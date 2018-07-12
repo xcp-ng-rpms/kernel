@@ -20,7 +20,7 @@
 %define _find_debuginfo_opts -r
 
 Name: kernel
-License: Portions GPL, Portions Non-Redistributable (See description)
+License: GPLv2
 Version: 4.4.52
 Release: 4.0.7
 ExclusiveArch: x86_64
@@ -415,26 +415,13 @@ Source2: macros.kernel
 %if %{do_kabichk}
 Source3: check-kabi
 Source4: Module.kabi
-Source5: https://repo.citrite.net/list/ctx-local-contrib/citrix/branding/Citrix_Logo_Black.png
 %endif
 
 %description
 The kernel package contains the Linux kernel (vmlinuz), the core of any
-Linux operating system, with selected patches provided by Citrix.  The
-kernel handles the basic functions of the operating system: memory
-allocation, process allocation, device input and output, etc.
-
-Citrix, the Citrix logo, Xen, XenServer, and certain other marks appearing
-herein are proprietary trademarks of Citrix Systems, Inc., and are
-registered in the U.S. and other countries. You may not redistribute this
-package, nor display or otherwise use any Citrix trademarks or any marks
-that incorporate Citrix trademarks without the express prior written
-authorization of Citrix. Nothing herein shall restrict your rights, if
-any, in the software contained within this package under an applicable
-open source license.
-
-Portions of this package are © 2017 Citrix Systems, Inc. For other
-copyright and licensing information see the relevant source RPM.
+Linux operating system.  The kernel handles the basic functions of the
+operating system: memory allocation, process allocation, device input
+and output, etc.
 
 
 %package headers
@@ -471,7 +458,6 @@ against the %{uname} kernel.
 
 make mrproper
 cp -f %{SOURCE1} .config
-cp -f %{SOURCE5} .
 
 %build
 
@@ -640,7 +626,6 @@ fi
 %ghost /lib/modules/%{uname}/modules.softdep
 %ghost /lib/modules/%{uname}/modules.symbols
 %ghost /lib/modules/%{uname}/modules.symbols.bin
-%doc Citrix_Logo_Black.png
 
 %files headers
 /usr/include/*
