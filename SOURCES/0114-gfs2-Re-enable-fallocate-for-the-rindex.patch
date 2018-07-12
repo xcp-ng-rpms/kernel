@@ -1,0 +1,34 @@
+From d4d7fc12b642a16732adeacefdaebe684bcb2218 Mon Sep 17 00:00:00 2001
+From: Andrew Price <anprice@redhat.com>
+Date: Wed, 5 Apr 2017 11:45:26 -0400
+Subject: [PATCH 114/170] gfs2: Re-enable fallocate for the rindex
+
+Commit 86066914edff2316cbed63aac8a87d5001441a16 "gfs2: Don't support
+fallocate on jdata files" removed the ability of gfs2_grow to reserve
+space at the end of the rindex, which could prevent a second gfs2_grow
+from succeeding if the fs is full. Allow fallocate to work on the rindex
+once again.
+
+Signed-off-by: Andrew Price <anprice@redhat.com>
+Signed-off-by: Bob Peterson <rpeterso@redhat.com>
+diff --git a/fs/gfs2/file.c b/fs/gfs2/file.c
+index 2cbc09d..88e745f 100644
+--- a/fs/gfs2/file.c
++++ b/fs/gfs2/file.c
+@@ -908,11 +908,15 @@ out_qunlock:
+ static long gfs2_fallocate(struct file *file, int mode, loff_t offset, loff_t len)
+ {
+ 	struct inode *inode = file_inode(file);
++	struct gfs2_sbd *sdp = GFS2_SB(inode);
+ 	struct gfs2_inode *ip = GFS2_I(inode);
+ 	struct gfs2_holder gh;
+ 	int ret;
+ 
+-	if ((mode & ~FALLOC_FL_KEEP_SIZE) || gfs2_is_jdata(ip))
++	if (mode & ~FALLOC_FL_KEEP_SIZE)
++		return -EOPNOTSUPP;
++	/* fallocate is needed by gfs2_grow to reserve space in the rindex */
++	if (gfs2_is_jdata(ip) && inode != sdp->sd_rindex)
+ 		return -EOPNOTSUPP;
+ 
+ 	inode_lock(inode);

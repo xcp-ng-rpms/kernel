@@ -1,0 +1,173 @@
+From 22fae97d863679994b951799dd4bbe7afd95897b Mon Sep 17 00:00:00 2001
+From: Paul Durrant <Paul.Durrant@citrix.com>
+Date: Tue, 2 Feb 2016 11:55:05 +0000
+Subject: [PATCH 4/4] xen-netback: implement dynamic multicast control
+
+My recent patch to the Xen Project documents a protocol for 'dynamic
+multicast control' in netif.h. This extends the previous multicast control
+protocol to not require a shared ring reconnection to turn the feature off.
+Instead the backend watches the "request-multicast-control" key in xenstore
+and turns the feature off if the key value is written to zero.
+
+This patch adds support for dynamic multicast control in xen-netback.
+
+Signed-off-by: Paul Durrant <paul.durrant@citrix.com>
+Cc: Ian Campbell <ian.campbell@citrix.com>
+Cc: Wei Liu <wei.liu2@citrix.com>
+Acked-by: Wei Liu <wei.liu2@citrix.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+---
+ drivers/net/xen-netback/common.h |    1 +
+ drivers/net/xen-netback/xenbus.c |   89 ++++++++++++++++++++++++++++++++++----
+ 2 files changed, 82 insertions(+), 8 deletions(-)
+
+diff --git a/drivers/net/xen-netback/common.h b/drivers/net/xen-netback/common.h
+index 0333ab0..1128252 100644
+--- a/drivers/net/xen-netback/common.h
++++ b/drivers/net/xen-netback/common.h
+@@ -251,6 +251,7 @@ struct xenvif {
+ 	unsigned int stalled_queues;
+ 
+ 	struct xenbus_watch credit_watch;
++	struct xenbus_watch mcast_ctrl_watch;
+ 
+ 	spinlock_t lock;
+ 
+diff --git a/drivers/net/xen-netback/xenbus.c b/drivers/net/xen-netback/xenbus.c
+index 56ebd82..39a303d 100644
+--- a/drivers/net/xen-netback/xenbus.c
++++ b/drivers/net/xen-netback/xenbus.c
+@@ -327,7 +327,7 @@ static int netback_probe(struct xenbus_device *dev,
+ 			goto abort_transaction;
+ 		}
+ 
+-		/* We support multicast-control. */
++		/* We support dynamic multicast-control. */
+ 		err = xenbus_printf(xbt, dev->nodename,
+ 				    "feature-multicast-control", "%d", 1);
+ 		if (err) {
+@@ -335,6 +335,14 @@ static int netback_probe(struct xenbus_device *dev,
+ 			goto abort_transaction;
+ 		}
+ 
++		err = xenbus_printf(xbt, dev->nodename,
++				    "feature-dynamic-multicast-control",
++				    "%d", 1);
++		if (err) {
++			message = "writing feature-dynamic-multicast-control";
++			goto abort_transaction;
++		}
++
+ 		err = xenbus_transaction_end(xbt, 0);
+ 	} while (err == -EAGAIN);
+ 
+@@ -683,7 +691,8 @@ static void xen_net_rate_changed(struct xenbus_watch *watch,
+ 	}
+ }
+ 
+-static int xen_register_watchers(struct xenbus_device *dev, struct xenvif *vif)
++static int xen_register_credit_watch(struct xenbus_device *dev,
++				     struct xenvif *vif)
+ {
+ 	int err = 0;
+ 	char *node;
+@@ -708,7 +717,7 @@ static int xen_register_watchers(struct xenbus_device *dev, struct xenvif *vif)
+ 	return err;
+ }
+ 
+-static void xen_unregister_watchers(struct xenvif *vif)
++static void xen_unregister_credit_watch(struct xenvif *vif)
+ {
+ 	if (vif->credit_watch.node) {
+ 		unregister_xenbus_watch(&vif->credit_watch);
+@@ -717,6 +726,75 @@ static void xen_unregister_watchers(struct xenvif *vif)
+ 	}
+ }
+ 
++static void xen_mcast_ctrl_changed(struct xenbus_watch *watch,
++				   const char **vec, unsigned int len)
++{
++	struct xenvif *vif = container_of(watch, struct xenvif,
++					  mcast_ctrl_watch);
++	struct xenbus_device *dev = xenvif_to_xenbus_device(vif);
++	int val;
++
++	if (xenbus_scanf(XBT_NIL, dev->otherend,
++			 "request-multicast-control", "%d", &val) < 0)
++		val = 0;
++	vif->multicast_control = !!val;
++}
++
++static int xen_register_mcast_ctrl_watch(struct xenbus_device *dev,
++					 struct xenvif *vif)
++{
++	int err = 0;
++	char *node;
++	unsigned maxlen = strlen(dev->otherend) +
++		sizeof("/request-multicast-control");
++
++	if (vif->mcast_ctrl_watch.node) {
++		pr_err_ratelimited("Watch is already registered\n");
++		return -EADDRINUSE;
++	}
++
++	node = kmalloc(maxlen, GFP_KERNEL);
++	if (!node) {
++		pr_err("Failed to allocate memory for watch\n");
++		return -ENOMEM;
++	}
++	snprintf(node, maxlen, "%s/request-multicast-control",
++		 dev->otherend);
++	vif->mcast_ctrl_watch.node = node;
++	vif->mcast_ctrl_watch.callback = xen_mcast_ctrl_changed;
++	err = register_xenbus_watch(&vif->mcast_ctrl_watch);
++	if (err) {
++		pr_err("Failed to set watcher %s\n",
++		       vif->mcast_ctrl_watch.node);
++		kfree(node);
++		vif->mcast_ctrl_watch.node = NULL;
++		vif->mcast_ctrl_watch.callback = NULL;
++	}
++	return err;
++}
++
++static void xen_unregister_mcast_ctrl_watch(struct xenvif *vif)
++{
++	if (vif->mcast_ctrl_watch.node) {
++		unregister_xenbus_watch(&vif->mcast_ctrl_watch);
++		kfree(vif->mcast_ctrl_watch.node);
++		vif->mcast_ctrl_watch.node = NULL;
++	}
++}
++
++static void xen_register_watchers(struct xenbus_device *dev,
++				  struct xenvif *vif)
++{
++	xen_register_credit_watch(dev, vif);
++	xen_register_mcast_ctrl_watch(dev, vif);
++}
++
++static void xen_unregister_watchers(struct xenvif *vif)
++{
++	xen_unregister_mcast_ctrl_watch(vif);
++	xen_unregister_credit_watch(vif);
++}
++
+ static void unregister_hotplug_status_watch(struct backend_info *be)
+ {
+ 	if (be->have_hotplug_status_watch) {
+@@ -1030,11 +1108,6 @@ static int read_xenbus_vif_flags(struct backend_info *be)
+ 		val = 0;
+ 	vif->ipv6_csum = !!val;
+ 
+-	if (xenbus_scanf(XBT_NIL, dev->otherend, "request-multicast-control",
+-			 "%d", &val) < 0)
+-		val = 0;
+-	vif->multicast_control = !!val;
+-
+ 	return 0;
+ }
+ 
+-- 
+1.7.10.4
+

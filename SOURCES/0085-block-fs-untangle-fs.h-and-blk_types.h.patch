@@ -1,0 +1,21 @@
+From 2f8b544477e627a42e66902e948d87f86554aeca Mon Sep 17 00:00:00 2001
+From: Christoph Hellwig <hch@lst.de>
+Date: Tue, 1 Nov 2016 07:40:13 -0600
+Subject: [PATCH 085/170] block,fs: untangle fs.h and blk_types.h
+
+Nothing in fs.h should require blk_types.h to be included.
+
+Signed-off-by: Christoph Hellwig <hch@lst.de>
+Signed-off-by: Jens Axboe <axboe@fb.com>
+diff --git a/fs/gfs2/dir.c b/fs/gfs2/dir.c
+index 8fd3afc..b45f24c 100644
+--- a/fs/gfs2/dir.c
++++ b/fs/gfs2/dir.c
+@@ -62,6 +62,7 @@
+ #include <linux/gfs2_ondisk.h>
+ #include <linux/crc32.h>
+ #include <linux/vmalloc.h>
++#include <linux/bio.h>
+ 
+ #include "gfs2.h"
+ #include "incore.h"

@@ -1,0 +1,39 @@
+From 14d37564fa3dc4e5d4c6828afcd26ac14e6796c5 Mon Sep 17 00:00:00 2001
+From: Dan Carpenter <dan.carpenter@oracle.com>
+Date: Wed, 14 Dec 2016 08:02:03 -0600
+Subject: [PATCH 089/170] GFS2: Fix reference to ERR_PTR in
+ gfs2_glock_iter_next
+
+This patch fixes a place where function gfs2_glock_iter_next can
+reference an invalid error pointer.
+
+Signed-off-by: Dan Carpenter <dan.carpenter@oracle.com>
+Signed-off-by: Bob Peterson <rpeterso@redhat.com>
+diff --git a/fs/gfs2/glock.c b/fs/gfs2/glock.c
+index 14cbf60..2928f12 100644
+--- a/fs/gfs2/glock.c
++++ b/fs/gfs2/glock.c
+@@ -1802,16 +1802,18 @@ void gfs2_glock_exit(void)
+ 
+ static void gfs2_glock_iter_next(struct gfs2_glock_iter *gi)
+ {
+-	do {
+-		gi->gl = rhashtable_walk_next(&gi->hti);
++	while ((gi->gl = rhashtable_walk_next(&gi->hti))) {
+ 		if (IS_ERR(gi->gl)) {
+ 			if (PTR_ERR(gi->gl) == -EAGAIN)
+ 				continue;
+ 			gi->gl = NULL;
++			return;
+ 		}
+-	/* Skip entries for other sb and dead entries */
+-	} while ((gi->gl) && ((gi->sdp != gi->gl->gl_name.ln_sbd) ||
+-			      __lockref_is_dead(&gi->gl->gl_lockref)));
++		/* Skip entries for other sb and dead entries */
++		if (gi->sdp == gi->gl->gl_name.ln_sbd &&
++		    !__lockref_is_dead(&gi->gl->gl_lockref))
++			return;
++	}
+ }
+ 
+ static void *gfs2_glock_seq_start(struct seq_file *seq, loff_t *pos)

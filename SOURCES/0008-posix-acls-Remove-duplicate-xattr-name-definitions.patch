@@ -1,0 +1,461 @@
+From 97d79299223baab330b194437e676d301f12d5f6 Mon Sep 17 00:00:00 2001
+From: Andreas Gruenbacher <agruenba@redhat.com>
+Date: Wed, 2 Dec 2015 14:44:35 +0100
+Subject: [PATCH] posix acls: Remove duplicate xattr name definitions
+
+Remove POSIX_ACL_XATTR_{ACCESS,DEFAULT} and GFS2_POSIX_ACL_{ACCESS,DEFAULT}
+and replace them with the definitions in <include/uapi/linux/xattr.h>.
+
+Signed-off-by: Andreas Gruenbacher <agruenba@redhat.com>
+Reviewed-by: James Morris <james.l.morris@oracle.com>
+Signed-off-by: Al Viro <viro@zeniv.linux.org.uk>
+diff --git a/drivers/staging/lustre/lustre/llite/xattr.c b/drivers/staging/lustre/lustre/llite/xattr.c
+index 4b7eb33..660b8ac 100644
+--- a/drivers/staging/lustre/lustre/llite/xattr.c
++++ b/drivers/staging/lustre/lustre/llite/xattr.c
+@@ -60,10 +60,10 @@
+ static
+ int get_xattr_type(const char *name)
+ {
+-	if (!strcmp(name, POSIX_ACL_XATTR_ACCESS))
++	if (!strcmp(name, XATTR_NAME_POSIX_ACL_ACCESS))
+ 		return XATTR_ACL_ACCESS_T;
+ 
+-	if (!strcmp(name, POSIX_ACL_XATTR_DEFAULT))
++	if (!strcmp(name, XATTR_NAME_POSIX_ACL_DEFAULT))
+ 		return XATTR_ACL_DEFAULT_T;
+ 
+ 	if (!strncmp(name, XATTR_USER_PREFIX,
+diff --git a/fs/9p/acl.c b/fs/9p/acl.c
+index 929b618..7fb6793 100644
+--- a/fs/9p/acl.c
++++ b/fs/9p/acl.c
+@@ -67,8 +67,8 @@ int v9fs_get_acl(struct inode *inode, struct p9_fid *fid)
+ 		return 0;
+ 	}
+ 	/* get the default/access acl values and cache them */
+-	dacl = __v9fs_get_acl(fid, POSIX_ACL_XATTR_DEFAULT);
+-	pacl = __v9fs_get_acl(fid, POSIX_ACL_XATTR_ACCESS);
++	dacl = __v9fs_get_acl(fid, XATTR_NAME_POSIX_ACL_DEFAULT);
++	pacl = __v9fs_get_acl(fid, XATTR_NAME_POSIX_ACL_ACCESS);
+ 
+ 	if (!IS_ERR(dacl) && !IS_ERR(pacl)) {
+ 		set_cached_acl(inode, ACL_TYPE_DEFAULT, dacl);
+@@ -133,10 +133,10 @@ static int v9fs_set_acl(struct p9_fid *fid, int type, struct posix_acl *acl)
+ 		goto err_free_out;
+ 	switch (type) {
+ 	case ACL_TYPE_ACCESS:
+-		name = POSIX_ACL_XATTR_ACCESS;
++		name = XATTR_NAME_POSIX_ACL_ACCESS;
+ 		break;
+ 	case ACL_TYPE_DEFAULT:
+-		name = POSIX_ACL_XATTR_DEFAULT;
++		name = XATTR_NAME_POSIX_ACL_DEFAULT;
+ 		break;
+ 	default:
+ 		BUG();
+@@ -322,14 +322,14 @@ err_out:
+ }
+ 
+ const struct xattr_handler v9fs_xattr_acl_access_handler = {
+-	.prefix	= POSIX_ACL_XATTR_ACCESS,
++	.prefix	= XATTR_NAME_POSIX_ACL_ACCESS,
+ 	.flags	= ACL_TYPE_ACCESS,
+ 	.get	= v9fs_xattr_get_acl,
+ 	.set	= v9fs_xattr_set_acl,
+ };
+ 
+ const struct xattr_handler v9fs_xattr_acl_default_handler = {
+-	.prefix	= POSIX_ACL_XATTR_DEFAULT,
++	.prefix	= XATTR_NAME_POSIX_ACL_DEFAULT,
+ 	.flags	= ACL_TYPE_DEFAULT,
+ 	.get	= v9fs_xattr_get_acl,
+ 	.set	= v9fs_xattr_set_acl,
+diff --git a/fs/btrfs/acl.c b/fs/btrfs/acl.c
+index fb3e64d..134bd2b 100644
+--- a/fs/btrfs/acl.c
++++ b/fs/btrfs/acl.c
+@@ -37,10 +37,10 @@ struct posix_acl *btrfs_get_acl(struct inode *inode, int type)
+ 
+ 	switch (type) {
+ 	case ACL_TYPE_ACCESS:
+-		name = POSIX_ACL_XATTR_ACCESS;
++		name = XATTR_NAME_POSIX_ACL_ACCESS;
+ 		break;
+ 	case ACL_TYPE_DEFAULT:
+-		name = POSIX_ACL_XATTR_DEFAULT;
++		name = XATTR_NAME_POSIX_ACL_DEFAULT;
+ 		break;
+ 	default:
+ 		BUG();
+@@ -81,7 +81,7 @@ static int __btrfs_set_acl(struct btrfs_trans_handle *trans,
+ 
+ 	switch (type) {
+ 	case ACL_TYPE_ACCESS:
+-		name = POSIX_ACL_XATTR_ACCESS;
++		name = XATTR_NAME_POSIX_ACL_ACCESS;
+ 		if (acl) {
+ 			ret = posix_acl_update_mode(inode, &inode->i_mode, &acl);
+ 			if (ret)
+@@ -92,7 +92,7 @@ static int __btrfs_set_acl(struct btrfs_trans_handle *trans,
+ 	case ACL_TYPE_DEFAULT:
+ 		if (!S_ISDIR(inode->i_mode))
+ 			return acl ? -EINVAL : 0;
+-		name = POSIX_ACL_XATTR_DEFAULT;
++		name = XATTR_NAME_POSIX_ACL_DEFAULT;
+ 		break;
+ 	default:
+ 		return -EINVAL;
+diff --git a/fs/btrfs/inode.c b/fs/btrfs/inode.c
+index 3cff652..9bbf498 100644
+--- a/fs/btrfs/inode.c
++++ b/fs/btrfs/inode.c
+@@ -3546,10 +3546,10 @@ static noinline int acls_after_inode_item(struct extent_buffer *leaf,
+ 	int scanned = 0;
+ 
+ 	if (!xattr_access) {
+-		xattr_access = btrfs_name_hash(POSIX_ACL_XATTR_ACCESS,
+-					strlen(POSIX_ACL_XATTR_ACCESS));
+-		xattr_default = btrfs_name_hash(POSIX_ACL_XATTR_DEFAULT,
+-					strlen(POSIX_ACL_XATTR_DEFAULT));
++		xattr_access = btrfs_name_hash(XATTR_NAME_POSIX_ACL_ACCESS,
++					strlen(XATTR_NAME_POSIX_ACL_ACCESS));
++		xattr_default = btrfs_name_hash(XATTR_NAME_POSIX_ACL_DEFAULT,
++					strlen(XATTR_NAME_POSIX_ACL_DEFAULT));
+ 	}
+ 
+ 	slot++;
+diff --git a/fs/ceph/acl.c b/fs/ceph/acl.c
+index 4d8caeb..8f81392 100644
+--- a/fs/ceph/acl.c
++++ b/fs/ceph/acl.c
+@@ -49,10 +49,10 @@ struct posix_acl *ceph_get_acl(struct inode *inode, int type)
+ 
+ 	switch (type) {
+ 	case ACL_TYPE_ACCESS:
+-		name = POSIX_ACL_XATTR_ACCESS;
++		name = XATTR_NAME_POSIX_ACL_ACCESS;
+ 		break;
+ 	case ACL_TYPE_DEFAULT:
+-		name = POSIX_ACL_XATTR_DEFAULT;
++		name = XATTR_NAME_POSIX_ACL_DEFAULT;
+ 		break;
+ 	default:
+ 		BUG();
+@@ -92,7 +92,7 @@ int ceph_set_acl(struct inode *inode, struct posix_acl *acl, int type)
+ 
+ 	switch (type) {
+ 	case ACL_TYPE_ACCESS:
+-		name = POSIX_ACL_XATTR_ACCESS;
++		name = XATTR_NAME_POSIX_ACL_ACCESS;
+ 		if (acl) {
+ 			ret = posix_acl_update_mode(inode, &new_mode, &acl);
+ 			if (ret)
+@@ -104,7 +104,7 @@ int ceph_set_acl(struct inode *inode, struct posix_acl *acl, int type)
+ 			ret = acl ? -EINVAL : 0;
+ 			goto out;
+ 		}
+-		name = POSIX_ACL_XATTR_DEFAULT;
++		name = XATTR_NAME_POSIX_ACL_DEFAULT;
+ 		break;
+ 	default:
+ 		ret = -EINVAL;
+@@ -200,11 +200,11 @@ int ceph_pre_init_acls(struct inode *dir, umode_t *mode,
+ 	ceph_pagelist_encode_32(pagelist, acl && default_acl ? 2 : 1);
+ 
+ 	if (acl) {
+-		size_t len = strlen(POSIX_ACL_XATTR_ACCESS);
++		size_t len = strlen(XATTR_NAME_POSIX_ACL_ACCESS);
+ 		err = ceph_pagelist_reserve(pagelist, len + val_size1 + 8);
+ 		if (err)
+ 			goto out_err;
+-		ceph_pagelist_encode_string(pagelist, POSIX_ACL_XATTR_ACCESS,
++		ceph_pagelist_encode_string(pagelist, XATTR_NAME_POSIX_ACL_ACCESS,
+ 					    len);
+ 		err = posix_acl_to_xattr(&init_user_ns, acl,
+ 					 tmp_buf, val_size1);
+@@ -214,12 +214,12 @@ int ceph_pre_init_acls(struct inode *dir, umode_t *mode,
+ 		ceph_pagelist_append(pagelist, tmp_buf, val_size1);
+ 	}
+ 	if (default_acl) {
+-		size_t len = strlen(POSIX_ACL_XATTR_DEFAULT);
++		size_t len = strlen(XATTR_NAME_POSIX_ACL_DEFAULT);
+ 		err = ceph_pagelist_reserve(pagelist, len + val_size2 + 8);
+ 		if (err)
+ 			goto out_err;
+ 		err = ceph_pagelist_encode_string(pagelist,
+-						  POSIX_ACL_XATTR_DEFAULT, len);
++						  XATTR_NAME_POSIX_ACL_DEFAULT, len);
+ 		err = posix_acl_to_xattr(&init_user_ns, default_acl,
+ 					 tmp_buf, val_size2);
+ 		if (err < 0)
+diff --git a/fs/cifs/xattr.c b/fs/cifs/xattr.c
+index ff9e1f8..f5dc2f0 100644
+--- a/fs/cifs/xattr.c
++++ b/fs/cifs/xattr.c
+@@ -190,8 +190,8 @@ int cifs_setxattr(struct dentry *direntry, const char *ea_name,
+ #endif /* CONFIG_CIFS_ACL */
+ 	} else {
+ 		int temp;
+-		temp = strncmp(ea_name, POSIX_ACL_XATTR_ACCESS,
+-			strlen(POSIX_ACL_XATTR_ACCESS));
++		temp = strncmp(ea_name, XATTR_NAME_POSIX_ACL_ACCESS,
++			strlen(XATTR_NAME_POSIX_ACL_ACCESS));
+ 		if (temp == 0) {
+ #ifdef CONFIG_CIFS_POSIX
+ 			if (sb->s_flags & MS_POSIXACL)
+@@ -203,8 +203,8 @@ int cifs_setxattr(struct dentry *direntry, const char *ea_name,
+ #else
+ 			cifs_dbg(FYI, "set POSIX ACL not supported\n");
+ #endif
+-		} else if (strncmp(ea_name, POSIX_ACL_XATTR_DEFAULT,
+-				   strlen(POSIX_ACL_XATTR_DEFAULT)) == 0) {
++		} else if (strncmp(ea_name, XATTR_NAME_POSIX_ACL_DEFAULT,
++				   strlen(XATTR_NAME_POSIX_ACL_DEFAULT)) == 0) {
+ #ifdef CONFIG_CIFS_POSIX
+ 			if (sb->s_flags & MS_POSIXACL)
+ 				rc = CIFSSMBSetPosixACL(xid, pTcon, full_path,
+@@ -292,8 +292,8 @@ ssize_t cifs_getxattr(struct dentry *direntry, const char *ea_name,
+ 			rc = pTcon->ses->server->ops->query_all_EAs(xid, pTcon,
+ 				full_path, ea_name, ea_value, buf_size,
+ 				cifs_sb->local_nls, cifs_remap(cifs_sb));
+-	} else if (strncmp(ea_name, POSIX_ACL_XATTR_ACCESS,
+-			  strlen(POSIX_ACL_XATTR_ACCESS)) == 0) {
++	} else if (strncmp(ea_name, XATTR_NAME_POSIX_ACL_ACCESS,
++			  strlen(XATTR_NAME_POSIX_ACL_ACCESS)) == 0) {
+ #ifdef CONFIG_CIFS_POSIX
+ 		if (sb->s_flags & MS_POSIXACL)
+ 			rc = CIFSSMBGetPosixACL(xid, pTcon, full_path,
+@@ -303,8 +303,8 @@ ssize_t cifs_getxattr(struct dentry *direntry, const char *ea_name,
+ #else
+ 		cifs_dbg(FYI, "Query POSIX ACL not supported yet\n");
+ #endif /* CONFIG_CIFS_POSIX */
+-	} else if (strncmp(ea_name, POSIX_ACL_XATTR_DEFAULT,
+-			  strlen(POSIX_ACL_XATTR_DEFAULT)) == 0) {
++	} else if (strncmp(ea_name, XATTR_NAME_POSIX_ACL_DEFAULT,
++			  strlen(XATTR_NAME_POSIX_ACL_DEFAULT)) == 0) {
+ #ifdef CONFIG_CIFS_POSIX
+ 		if (sb->s_flags & MS_POSIXACL)
+ 			rc = CIFSSMBGetPosixACL(xid, pTcon, full_path,
+diff --git a/fs/gfs2/acl.c b/fs/gfs2/acl.c
+index ff0ac96..5b03a41 100644
+--- a/fs/gfs2/acl.c
++++ b/fs/gfs2/acl.c
+@@ -31,9 +31,9 @@ static const char *gfs2_acl_name(int type)
+ {
+ 	switch (type) {
+ 	case ACL_TYPE_ACCESS:
+-		return GFS2_POSIX_ACL_ACCESS;
++		return XATTR_POSIX_ACL_ACCESS;
+ 	case ACL_TYPE_DEFAULT:
+-		return GFS2_POSIX_ACL_DEFAULT;
++		return XATTR_POSIX_ACL_DEFAULT;
+ 	}
+ 	return NULL;
+ }
+diff --git a/fs/gfs2/acl.h b/fs/gfs2/acl.h
+index 2d65ec4..3af4f40 100644
+--- a/fs/gfs2/acl.h
++++ b/fs/gfs2/acl.h
+@@ -12,8 +12,6 @@
+ 
+ #include "incore.h"
+ 
+-#define GFS2_POSIX_ACL_ACCESS		"posix_acl_access"
+-#define GFS2_POSIX_ACL_DEFAULT		"posix_acl_default"
+ #define GFS2_ACL_MAX_ENTRIES(sdp) ((300 << (sdp)->sd_sb.sb_bsize_shift) >> 12)
+ 
+ extern struct posix_acl *gfs2_get_acl(struct inode *inode, int type);
+diff --git a/fs/hfsplus/posix_acl.c b/fs/hfsplus/posix_acl.c
+index 71b3087..de71351 100644
+--- a/fs/hfsplus/posix_acl.c
++++ b/fs/hfsplus/posix_acl.c
+@@ -21,10 +21,10 @@ struct posix_acl *hfsplus_get_posix_acl(struct inode *inode, int type)
+ 
+ 	switch (type) {
+ 	case ACL_TYPE_ACCESS:
+-		xattr_name = POSIX_ACL_XATTR_ACCESS;
++		xattr_name = XATTR_NAME_POSIX_ACL_ACCESS;
+ 		break;
+ 	case ACL_TYPE_DEFAULT:
+-		xattr_name = POSIX_ACL_XATTR_DEFAULT;
++		xattr_name = XATTR_NAME_POSIX_ACL_DEFAULT;
+ 		break;
+ 	default:
+ 		return ERR_PTR(-EINVAL);
+@@ -66,7 +66,7 @@ int hfsplus_set_posix_acl(struct inode *inode, struct posix_acl *acl,
+ 
+ 	switch (type) {
+ 	case ACL_TYPE_ACCESS:
+-		xattr_name = POSIX_ACL_XATTR_ACCESS;
++		xattr_name = XATTR_NAME_POSIX_ACL_ACCESS;
+ 		if (acl) {
+ 			err = posix_acl_update_mode(inode, &inode->i_mode, &acl);
+ 			if (err)
+@@ -76,7 +76,7 @@ int hfsplus_set_posix_acl(struct inode *inode, struct posix_acl *acl,
+ 		break;
+ 
+ 	case ACL_TYPE_DEFAULT:
+-		xattr_name = POSIX_ACL_XATTR_DEFAULT;
++		xattr_name = XATTR_NAME_POSIX_ACL_DEFAULT;
+ 		if (!S_ISDIR(inode->i_mode))
+ 			return acl ? -EACCES : 0;
+ 		break;
+diff --git a/fs/jfs/acl.c b/fs/jfs/acl.c
+index 9fad9f4..92b2580 100644
+--- a/fs/jfs/acl.c
++++ b/fs/jfs/acl.c
+@@ -40,10 +40,10 @@ struct posix_acl *jfs_get_acl(struct inode *inode, int type)
+ 
+ 	switch(type) {
+ 		case ACL_TYPE_ACCESS:
+-			ea_name = POSIX_ACL_XATTR_ACCESS;
++			ea_name = XATTR_NAME_POSIX_ACL_ACCESS;
+ 			break;
+ 		case ACL_TYPE_DEFAULT:
+-			ea_name = POSIX_ACL_XATTR_DEFAULT;
++			ea_name = XATTR_NAME_POSIX_ACL_DEFAULT;
+ 			break;
+ 		default:
+ 			return ERR_PTR(-EINVAL);
+@@ -82,7 +82,7 @@ static int __jfs_set_acl(tid_t tid, struct inode *inode, int type,
+ 
+ 	switch (type) {
+ 	case ACL_TYPE_ACCESS:
+-		ea_name = POSIX_ACL_XATTR_ACCESS;
++		ea_name = XATTR_NAME_POSIX_ACL_ACCESS;
+ 		if (acl) {
+ 			rc = posix_acl_update_mode(inode, &inode->i_mode, &acl);
+ 			if (rc)
+@@ -92,7 +92,7 @@ static int __jfs_set_acl(tid_t tid, struct inode *inode, int type,
+ 		}
+ 		break;
+ 	case ACL_TYPE_DEFAULT:
+-		ea_name = POSIX_ACL_XATTR_DEFAULT;
++		ea_name = XATTR_NAME_POSIX_ACL_DEFAULT;
+ 		break;
+ 	default:
+ 		return -EINVAL;
+diff --git a/fs/nfs/nfs3acl.c b/fs/nfs/nfs3acl.c
+index 1ebe2fc..17c0fa1 100644
+--- a/fs/nfs/nfs3acl.c
++++ b/fs/nfs/nfs3acl.c
+@@ -284,12 +284,12 @@ nfs3_listxattr(struct dentry *dentry, char *data, size_t size)
+ 	int error;
+ 
+ 	error = nfs3_list_one_acl(inode, ACL_TYPE_ACCESS,
+-			POSIX_ACL_XATTR_ACCESS, data, size, &result);
++			XATTR_NAME_POSIX_ACL_ACCESS, data, size, &result);
+ 	if (error)
+ 		return error;
+ 
+ 	error = nfs3_list_one_acl(inode, ACL_TYPE_DEFAULT,
+-			POSIX_ACL_XATTR_DEFAULT, data, size, &result);
++			XATTR_NAME_POSIX_ACL_DEFAULT, data, size, &result);
+ 	if (error)
+ 		return error;
+ 	return result;
+diff --git a/fs/posix_acl.c b/fs/posix_acl.c
+index 993bb3b..9af5417 100644
+--- a/fs/posix_acl.c
++++ b/fs/posix_acl.c
+@@ -881,7 +881,7 @@ posix_acl_xattr_list(const struct xattr_handler *handler,
+ }
+ 
+ const struct xattr_handler posix_acl_access_xattr_handler = {
+-	.prefix = POSIX_ACL_XATTR_ACCESS,
++	.prefix = XATTR_NAME_POSIX_ACL_ACCESS,
+ 	.flags = ACL_TYPE_ACCESS,
+ 	.list = posix_acl_xattr_list,
+ 	.get = posix_acl_xattr_get,
+@@ -890,7 +890,7 @@ const struct xattr_handler posix_acl_access_xattr_handler = {
+ EXPORT_SYMBOL_GPL(posix_acl_access_xattr_handler);
+ 
+ const struct xattr_handler posix_acl_default_xattr_handler = {
+-	.prefix = POSIX_ACL_XATTR_DEFAULT,
++	.prefix = XATTR_NAME_POSIX_ACL_DEFAULT,
+ 	.flags = ACL_TYPE_DEFAULT,
+ 	.list = posix_acl_xattr_list,
+ 	.get = posix_acl_xattr_get,
+diff --git a/fs/reiserfs/xattr_acl.c b/fs/reiserfs/xattr_acl.c
+index 9b1824f..5d2d44f 100644
+--- a/fs/reiserfs/xattr_acl.c
++++ b/fs/reiserfs/xattr_acl.c
+@@ -186,10 +186,10 @@ struct posix_acl *reiserfs_get_acl(struct inode *inode, int type)
+ 
+ 	switch (type) {
+ 	case ACL_TYPE_ACCESS:
+-		name = POSIX_ACL_XATTR_ACCESS;
++		name = XATTR_NAME_POSIX_ACL_ACCESS;
+ 		break;
+ 	case ACL_TYPE_DEFAULT:
+-		name = POSIX_ACL_XATTR_DEFAULT;
++		name = XATTR_NAME_POSIX_ACL_DEFAULT;
+ 		break;
+ 	default:
+ 		BUG();
+@@ -244,7 +244,7 @@ __reiserfs_set_acl(struct reiserfs_transaction_handle *th, struct inode *inode,
+ 
+ 	switch (type) {
+ 	case ACL_TYPE_ACCESS:
+-		name = POSIX_ACL_XATTR_ACCESS;
++		name = XATTR_NAME_POSIX_ACL_ACCESS;
+ 		if (acl) {
+ 			error = posix_acl_update_mode(inode, &inode->i_mode, &acl);
+ 			if (error)
+@@ -252,7 +252,7 @@ __reiserfs_set_acl(struct reiserfs_transaction_handle *th, struct inode *inode,
+ 		}
+ 		break;
+ 	case ACL_TYPE_DEFAULT:
+-		name = POSIX_ACL_XATTR_DEFAULT;
++		name = XATTR_NAME_POSIX_ACL_DEFAULT;
+ 		if (!S_ISDIR(inode->i_mode))
+ 			return acl ? -EACCES : 0;
+ 		break;
+diff --git a/fs/xfs/xfs_xattr.c b/fs/xfs/xfs_xattr.c
+index 839b35c..7288795 100644
+--- a/fs/xfs/xfs_xattr.c
++++ b/fs/xfs/xfs_xattr.c
+@@ -253,16 +253,16 @@ xfs_vn_listxattr(struct dentry *dentry, char *data, size_t size)
+ 	 * Then add the two synthetic ACL attributes.
+ 	 */
+ 	if (posix_acl_access_exists(inode)) {
+-		error = list_one_attr(POSIX_ACL_XATTR_ACCESS,
+-				strlen(POSIX_ACL_XATTR_ACCESS) + 1,
++		error = list_one_attr(XATTR_NAME_POSIX_ACL_ACCESS,
++				strlen(XATTR_NAME_POSIX_ACL_ACCESS) + 1,
+ 				data, size, &context.count);
+ 		if (error)
+ 			return error;
+ 	}
+ 
+ 	if (posix_acl_default_exists(inode)) {
+-		error = list_one_attr(POSIX_ACL_XATTR_DEFAULT,
+-				strlen(POSIX_ACL_XATTR_DEFAULT) + 1,
++		error = list_one_attr(XATTR_NAME_POSIX_ACL_DEFAULT,
++				strlen(XATTR_NAME_POSIX_ACL_DEFAULT) + 1,
+ 				data, size, &context.count);
+ 		if (error)
+ 			return error;
+diff --git a/include/linux/posix_acl_xattr.h b/include/linux/posix_acl_xattr.h
+index 6f14ee2..e5e8ec4 100644
+--- a/include/linux/posix_acl_xattr.h
++++ b/include/linux/posix_acl_xattr.h
+@@ -9,16 +9,12 @@
+ #ifndef _POSIX_ACL_XATTR_H
+ #define _POSIX_ACL_XATTR_H
+ 
++#include <uapi/linux/xattr.h>
+ #include <linux/posix_acl.h>
+ 
+-/* Extended attribute names */
+-#define POSIX_ACL_XATTR_ACCESS	"system.posix_acl_access"
+-#define POSIX_ACL_XATTR_DEFAULT	"system.posix_acl_default"
+-
+ /* Supported ACL a_version fields */
+ #define POSIX_ACL_XATTR_VERSION	0x0002
+ 
+-
+ /* An undefined entry e_id value */
+ #define ACL_UNDEFINED_ID	(-1)
+ 

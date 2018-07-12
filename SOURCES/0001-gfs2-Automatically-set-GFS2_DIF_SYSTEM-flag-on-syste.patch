@@ -1,0 +1,49 @@
+From acc546fd6108cb17f87f985e4235b68756d7b01f Mon Sep 17 00:00:00 2001
+From: Abhi Das <adas@redhat.com>
+Date: Tue, 10 Nov 2015 15:07:26 -0600
+Subject: [PATCH 001/170] gfs2: Automatically set GFS2_DIF_SYSTEM flag on
+ system files
+
+When new files and directories are created inside a parent directory
+we automatically inherit the GFS2_DIF_SYSTEM flag (if set) and assign
+it to the new file/dirs.
+
+All new system files/dirs created in the metafs by, say gfs2_jadd,
+will have this flag set because they will have parent directories in
+the metafs whose GFS2_DIF_SYSTEM flag has already been set (most likely
+by a previous mkfs.gfs2)
+
+Signed-off-by: Abhi Das <adas@redhat.com>
+Signed-off-by: Bob Peterson <rpeterso@redhat.com>
+diff --git a/fs/gfs2/file.c b/fs/gfs2/file.c
+index 5e42546..2012820 100644
+--- a/fs/gfs2/file.c
++++ b/fs/gfs2/file.c
+@@ -298,9 +298,9 @@ static int gfs2_set_flags(struct file *filp, u32 __user *ptr)
+ 		gfsflags &= ~GFS2_DIF_TOPDIR;
+ 		if (gfsflags & GFS2_DIF_INHERIT_JDATA)
+ 			gfsflags ^= (GFS2_DIF_JDATA | GFS2_DIF_INHERIT_JDATA);
+-		return do_gfs2_set_flags(filp, gfsflags, ~0);
++		return do_gfs2_set_flags(filp, gfsflags, ~GFS2_DIF_SYSTEM);
+ 	}
+-	return do_gfs2_set_flags(filp, gfsflags, ~GFS2_DIF_JDATA);
++	return do_gfs2_set_flags(filp, gfsflags, ~(GFS2_DIF_SYSTEM | GFS2_DIF_JDATA));
+ }
+ 
+ static long gfs2_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
+diff --git a/fs/gfs2/inode.c b/fs/gfs2/inode.c
+index 063fdfc..2c05bc3 100644
+--- a/fs/gfs2/inode.c
++++ b/fs/gfs2/inode.c
+@@ -685,6 +685,11 @@ static int gfs2_create_inode(struct inode *dir, struct dentry *dentry,
+ 		ip->i_entries = 2;
+ 		break;
+ 	}
++
++	/* Force SYSTEM flag on all files and subdirs of a SYSTEM directory */
++	if (dip->i_diskflags & GFS2_DIF_SYSTEM)
++		ip->i_diskflags |= GFS2_DIF_SYSTEM;
++
+ 	gfs2_set_inode_flags(inode);
+ 
+ 	if ((GFS2_I(d_inode(sdp->sd_root_dir)) == dip) ||

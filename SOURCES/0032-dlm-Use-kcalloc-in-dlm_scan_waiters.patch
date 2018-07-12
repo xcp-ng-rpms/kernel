@@ -1,0 +1,26 @@
+From fbb1008151cabb83aeadf91ae363196def070eba Mon Sep 17 00:00:00 2001
+From: Markus Elfring <elfring@users.sourceforge.net>
+Date: Sat, 6 May 2017 08:38:49 +0200
+Subject: [PATCH 32/45] dlm: Use kcalloc() in dlm_scan_waiters()
+
+A multiplication for the size determination of a memory allocation
+indicated that an array data structure should be processed.
+Thus use the corresponding function "kcalloc".
+
+This issue was detected by using the Coccinelle software.
+
+Signed-off-by: Markus Elfring <elfring@users.sourceforge.net>
+Signed-off-by: David Teigland <teigland@redhat.com>
+diff --git a/fs/dlm/lock.c b/fs/dlm/lock.c
+index 35502d4..e3e608c 100644
+--- a/fs/dlm/lock.c
++++ b/fs/dlm/lock.c
+@@ -1427,7 +1427,7 @@ void dlm_scan_waiters(struct dlm_ls *ls)
+ 
+ 		if (!num_nodes) {
+ 			num_nodes = ls->ls_num_nodes;
+-			warned = kzalloc(num_nodes * sizeof(int), GFP_KERNEL);
++			warned = kcalloc(num_nodes, sizeof(int), GFP_KERNEL);
+ 		}
+ 		if (!warned)
+ 			continue;

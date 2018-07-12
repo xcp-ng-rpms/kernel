@@ -1,0 +1,24 @@
+From cfc93ab5b8de76b2f46bcf6a368d688965377c27 Mon Sep 17 00:00:00 2001
+From: Anoob Soman <anoob.soman@citrix.com>
+Date: Mon, 3 Apr 2017 22:56:39 +0100
+Subject: [PATCH] openvswitch: clear sender cpu before forwarding packets
+
+Similar to commit c29390c6dfee ("xps: must clear sender_cpu before
+forwarding") the skb->sender_cpu needs to be cleared before forwarding
+packets.
+
+Fixes a crash in __netdev_pick_tx()
+
+Signed-off-by: Anoob Soman <anoob.soman@citrix.com>
+diff --git a/net/openvswitch/vport.c b/net/openvswitch/vport.c
+index 31cbc8c..a4887e7 100644
+--- a/net/openvswitch/vport.c
++++ b/net/openvswitch/vport.c
+@@ -503,6 +503,7 @@ void ovs_vport_send(struct vport *vport, struct sk_buff *skb)
+ 	}
+ 
+ 	skb->dev = vport->dev;
++	skb_sender_cpu_clear(skb);
+ 	vport->ops->send(skb);
+ 	return;
+ 

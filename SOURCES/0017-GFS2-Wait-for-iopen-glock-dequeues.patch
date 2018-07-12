@@ -1,0 +1,59 @@
+From 86d067a797d4e8546a7c92b985f31e8cd3ec39ad Mon Sep 17 00:00:00 2001
+From: Bob Peterson <rpeterso@redhat.com>
+Date: Mon, 7 Dec 2015 15:10:42 -0600
+Subject: [PATCH 017/170] GFS2: Wait for iopen glock dequeues
+
+This patch changes every glock_dq for iopen glocks into a dq_wait.
+This makes sure that iopen glocks do not outlive the inode itself.
+In turn, that ensures that anyone trying to unlink the glock will
+be able to find the inode when it receives a remote iopen callback.
+
+Signed-off-by: Bob Peterson <rpeterso@redhat.com>
+Acked-by: Steven Whitehouse <swhiteho@redhat.com>
+diff --git a/fs/gfs2/inode.c b/fs/gfs2/inode.c
+index a8ce2e9..bf2af04 100644
+--- a/fs/gfs2/inode.c
++++ b/fs/gfs2/inode.c
+@@ -191,7 +191,8 @@ struct inode *gfs2_inode_lookup(struct super_block *sb, unsigned int type,
+ fail_refresh:
+ 	ip->i_iopen_gh.gh_flags |= GL_NOCACHE;
+ 	ip->i_iopen_gh.gh_gl->gl_object = NULL;
+-	gfs2_glock_dq_uninit(&ip->i_iopen_gh);
++	gfs2_glock_dq_wait(&ip->i_iopen_gh);
++	gfs2_holder_uninit(&ip->i_iopen_gh);
+ fail_iopen:
+ 	if (io_gl)
+ 		gfs2_glock_put(io_gl);
+diff --git a/fs/gfs2/super.c b/fs/gfs2/super.c
+index 1e7da38..4f0708f 100644
+--- a/fs/gfs2/super.c
++++ b/fs/gfs2/super.c
+@@ -1533,7 +1533,8 @@ static void gfs2_evict_inode(struct inode *inode)
+ 	error = gfs2_glock_nq_init(ip->i_gl, LM_ST_EXCLUSIVE, GL_SKIP, &gh);
+ 	if (unlikely(error)) {
+ 		ip->i_iopen_gh.gh_flags |= GL_NOCACHE;
+-		gfs2_glock_dq_uninit(&ip->i_iopen_gh);
++		gfs2_glock_dq_wait(&ip->i_iopen_gh);
++		gfs2_holder_uninit(&ip->i_iopen_gh);
+ 		goto out;
+ 	}
+ 
+@@ -1605,7 +1606,7 @@ out_unlock:
+ 
+ 	if (test_bit(HIF_HOLDER, &ip->i_iopen_gh.gh_iflags)) {
+ 		ip->i_iopen_gh.gh_flags |= GL_NOCACHE;
+-		gfs2_glock_dq(&ip->i_iopen_gh);
++		gfs2_glock_dq_wait(&ip->i_iopen_gh);
+ 	}
+ 	gfs2_holder_uninit(&ip->i_iopen_gh);
+ 	gfs2_glock_dq_uninit(&gh);
+@@ -1626,7 +1627,8 @@ out:
+ 	if (ip->i_iopen_gh.gh_gl) {
+ 		ip->i_iopen_gh.gh_gl->gl_object = NULL;
+ 		ip->i_iopen_gh.gh_flags |= GL_NOCACHE;
+-		gfs2_glock_dq_uninit(&ip->i_iopen_gh);
++		gfs2_glock_dq_wait(&ip->i_iopen_gh);
++		gfs2_holder_uninit(&ip->i_iopen_gh);
+ 	}
+ }
+ 

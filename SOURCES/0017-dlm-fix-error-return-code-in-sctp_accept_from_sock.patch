@@ -1,0 +1,24 @@
+From 26c1ec2fe410ba861f15ebbfc9f44f907a41b6ff Mon Sep 17 00:00:00 2001
+From: Wei Yongjun <weiyongjun1@huawei.com>
+Date: Sat, 22 Oct 2016 14:37:36 +0000
+Subject: [PATCH 17/45] dlm: fix error return code in sctp_accept_from_sock()
+
+Fix to return a negative error code from the error handling
+case instead of 0, as done elsewhere in this function.
+
+Signed-off-by: Wei Yongjun <weiyongjun1@huawei.com>
+Signed-off-by: David Teigland <teigland@redhat.com>
+diff --git a/fs/dlm/lowcomms.c b/fs/dlm/lowcomms.c
+index df680a2..7d398d3 100644
+--- a/fs/dlm/lowcomms.c
++++ b/fs/dlm/lowcomms.c
+@@ -879,7 +879,8 @@ static int sctp_accept_from_sock(struct connection *con)
+ 	}
+ 
+ 	make_sockaddr(&prim.ssp_addr, 0, &addr_len);
+-	if (addr_to_nodeid(&prim.ssp_addr, &nodeid)) {
++	ret = addr_to_nodeid(&prim.ssp_addr, &nodeid);
++	if (ret) {
+ 		unsigned char *b = (unsigned char *)&prim.ssp_addr;
+ 
+ 		log_print("reject connect from unknown addr");

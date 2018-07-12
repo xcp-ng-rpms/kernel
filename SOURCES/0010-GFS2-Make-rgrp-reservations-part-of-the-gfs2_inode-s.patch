@@ -1,0 +1,405 @@
+From a097dc7e24cba7980bc5e2df461a4ef228e97e59 Mon Sep 17 00:00:00 2001
+From: Bob Peterson <rpeterso@redhat.com>
+Date: Thu, 16 Jul 2015 08:28:04 -0500
+Subject: [PATCH 010/170] GFS2: Make rgrp reservations part of the gfs2_inode
+ structure
+
+Before this patch, multi-block reservation structures were allocated
+from a special slab. This patch folds the structure into the gfs2_inode
+structure. The disadvantage is that the gfs2_inode needs more memory,
+even when a file is opened read-only. The advantages are: (a) we don't
+need the special slab and the extra time it takes to allocate and
+deallocate from it. (b) we no longer need to worry that the structure
+exists for things like quota management. (c) This also allows us to
+remove the calls to get_write_access and put_write_access since we
+know the structure will exist.
+
+Signed-off-by: Bob Peterson <rpeterso@redhat.com>
+diff --git a/fs/gfs2/bmap.c b/fs/gfs2/bmap.c
+index 8d46ae4..0860f0b 100644
+--- a/fs/gfs2/bmap.c
++++ b/fs/gfs2/bmap.c
+@@ -787,8 +787,8 @@ static int do_strip(struct gfs2_inode *ip, struct buffer_head *dibh,
+ 	if (error)
+ 		goto out_rlist;
+ 
+-	if (gfs2_rs_active(ip->i_res)) /* needs to be done with the rgrp glock held */
+-		gfs2_rs_deltree(ip->i_res);
++	if (gfs2_rs_active(&ip->i_res)) /* needs to be done with the rgrp glock held */
++		gfs2_rs_deltree(&ip->i_res);
+ 
+ 	error = gfs2_trans_begin(sdp, rg_blocks + RES_DINODE +
+ 				 RES_INDIRECT + RES_STATFS + RES_QUOTA,
+@@ -1291,10 +1291,6 @@ int gfs2_setattr_size(struct inode *inode, u64 newsize)
+ 	if (ret)
+ 		return ret;
+ 
+-	ret = get_write_access(inode);
+-	if (ret)
+-		return ret;
+-
+ 	inode_dio_wait(inode);
+ 
+ 	ret = gfs2_rsqa_alloc(ip);
+@@ -1307,10 +1303,9 @@ int gfs2_setattr_size(struct inode *inode, u64 newsize)
+ 		goto out;
+ 	}
+ 
+-	gfs2_rs_deltree(ip->i_res);
+ 	ret = do_shrink(inode, oldsize, newsize);
+ out:
+-	put_write_access(inode);
++	gfs2_rsqa_delete(ip, NULL);
+ 	return ret;
+ }
+ 
+diff --git a/fs/gfs2/file.c b/fs/gfs2/file.c
+index de001eb..3ead27d 100644
+--- a/fs/gfs2/file.c
++++ b/fs/gfs2/file.c
+@@ -336,8 +336,8 @@ static void gfs2_size_hint(struct file *filep, loff_t offset, size_t size)
+ 	size_t blks = (size + sdp->sd_sb.sb_bsize - 1) >> sdp->sd_sb.sb_bsize_shift;
+ 	int hint = min_t(size_t, INT_MAX, blks);
+ 
+-	if (hint > atomic_read(&ip->i_res->rs_sizehint))
+-		atomic_set(&ip->i_res->rs_sizehint, hint);
++	if (hint > atomic_read(&ip->i_res.rs_sizehint))
++		atomic_set(&ip->i_res.rs_sizehint, hint);
+ }
+ 
+ /**
+@@ -397,13 +397,9 @@ static int gfs2_page_mkwrite(struct vm_area_struct *vma, struct vm_fault *vmf)
+ 	/* Update file times before taking page lock */
+ 	file_update_time(vma->vm_file);
+ 
+-	ret = get_write_access(inode);
+-	if (ret)
+-		goto out;
+-
+ 	ret = gfs2_rsqa_alloc(ip);
+ 	if (ret)
+-		goto out_write_access;
++		goto out;
+ 
+ 	gfs2_size_hint(vma->vm_file, pos, PAGE_CACHE_SIZE);
+ 
+@@ -486,8 +482,6 @@ out_uninit:
+ 		set_page_dirty(page);
+ 		wait_for_stable_page(page);
+ 	}
+-out_write_access:
+-	put_write_access(inode);
+ out:
+ 	sb_end_pagefault(inode->i_sb);
+ 	return block_page_mkwrite_return(ret);
+@@ -944,7 +938,8 @@ static long gfs2_fallocate(struct file *file, int mode, loff_t offset, loff_t le
+ 
+ 	ret = __gfs2_fallocate(file, mode, offset, len);
+ 	if (ret)
+-		gfs2_rs_deltree(ip->i_res);
++		gfs2_rs_deltree(&ip->i_res);
++
+ out_putw:
+ 	put_write_access(inode);
+ out_unlock:
+diff --git a/fs/gfs2/incore.h b/fs/gfs2/incore.h
+index 6a22f66..25d0f12a 100644
+--- a/fs/gfs2/incore.h
++++ b/fs/gfs2/incore.h
+@@ -394,7 +394,7 @@ struct gfs2_inode {
+ 	struct gfs2_holder i_iopen_gh;
+ 	struct gfs2_holder i_gh; /* for prepare/commit_write only */
+ 	struct gfs2_qadata *i_qadata; /* quota allocation data */
+-	struct gfs2_blkreserv *i_res; /* rgrp multi-block reservation */
++	struct gfs2_blkreserv i_res; /* rgrp multi-block reservation */
+ 	struct gfs2_rgrpd *i_rgd;
+ 	u64 i_goal;	/* goal block for allocations */
+ 	struct rw_semaphore i_rw_mutex;
+diff --git a/fs/gfs2/inode.c b/fs/gfs2/inode.c
+index c37e6bf..a8ce2e9 100644
+--- a/fs/gfs2/inode.c
++++ b/fs/gfs2/inode.c
+@@ -1859,10 +1859,6 @@ static int setattr_chown(struct inode *inode, struct iattr *attr)
+ 	if (!(attr->ia_valid & ATTR_GID) || gid_eq(ogid, ngid))
+ 		ogid = ngid = NO_GID_QUOTA_CHANGE;
+ 
+-	error = get_write_access(inode);
+-	if (error)
+-		return error;
+-
+ 	error = gfs2_rsqa_alloc(ip);
+ 	if (error)
+ 		goto out;
+@@ -1903,7 +1899,6 @@ out_end_trans:
+ out_gunlock_q:
+ 	gfs2_quota_unlock(ip);
+ out:
+-	put_write_access(inode);
+ 	return error;
+ }
+ 
+diff --git a/fs/gfs2/main.c b/fs/gfs2/main.c
+index cde5c73..1d709d4 100644
+--- a/fs/gfs2/main.c
++++ b/fs/gfs2/main.c
+@@ -42,7 +42,8 @@ static void gfs2_init_inode_once(void *foo)
+ 	init_rwsem(&ip->i_rw_mutex);
+ 	INIT_LIST_HEAD(&ip->i_trunc_list);
+ 	ip->i_qadata = NULL;
+-	ip->i_res = NULL;
++	memset(&ip->i_res, 0, sizeof(ip->i_res));
++	RB_CLEAR_NODE(&ip->i_res.rs_node);
+ 	ip->i_hash_cache = NULL;
+ }
+ 
+@@ -142,12 +143,6 @@ static int __init init_gfs2_fs(void)
+ 	if (!gfs2_qadata_cachep)
+ 		goto fail;
+ 
+-	gfs2_rsrv_cachep = kmem_cache_create("gfs2_mblk",
+-					     sizeof(struct gfs2_blkreserv),
+-					       0, 0, NULL);
+-	if (!gfs2_rsrv_cachep)
+-		goto fail;
+-
+ 	register_shrinker(&gfs2_qd_shrinker);
+ 
+ 	error = register_filesystem(&gfs2_fs_type);
+@@ -200,9 +195,6 @@ fail_lru:
+ 	unregister_shrinker(&gfs2_qd_shrinker);
+ 	gfs2_glock_exit();
+ 
+-	if (gfs2_rsrv_cachep)
+-		kmem_cache_destroy(gfs2_rsrv_cachep);
+-
+ 	if (gfs2_qadata_cachep)
+ 		kmem_cache_destroy(gfs2_qadata_cachep);
+ 
+@@ -248,7 +240,6 @@ static void __exit exit_gfs2_fs(void)
+ 	rcu_barrier();
+ 
+ 	mempool_destroy(gfs2_page_pool);
+-	kmem_cache_destroy(gfs2_rsrv_cachep);
+ 	kmem_cache_destroy(gfs2_qadata_cachep);
+ 	kmem_cache_destroy(gfs2_quotad_cachep);
+ 	kmem_cache_destroy(gfs2_rgrpd_cachep);
+diff --git a/fs/gfs2/quota.c b/fs/gfs2/quota.c
+index b845efd..63a72109 100644
+--- a/fs/gfs2/quota.c
++++ b/fs/gfs2/quota.c
+@@ -550,10 +550,10 @@ int gfs2_qa_alloc(struct gfs2_inode *ip)
+ 	return error;
+ }
+ 
+-void gfs2_qa_delete(struct gfs2_inode *ip)
++void gfs2_qa_delete(struct gfs2_inode *ip, atomic_t *wcount)
+ {
+ 	down_write(&ip->i_rw_mutex);
+-	if (ip->i_qadata) {
++	if (ip->i_qadata && ((wcount == NULL) || (atomic_read(wcount) <= 1))) {
+ 		kmem_cache_free(gfs2_qadata_cachep, ip->i_qadata);
+ 		ip->i_qadata = NULL;
+ 	}
+diff --git a/fs/gfs2/quota.h b/fs/gfs2/quota.h
+index 1940dd9..5e47c93 100644
+--- a/fs/gfs2/quota.h
++++ b/fs/gfs2/quota.h
+@@ -19,7 +19,7 @@ struct gfs2_sbd;
+ #define NO_GID_QUOTA_CHANGE INVALID_GID
+ 
+ extern int gfs2_qa_alloc(struct gfs2_inode *ip);
+-extern void gfs2_qa_delete(struct gfs2_inode *ip);
++extern void gfs2_qa_delete(struct gfs2_inode *ip, atomic_t *wcount);
+ extern int gfs2_quota_hold(struct gfs2_inode *ip, kuid_t uid, kgid_t gid);
+ extern void gfs2_quota_unhold(struct gfs2_inode *ip);
+ 
+diff --git a/fs/gfs2/rgrp.c b/fs/gfs2/rgrp.c
+index cb30748..b879925 100644
+--- a/fs/gfs2/rgrp.c
++++ b/fs/gfs2/rgrp.c
+@@ -602,28 +602,7 @@ void gfs2_free_clones(struct gfs2_rgrpd *rgd)
+  */
+ int gfs2_rsqa_alloc(struct gfs2_inode *ip)
+ {
+-	int error = 0;
+-
+-	down_write(&ip->i_rw_mutex);
+-	if (ip->i_res)
+-		goto out;
+-
+-	ip->i_res = kmem_cache_zalloc(gfs2_rsrv_cachep, GFP_NOFS);
+-	if (!ip->i_res) {
+-		error = -ENOMEM;
+-		goto out;
+-	}
+-
+-	RB_CLEAR_NODE(&ip->i_res->rs_node);
+-	error = gfs2_qa_alloc(ip);
+-	if (error) {
+-		kmem_cache_free(gfs2_rsrv_cachep, ip->i_res);
+-		ip->i_res = NULL;
+-	}
+-
+-out:
+-	up_write(&ip->i_rw_mutex);
+-	return error;
++	return gfs2_qa_alloc(ip);
+ }
+ 
+ static void dump_rs(struct seq_file *seq, const struct gfs2_blkreserv *rs)
+@@ -693,15 +672,12 @@ void gfs2_rs_deltree(struct gfs2_blkreserv *rs)
+ void gfs2_rsqa_delete(struct gfs2_inode *ip, atomic_t *wcount)
+ {
+ 	down_write(&ip->i_rw_mutex);
+-	if (ip->i_res && ((wcount == NULL) || (atomic_read(wcount) <= 1))) {
+-		gfs2_rs_deltree(ip->i_res);
+-		BUG_ON(ip->i_res->rs_free);
+-		kmem_cache_free(gfs2_rsrv_cachep, ip->i_res);
+-		ip->i_res = NULL;
+-
+-		gfs2_qa_delete(ip);
++	if ((wcount == NULL) || (atomic_read(wcount) <= 1)) {
++		gfs2_rs_deltree(&ip->i_res);
++		BUG_ON(ip->i_res.rs_free);
+ 	}
+ 	up_write(&ip->i_rw_mutex);
++	gfs2_qa_delete(ip, wcount);
+ }
+ 
+ /**
+@@ -1465,7 +1441,7 @@ static void rs_insert(struct gfs2_inode *ip)
+ {
+ 	struct rb_node **newn, *parent = NULL;
+ 	int rc;
+-	struct gfs2_blkreserv *rs = ip->i_res;
++	struct gfs2_blkreserv *rs = &ip->i_res;
+ 	struct gfs2_rgrpd *rgd = rs->rs_rbm.rgd;
+ 	u64 fsblock = gfs2_rbm_to_block(&rs->rs_rbm);
+ 
+@@ -1512,7 +1488,7 @@ static void rg_mblk_search(struct gfs2_rgrpd *rgd, struct gfs2_inode *ip,
+ {
+ 	struct gfs2_rbm rbm = { .rgd = rgd, };
+ 	u64 goal;
+-	struct gfs2_blkreserv *rs = ip->i_res;
++	struct gfs2_blkreserv *rs = &ip->i_res;
+ 	u32 extlen;
+ 	u32 free_blocks = rgd->rd_free_clone - rgd->rd_reserved;
+ 	int ret;
+@@ -1583,7 +1559,7 @@ static u64 gfs2_next_unreserved_block(struct gfs2_rgrpd *rgd, u64 block,
+ 	}
+ 
+ 	if (n) {
+-		while ((rs_cmp(block, length, rs) == 0) && (ip->i_res != rs)) {
++		while ((rs_cmp(block, length, rs) == 0) && (&ip->i_res != rs)) {
+ 			block = gfs2_rbm_to_block(&rs->rs_rbm) + rs->rs_free;
+ 			n = n->rb_right;
+ 			if (n == NULL)
+@@ -1993,7 +1969,7 @@ int gfs2_inplace_reserve(struct gfs2_inode *ip, struct gfs2_alloc_parms *ap)
+ {
+ 	struct gfs2_sbd *sdp = GFS2_SB(&ip->i_inode);
+ 	struct gfs2_rgrpd *begin = NULL;
+-	struct gfs2_blkreserv *rs = ip->i_res;
++	struct gfs2_blkreserv *rs = &ip->i_res;
+ 	int error = 0, rg_locked, flags = 0;
+ 	u64 last_unlinked = NO_BLOCK;
+ 	int loops = 0;
+@@ -2122,7 +2098,7 @@ next_rgrp:
+ 
+ void gfs2_inplace_release(struct gfs2_inode *ip)
+ {
+-	struct gfs2_blkreserv *rs = ip->i_res;
++	struct gfs2_blkreserv *rs = &ip->i_res;
+ 
+ 	if (rs->rs_rgd_gh.gh_gl)
+ 		gfs2_glock_dq_uninit(&rs->rs_rgd_gh);
+@@ -2276,7 +2252,7 @@ static void gfs2_rgrp_error(struct gfs2_rgrpd *rgd)
+ static void gfs2_adjust_reservation(struct gfs2_inode *ip,
+ 				    const struct gfs2_rbm *rbm, unsigned len)
+ {
+-	struct gfs2_blkreserv *rs = ip->i_res;
++	struct gfs2_blkreserv *rs = &ip->i_res;
+ 	struct gfs2_rgrpd *rgd = rbm->rgd;
+ 	unsigned rlen;
+ 	u64 block;
+@@ -2319,8 +2295,8 @@ static void gfs2_set_alloc_start(struct gfs2_rbm *rbm,
+ {
+ 	u64 goal;
+ 
+-	if (gfs2_rs_active(ip->i_res)) {
+-		*rbm = ip->i_res->rs_rbm;
++	if (gfs2_rs_active(&ip->i_res)) {
++		*rbm = ip->i_res.rs_rbm;
+ 		return;
+ 	}
+ 
+@@ -2374,7 +2350,7 @@ int gfs2_alloc_blocks(struct gfs2_inode *ip, u64 *bn, unsigned int *nblocks,
+ 	gfs2_alloc_extent(&rbm, dinode, nblocks);
+ 	block = gfs2_rbm_to_block(&rbm);
+ 	rbm.rgd->rd_last_alloc = block - rbm.rgd->rd_data0;
+-	if (gfs2_rs_active(ip->i_res))
++	if (gfs2_rs_active(&ip->i_res))
+ 		gfs2_adjust_reservation(ip, &rbm, *nblocks);
+ 	ndata = *nblocks;
+ 	if (dinode)
+diff --git a/fs/gfs2/rgrp.h b/fs/gfs2/rgrp.h
+index 06bbefa..66b51cf 100644
+--- a/fs/gfs2/rgrp.h
++++ b/fs/gfs2/rgrp.h
+@@ -78,7 +78,7 @@ extern int gfs2_rgrp_send_discards(struct gfs2_sbd *sdp, u64 offset,
+ extern int gfs2_fitrim(struct file *filp, void __user *argp);
+ 
+ /* This is how to tell if a reservation is in the rgrp tree: */
+-static inline bool gfs2_rs_active(struct gfs2_blkreserv *rs)
++static inline bool gfs2_rs_active(const struct gfs2_blkreserv *rs)
+ {
+ 	return rs && !RB_EMPTY_NODE(&rs->rs_node);
+ }
+diff --git a/fs/gfs2/super.c b/fs/gfs2/super.c
+index b030ca2..64f03c8 100644
+--- a/fs/gfs2/super.c
++++ b/fs/gfs2/super.c
+@@ -1593,8 +1593,8 @@ out_truncate:
+ 
+ out_unlock:
+ 	/* Error path for case 1 */
+-	if (gfs2_rs_active(ip->i_res))
+-		gfs2_rs_deltree(ip->i_res);
++	if (gfs2_rs_active(&ip->i_res))
++		gfs2_rs_deltree(&ip->i_res);
+ 
+ 	if (test_bit(HIF_HOLDER, &ip->i_iopen_gh.gh_iflags)) {
+ 		ip->i_iopen_gh.gh_flags |= GL_NOCACHE;
+@@ -1632,7 +1632,8 @@ static struct inode *gfs2_alloc_inode(struct super_block *sb)
+ 		ip->i_flags = 0;
+ 		ip->i_gl = NULL;
+ 		ip->i_rgd = NULL;
+-		ip->i_res = NULL;
++		memset(&ip->i_res, 0, sizeof(ip->i_res));
++		RB_CLEAR_NODE(&ip->i_res.rs_node);
+ 		ip->i_rahead = 0;
+ 	}
+ 	return &ip->i_inode;
+diff --git a/fs/gfs2/util.c b/fs/gfs2/util.c
+index 3b4819d..cf64583 100644
+--- a/fs/gfs2/util.c
++++ b/fs/gfs2/util.c
+@@ -28,7 +28,6 @@ struct kmem_cache *gfs2_bufdata_cachep __read_mostly;
+ struct kmem_cache *gfs2_rgrpd_cachep __read_mostly;
+ struct kmem_cache *gfs2_quotad_cachep __read_mostly;
+ struct kmem_cache *gfs2_qadata_cachep __read_mostly;
+-struct kmem_cache *gfs2_rsrv_cachep __read_mostly;
+ mempool_t *gfs2_page_pool __read_mostly;
+ 
+ void gfs2_assert_i(struct gfs2_sbd *sdp)
+diff --git a/fs/gfs2/util.h b/fs/gfs2/util.h
+index 9edbcc9..c81295f 100644
+--- a/fs/gfs2/util.h
++++ b/fs/gfs2/util.h
+@@ -150,7 +150,6 @@ extern struct kmem_cache *gfs2_bufdata_cachep;
+ extern struct kmem_cache *gfs2_rgrpd_cachep;
+ extern struct kmem_cache *gfs2_quotad_cachep;
+ extern struct kmem_cache *gfs2_qadata_cachep;
+-extern struct kmem_cache *gfs2_rsrv_cachep;
+ extern mempool_t *gfs2_page_pool;
+ 
+ static inline unsigned int gfs2_tune_get_i(struct gfs2_tune *gt,

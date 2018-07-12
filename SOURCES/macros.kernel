@@ -1,0 +1,19 @@
+%regenerate_initrd_post() \
+> %{_localstatedir}/lib/rpm-state/regenerate-initrd-%{kernel_version} \
+%{nil}
+
+%regenerate_initrd_postun() \
+if [ $1 -eq 0 ]; then \
+    dracut -f /boot/initrd-%{kernel_version}.img %{kernel_version} \
+else \
+    > %{_localstatedir}/lib/rpm-state/regenerate-initrd-%{kernel_version} \
+fi \
+%{nil}
+
+%regenerate_initrd_posttrans() \
+if [ -e %{_localstatedir}/lib/rpm-state/regenerate-initrd-%{kernel_version} ]; then \
+    rm %{_localstatedir}/lib/rpm-state/regenerate-initrd-%{kernel_version} \
+    dracut -f /boot/initrd-%{kernel_version}.img %{kernel_version} \
+    udevadm trigger --attr-nomatch=driver && udevadm settle -t 30 \
+fi \
+%{nil}

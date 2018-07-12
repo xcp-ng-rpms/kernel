@@ -1,0 +1,43 @@
+From ed17545d01e4a40086f1622c88ce64cc0241cfc2 Mon Sep 17 00:00:00 2001
+From: Bob Peterson <rpeterso@redhat.com>
+Date: Fri, 5 May 2017 09:43:02 -0500
+Subject: [PATCH 118/170] GFS2: Allow glocks to be unlocked after withdraw
+
+This bug fixes a regression introduced by patch 0d1c7ae9d8.
+
+The intent of the patch was to stop promoting glocks after a
+file system is withdrawn due to a variety of errors, because doing
+so results in a BUG(). (You should be able to unmount after a
+withdraw rather than having the kernel panic.)
+
+Unfortunately, it also stopped demotions, so glocks could not be
+unlocked after withdraw, which means the unmount would hang.
+
+This patch allows function do_xmote to demote locks to an
+unlocked state after a withdraw, but not promote them.
+
+Signed-off-by: Bob Peterson <rpeterso@redhat.com>
+diff --git a/fs/gfs2/glock.c b/fs/gfs2/glock.c
+index 8744911..1fd8020 100644
+--- a/fs/gfs2/glock.c
++++ b/fs/gfs2/glock.c
+@@ -449,7 +449,8 @@ __acquires(&gl->gl_lockref.lock)
+ 	unsigned int lck_flags = (unsigned int)(gh ? gh->gh_flags : 0);
+ 	int ret;
+ 
+-	if (unlikely(test_bit(SDF_SHUTDOWN, &sdp->sd_flags)))
++	if (unlikely(test_bit(SDF_SHUTDOWN, &sdp->sd_flags)) &&
++	    target != LM_ST_UNLOCKED)
+ 		return;
+ 	lck_flags &= (LM_FLAG_TRY | LM_FLAG_TRY_1CB | LM_FLAG_NOEXP |
+ 		      LM_FLAG_PRIORITY);
+@@ -486,7 +487,8 @@ __acquires(&gl->gl_lockref.lock)
+ 		}
+ 		else if (ret) {
+ 			pr_err("lm_lock ret %d\n", ret);
+-			GLOCK_BUG_ON(gl, 1);
++			GLOCK_BUG_ON(gl, !test_bit(SDF_SHUTDOWN,
++						   &sdp->sd_flags));
+ 		}
+ 	} else { /* lock_nolock */
+ 		finish_xmote(gl, target);

@@ -1,0 +1,47 @@
+From 3dd1dd8c696bdb7c8dcc9456cb23558ad1b336b8 Mon Sep 17 00:00:00 2001
+From: Andrew Price <anprice@redhat.com>
+Date: Thu, 12 Nov 2015 14:07:52 -0600
+Subject: [PATCH 003/170] GFS2: Use rht_for_each_entry_rcu in glock_hash_walk
+
+This lockdep splat was being triggered on umount:
+
+[55715.973122] ===============================
+[55715.980169] [ INFO: suspicious RCU usage. ]
+[55715.981021] 4.3.0-11553-g8d3de01-dirty #15 Tainted: G        W
+[55715.982353] -------------------------------
+[55715.983301] fs/gfs2/glock.c:1427 suspicious rcu_dereference_protected() usage!
+
+The code it refers to is the rht_for_each_entry_safe usage in
+glock_hash_walk. The condition that triggers the warning is
+lockdep_rht_bucket_is_held(tbl, hash) which is checked in the
+__rcu_dereference_protected macro.
+
+The rhashtable buckets are not changed in glock_hash_walk so it's safe
+to rely on the rcu protection. Replace the rht_for_each_entry_safe()
+usage with rht_for_each_entry_rcu(), which doesn't care whether the
+bucket lock is held if the rcu read lock is held.
+
+Signed-off-by: Andrew Price <anprice@redhat.com>
+Signed-off-by: Bob Peterson <rpeterso@redhat.com>
+Acked-by: Steven Whitehouse <swhiteho@redhat.com>
+diff --git a/fs/gfs2/glock.c b/fs/gfs2/glock.c
+index 32e7471..430326e 100644
+--- a/fs/gfs2/glock.c
++++ b/fs/gfs2/glock.c
+@@ -1417,14 +1417,14 @@ static struct shrinker glock_shrinker = {
+ static void glock_hash_walk(glock_examiner examiner, const struct gfs2_sbd *sdp)
+ {
+ 	struct gfs2_glock *gl;
+-	struct rhash_head *pos, *next;
++	struct rhash_head *pos;
+ 	const struct bucket_table *tbl;
+ 	int i;
+ 
+ 	rcu_read_lock();
+ 	tbl = rht_dereference_rcu(gl_hash_table.tbl, &gl_hash_table);
+ 	for (i = 0; i < tbl->size; i++) {
+-		rht_for_each_entry_safe(gl, pos, next, tbl, i, gl_node) {
++		rht_for_each_entry_rcu(gl, pos, tbl, i, gl_node) {
+ 			if ((gl->gl_name.ln_sbd == sdp) &&
+ 			    lockref_get_not_dead(&gl->gl_lockref))
+ 				examiner(gl);

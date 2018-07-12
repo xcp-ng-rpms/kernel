@@ -1,0 +1,65 @@
+From aacee72061a352d52ef9d3854f8db3b86b93ea16 Mon Sep 17 00:00:00 2001
+From: Bob Peterson <rpeterso@redhat.com>
+Date: Mon, 30 Jan 2017 11:51:21 -0500
+Subject: [PATCH 097/170] GFS2: Reduce contention on gfs2_log_lock
+
+This patch modifies functions gfs2_trans_add_meta and _data so that
+they check whether the buffer_head is already in a transaction,
+and if so, avoid taking the gfs2_log_lock.
+
+Signed-off-by: Bob Peterson <rpeterso@redhat.com>
+diff --git a/fs/gfs2/trans.c b/fs/gfs2/trans.c
+index 483c5a7..affef3c 100644
+--- a/fs/gfs2/trans.c
++++ b/fs/gfs2/trans.c
+@@ -170,6 +170,10 @@ void gfs2_trans_add_data(struct gfs2_glock *gl, struct buffer_head *bh)
+ 	}
+ 
+ 	lock_buffer(bh);
++	if (buffer_pinned(bh)) {
++		set_bit(TR_TOUCHED, &tr->tr_flags);
++		goto out;
++	}
+ 	gfs2_log_lock(sdp);
+ 	bd = bh->b_private;
+ 	if (bd == NULL) {
+@@ -192,6 +196,7 @@ void gfs2_trans_add_data(struct gfs2_glock *gl, struct buffer_head *bh)
+ 		list_add_tail(&bd->bd_list, &tr->tr_databuf);
+ 	}
+ 	gfs2_log_unlock(sdp);
++out:
+ 	unlock_buffer(bh);
+ }
+ 
+@@ -201,10 +206,14 @@ void gfs2_trans_add_meta(struct gfs2_glock *gl, struct buffer_head *bh)
+ 	struct gfs2_sbd *sdp = gl->gl_name.ln_sbd;
+ 	struct gfs2_bufdata *bd;
+ 	struct gfs2_meta_header *mh;
+-	struct gfs2_trans *tr;
++	struct gfs2_trans *tr = current->journal_info;
+ 	enum gfs2_freeze_state state = atomic_read(&sdp->sd_freeze_state);
+ 
+ 	lock_buffer(bh);
++	if (buffer_pinned(bh)) {
++		set_bit(TR_TOUCHED, &tr->tr_flags);
++		goto out;
++	}
+ 	gfs2_log_lock(sdp);
+ 	bd = bh->b_private;
+ 	if (bd == NULL) {
+@@ -220,7 +229,6 @@ void gfs2_trans_add_meta(struct gfs2_glock *gl, struct buffer_head *bh)
+ 		gfs2_log_lock(sdp);
+ 	}
+ 	gfs2_assert(sdp, bd->bd_gl == gl);
+-	tr = current->journal_info;
+ 	set_bit(TR_TOUCHED, &tr->tr_flags);
+ 	if (!list_empty(&bd->bd_list))
+ 		goto out_unlock;
+@@ -243,6 +251,7 @@ void gfs2_trans_add_meta(struct gfs2_glock *gl, struct buffer_head *bh)
+ 	tr->tr_num_buf_new++;
+ out_unlock:
+ 	gfs2_log_unlock(sdp);
++out:
+ 	unlock_buffer(bh);
+ }
+ 

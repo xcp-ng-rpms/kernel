@@ -1,0 +1,27 @@
+From 5ea31bc0a6524b4fee8dc9ae8005d4a114a79812 Mon Sep 17 00:00:00 2001
+From: Bob Peterson <rpeterso@redhat.com>
+Date: Fri, 4 Dec 2015 12:57:00 -0600
+Subject: [PATCH 020/170] GFS2: Always use iopen glock for gl_deletes
+
+Before this patch, when function try_rgrp_unlink queued a glock for
+delete_work to reclaim the space, it used the inode glock to do so.
+That's different from the iopen callback which uses the iopen glock
+for the same purpose. We should be consistent and always use the
+iopen glock. This may also save us reference counting problems with
+the inode glock, since clear_glock does an extra glock_put() for the
+inode glock.
+
+Signed-off-by: Bob Peterson <rpeterso@redhat.com>
+diff --git a/fs/gfs2/rgrp.c b/fs/gfs2/rgrp.c
+index b879925..07c0265 100644
+--- a/fs/gfs2/rgrp.c
++++ b/fs/gfs2/rgrp.c
+@@ -1789,7 +1789,7 @@ static void try_rgrp_unlink(struct gfs2_rgrpd *rgd, u64 *last_unlinked, u64 skip
+ 			continue;
+ 		*last_unlinked = block;
+ 
+-		error = gfs2_glock_get(sdp, block, &gfs2_inode_glops, CREATE, &gl);
++		error = gfs2_glock_get(sdp, block, &gfs2_iopen_glops, CREATE, &gl);
+ 		if (error)
+ 			continue;
+ 

@@ -1,0 +1,43 @@
+From 5b825c3af1d8a0af4deb4a5eb349d0d0050c62e5 Mon Sep 17 00:00:00 2001
+From: Ingo Molnar <mingo@kernel.org>
+Date: Thu, 2 Feb 2017 17:54:15 +0100
+Subject: [PATCH 103/170] sched/headers: Prepare to remove <linux/cred.h>
+ inclusion from <linux/sched.h>
+
+Add #include <linux/cred.h> dependencies to all .c files rely on sched.h
+doing that for them.
+
+Note that even if the count where we need to add extra headers seems high,
+it's still a net win, because <linux/sched.h> is included in over
+2,200 files ...
+
+Acked-by: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: Mike Galbraith <efault@gmx.de>
+Cc: Peter Zijlstra <peterz@infradead.org>
+Cc: Thomas Gleixner <tglx@linutronix.de>
+Cc: linux-kernel@vger.kernel.org
+Signed-off-by: Ingo Molnar <mingo@kernel.org>
+diff --git a/fs/gfs2/inode.c b/fs/gfs2/inode.c
+index 5c39a98..d84963d 100644
+--- a/fs/gfs2/inode.c
++++ b/fs/gfs2/inode.c
+@@ -13,6 +13,7 @@
+ #include <linux/buffer_head.h>
+ #include <linux/namei.h>
+ #include <linux/mm.h>
++#include <linux/cred.h>
+ #include <linux/xattr.h>
+ #include <linux/posix_acl.h>
+ #include <linux/gfs2_ondisk.h>
+diff --git a/fs/gfs2/sys.c b/fs/gfs2/sys.c
+index f8d30e4..7a51534 100644
+--- a/fs/gfs2/sys.c
++++ b/fs/gfs2/sys.c
+@@ -10,6 +10,7 @@
+ #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
+ 
+ #include <linux/sched.h>
++#include <linux/cred.h>
+ #include <linux/spinlock.h>
+ #include <linux/completion.h>
+ #include <linux/buffer_head.h>

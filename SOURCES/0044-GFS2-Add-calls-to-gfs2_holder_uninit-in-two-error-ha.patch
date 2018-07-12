@@ -1,0 +1,53 @@
+From 9c7fe83530a351845719acf1dda0587e8c743588 Mon Sep 17 00:00:00 2001
+From: Daniel DeFreez <dcdefreez@ucdavis.edu>
+Date: Tue, 19 Apr 2016 19:57:45 -0400
+Subject: [PATCH 044/170] GFS2: Add calls to gfs2_holder_uninit in two error
+ handlers
+
+This patch fixes two locations that do not call gfs2_holder_uninit
+if gfs2_glock_nq returns an error.
+
+Signed-off-by: Daniel DeFreez <dcdefreez@ucdavis.edu>
+Signed-off-by: Bob Peterson <rpeterso@redhat.com>
+diff --git a/fs/gfs2/aops.c b/fs/gfs2/aops.c
+index 1bbbee9..68100df 100644
+--- a/fs/gfs2/aops.c
++++ b/fs/gfs2/aops.c
+@@ -1063,7 +1063,7 @@ static ssize_t gfs2_direct_IO(struct kiocb *iocb, struct iov_iter *iter,
+ 	gfs2_holder_init(ip->i_gl, LM_ST_DEFERRED, 0, &gh);
+ 	rv = gfs2_glock_nq(&gh);
+ 	if (rv)
+-		return rv;
++		goto out_uninit;
+ 	rv = gfs2_ok_for_dio(ip, offset);
+ 	if (rv != 1)
+ 		goto out; /* dio not valid, fall back to buffered i/o */
+@@ -1102,6 +1102,7 @@ static ssize_t gfs2_direct_IO(struct kiocb *iocb, struct iov_iter *iter,
+ 				  offset, gfs2_get_block_direct, NULL, NULL, 0);
+ out:
+ 	gfs2_glock_dq(&gh);
++out_uninit:
+ 	gfs2_holder_uninit(&gh);
+ 	return rv;
+ }
+diff --git a/fs/gfs2/file.c b/fs/gfs2/file.c
+index 1a9beb7..3f27ab2 100644
+--- a/fs/gfs2/file.c
++++ b/fs/gfs2/file.c
+@@ -160,7 +160,7 @@ static int gfs2_get_flags(struct file *filp, u32 __user *ptr)
+ 	gfs2_holder_init(ip->i_gl, LM_ST_SHARED, 0, &gh);
+ 	error = gfs2_glock_nq(&gh);
+ 	if (error)
+-		return error;
++		goto out_uninit;
+ 
+ 	fsflags = fsflags_cvt(gfs2_to_fsflags, ip->i_diskflags);
+ 	if (!S_ISDIR(inode->i_mode) && ip->i_diskflags & GFS2_DIF_JDATA)
+@@ -169,6 +169,7 @@ static int gfs2_get_flags(struct file *filp, u32 __user *ptr)
+ 		error = -EFAULT;
+ 
+ 	gfs2_glock_dq(&gh);
++out_uninit:
+ 	gfs2_holder_uninit(&gh);
+ 	return error;
+ }

@@ -1,0 +1,80 @@
+From 7cad1bac96d381d953b47695f6602b4e2480aa5d Mon Sep 17 00:00:00 2001
+From: David Decotigny <decot@googlers.com>
+Date: Wed, 24 Feb 2016 10:58:10 -0800
+Subject: [PATCH 13/13] net: core: use __ethtool_get_ksettings
+
+Signed-off-by: David Decotigny <decot@googlers.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+diff --git a/net/core/net-sysfs.c b/net/core/net-sysfs.c
+index f88a62a..cf270b1 100644
+--- a/net/core/net-sysfs.c
++++ b/net/core/net-sysfs.c
+@@ -199,9 +199,10 @@ static ssize_t speed_show(struct device *dev,
+ 		return restart_syscall();
+ 
+ 	if (netif_running(netdev)) {
+-		struct ethtool_cmd cmd;
+-		if (!__ethtool_get_settings(netdev, &cmd))
+-			ret = sprintf(buf, fmt_dec, ethtool_cmd_speed(&cmd));
++		struct ethtool_link_ksettings cmd;
++
++		if (!__ethtool_get_link_ksettings(netdev, &cmd))
++			ret = sprintf(buf, fmt_dec, cmd.base.speed);
+ 	}
+ 	rtnl_unlock();
+ 	return ret;
+@@ -218,10 +219,12 @@ static ssize_t duplex_show(struct device *dev,
+ 		return restart_syscall();
+ 
+ 	if (netif_running(netdev)) {
+-		struct ethtool_cmd cmd;
+-		if (!__ethtool_get_settings(netdev, &cmd)) {
++		struct ethtool_link_ksettings cmd;
++
++		if (!__ethtool_get_link_ksettings(netdev, &cmd)) {
+ 			const char *duplex;
+-			switch (cmd.duplex) {
++
++			switch (cmd.base.duplex) {
+ 			case DUPLEX_HALF:
+ 				duplex = "half";
+ 				break;
+diff --git a/net/packet/af_packet.c b/net/packet/af_packet.c
+index d805cd5..1fd9f41 100644
+--- a/net/packet/af_packet.c
++++ b/net/packet/af_packet.c
+@@ -556,9 +556,8 @@ static int prb_calc_retire_blk_tmo(struct packet_sock *po,
+ {
+ 	struct net_device *dev;
+ 	unsigned int mbits = 0, msec = 0, div = 0, tmo = 0;
+-	struct ethtool_cmd ecmd;
++	struct ethtool_link_ksettings ecmd;
+ 	int err;
+-	u32 speed;
+ 
+ 	rtnl_lock();
+ 	dev = __dev_get_by_index(sock_net(&po->sk), po->ifindex);
+@@ -566,19 +565,19 @@ static int prb_calc_retire_blk_tmo(struct packet_sock *po,
+ 		rtnl_unlock();
+ 		return DEFAULT_PRB_RETIRE_TOV;
+ 	}
+-	err = __ethtool_get_settings(dev, &ecmd);
+-	speed = ethtool_cmd_speed(&ecmd);
++	err = __ethtool_get_link_ksettings(dev, &ecmd);
+ 	rtnl_unlock();
+ 	if (!err) {
+ 		/*
+ 		 * If the link speed is so slow you don't really
+ 		 * need to worry about perf anyways
+ 		 */
+-		if (speed < SPEED_1000 || speed == SPEED_UNKNOWN) {
++		if (ecmd.base.speed < SPEED_1000 ||
++		    ecmd.base.speed == SPEED_UNKNOWN) {
+ 			return DEFAULT_PRB_RETIRE_TOV;
+ 		} else {
+ 			msec = 1;
+-			div = speed / 1000;
++			div = ecmd.base.speed / 1000;
+ 		}
+ 	}
+ 

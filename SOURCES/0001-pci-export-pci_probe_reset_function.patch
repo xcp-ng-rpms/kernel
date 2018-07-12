@@ -1,0 +1,45 @@
+From a6ae082ce8b66f899a237f3288873dcae77fdf23 Mon Sep 17 00:00:00 2001
+From: David Vrabel <david.vrabel@citrix.com>
+Date: Thu, 10 Jul 2014 13:10:04 +0100
+Subject: [PATCH] pci: export pci_probe_reset_function()
+
+The xen-pciback needs to test if a per-function reset is available so
+it can provide an interface for a safe bus reset instead.
+
+Signed-off-by: David Vrabel <david.vrabel@citrix.com>
+diff --git a/drivers/pci/pci.c b/drivers/pci/pci.c
+index 42d8617..0df64ff 100644
+--- a/drivers/pci/pci.c
++++ b/drivers/pci/pci.c
+@@ -3781,6 +3781,7 @@ int pci_probe_reset_function(struct pci_dev *dev)
+ {
+ 	return pci_dev_reset(dev, 1);
+ }
++EXPORT_SYMBOL_GPL(pci_probe_reset_function);
+ 
+ /**
+  * pci_reset_function - quiesce and reset a PCI device function
+diff --git a/drivers/pci/pci.h b/drivers/pci/pci.h
+index d390fc1..1a75f2c 100644
+--- a/drivers/pci/pci.h
++++ b/drivers/pci/pci.h
+@@ -32,7 +32,6 @@ enum pci_mmap_api {
+ int pci_mmap_fits(struct pci_dev *pdev, int resno, struct vm_area_struct *vmai,
+ 		  enum pci_mmap_api mmap_api);
+ #endif
+-int pci_probe_reset_function(struct pci_dev *dev);
+ 
+ /**
+  * struct pci_platform_pm_ops - Firmware PM callbacks
+diff --git a/include/linux/pci.h b/include/linux/pci.h
+index e89c7ee..7d9d0b1 100644
+--- a/include/linux/pci.h
++++ b/include/linux/pci.h
+@@ -1018,6 +1018,7 @@ int pcie_get_mps(struct pci_dev *dev);
+ int pcie_set_mps(struct pci_dev *dev, int mps);
+ int pcie_get_minimum_link(struct pci_dev *dev, enum pci_bus_speed *speed,
+ 			  enum pcie_link_width *width);
++int pci_probe_reset_function(struct pci_dev *dev);
+ int __pci_reset_function(struct pci_dev *dev);
+ int __pci_reset_function_locked(struct pci_dev *dev);
+ int pci_reset_function(struct pci_dev *dev);

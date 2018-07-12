@@ -1,0 +1,27 @@
+From 3b0e761ba83cb063eb95734faece35378beebac4 Mon Sep 17 00:00:00 2001
+From: Zhu Lingshan <lszhu@suse.com>
+Date: Tue, 11 Jul 2017 09:26:55 -0500
+Subject: [PATCH 39/45] dlm: print log message when cluster name is not set
+
+Print a message when a cluster name is not specified by
+the caller.  In this case the cluster name configured
+for the dlm is used without any validation that it is
+the cluster expected by the application.
+
+Signed-off-by: Zhu Lingshan <lszhu@suse.com>
+Signed-off-by: David Teigland <teigland@redhat.com>
+diff --git a/fs/dlm/lockspace.c b/fs/dlm/lockspace.c
+index 3233416..9ebfa05 100644
+--- a/fs/dlm/lockspace.c
++++ b/fs/dlm/lockspace.c
+@@ -453,6 +453,10 @@ static int new_lockspace(const char *name, const char *cluster,
+ 			*ops_result = 0;
+ 	}
+ 
++	if (!cluster)
++		log_print("dlm cluster name '%s' is being used without an application provided cluster name",
++			  dlm_config.ci_cluster_name);
++
+ 	if (dlm_config.ci_recover_callbacks && cluster &&
+ 	    strncmp(cluster, dlm_config.ci_cluster_name, DLM_LOCKSPACE_LEN)) {
+ 		log_print("dlm cluster name '%s' does not match "

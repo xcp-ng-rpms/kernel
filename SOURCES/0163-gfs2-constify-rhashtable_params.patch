@@ -1,0 +1,25 @@
+From d296b15ed58231bd991c0fb0f3592d595539bcd1 Mon Sep 17 00:00:00 2001
+From: Arvind Yadav <arvind.yadav.cs@gmail.com>
+Date: Wed, 30 Aug 2017 07:50:03 -0500
+Subject: [PATCH 163/170] gfs2: constify rhashtable_params
+
+rhashtable_params are not supposed to change at runtime. All
+Functions rhashtable_* working with const rhashtable_params
+provided by <linux/rhashtable.h>. So mark the non-const structs
+as const.
+
+Signed-off-by: Arvind Yadav <arvind.yadav.cs@gmail.com>
+Signed-off-by: Bob Peterson <rpeterso@redhat.com>
+diff --git a/fs/gfs2/glock.c b/fs/gfs2/glock.c
+index 54c7234..ddae8c6 100644
+--- a/fs/gfs2/glock.c
++++ b/fs/gfs2/glock.c
+@@ -72,7 +72,7 @@ static DEFINE_SPINLOCK(lru_lock);
+ #define GFS2_GL_HASH_SHIFT      15
+ #define GFS2_GL_HASH_SIZE       BIT(GFS2_GL_HASH_SHIFT)
+ 
+-static struct rhashtable_params ht_parms = {
++static const struct rhashtable_params ht_parms = {
+ 	.nelem_hint = GFS2_GL_HASH_SIZE * 3 / 4,
+ 	.key_len = offsetofend(struct lm_lockname, ln_type),
+ 	.key_offset = offsetof(struct gfs2_glock, gl_name),

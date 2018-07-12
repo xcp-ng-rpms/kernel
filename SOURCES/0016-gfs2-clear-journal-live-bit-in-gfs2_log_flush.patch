@@ -1,0 +1,50 @@
+From 400ac52e805bb6852e743817bc05a136e85042a9 Mon Sep 17 00:00:00 2001
+From: Benjamin Marzinski <bmarzins@redhat.com>
+Date: Wed, 9 Dec 2015 07:46:33 -0600
+Subject: [PATCH 016/170] gfs2: clear journal live bit in	gfs2_log_flush
+
+When gfs2 was unmounting filesystems or changing them to read-only it
+was clearing the SDF_JOURNAL_LIVE bit before the final log flush.  This
+caused a race.  If an inode glock got demoted in the gap between
+clearing the bit and the shutdown flush, it would be unable to reserve
+log space to clear out the active items list in inode_go_sync, causing an
+error in inode_go_inval because the glock was still dirty.
+
+To solve this, the SDF_JOURNAL_LIVE bit is now cleared inside the
+shutdown log flush.  This means that, because of the locking on the log
+blocks, either inode_go_sync will be able to reserve space to clean the
+glock before the shutdown flush, or the shutdown flush will clean the
+glock itself, before inode_go_sync fails to reserve the space. Either
+way, the glock will be clean before inode_go_inval.
+
+Signed-off-by: Benjamin Marzinski <bmarzins@redhat.com>
+Signed-off-by: Bob Peterson <rpeterso@redhat.com>
+diff --git a/fs/gfs2/log.c b/fs/gfs2/log.c
+index 536e7a6..0ff028c 100644
+--- a/fs/gfs2/log.c
++++ b/fs/gfs2/log.c
+@@ -716,6 +716,9 @@ void gfs2_log_flush(struct gfs2_sbd *sdp, struct gfs2_glock *gl,
+ 	}
+ 	trace_gfs2_log_flush(sdp, 1);
+ 
++	if (type == SHUTDOWN_FLUSH)
++		clear_bit(SDF_JOURNAL_LIVE, &sdp->sd_flags);
++
+ 	sdp->sd_log_flush_head = sdp->sd_log_head;
+ 	sdp->sd_log_flush_wrapped = 0;
+ 	tr = sdp->sd_log_tr;
+diff --git a/fs/gfs2/super.c b/fs/gfs2/super.c
+index 0f3d646..1e7da38 100644
+--- a/fs/gfs2/super.c
++++ b/fs/gfs2/super.c
+@@ -851,10 +851,6 @@ static int gfs2_make_fs_ro(struct gfs2_sbd *sdp)
+ 	gfs2_quota_sync(sdp->sd_vfs, 0);
+ 	gfs2_statfs_sync(sdp->sd_vfs, 0);
+ 
+-	down_write(&sdp->sd_log_flush_lock);
+-	clear_bit(SDF_JOURNAL_LIVE, &sdp->sd_flags);
+-	up_write(&sdp->sd_log_flush_lock);
+-
+ 	gfs2_log_flush(sdp, NULL, SHUTDOWN_FLUSH);
+ 	wait_event(sdp->sd_reserving_log_wait, atomic_read(&sdp->sd_reserving_log) == 0);
+ 	gfs2_assert_warn(sdp, atomic_read(&sdp->sd_log_blks_free) == sdp->sd_jdesc->jd_blocks);

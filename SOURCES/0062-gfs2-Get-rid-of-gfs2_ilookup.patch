@@ -1,0 +1,109 @@
+From ec5ec66ba48bd3163110599359797858ac38e79b Mon Sep 17 00:00:00 2001
+From: Andreas Gruenbacher <agruenba@redhat.com>
+Date: Tue, 14 Jun 2016 12:23:59 -0500
+Subject: [PATCH 062/170] gfs2: Get rid of gfs2_ilookup
+
+Now that gfs2_lookup_by_inum only takes the inode glock for new inodes
+(and not for cached inodes anymore), there no longer is a need to
+optimize the cached-inode case in gfs2_get_dentry or delete_work_func,
+and gfs2_ilookup can be removed.
+
+In addition, gfs2_get_dentry wasn't checking the GFS2_DIF_SYSTEM flag in
+i_diskflags in the gfs2_ilookup case (see gfs2_lookup_by_inum); this
+inconsistency goes away as well.
+
+Signed-off-by: Andreas Gruenbacher <agruenba@redhat.com>
+Signed-off-by: Bob Peterson <rpeterso@redhat.com>
+diff --git a/fs/gfs2/export.c b/fs/gfs2/export.c
+index d5bda85..a332f3c 100644
+--- a/fs/gfs2/export.c
++++ b/fs/gfs2/export.c
+@@ -137,21 +137,10 @@ static struct dentry *gfs2_get_dentry(struct super_block *sb,
+ 	struct gfs2_sbd *sdp = sb->s_fs_info;
+ 	struct inode *inode;
+ 
+-	inode = gfs2_ilookup(sb, inum->no_addr);
+-	if (inode) {
+-		if (GFS2_I(inode)->i_no_formal_ino != inum->no_formal_ino) {
+-			iput(inode);
+-			return ERR_PTR(-ESTALE);
+-		}
+-		goto out_inode;
+-	}
+-
+ 	inode = gfs2_lookup_by_inum(sdp, inum->no_addr, &inum->no_formal_ino,
+ 				    GFS2_BLKST_DINODE);
+ 	if (IS_ERR(inode))
+ 		return ERR_CAST(inode);
+-
+-out_inode:
+ 	return d_obtain_alias(inode);
+ }
+ 
+diff --git a/fs/gfs2/glock.c b/fs/gfs2/glock.c
+index ce46375..1138a61 100644
+--- a/fs/gfs2/glock.c
++++ b/fs/gfs2/glock.c
+@@ -575,8 +575,7 @@ static void delete_work_func(struct work_struct *work)
+ {
+ 	struct gfs2_glock *gl = container_of(work, struct gfs2_glock, gl_delete);
+ 	struct gfs2_sbd *sdp = gl->gl_name.ln_sbd;
+-	struct gfs2_inode *ip;
+-	struct inode *inode = NULL;
++	struct inode *inode;
+ 	u64 no_addr = gl->gl_name.ln_number;
+ 
+ 	/* If someone's using this glock to create a new dinode, the block must
+@@ -585,13 +584,7 @@ static void delete_work_func(struct work_struct *work)
+ 	if (test_bit(GLF_INODE_CREATING, &gl->gl_flags))
+ 		goto out;
+ 
+-	ip = gl->gl_object;
+-	/* Note: Unsafe to dereference ip as we don't hold right refs/locks */
+-
+-	if (ip)
+-		inode = gfs2_ilookup(sdp->sd_vfs, no_addr);
+-	if (IS_ERR_OR_NULL(inode))
+-		inode = gfs2_lookup_by_inum(sdp, no_addr, NULL, GFS2_BLKST_UNLINKED);
++	inode = gfs2_lookup_by_inum(sdp, no_addr, NULL, GFS2_BLKST_UNLINKED);
+ 	if (inode && !IS_ERR(inode)) {
+ 		d_prune_aliases(inode);
+ 		iput(inode);
+diff --git a/fs/gfs2/inode.c b/fs/gfs2/inode.c
+index 08f4023..41aba37 100644
+--- a/fs/gfs2/inode.c
++++ b/fs/gfs2/inode.c
+@@ -37,21 +37,6 @@
+ #include "super.h"
+ #include "glops.h"
+ 
+-struct inode *gfs2_ilookup(struct super_block *sb, u64 no_addr)
+-{
+-	struct inode *inode;
+-
+-repeat:
+-	inode = ilookup(sb, no_addr);
+-	if (!inode)
+-		return inode;
+-	if (is_bad_inode(inode)) {
+-		iput(inode);
+-		goto repeat;
+-	}
+-	return inode;
+-}
+-
+ static struct inode *gfs2_iget(struct super_block *sb, u64 no_addr)
+ {
+ 	struct inode *inode;
+diff --git a/fs/gfs2/inode.h b/fs/gfs2/inode.h
+index 443b46c..7710dfd 100644
+--- a/fs/gfs2/inode.h
++++ b/fs/gfs2/inode.h
+@@ -99,7 +99,6 @@ extern struct inode *gfs2_inode_lookup(struct super_block *sb, unsigned type,
+ extern struct inode *gfs2_lookup_by_inum(struct gfs2_sbd *sdp, u64 no_addr,
+ 					 u64 *no_formal_ino,
+ 					 unsigned int blktype);
+-extern struct inode *gfs2_ilookup(struct super_block *sb, u64 no_addr);
+ 
+ extern int gfs2_inode_refresh(struct gfs2_inode *ip);
+ 

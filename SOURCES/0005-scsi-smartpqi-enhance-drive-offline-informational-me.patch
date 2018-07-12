@@ -1,0 +1,43 @@
+From e58081a714275d1490e470bdaf1b5dc23043cf2a Mon Sep 17 00:00:00 2001
+From: Kevin Barnett <kevin.barnett@microsemi.com>
+Date: Wed, 31 Aug 2016 14:54:29 -0500
+Subject: [PATCH 5/5] scsi: smartpqi: enhance drive offline informational
+ message
+
+Made a couple of error messages more verbose.
+
+Reviewed-by: Scott Teel <scott.teel@microsemi.com>
+Reviewed-by: Scott Benesh <scott.benesh@microsemi.com>
+Reviewed-by: Johannes Thumshirn <jthumshirn@suse.de>
+Reviewed-by: Tomas Henzl <thenzl@redhat.com>
+Signed-off-by: Kevin Barnett <kevin.barnett@microsemi.com>
+Signed-off-by: Don Brace <don.brace@microsemi.com>
+Signed-off-by: Martin K. Petersen <martin.petersen@oracle.com>
+---
+ drivers/scsi/smartpqi/smartpqi_init.c |    5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/drivers/scsi/smartpqi/smartpqi_init.c b/drivers/scsi/smartpqi/smartpqi_init.c
+index 9922e31..198a7c2 100644
+--- a/drivers/scsi/smartpqi/smartpqi_init.c
++++ b/drivers/scsi/smartpqi/smartpqi_init.c
+@@ -2298,11 +2298,16 @@ static inline void pqi_aio_path_disabled(struct pqi_io_request *io_request)
+ static inline void pqi_take_device_offline(struct scsi_device *sdev)
+ {
+ 	struct pqi_ctrl_info *ctrl_info;
++	struct pqi_scsi_dev *device;
+ 
+ 	if (scsi_device_online(sdev)) {
+ 		scsi_device_set_state(sdev, SDEV_OFFLINE);
+ 		ctrl_info = shost_to_hba(sdev->host);
+ 		schedule_delayed_work(&ctrl_info->rescan_work, 0);
++		device = sdev->hostdata;
++		dev_err(&ctrl_info->pci_dev->dev, "offlined scsi %d:%d:%d:%d\n",
++			ctrl_info->scsi_host->host_no, device->bus,
++			device->target, device->lun);
+ 	}
+ }
+ 
+-- 
+1.7.10.4
+

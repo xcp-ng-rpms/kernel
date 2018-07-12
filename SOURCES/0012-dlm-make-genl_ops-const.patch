@@ -1,0 +1,22 @@
+From dbef1c05341b1eb4912154cc32bc1a8b64ac0f59 Mon Sep 17 00:00:00 2001
+From: Stephen Hemminger <stephen@networkplumber.org>
+Date: Wed, 31 Aug 2016 10:26:28 -0700
+Subject: [PATCH 12/45] dlm: make genl_ops const
+
+This table contains function points and should be const.
+
+Signed-off-by: Stephen Hemminger <stephen@networkplumber.org>
+Signed-off-by: David Teigland <teigland@redhat.com>
+diff --git a/fs/dlm/netlink.c b/fs/dlm/netlink.c
+index 1e6e227..934ab06 100644
+--- a/fs/dlm/netlink.c
++++ b/fs/dlm/netlink.c
+@@ -69,7 +69,7 @@ static int user_cmd(struct sk_buff *skb, struct genl_info *info)
+ 	return 0;
+ }
+ 
+-static struct genl_ops dlm_nl_ops[] = {
++static const struct genl_ops dlm_nl_ops[] = {
+ 	{
+ 		.cmd	= DLM_CMD_HELLO,
+ 		.doit	= user_cmd,

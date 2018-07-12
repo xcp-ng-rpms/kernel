@@ -1,0 +1,23 @@
+From 1e875f5a95a28b5286165db9fa832b0773657ddb Mon Sep 17 00:00:00 2001
+From: Andreas Gruenbacher <agruenba@redhat.com>
+Date: Fri, 17 Jun 2016 07:22:15 -0500
+Subject: [PATCH 060/170] gfs2: Initialize iopen glock holder for new inodes
+
+In gfs2_init_inode_once, initialize inode->i_iopen_gh.gh_gl to NULL:
+otherwise, when gfs2_inode_lookup fails, the iopen glock holder can
+remain unset and iget_failed can end up accessing random memory.
+
+Signed-off-by: Andreas Gruenbacher <agruenba@redhat.com>
+Signed-off-by: Bob Peterson <rpeterso@redhat.com>
+diff --git a/fs/gfs2/main.c b/fs/gfs2/main.c
+index 1d709d4..88b42be 100644
+--- a/fs/gfs2/main.c
++++ b/fs/gfs2/main.c
+@@ -45,6 +45,7 @@ static void gfs2_init_inode_once(void *foo)
+ 	memset(&ip->i_res, 0, sizeof(ip->i_res));
+ 	RB_CLEAR_NODE(&ip->i_res.rs_node);
+ 	ip->i_hash_cache = NULL;
++	ip->i_iopen_gh.gh_gl = NULL;
+ }
+ 
+ static void gfs2_init_glock_once(void *foo)

@@ -1,0 +1,34 @@
+From 73cc86252bd8a547349d2856497eceaf4f2d1766 Mon Sep 17 00:00:00 2001
+From: Bob Peterson <rpeterso@redhat.com>
+Date: Fri, 1 Apr 2016 13:18:38 -0400
+Subject: [PATCH 037/170] GFS2: Get rid of dead code in inode_go_demote_ok
+
+Function inode_go_demote_ok had some code that was only executed
+if gl_holders was not empty. However, if gl_holders was not empty,
+the only caller, demote_ok(), returns before inode_go_demote_ok
+would ever be called. Therefore, it's dead code, so I removed it.
+
+Signed-off-by: Bob Peterson <rpeterso@redhat.com>
+Acked-by: Steven Whitehouse <swhiteho@redhat.com>
+diff --git a/fs/gfs2/glops.c b/fs/gfs2/glops.c
+index 437fd73..5db59d4 100644
+--- a/fs/gfs2/glops.c
++++ b/fs/gfs2/glops.c
+@@ -286,17 +286,10 @@ static void inode_go_inval(struct gfs2_glock *gl, int flags)
+ static int inode_go_demote_ok(const struct gfs2_glock *gl)
+ {
+ 	struct gfs2_sbd *sdp = gl->gl_name.ln_sbd;
+-	struct gfs2_holder *gh;
+ 
+ 	if (sdp->sd_jindex == gl->gl_object || sdp->sd_rindex == gl->gl_object)
+ 		return 0;
+ 
+-	if (!list_empty(&gl->gl_holders)) {
+-		gh = list_entry(gl->gl_holders.next, struct gfs2_holder, gh_list);
+-		if (gh->gh_list.next != &gl->gl_holders)
+-			return 0;
+-	}
+-
+ 	return 1;
+ }
+ 

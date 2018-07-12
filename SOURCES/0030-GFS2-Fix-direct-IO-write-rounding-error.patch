@@ -1,0 +1,28 @@
+From 2df6f47150b6afbb258ed1d5c9ed78c23df05053 Mon Sep 17 00:00:00 2001
+From: Bob Peterson <rpeterso@redhat.com>
+Date: Wed, 27 Jan 2016 16:00:38 -0500
+Subject: [PATCH 030/170] GFS2: Fix direct IO write rounding error
+
+The fsx test in xfstests was failing because it was using direct IO
+writes which were using a bad calculation. It was using
+loff_t lstart = offset & (PAGE_CACHE_SIZE - 1); when it should be
+loff_t lstart = offset & ~(PAGE_CACHE_SIZE - 1);
+Thus, the write at offset 0x67e00 was calculating lstart to be
+0xe00, the address of our corruption. Instead, it should have been
+0x67000. This patch fixes the calculation.
+
+Signed-off-by: Bob Peterson <rpeterso@redhat.com>
+Acked-by: Steven Whitehouse <swhiteho@redhat.com>
+diff --git a/fs/gfs2/aops.c b/fs/gfs2/aops.c
+index 93f0746..aa016e4 100644
+--- a/fs/gfs2/aops.c
++++ b/fs/gfs2/aops.c
+@@ -1082,7 +1082,7 @@ static ssize_t gfs2_direct_IO(struct kiocb *iocb, struct iov_iter *iter,
+ 	 * the first place, mapping->nr_pages will always be zero.
+ 	 */
+ 	if (mapping->nrpages) {
+-		loff_t lstart = offset & (PAGE_CACHE_SIZE - 1);
++		loff_t lstart = offset & ~(PAGE_CACHE_SIZE - 1);
+ 		loff_t len = iov_iter_count(iter);
+ 		loff_t end = PAGE_ALIGN(offset + len) - 1;
+ 

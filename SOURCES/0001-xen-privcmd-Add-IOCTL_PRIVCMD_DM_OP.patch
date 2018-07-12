@@ -1,0 +1,344 @@
+From ab520be8cd5d56867fc95cfbc34b90880faf1f9d Mon Sep 17 00:00:00 2001
+From: Paul Durrant <paul.durrant@citrix.com>
+Date: Mon, 13 Feb 2017 17:03:23 +0000
+Subject: [PATCH 1/1] xen/privcmd: Add IOCTL_PRIVCMD_DM_OP
+
+Recently a new dm_op[1] hypercall was added to Xen to provide a mechanism
+for restricting device emulators (such as QEMU) to a limited set of
+hypervisor operations, and being able to audit those operations in the
+kernel of the domain in which they run.
+
+This patch adds IOCTL_PRIVCMD_DM_OP as gateway for __HYPERVISOR_dm_op.
+
+NOTE: There is no requirement for user-space code to bounce data through
+      locked memory buffers (as with IOCTL_PRIVCMD_HYPERCALL) since
+      privcmd has enough information to lock the original buffers
+      directly.
+
+[1] http://xenbits.xen.org/gitweb/?p=xen.git;a=commit;h=524a98c2
+
+Signed-off-by: Paul Durrant <paul.durrant@citrix.com>
+Acked-by: Stefano Stabellini <sstabellini@kernel.org>
+Signed-off-by: Boris Ostrovsky <boris.ostrovsky@oracle.com>
+diff --git a/arch/arm/include/asm/xen/hypercall.h b/arch/arm/include/asm/xen/hypercall.h
+index 712b50e..04c2df4 100644
+--- a/arch/arm/include/asm/xen/hypercall.h
++++ b/arch/arm/include/asm/xen/hypercall.h
+@@ -49,6 +49,7 @@ int HYPERVISOR_memory_op(unsigned int cmd, void *arg);
+ int HYPERVISOR_physdev_op(int cmd, void *arg);
+ int HYPERVISOR_vcpu_op(int cmd, int vcpuid, void *extra_args);
+ int HYPERVISOR_tmem_op(void *arg);
++int HYPERVISOR_dm_op(domid_t domid, unsigned int nr_bufs, void *bufs);
+ int HYPERVISOR_multicall(struct multicall_entry *calls, uint32_t nr);
+ 
+ static inline int
+diff --git a/arch/arm/xen/enlighten.c b/arch/arm/xen/enlighten.c
+index fc7ea52..2290446 100644
+--- a/arch/arm/xen/enlighten.c
++++ b/arch/arm/xen/enlighten.c
+@@ -308,4 +308,5 @@ EXPORT_SYMBOL_GPL(HYPERVISOR_physdev_op);
+ EXPORT_SYMBOL_GPL(HYPERVISOR_vcpu_op);
+ EXPORT_SYMBOL_GPL(HYPERVISOR_tmem_op);
+ EXPORT_SYMBOL_GPL(HYPERVISOR_multicall);
++EXPORT_SYMBOL_GPL(HYPERVISOR_dm_op);
+ EXPORT_SYMBOL_GPL(privcmd_call);
+diff --git a/arch/arm/xen/hypercall.S b/arch/arm/xen/hypercall.S
+index 10fd99c..e25f34e 100644
+--- a/arch/arm/xen/hypercall.S
++++ b/arch/arm/xen/hypercall.S
+@@ -90,6 +90,7 @@ HYPERCALL2(physdev_op);
+ HYPERCALL3(vcpu_op);
+ HYPERCALL1(tmem_op);
+ HYPERCALL2(multicall);
++HYPERCALL3(dm_op);
+ 
+ ENTRY(privcmd_call)
+ 	stmdb sp!, {r4}
+diff --git a/arch/arm64/xen/hypercall.S b/arch/arm64/xen/hypercall.S
+index 8bbe940..1e098f9 100644
+--- a/arch/arm64/xen/hypercall.S
++++ b/arch/arm64/xen/hypercall.S
+@@ -81,6 +81,7 @@ HYPERCALL2(physdev_op);
+ HYPERCALL3(vcpu_op);
+ HYPERCALL1(tmem_op);
+ HYPERCALL2(multicall);
++HYPERCALL3(dm_op);
+ 
+ ENTRY(privcmd_call)
+ 	mov x16, x0
+diff --git a/arch/x86/include/asm/xen/hypercall.h b/arch/x86/include/asm/xen/hypercall.h
+index 4c20dd3..b083d62 100644
+--- a/arch/x86/include/asm/xen/hypercall.h
++++ b/arch/x86/include/asm/xen/hypercall.h
+@@ -471,6 +471,13 @@ HYPERVISOR_xenpmu_op(unsigned int op, void *arg)
+ 	return _hypercall2(int, xenpmu_op, op, arg);
+ }
+ 
++static inline int
++HYPERVISOR_dm_op(
++	domid_t dom, unsigned int nr_bufs, void *bufs)
++{
++	return _hypercall3(int, dm_op, dom, nr_bufs, bufs);
++}
++
+ static inline void
+ MULTI_fpu_taskswitch(struct multicall_entry *mcl, int set)
+ {
+diff --git a/drivers/xen/privcmd.c b/drivers/xen/privcmd.c
+index f13ab5a..72e32a5 100644
+--- a/drivers/xen/privcmd.c
++++ b/drivers/xen/privcmd.c
+@@ -22,6 +22,7 @@
+ #include <linux/pagemap.h>
+ #include <linux/seq_file.h>
+ #include <linux/miscdevice.h>
++#include <linux/moduleparam.h>
+ 
+ #include <asm/pgalloc.h>
+ #include <asm/pgtable.h>
+@@ -32,6 +33,7 @@
+ #include <xen/xen.h>
+ #include <xen/privcmd.h>
+ #include <xen/interface/xen.h>
++#include <xen/interface/hvm/dm_op.h>
+ #include <xen/features.h>
+ #include <xen/page.h>
+ #include <xen/xen-ops.h>
+@@ -43,6 +45,17 @@ MODULE_LICENSE("GPL");
+ 
+ #define PRIV_VMA_LOCKED ((void *)1)
+ 
++static unsigned int privcmd_dm_op_max_num = 16;
++module_param_named(dm_op_max_nr_bufs, privcmd_dm_op_max_num, uint, 0644);
++MODULE_PARM_DESC(dm_op_max_nr_bufs,
++		 "Maximum number of buffers per dm_op hypercall");
++
++static unsigned int privcmd_dm_op_buf_max_size = 4096;
++module_param_named(dm_op_buf_max_size, privcmd_dm_op_buf_max_size, uint,
++		   0644);
++MODULE_PARM_DESC(dm_op_buf_max_size,
++		 "Maximum size of a dm_op hypercall buffer");
++
+ static int privcmd_vma_range_is_mapped(
+                struct vm_area_struct *vma,
+                unsigned long addr,
+@@ -548,6 +561,128 @@ out_unlock:
+ 	goto out;
+ }
+ 
++static int lock_pages(
++	struct privcmd_dm_op_buf kbufs[], unsigned int num,
++	struct page *pages[], unsigned int nr_pages)
++{
++	unsigned int i;
++
++	for (i = 0; i < num; i++) {
++		unsigned int requested;
++		int pinned;
++
++		requested = DIV_ROUND_UP(
++			offset_in_page(kbufs[i].uptr) + kbufs[i].size,
++			PAGE_SIZE);
++		if (requested > nr_pages)
++			return -ENOSPC;
++
++		pinned = get_user_pages_fast(
++			(unsigned long) kbufs[i].uptr,
++			requested, FOLL_WRITE, pages);
++		if (pinned < 0)
++			return pinned;
++
++		nr_pages -= pinned;
++		pages += pinned;
++	}
++
++	return 0;
++}
++
++static void unlock_pages(struct page *pages[], unsigned int nr_pages)
++{
++	unsigned int i;
++
++	if (!pages)
++		return;
++
++	for (i = 0; i < nr_pages; i++) {
++		if (pages[i])
++			put_page(pages[i]);
++	}
++}
++
++static long privcmd_ioctl_dm_op(void __user *udata)
++{
++	struct privcmd_dm_op kdata;
++	struct privcmd_dm_op_buf *kbufs;
++	unsigned int nr_pages = 0;
++	struct page **pages = NULL;
++	struct xen_dm_op_buf *xbufs = NULL;
++	unsigned int i;
++	long rc;
++
++	if (copy_from_user(&kdata, udata, sizeof(kdata)))
++		return -EFAULT;
++
++	if (kdata.num == 0)
++		return 0;
++
++	if (kdata.num > privcmd_dm_op_max_num)
++		return -E2BIG;
++
++	kbufs = kcalloc(kdata.num, sizeof(*kbufs), GFP_KERNEL);
++	if (!kbufs)
++		return -ENOMEM;
++
++	if (copy_from_user(kbufs, kdata.ubufs,
++			   sizeof(*kbufs) * kdata.num)) {
++		rc = -EFAULT;
++		goto out;
++	}
++
++	for (i = 0; i < kdata.num; i++) {
++		if (kbufs[i].size > privcmd_dm_op_buf_max_size) {
++			rc = -E2BIG;
++			goto out;
++		}
++
++		if (!access_ok(VERIFY_WRITE, kbufs[i].uptr,
++			       kbufs[i].size)) {
++			rc = -EFAULT;
++			goto out;
++		}
++
++		nr_pages += DIV_ROUND_UP(
++			offset_in_page(kbufs[i].uptr) + kbufs[i].size,
++			PAGE_SIZE);
++	}
++
++	pages = kcalloc(nr_pages, sizeof(*pages), GFP_KERNEL);
++	if (!pages) {
++		rc = -ENOMEM;
++		goto out;
++	}
++
++	xbufs = kcalloc(kdata.num, sizeof(*xbufs), GFP_KERNEL);
++	if (!xbufs) {
++		rc = -ENOMEM;
++		goto out;
++	}
++
++	rc = lock_pages(kbufs, kdata.num, pages, nr_pages);
++	if (rc)
++		goto out;
++
++	for (i = 0; i < kdata.num; i++) {
++		set_xen_guest_handle(xbufs[i].h, kbufs[i].uptr);
++		xbufs[i].size = kbufs[i].size;
++	}
++
++	xen_preemptible_hcall_begin();
++	rc = HYPERVISOR_dm_op(kdata.dom, kdata.num, xbufs);
++	xen_preemptible_hcall_end();
++
++out:
++	unlock_pages(pages, nr_pages);
++	kfree(xbufs);
++	kfree(pages);
++	kfree(kbufs);
++
++	return rc;
++}
++
+ static long privcmd_ioctl(struct file *file,
+ 			  unsigned int cmd, unsigned long data)
+ {
+@@ -571,6 +706,10 @@ static long privcmd_ioctl(struct file *file,
+ 		ret = privcmd_ioctl_mmap_batch(udata, 2);
+ 		break;
+ 
++	case IOCTL_PRIVCMD_DM_OP:
++		ret = privcmd_ioctl_dm_op(udata);
++		break;
++
+ 	default:
+ 		break;
+ 	}
+diff --git a/include/uapi/xen/privcmd.h b/include/uapi/xen/privcmd.h
+index 7ddeeda..f8c5d75 100644
+--- a/include/uapi/xen/privcmd.h
++++ b/include/uapi/xen/privcmd.h
+@@ -77,6 +77,17 @@ struct privcmd_mmapbatch_v2 {
+ 	int __user *err;  /* array of error codes */
+ };
+ 
++struct privcmd_dm_op_buf {
++	void __user *uptr;
++	size_t size;
++};
++
++struct privcmd_dm_op {
++	domid_t dom;
++	__u16 num;
++	const struct privcmd_dm_op_buf __user *ubufs;
++};
++
+ /*
+  * @cmd: IOCTL_PRIVCMD_HYPERCALL
+  * @arg: &privcmd_hypercall_t
+@@ -98,5 +109,7 @@ struct privcmd_mmapbatch_v2 {
+ 	_IOC(_IOC_NONE, 'P', 3, sizeof(struct privcmd_mmapbatch))
+ #define IOCTL_PRIVCMD_MMAPBATCH_V2				\
+ 	_IOC(_IOC_NONE, 'P', 4, sizeof(struct privcmd_mmapbatch_v2))
++#define IOCTL_PRIVCMD_DM_OP					\
++	_IOC(_IOC_NONE, 'P', 5, sizeof(struct privcmd_dm_op))
+ 
+ #endif /* __LINUX_PUBLIC_PRIVCMD_H__ */
+diff --git a/include/xen/interface/hvm/dm_op.h b/include/xen/interface/hvm/dm_op.h
+new file mode 100644
+index 0000000..ee9e480
+--- /dev/null
++++ b/include/xen/interface/hvm/dm_op.h
+@@ -0,0 +1,32 @@
++/*
++ * Copyright (c) 2016, Citrix Systems Inc
++ *
++ * Permission is hereby granted, free of charge, to any person obtaining a copy
++ * of this software and associated documentation files (the "Software"), to
++ * deal in the Software without restriction, including without limitation the
++ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
++ * sell copies of the Software, and to permit persons to whom the Software is
++ * furnished to do so, subject to the following conditions:
++ *
++ * The above copyright notice and this permission notice shall be included in
++ * all copies or substantial portions of the Software.
++ *
++ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
++ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
++ * DEALINGS IN THE SOFTWARE.
++ */
++
++#ifndef __XEN_PUBLIC_HVM_DM_OP_H__
++#define __XEN_PUBLIC_HVM_DM_OP_H__
++
++struct xen_dm_op_buf {
++	GUEST_HANDLE(void) h;
++	xen_ulong_t size;
++};
++DEFINE_GUEST_HANDLE_STRUCT(xen_dm_op_buf);
++
++#endif /* __XEN_PUBLIC_HVM_DM_OP_H__ */
+diff --git a/include/xen/interface/xen.h b/include/xen/interface/xen.h
+index 167071c..24a5e04 100644
+--- a/include/xen/interface/xen.h
++++ b/include/xen/interface/xen.h
+@@ -81,6 +81,7 @@
+ #define __HYPERVISOR_tmem_op              38
+ #define __HYPERVISOR_xc_reserved_op       39 /* reserved for XenClient */
+ #define __HYPERVISOR_xenpmu_op            40
++#define __HYPERVISOR_dm_op                41
+ 
+ /* Architecture-specific hypercall definitions. */
+ #define __HYPERVISOR_arch_0               48

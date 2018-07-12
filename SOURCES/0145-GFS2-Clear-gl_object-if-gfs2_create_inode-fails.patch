@@ -1,0 +1,36 @@
+From 9c1b28081f43c0f14ccbcad02a6e0f227c072da2 Mon Sep 17 00:00:00 2001
+From: Bob Peterson <rpeterso@redhat.com>
+Date: Tue, 18 Jul 2017 12:26:07 -0500
+Subject: [PATCH 145/170] GFS2: Clear gl_object if gfs2_create_inode fails
+
+If function gfs2_create_inode fails after the inode has been
+created (for example, if the inode_refresh fails for some reason)
+the function was setting gl_object but never clearing it again.
+The glocks are left pointing to a freed inode. This patch adds
+the calls to clear gl_object in the appropriate error paths.
+
+Signed-off-by: Bob Peterson <rpeterso@redhat.com>
+Reviewed-by: Andreas Gruenbacher <agruenba@redhat.com>
+diff --git a/fs/gfs2/inode.c b/fs/gfs2/inode.c
+index 5079a2f..6f258b5 100644
+--- a/fs/gfs2/inode.c
++++ b/fs/gfs2/inode.c
+@@ -775,14 +775,17 @@ static int gfs2_create_inode(struct inode *dir, struct dentry *dentry,
+ 	return error;
+ 
+ fail_gunlock3:
++	glock_clear_object(io_gl, ip);
+ 	gfs2_glock_dq_uninit(&ip->i_iopen_gh);
+ 	gfs2_glock_put(io_gl);
+ fail_gunlock2:
+ 	if (io_gl)
+ 		clear_bit(GLF_INODE_CREATING, &io_gl->gl_flags);
+ fail_free_inode:
+-	if (ip->i_gl)
++	if (ip->i_gl) {
++		glock_clear_object(ip->i_gl, ip);
+ 		gfs2_glock_put(ip->i_gl);
++	}
+ 	gfs2_rsqa_delete(ip, NULL);
+ fail_free_acls:
+ 	if (default_acl)

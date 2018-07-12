@@ -1,0 +1,25 @@
+From 702b26a24d3d012b9286efb3efbf2b81b23271f5 Mon Sep 17 00:00:00 2001
+From: David Decotigny <decot@googlers.com>
+Date: Wed, 24 Feb 2016 10:58:09 -0800
+Subject: [PATCH 12/12] net: bridge: use __ethtool_get_ksettings
+
+Signed-off-by: David Decotigny <decot@googlers.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+diff --git a/net/bridge/br_if.c b/net/bridge/br_if.c
+index ec02f58..9a452c3 100644
+--- a/net/bridge/br_if.c
++++ b/net/bridge/br_if.c
+@@ -36,10 +36,10 @@
+  */
+ static int port_cost(struct net_device *dev)
+ {
+-	struct ethtool_cmd ecmd;
++	struct ethtool_link_ksettings ecmd;
+ 
+-	if (!__ethtool_get_settings(dev, &ecmd)) {
+-		switch (ethtool_cmd_speed(&ecmd)) {
++	if (!__ethtool_get_link_ksettings(dev, &ecmd)) {
++		switch (ecmd.base.speed) {
+ 		case SPEED_10000:
+ 			return 2;
+ 		case SPEED_1000:

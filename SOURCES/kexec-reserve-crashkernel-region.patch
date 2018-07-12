@@ -1,0 +1,73 @@
+xen/setup: Reserve the crashkernel region
+
+Reserve the crashkernel region in the E820. This prevents oustanding DMA
+operations overwriting the crashkernel region when the IOMMU is disabled
+during kexec. Normally, the IOMMU would not be used for dom0, but it is
+used for PV-IOMMU.
+
+Signed-off-by: Ross Lagerwall <ross.lagerwall@citrix.com>
+
+diff --git a/arch/x86/xen/setup.c b/arch/x86/xen/setup.c
+index 0cc2312..e83b1ce 100644
+--- a/arch/x86/xen/setup.c
++++ b/arch/x86/xen/setup.c
+@@ -24,6 +24,7 @@
+ #include <xen/xen.h>
+ #include <xen/page.h>
+ #include <xen/interface/callback.h>
++#include <xen/interface/kexec.h>
+ #include <xen/interface/memory.h>
+ #include <xen/interface/physdev.h>
+ #include <xen/features.h>
+@@ -795,12 +796,27 @@ char * __init xen_memory_setup(void)
+ 	 * a patch in the future.
+ 	 */
+ 	if (xen_initial_domain()) {
++		xen_kexec_range_t range = { KEXEC_RANGE_MA_CRASH, 0 };
++
+ 		xen_ignore_unusable();
+ 		/* Reserve 0.5 MiB to 1 MiB region so iBFT can be found */
+ 		xen_e820_map[xen_e820_map_entries].addr = 0x80000;
+ 		xen_e820_map[xen_e820_map_entries].size = 0x80000;
+ 		xen_e820_map[xen_e820_map_entries].type = E820_RESERVED;
+ 		xen_e820_map_entries++;
++
++		/*
++		 * Reserve the crashkernel region to prevent outstanding DMA
++		 * ops overwriting the crashkernel after the IOMMU is disabled
++		 * while kexecing.
++		 */
++		rc = HYPERVISOR_kexec_op(KEXEC_CMD_kexec_get_range, &range);
++		if (rc == 0) {
++			xen_e820_map[xen_e820_map_entries].addr = range.start;
++			xen_e820_map[xen_e820_map_entries].size = range.size;
++			xen_e820_map[xen_e820_map_entries].type = E820_RESERVED;
++			xen_e820_map_entries++;
++		}
+ 	}
+ 
+ 	/* Make sure the Xen-supplied memory map is well-ordered. */
+diff --git a/include/xen/interface/kexec.h b/include/xen/interface/kexec.h
+index 443df8a..e6d7215 100644
+--- a/include/xen/interface/kexec.h
++++ b/include/xen/interface/kexec.h
+@@ -2,9 +2,19 @@
+ #define _XEN_KEXEC_H
+ 
+ #define KEXEC_CMD_kexec                    0
++#define KEXEC_CMD_kexec_get_range          3
+ typedef struct xen_kexec_exec {
+ 	int type;
+ } xen_kexec_exec_t;
+ 
++#define KEXEC_RANGE_MA_CRASH      0 /* machine address and size of crash area */
++
++typedef struct xen_kexec_range {
++	int range;
++	int nr;
++	unsigned long size;
++	unsigned long start;
++} xen_kexec_range_t;
++
+ #endif
+ 

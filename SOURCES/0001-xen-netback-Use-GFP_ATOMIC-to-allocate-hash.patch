@@ -1,0 +1,25 @@
+From 9f674e48c13dcbc31ac903433727837795b81efe Mon Sep 17 00:00:00 2001
+From: Anoob Soman <anoob.soman@citrix.com>
+Date: Thu, 2 Mar 2017 10:50:20 +0000
+Subject: [PATCH] xen-netback: Use GFP_ATOMIC to allocate hash
+
+Allocation of new_hash, inside xenvif_new_hash(), always happen
+in softirq context, so use GFP_ATOMIC instead of GFP_KERNEL for new
+hash allocation.
+
+Signed-off-by: Anoob Soman <anoob.soman@citrix.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+
+diff --git a/drivers/net/xen-netback/hash.c b/drivers/net/xen-netback/hash.c
+index e8c5ddd..3c4c58b 100644
+--- a/drivers/net/xen-netback/hash.c
++++ b/drivers/net/xen-netback/hash.c
+@@ -39,7 +39,7 @@ static void xenvif_add_hash(struct xenvif *vif, const u8 *tag,
+ 	unsigned long flags;
+ 	bool found;
+ 
+-	new = kmalloc(sizeof(*entry), GFP_KERNEL);
++	new = kmalloc(sizeof(*entry), GFP_ATOMIC);
+ 	if (!new)
+ 		return;
+ 

@@ -1,0 +1,64 @@
+From d4da31986c5da14277b3ecc479f1b0682756b54c Mon Sep 17 00:00:00 2001
+From: Andreas Gruenbacher <agruenba@redhat.com>
+Date: Wed, 22 Feb 2017 20:05:09 +0100
+Subject: [PATCH 113/170] Revert "GFS2: Wait for iopen glock dequeues"
+
+Revert commit 86d067a797d4e8546a7c92b985f31e8cd3ec39ad: it turns out
+that waiting for iopen glock dequeues here isn't needed anymore because
+the bugs that commit was meant to fix have been fixed otherwise.
+
+In addition, we want to avoid waiting on glocks in gfs2_evict_inode in
+shrinker context because the shrinker may be invoked on behalf of DLM,
+in which case calling into DLM again would deadlock.  This commit makes
+the described scenario less likely without completely avoiding it; it's
+still a step in the right direction, though.
+
+Signed-off-by: Andreas Gruenbacher <agruenba@redhat.com>
+Signed-off-by: Bob Peterson <rpeterso@redhat.com>
+diff --git a/fs/gfs2/inode.c b/fs/gfs2/inode.c
+index 86d327f..15c9456 100644
+--- a/fs/gfs2/inode.c
++++ b/fs/gfs2/inode.c
+@@ -202,8 +202,7 @@ struct inode *gfs2_inode_lookup(struct super_block *sb, unsigned int type,
+ fail_refresh:
+ 	ip->i_iopen_gh.gh_flags |= GL_NOCACHE;
+ 	ip->i_iopen_gh.gh_gl->gl_object = NULL;
+-	gfs2_glock_dq_wait(&ip->i_iopen_gh);
+-	gfs2_holder_uninit(&ip->i_iopen_gh);
++	gfs2_glock_dq_uninit(&ip->i_iopen_gh);
+ fail_put:
+ 	if (io_gl)
+ 		gfs2_glock_put(io_gl);
+diff --git a/fs/gfs2/super.c b/fs/gfs2/super.c
+index 8b0139c..c3f0715 100644
+--- a/fs/gfs2/super.c
++++ b/fs/gfs2/super.c
+@@ -1539,8 +1539,7 @@ static void gfs2_evict_inode(struct inode *inode)
+ 	error = gfs2_glock_nq_init(ip->i_gl, LM_ST_EXCLUSIVE, GL_SKIP, &gh);
+ 	if (unlikely(error)) {
+ 		ip->i_iopen_gh.gh_flags |= GL_NOCACHE;
+-		gfs2_glock_dq_wait(&ip->i_iopen_gh);
+-		gfs2_holder_uninit(&ip->i_iopen_gh);
++		gfs2_glock_dq_uninit(&ip->i_iopen_gh);
+ 		goto out;
+ 	}
+ 
+@@ -1618,7 +1617,7 @@ out_unlock:
+ 	if (gfs2_holder_initialized(&ip->i_iopen_gh)) {
+ 		if (test_bit(HIF_HOLDER, &ip->i_iopen_gh.gh_iflags)) {
+ 			ip->i_iopen_gh.gh_flags |= GL_NOCACHE;
+-			gfs2_glock_dq_wait(&ip->i_iopen_gh);
++			gfs2_glock_dq(&ip->i_iopen_gh);
+ 		}
+ 		gfs2_holder_uninit(&ip->i_iopen_gh);
+ 	}
+@@ -1640,8 +1639,7 @@ out:
+ 	if (gfs2_holder_initialized(&ip->i_iopen_gh)) {
+ 		ip->i_iopen_gh.gh_gl->gl_object = NULL;
+ 		ip->i_iopen_gh.gh_flags |= GL_NOCACHE;
+-		gfs2_glock_dq_wait(&ip->i_iopen_gh);
+-		gfs2_holder_uninit(&ip->i_iopen_gh);
++		gfs2_glock_dq_uninit(&ip->i_iopen_gh);
+ 	}
+ }
+ 

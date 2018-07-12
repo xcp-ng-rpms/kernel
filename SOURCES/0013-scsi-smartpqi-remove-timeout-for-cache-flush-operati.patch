@@ -1,0 +1,44 @@
+From d48f8fad1e435eff26c29e8e109c1a50c441e533 Mon Sep 17 00:00:00 2001
+From: Kevin Barnett <kevin.barnett@microsemi.com>
+Date: Wed, 31 Aug 2016 14:55:17 -0500
+Subject: [PATCH 13/13] scsi: smartpqi: remove timeout for cache flush
+ operations
+
+Some cache flush operations can take longer than the timeout value. Best
+to not impose a time limit to handle all cases.
+
+Reviewed-by: Scott Teel <scott.teel@microsemi.com>
+Reviewed-by: Scott Benesh <scott.benesh@microsemi.com>
+Reviewed-by: Johannes Thumshirn <jthumshirn@suse.de>
+Reviewed-by: Tomas Henzl <thenzl@redhat.com>
+Signed-off-by: Kevin Barnett <kevin.barnett@microsemi.com>
+Signed-off-by: Don Brace <don.brace@microsemi.com>
+Signed-off-by: Martin K. Petersen <martin.petersen@oracle.com>
+---
+ drivers/scsi/smartpqi/smartpqi_init.c |    3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/drivers/scsi/smartpqi/smartpqi_init.c b/drivers/scsi/smartpqi/smartpqi_init.c
+index f0672ed..c6dcb33 100644
+--- a/drivers/scsi/smartpqi/smartpqi_init.c
++++ b/drivers/scsi/smartpqi/smartpqi_init.c
+@@ -407,7 +407,6 @@ static int pqi_identify_physical_device(struct pqi_ctrl_info *ctrl_info,
+ }
+ 
+ #define SA_CACHE_FLUSH_BUFFER_LENGTH	4
+-#define PQI_FLUSH_CACHE_TIMEOUT		(30 * 1000)
+ 
+ static int pqi_flush_cache(struct pqi_ctrl_info *ctrl_info)
+ {
+@@ -434,7 +433,7 @@ static int pqi_flush_cache(struct pqi_ctrl_info *ctrl_info)
+ 		goto out;
+ 
+ 	rc = pqi_submit_raid_request_synchronous(ctrl_info, &request.header,
+-		0, NULL, PQI_FLUSH_CACHE_TIMEOUT);
++		0, NULL, NO_TIMEOUT);
+ 
+ 	pqi_pci_unmap(ctrl_info->pci_dev, request.sg_descriptors, 1,
+ 		pci_direction);
+-- 
+1.7.10.4
+

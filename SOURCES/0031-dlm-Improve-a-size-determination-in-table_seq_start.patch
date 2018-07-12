@@ -1,0 +1,24 @@
+From 2c257e96df505a8472c8376524b3a68e8fde66dd Mon Sep 17 00:00:00 2001
+From: Markus Elfring <elfring@users.sourceforge.net>
+Date: Sat, 6 May 2017 08:34:27 +0200
+Subject: [PATCH 31/45] dlm: Improve a size determination in table_seq_start()
+
+Replace the specification of a data structure by a pointer dereference
+as the parameter for the operator "sizeof" to make the corresponding size
+determination a bit safer according to the Linux coding style convention.
+
+Signed-off-by: Markus Elfring <elfring@users.sourceforge.net>
+Signed-off-by: David Teigland <teigland@redhat.com>
+diff --git a/fs/dlm/debug_fs.c b/fs/dlm/debug_fs.c
+index 551e0f8..fa08448 100644
+--- a/fs/dlm/debug_fs.c
++++ b/fs/dlm/debug_fs.c
+@@ -435,7 +435,7 @@ static void *table_seq_start(struct seq_file *seq, loff_t *pos)
+ 	if (bucket >= ls->ls_rsbtbl_size)
+ 		return NULL;
+ 
+-	ri = kzalloc(sizeof(struct rsbtbl_iter), GFP_NOFS);
++	ri = kzalloc(sizeof(*ri), GFP_NOFS);
+ 	if (!ri)
+ 		return NULL;
+ 	if (n == 0)

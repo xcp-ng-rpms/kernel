@@ -1,0 +1,23 @@
+From 8006f6bf5e39f11c697f48df20382b81d2f2f8b8 Mon Sep 17 00:00:00 2001
+From: Miroslav Lichvar <mlichvar@redhat.com>
+Date: Thu, 24 Nov 2016 10:55:06 +0100
+Subject: [PATCH 4/4] net: ethtool: don't require CAP_NET_ADMIN for
+ ETHTOOL_GLINKSETTINGS
+
+The ETHTOOL_GLINKSETTINGS command is deprecating the ETHTOOL_GSET
+command and likewise it shouldn't require the CAP_NET_ADMIN capability.
+
+Signed-off-by: Miroslav Lichvar <mlichvar@redhat.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+diff --git a/net/core/ethtool.c b/net/core/ethtool.c
+index 48c1fbe..1d3113d 100644
+--- a/net/core/ethtool.c
++++ b/net/core/ethtool.c
+@@ -2219,6 +2219,7 @@ int dev_ethtool(struct net *net, struct ifreq *ifr)
+ 	case ETHTOOL_GET_TS_INFO:
+ 	case ETHTOOL_GEEE:
+ 	case ETHTOOL_GTUNABLE:
++	case ETHTOOL_GLINKSETTINGS:
+ 		break;
+ 	default:
+ 		if (!ns_capable(net->user_ns, CAP_NET_ADMIN))

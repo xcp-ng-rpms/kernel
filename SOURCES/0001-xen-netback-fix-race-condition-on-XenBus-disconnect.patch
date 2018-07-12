@@ -1,0 +1,165 @@
+From 6931bc0f8e549d0994773ab522b774da24669767 Mon Sep 17 00:00:00 2001
+From: Igor Druzhinin <igor.druzhinin@citrix.com>
+Date: Thu, 2 Mar 2017 22:03:48 +0000
+Subject: [PATCH] xen-netback: fix race condition on XenBus disconnect
+
+In some cases during XenBus disconnect event handling and subsequent
+queue resource release there may be some TX handlers active on
+other processors. Use RCU in order to synchronize with them.
+
+Signed-off-by: Igor Druzhinin <igor.druzhinin@citrix.com>
+---
+ drivers/net/xen-netback/interface.c | 34 +++++++++++++++++++++-------------
+ drivers/net/xen-netback/netback.c   |  2 +-
+ drivers/net/xen-netback/xenbus.c    | 31 +++++++++++++++++++------------
+ 3 files changed, 41 insertions(+), 26 deletions(-)
+
+diff --git a/drivers/net/xen-netback/interface.c b/drivers/net/xen-netback/interface.c
+index c48252a..e0a4917 100644
+--- a/drivers/net/xen-netback/interface.c
++++ b/drivers/net/xen-netback/interface.c
+@@ -173,13 +173,17 @@ static int xenvif_start_xmit(struct sk_buff *skb, struct net_device *dev)
+ {
+ 	struct xenvif *vif = netdev_priv(dev);
+ 	struct xenvif_queue *queue = NULL;
+-	unsigned int num_queues = vif->num_queues;
++	unsigned int num_queues;
+ 	u16 index;
+ 	struct xenvif_rx_cb *cb;
+ 
+ 	BUG_ON(skb->dev != dev);
+ 
+-	/* Drop the packet if queues are not set up */
++	/* Drop the packet if queues are not set up.
++	 * This handler should be called inside an RCU read section
++	 * so we don't need to enter it here explicitly.
++	 */
++	num_queues = READ_ONCE(vif->num_queues);
+ 	if (num_queues < 1)
+ 		goto drop;
+ 
+@@ -230,18 +234,18 @@ static struct net_device_stats *xenvif_get_stats(struct net_device *dev)
+ {
+ 	struct xenvif *vif = netdev_priv(dev);
+ 	struct xenvif_queue *queue = NULL;
+-	unsigned long rx_bytes = 0;
+-	unsigned long rx_packets = 0;
+-	unsigned long tx_bytes = 0;
+-	unsigned long tx_packets = 0;
++	unsigned int num_queues;
++	u64 rx_bytes = 0;
++	u64 rx_packets = 0;
++	u64 tx_bytes = 0;
++	u64 tx_packets = 0;
+ 	unsigned int index;
+ 
+-	spin_lock(&vif->lock);
+-	if (vif->queues == NULL)
+-		goto out;
++	rcu_read_lock();
++	num_queues = READ_ONCE(vif->num_queues);
+ 
+ 	/* Aggregate tx and rx stats from each queue */
+-	for (index = 0; index < vif->num_queues; ++index) {
++	for (index = 0; index < num_queues; ++index) {
+ 		queue = &vif->queues[index];
+ 		rx_bytes += queue->stats.rx_bytes;
+ 		rx_packets += queue->stats.rx_packets;
+@@ -249,8 +253,7 @@ static struct net_device_stats *xenvif_get_stats(struct net_device *dev)
+ 		tx_packets += queue->stats.tx_packets;
+ 	}
+ 
+-out:
+-	spin_unlock(&vif->lock);
++	rcu_read_unlock();
+ 
+ 	vif->dev->stats.rx_bytes = rx_bytes;
+ 	vif->dev->stats.rx_packets = rx_packets;
+@@ -386,10 +389,13 @@ static void xenvif_get_ethtool_stats(struct net_device *dev,
+ 				     struct ethtool_stats *stats, u64 * data)
+ {
+ 	struct xenvif *vif = netdev_priv(dev);
+-	unsigned int num_queues = vif->num_queues;
++	unsigned int num_queues;
+ 	int i;
+ 	unsigned int queue_index;
+ 
++	rcu_read_lock();
++	num_queues = READ_ONCE(vif->num_queues);
++
+ 	for (i = 0; i < ARRAY_SIZE(xenvif_stats); i++) {
+ 		unsigned long accum = 0;
+ 		for (queue_index = 0; queue_index < num_queues; ++queue_index) {
+@@ -398,6 +404,8 @@ static void xenvif_get_ethtool_stats(struct net_device *dev,
+ 		}
+ 		data[i] = accum;
+ 	}
++
++	rcu_read_unlock();
+ }
+ 
+ static void xenvif_get_strings(struct net_device *dev, u32 stringset, u8 * data)
+diff --git a/drivers/net/xen-netback/netback.c b/drivers/net/xen-netback/netback.c
+index ccd968a..1d43e14 100644
+--- a/drivers/net/xen-netback/netback.c
++++ b/drivers/net/xen-netback/netback.c
+@@ -213,7 +213,7 @@ static void xenvif_fatal_tx_err(struct xenvif *vif)
+ 	netdev_err(vif->dev, "fatal error; disabling device\n");
+ 	vif->disabled = true;
+ 	/* Disable the vif from queue 0's kthread */
+-	if (vif->queues)
++	if (vif->num_queues)
+ 		xenvif_kick_thread(&vif->queues[0]);
+ }
+ 
+diff --git a/drivers/net/xen-netback/xenbus.c b/drivers/net/xen-netback/xenbus.c
+index d82cd71..a5a97c4 100644
+--- a/drivers/net/xen-netback/xenbus.c
++++ b/drivers/net/xen-netback/xenbus.c
+@@ -492,24 +492,31 @@ static int backend_create_xenvif(struct backend_info *be)
+ 
+ static void backend_disconnect(struct backend_info *be)
+ {
+-	if (be->vif) {
++	struct xenvif *vif = be->vif;
++
++	if (vif) {
++		unsigned int num_queues = vif->num_queues;
+ 		unsigned int queue_index;
+ 
+-		xen_unregister_watchers(be->vif);
++		xen_unregister_watchers(vif);
+ #ifdef CONFIG_DEBUG_FS
+-		xenvif_debugfs_delif(be->vif);
++		xenvif_debugfs_delif(vif);
+ #endif /* CONFIG_DEBUG_FS */
+-		xenvif_disconnect_data(be->vif);
+-		for (queue_index = 0; queue_index < be->vif->num_queues; ++queue_index)
+-			xenvif_deinit_queue(&be->vif->queues[queue_index]);
++		xenvif_disconnect_data(vif);
++
++		/* At this point some of the handlers may still be active
++		 * so we need to have additional synchronization here.
++		 */
++		vif->num_queues = 0;
++		synchronize_net();
++
++		for (queue_index = 0; queue_index < num_queues; ++queue_index)
++			xenvif_deinit_queue(&vif->queues[queue_index]);
+ 
+-		spin_lock(&be->vif->lock);
+-		vfree(be->vif->queues);
+-		be->vif->num_queues = 0;
+-		be->vif->queues = NULL;
+-		spin_unlock(&be->vif->lock);
++		vfree(vif->queues);
++		vif->queues = NULL;
+ 
+-		xenvif_disconnect_ctrl(be->vif);
++		xenvif_disconnect_ctrl(vif);
+ 	}
+ }
+ 
+-- 
+2.7.4
+

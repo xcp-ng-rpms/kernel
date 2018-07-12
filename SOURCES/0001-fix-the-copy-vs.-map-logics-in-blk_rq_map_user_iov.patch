@@ -1,0 +1,129 @@
+From 357f435d8a0d32068c75f3c7176434d992b3adb7 Mon Sep 17 00:00:00 2001
+From: Al Viro <viro@zeniv.linux.org.uk>
+Date: Fri, 8 Apr 2016 19:05:19 -0400
+Subject: [PATCH 1/1] fix the copy vs. map logics in blk_rq_map_user_iov()
+
+Signed-off-by: Al Viro <viro@zeniv.linux.org.uk>
+diff --git a/block/blk-map.c b/block/blk-map.c
+index f1d347d0..8a983a8 100644
+--- a/block/blk-map.c
++++ b/block/blk-map.c
+@@ -9,24 +9,6 @@
+ 
+ #include "blk.h"
+ 
+-static bool iovec_gap_to_prv(struct request_queue *q,
+-			     struct iovec *prv, struct iovec *cur)
+-{
+-	unsigned long prev_end;
+-
+-	if (!queue_virt_boundary(q))
+-		return false;
+-
+-	if (prv->iov_base == NULL && prv->iov_len == 0)
+-		/* prv is not set - don't check */
+-		return false;
+-
+-	prev_end = (unsigned long)(prv->iov_base + prv->iov_len);
+-
+-	return (((unsigned long)cur->iov_base & queue_virt_boundary(q)) ||
+-		prev_end & queue_virt_boundary(q));
+-}
+-
+ int blk_rq_append_bio(struct request_queue *q, struct request *rq,
+ 		      struct bio *bio)
+ {
+@@ -125,34 +107,21 @@ int blk_rq_map_user_iov(struct request_queue *q, struct request *rq,
+ 			struct rq_map_data *map_data,
+ 			const struct iov_iter *iter, gfp_t gfp_mask)
+ {
+-	struct iovec iov, prv = {.iov_base = NULL, .iov_len = 0};
+-	bool copy = (q->dma_pad_mask & iter->count) || map_data;
++	bool copy = false;
++	unsigned long align = q->dma_pad_mask | queue_dma_alignment(q);
+ 	struct bio *bio = NULL;
+ 	struct iov_iter i;
+ 	int ret;
+ 
+-	if (!iter || !iter->count)
+-		return -EINVAL;
+-
+ 	if (!iter_is_iovec(iter))
+-		return -EINVAL;
+-
+-	iov_for_each(iov, i, *iter) {
+-		unsigned long uaddr = (unsigned long) iov.iov_base;
+-
+-		if (!iov.iov_len)
+-			return -EINVAL;
++		goto fail;
+ 
+-		/*
+-		 * Keep going so we check length of all segments
+-		 */
+-		if ((uaddr & queue_dma_alignment(q)) ||
+-		    iovec_gap_to_prv(q, &prv, &iov))
+-			copy = true;
+-
+-		prv.iov_base = iov.iov_base;
+-		prv.iov_len = iov.iov_len;
+-	}
++	if (map_data)
++		copy = true;
++	else if (iov_iter_alignment(iter) & align)
++		copy = true;
++	else if (queue_virt_boundary(q))
++		copy = queue_virt_boundary(q) & iov_iter_gap_alignment(iter);
+ 
+ 	i = *iter;
+ 	do {
+@@ -169,6 +138,7 @@ int blk_rq_map_user_iov(struct request_queue *q, struct request *rq,
+ 
+ unmap_rq:
+ 	__blk_rq_unmap_user(bio);
++fail:
+ 	rq->bio = NULL;
+ 	return -EINVAL;
+ }
+diff --git a/include/linux/uio.h b/include/linux/uio.h
+index e222510..ca9010d 100644
+--- a/include/linux/uio.h
++++ b/include/linux/uio.h
+@@ -87,6 +87,7 @@ size_t copy_from_iter(void *addr, size_t bytes, struct iov_iter *i);
+ size_t copy_from_iter_nocache(void *addr, size_t bytes, struct iov_iter *i);
+ size_t iov_iter_zero(size_t bytes, struct iov_iter *);
+ unsigned long iov_iter_alignment(const struct iov_iter *i);
++unsigned long iov_iter_gap_alignment(const struct iov_iter *i);
+ void iov_iter_init(struct iov_iter *i, int direction, const struct iovec *iov,
+ 			unsigned long nr_segs, size_t count);
+ void iov_iter_kvec(struct iov_iter *i, int direction, const struct kvec *kvec,
+diff --git a/lib/iov_iter.c b/lib/iov_iter.c
+index daca582..bec1c43 100644
+--- a/lib/iov_iter.c
++++ b/lib/iov_iter.c
+@@ -549,6 +549,25 @@ unsigned long iov_iter_alignment(const struct iov_iter *i)
+ }
+ EXPORT_SYMBOL(iov_iter_alignment);
+ 
++unsigned long iov_iter_gap_alignment(const struct iov_iter *i)
++{
++        unsigned long res = 0;
++	size_t size = i->count;
++	if (!size)
++		return 0;
++
++	iterate_all_kinds(i, size, v,
++		(res |= (!res ? 0 : (unsigned long)v.iov_base) |
++			(size != v.iov_len ? size : 0), 0),
++		(res |= (!res ? 0 : (unsigned long)v.bv_offset) |
++			(size != v.bv_len ? size : 0)),
++		(res |= (!res ? 0 : (unsigned long)v.iov_base) |
++			(size != v.iov_len ? size : 0))
++		);
++		return res;
++}
++EXPORT_SYMBOL(iov_iter_gap_alignment);
++
+ ssize_t iov_iter_get_pages(struct iov_iter *i,
+ 		   struct page **pages, size_t maxsize, unsigned maxpages,
+ 		   size_t *start)

@@ -1,0 +1,33 @@
+From df68f20f56084cffd15add2d7652bcdfb38cd875 Mon Sep 17 00:00:00 2001
+From: Bob Peterson <rpeterso@redhat.com>
+Date: Mon, 5 Jun 2017 13:14:16 -0500
+Subject: [PATCH 125/170] GFS2: Remove gl_list from glock structure
+
+The gl_list is no longer used nor needed in the glock structure,
+so this patch eliminates it.
+
+Signed-off-by: Bob Peterson <rpeterso@redhat.com>
+diff --git a/fs/gfs2/incore.h b/fs/gfs2/incore.h
+index aa3d445..7debc6a 100644
+--- a/fs/gfs2/incore.h
++++ b/fs/gfs2/incore.h
+@@ -336,7 +336,6 @@ enum {
+ };
+ 
+ struct gfs2_glock {
+-	struct hlist_bl_node gl_list;
+ 	unsigned long gl_flags;		/* GLF_... */
+ 	struct lm_lockname gl_name;
+ 
+diff --git a/fs/gfs2/main.c b/fs/gfs2/main.c
+index 8031d8a..cb4ab02 100644
+--- a/fs/gfs2/main.c
++++ b/fs/gfs2/main.c
+@@ -52,7 +52,6 @@ static void gfs2_init_glock_once(void *foo)
+ {
+ 	struct gfs2_glock *gl = foo;
+ 
+-	INIT_HLIST_BL_NODE(&gl->gl_list);
+ 	spin_lock_init(&gl->gl_lockref.lock);
+ 	INIT_LIST_HEAD(&gl->gl_holders);
+ 	INIT_LIST_HEAD(&gl->gl_lru);

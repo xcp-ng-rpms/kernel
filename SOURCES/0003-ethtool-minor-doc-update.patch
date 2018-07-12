@@ -1,0 +1,27 @@
+From 5f2d472450c94402627f54b603d271076f3f97c2 Mon Sep 17 00:00:00 2001
+From: David Decotigny <decot@googlers.com>
+Date: Mon, 21 Mar 2016 10:15:34 -0700
+Subject: [PATCH 3/3] ethtool: minor doc update
+
+Updates: commit 793cf87de9d1 ("ethtool: Set cmd field in
+         ETHTOOL_GLINKSETTINGS response to wrong nwords")
+
+Signed-off-by: David Decotigny <decot@googlers.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+diff --git a/include/uapi/linux/ethtool.h b/include/uapi/linux/ethtool.h
+index 8892129..ca9e2ae 100644
+--- a/include/uapi/linux/ethtool.h
++++ b/include/uapi/linux/ethtool.h
+@@ -1548,9 +1548,9 @@ enum ethtool_reset_flags {
+  *	%ETHTOOL_GLINKSETTINGS: on entry, number of words passed by user
+  *	(>= 0); on return, if handshake in progress, negative if
+  *	request size unsupported by kernel: absolute value indicates
+- *	kernel recommended size and cmd field is 0, as well as all the
+- *	other fields; otherwise (handshake completed), strictly
+- *	positive to indicate size used by kernel and cmd field is
++ *	kernel expected size and all the other fields but cmd
++ *	are 0; otherwise (handshake completed), strictly positive
++ *	to indicate size used by kernel and cmd field stays
+  *	%ETHTOOL_GLINKSETTINGS, all other fields populated by driver. For
+  *	%ETHTOOL_SLINKSETTINGS: must be valid on entry, ie. a positive
+  *	value returned previously by %ETHTOOL_GLINKSETTINGS, otherwise

@@ -1,0 +1,169 @@
+From f25d21b970e1e5f43a3bffadc8dd1d5fe6b6427c Mon Sep 17 00:00:00 2001
+From: Ross Lagerwall <ross.lagerwall@citrix.com>
+Date: Mon, 19 Sep 2016 15:48:20 +0100
+Subject: [PATCH 2/2] mm: Ignore zones with no managed pages
+
+When Xen hotplugs unpopulated memory and ZONE_NORMAL does not yet exist,
+it gets created as a new zone with no managed pages.
+kswapd's page reclaim is zone based, and computes how many slab objects
+to free based on the highest zone that satisfies the requests (the
+classzone). With an empty ZONE_NORMAL, it tries to free a small number of
+items which prevents the batch freeing from working correctly. So the
+result is that kswapd repeatedly frees small numbers of inodes which
+takes a lot of time as it appears to require synchronous writing to the
+disk. Since kswapd doesn't free up enough pages quickly enough, it
+forces a lot of other code paths to do direct reclaim and these factors
+combined kill the performance for something doing a small number of
+reads while there is a lot of streaming write activity.
+
+Fix this by making the memory allocator (mostly) ignore zones without
+any managed pages.
+
+This patch does not need to go upstream, because upstream has two
+commits which should fix the issue:
+Commit 1d82de618ddd ("mm, vmscan: make kswapd reclaim in terms of
+nodes") and commit 6aa303defb74 ("mm, vmscan: only allocate and reclaim
+from zones with pages managed by the buddy allocator").
+
+Signed-off-by: Ross Lagerwall <ross.lagerwall@citrix.com>
+---
+ include/linux/mmzone.h |  5 +++++
+ mm/compaction.c        |  6 ++++++
+ mm/migrate.c           |  3 +++
+ mm/vmscan.c            | 22 +++++++++++++++++++++-
+ 4 files changed, 35 insertions(+), 1 deletion(-)
+
+diff --git a/include/linux/mmzone.h b/include/linux/mmzone.h
+index e23a9e7..d11dbc6 100644
+--- a/include/linux/mmzone.h
++++ b/include/linux/mmzone.h
+@@ -785,6 +785,11 @@ static inline int populated_zone(struct zone *zone)
+ 	return (!!zone->present_pages);
+ }
+ 
++static inline int managed_zone(struct zone *zone)
++{
++	return !!zone->managed_pages;
++}
++
+ extern int movable_zone;
+ 
+ #ifdef CONFIG_HIGHMEM
+diff --git a/mm/compaction.c b/mm/compaction.c
+index dba02de..f7756ee 100644
+--- a/mm/compaction.c
++++ b/mm/compaction.c
+@@ -244,6 +244,9 @@ void reset_isolation_suitable(pg_data_t *pgdat)
+ 		if (!populated_zone(zone))
+ 			continue;
+ 
++		if (!managed_zone(zone))
++			continue;
++
+ 		/* Only flush if a full compaction finished recently */
+ 		if (zone->compact_blockskip_flush)
+ 			__reset_isolation_suitable(zone);
+@@ -1627,6 +1630,9 @@ static void __compact_pgdat(pg_data_t *pgdat, struct compact_control *cc)
+ 		if (!populated_zone(zone))
+ 			continue;
+ 
++		if (!managed_zone(zone))
++			continue;
++
+ 		cc->nr_freepages = 0;
+ 		cc->nr_migratepages = 0;
+ 		cc->zone = zone;
+diff --git a/mm/migrate.c b/mm/migrate.c
+index 72c09de..277186f 100644
+--- a/mm/migrate.c
++++ b/mm/migrate.c
+@@ -1561,6 +1561,9 @@ static bool migrate_balanced_pgdat(struct pglist_data *pgdat,
+ 		if (!populated_zone(zone))
+ 			continue;
+ 
++		if (!managed_zone(zone))
++			continue;
++
+ 		if (!zone_reclaimable(zone))
+ 			continue;
+ 
+diff --git a/mm/vmscan.c b/mm/vmscan.c
+index 0c114e2..45f5d82 100644
+--- a/mm/vmscan.c
++++ b/mm/vmscan.c
+@@ -2540,8 +2540,13 @@ static bool shrink_zones(struct zonelist *zonelist, struct scan_control *sc)
+ 		if (!populated_zone(zone))
+ 			continue;
+ 
++		if (!managed_zone(zone))
++			continue;
++
+ 		classzone_idx = requested_highidx;
+ 		while (!populated_zone(zone->zone_pgdat->node_zones +
++							classzone_idx) ||
++		       !managed_zone(zone->zone_pgdat->node_zones +
+ 							classzone_idx))
+ 			classzone_idx--;
+ 
+@@ -2706,7 +2711,7 @@ static bool pfmemalloc_watermark_ok(pg_data_t *pgdat)
+ 
+ 	for (i = 0; i <= ZONE_NORMAL; i++) {
+ 		zone = &pgdat->node_zones[i];
+-		if (!populated_zone(zone) ||
++		if (!populated_zone(zone) || !managed_zone(zone) ||
+ 		    zone_reclaimable_pages(zone) == 0)
+ 			continue;
+ 
+@@ -3003,6 +3008,9 @@ static bool pgdat_balanced(pg_data_t *pgdat, int order, int classzone_idx)
+ 		if (!populated_zone(zone))
+ 			continue;
+ 
++		if (!managed_zone(zone))
++			continue;
++
+ 		managed_pages += zone->managed_pages;
+ 
+ 		/*
+@@ -3187,6 +3195,9 @@ static unsigned long balance_pgdat(pg_data_t *pgdat, int order,
+ 			if (!populated_zone(zone))
+ 				continue;
+ 
++			if (!managed_zone(zone))
++				continue;
++
+ 			if (sc.priority != DEF_PRIORITY &&
+ 			    !zone_reclaimable(zone))
+ 				continue;
+@@ -3230,6 +3241,9 @@ static unsigned long balance_pgdat(pg_data_t *pgdat, int order,
+ 			if (!populated_zone(zone))
+ 				continue;
+ 
++			if (!managed_zone(zone))
++				continue;
++
+ 			/*
+ 			 * If any zone is currently balanced then kswapd will
+ 			 * not call compaction as it is expected that the
+@@ -3264,6 +3278,9 @@ static unsigned long balance_pgdat(pg_data_t *pgdat, int order,
+ 			if (!populated_zone(zone))
+ 				continue;
+ 
++			if (!managed_zone(zone))
++				continue;
++
+ 			if (sc.priority != DEF_PRIORITY &&
+ 			    !zone_reclaimable(zone))
+ 				continue;
+@@ -3515,6 +3532,9 @@ void wakeup_kswapd(struct zone *zone, int order, enum zone_type classzone_idx)
+ 	if (!populated_zone(zone))
+ 		return;
+ 
++	if (!managed_zone(zone))
++		return;
++
+ 	if (!cpuset_zone_allowed(zone, GFP_KERNEL | __GFP_HARDWALL))
+ 		return;
+ 	pgdat = zone->zone_pgdat;
+-- 
+2.7.4
+

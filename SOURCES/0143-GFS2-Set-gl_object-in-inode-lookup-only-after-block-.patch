@@ -1,0 +1,53 @@
+From 4d7c18c7df89ef549f2de79b0faf873b49dea57a Mon Sep 17 00:00:00 2001
+From: Bob Peterson <rpeterso@redhat.com>
+Date: Tue, 18 Jul 2017 12:15:01 -0500
+Subject: [PATCH 143/170] GFS2: Set gl_object in inode lookup only after block
+ type check
+
+Before this patch, the inode glock's gl_object was set after a
+reference was acquired, but before the block type was verified.
+In cases where the block was unlinked, then freed and reused on
+another node, a residule delete callback (delete_work) would try
+to look up the inode, eventually failing the block check, but
+only after it overwrites gl_object with a pointer to the wrong
+inode. This patch moves the assignment of gl_object after the
+block check so it won't be improperly overwritten.
+
+Likewise, at the end of the function, gfs2_inode_lookup was
+clearing gl_object after it unlocked the glock, which meant
+another process might free the glock in the meantime. This
+patch guards against that case.
+
+Signed-off-by: Bob Peterson <rpeterso@redhat.com>
+Reviewed-by: Andreas Gruenbacher <agruenba@redhat.com>
+diff --git a/fs/gfs2/inode.c b/fs/gfs2/inode.c
+index 2876f51..5079a2f 100644
+--- a/fs/gfs2/inode.c
++++ b/fs/gfs2/inode.c
+@@ -145,7 +145,6 @@ struct inode *gfs2_inode_lookup(struct super_block *sb, unsigned int type,
+ 		if (unlikely(error))
+ 			goto fail;
+ 		flush_delayed_work(&ip->i_gl->gl_work);
+-		glock_set_object(ip->i_gl, ip);
+ 
+ 		error = gfs2_glock_get(sdp, no_addr, &gfs2_iopen_glops, CREATE, &io_gl);
+ 		if (unlikely(error))
+@@ -170,6 +169,7 @@ struct inode *gfs2_inode_lookup(struct super_block *sb, unsigned int type,
+ 			}
+ 		}
+ 
++		glock_set_object(ip->i_gl, ip);
+ 		set_bit(GIF_INVALID, &ip->i_flags);
+ 		error = gfs2_glock_nq_init(io_gl, LM_ST_SHARED, GL_EXACT, &ip->i_iopen_gh);
+ 		if (unlikely(error))
+@@ -206,9 +206,9 @@ fail_refresh:
+ fail_put:
+ 	if (io_gl)
+ 		gfs2_glock_put(io_gl);
++	glock_clear_object(ip->i_gl, ip);
+ 	if (gfs2_holder_initialized(&i_gh))
+ 		gfs2_glock_dq_uninit(&i_gh);
+-	glock_clear_object(ip->i_gl, ip);
+ fail:
+ 	iget_failed(inode);
+ 	return ERR_PTR(error);

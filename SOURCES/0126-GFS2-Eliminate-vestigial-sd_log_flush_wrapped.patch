@@ -1,0 +1,65 @@
+From 722f6f62a563108dc0f311bd86120b8fbfa0c6df Mon Sep 17 00:00:00 2001
+From: Bob Peterson <rpeterso@redhat.com>
+Date: Tue, 20 Jun 2017 09:52:57 -0500
+Subject: [PATCH 126/170] GFS2: Eliminate vestigial sd_log_flush_wrapped
+
+Superblock variable sd_log_flush_wrapped is set, but never referenced,
+so this patch eliminates it.
+
+Signed-off-by: Bob Peterson <rpeterso@redhat.com>
+diff --git a/fs/gfs2/incore.h b/fs/gfs2/incore.h
+index 7debc6a..4b30706 100644
+--- a/fs/gfs2/incore.h
++++ b/fs/gfs2/incore.h
+@@ -819,7 +819,6 @@ struct gfs2_sbd {
+ 	wait_queue_head_t sd_reserving_log_wait;
+ 
+ 	unsigned int sd_log_flush_head;
+-	u64 sd_log_flush_wrapped;
+ 
+ 	spinlock_t sd_ail_lock;
+ 	struct list_head sd_ail1_list;
+diff --git a/fs/gfs2/log.c b/fs/gfs2/log.c
+index bff4d1e..b92c5b4 100644
+--- a/fs/gfs2/log.c
++++ b/fs/gfs2/log.c
+@@ -722,7 +722,6 @@ void gfs2_log_flush(struct gfs2_sbd *sdp, struct gfs2_glock *gl,
+ 		clear_bit(SDF_JOURNAL_LIVE, &sdp->sd_flags);
+ 
+ 	sdp->sd_log_flush_head = sdp->sd_log_head;
+-	sdp->sd_log_flush_wrapped = 0;
+ 	tr = sdp->sd_log_tr;
+ 	if (tr) {
+ 		sdp->sd_log_tr = NULL;
+@@ -775,7 +774,6 @@ void gfs2_log_flush(struct gfs2_sbd *sdp, struct gfs2_glock *gl,
+ 			}
+ 			atomic_dec(&sdp->sd_log_blks_free); /* Adjust for unreserved buffer */
+ 			trace_gfs2_log_blocks(sdp, -1);
+-			sdp->sd_log_flush_wrapped = 0;
+ 			log_write_header(sdp, 0);
+ 			sdp->sd_log_head = sdp->sd_log_flush_head;
+ 		}
+@@ -880,7 +878,6 @@ void gfs2_log_shutdown(struct gfs2_sbd *sdp)
+ 	gfs2_assert_withdraw(sdp, list_empty(&sdp->sd_ail1_list));
+ 
+ 	sdp->sd_log_flush_head = sdp->sd_log_head;
+-	sdp->sd_log_flush_wrapped = 0;
+ 
+ 	log_write_header(sdp, GFS2_LOG_HEAD_UNMOUNT);
+ 
+diff --git a/fs/gfs2/lops.c b/fs/gfs2/lops.c
+index a47e7ce..6a96dc5 100644
+--- a/fs/gfs2/lops.c
++++ b/fs/gfs2/lops.c
+@@ -134,10 +134,8 @@ static void gfs2_log_incr_head(struct gfs2_sbd *sdp)
+ 	BUG_ON((sdp->sd_log_flush_head == sdp->sd_log_tail) &&
+ 	       (sdp->sd_log_flush_head != sdp->sd_log_head));
+ 
+-	if (++sdp->sd_log_flush_head == sdp->sd_jdesc->jd_blocks) {
++	if (++sdp->sd_log_flush_head == sdp->sd_jdesc->jd_blocks)
+ 		sdp->sd_log_flush_head = 0;
+-		sdp->sd_log_flush_wrapped = 1;
+-	}
+ }
+ 
+ static u64 gfs2_log_bmap(struct gfs2_sbd *sdp)

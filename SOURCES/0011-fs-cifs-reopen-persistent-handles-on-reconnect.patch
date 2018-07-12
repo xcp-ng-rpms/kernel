@@ -1,0 +1,87 @@
+From 52ace1ef1259e119a24a34b45cb800c4e7529090 Mon Sep 17 00:00:00 2001
+From: Steve French <smfrench@gmail.com>
+Date: Thu, 22 Sep 2016 19:23:56 -0500
+Subject: [PATCH 11/11] fs/cifs: reopen persistent handles on reconnect
+
+Continuous Availability features like persistent handles
+require that clients reconnect their open files, not
+just the sessions, soon after the network connection comes
+back up, otherwise the server will throw away the state
+(byte range locks, leases, deny modes) on those handles
+after a timeout.
+
+Add code to reconnect handles when use_persistent set
+(e.g. Continuous Availability shares) after tree reconnect.
+
+Signed-off-by: Aurelien Aptel <aaptel@suse.com>
+Reviewed-by: Germano Percossi <germano.percossi@citrix.com>
+Signed-off-by: Steve French <smfrench@gmail.com>
+---
+ fs/cifs/cifsproto.h |    2 ++
+ fs/cifs/file.c      |   18 ++++++++++++++++++
+ fs/cifs/smb2pdu.c   |    5 +++++
+ 3 files changed, 25 insertions(+)
+
+diff --git a/fs/cifs/cifsproto.h b/fs/cifs/cifsproto.h
+index 4ead72a..ced0e42 100644
+--- a/fs/cifs/cifsproto.h
++++ b/fs/cifs/cifsproto.h
+@@ -193,6 +193,8 @@ extern struct smb_vol *cifs_get_volume_info(char *mount_data,
+ extern int cifs_mount(struct cifs_sb_info *, struct smb_vol *);
+ extern void cifs_umount(struct cifs_sb_info *);
+ extern void cifs_mark_open_files_invalid(struct cifs_tcon *tcon);
++extern void cifs_reopen_persistent_handles(struct cifs_tcon *tcon);
++
+ extern bool cifs_find_lock_conflict(struct cifsFileInfo *cfile, __u64 offset,
+ 				    __u64 length, __u8 type,
+ 				    struct cifsLockInfo **conf_lock,
+diff --git a/fs/cifs/file.c b/fs/cifs/file.c
+index ee5ceae..8f27c8a 100644
+--- a/fs/cifs/file.c
++++ b/fs/cifs/file.c
+@@ -760,6 +760,24 @@ int cifs_close(struct inode *inode, struct file *file)
+ 	return 0;
+ }
+ 
++void
++cifs_reopen_persistent_handles(struct cifs_tcon *tcon)
++{
++	struct cifsFileInfo *open_file = NULL;
++	struct list_head *tmp;
++	struct list_head *tmp1;
++
++	/* list all files open on tree connection, reopen resilient handles  */
++	spin_lock(&tcon->open_file_lock);
++	list_for_each_safe(tmp, tmp1, &tcon->openFileList) {
++		open_file = list_entry(tmp, struct cifsFileInfo, tlist);
++		spin_unlock(&tcon->open_file_lock);
++		cifs_reopen_file(open_file, false /* do not flush */);
++		spin_lock(&tcon->open_file_lock);
++	}
++	spin_unlock(&tcon->open_file_lock);
++}
++
+ int cifs_closedir(struct inode *inode, struct file *file)
+ {
+ 	int rc = 0;
+diff --git a/fs/cifs/smb2pdu.c b/fs/cifs/smb2pdu.c
+index 3eec96c..4d944c4 100644
+--- a/fs/cifs/smb2pdu.c
++++ b/fs/cifs/smb2pdu.c
+@@ -250,8 +250,13 @@ smb2_reconnect(__le16 smb2_command, struct cifs_tcon *tcon)
+ 	}
+ 
+ 	cifs_mark_open_files_invalid(tcon);
++
+ 	rc = SMB2_tcon(0, tcon->ses, tcon->treeName, tcon, nls_codepage);
+ 	mutex_unlock(&tcon->ses->session_mutex);
++
++	if (tcon->use_persistent)
++		cifs_reopen_persistent_handles(tcon);
++
+ 	cifs_dbg(FYI, "reconnect tcon rc = %d\n", rc);
+ 	if (rc)
+ 		goto out;
+-- 
+1.7.10.4
+

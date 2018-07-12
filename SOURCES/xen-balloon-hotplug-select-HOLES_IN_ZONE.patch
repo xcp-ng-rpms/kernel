@@ -1,0 +1,26 @@
+diff --git a/drivers/xen/Kconfig b/drivers/xen/Kconfig
+index 73708ac..e283707 100644
+--- a/drivers/xen/Kconfig
++++ b/drivers/xen/Kconfig
+@@ -29,6 +29,7 @@ config XEN_BALLOON_MEMORY_HOTPLUG
+ 	bool "Memory hotplug support for Xen balloon driver"
+ 	default n
+ 	depends on XEN_BALLOON && MEMORY_HOTPLUG
++	select HOLES_IN_ZONE
+ 	help
+ 	  Memory hotplug support for Xen balloon driver allows expanding memory
+ 	  available for the system above limit declared at system startup.
+diff --git a/mm/Kconfig b/mm/Kconfig
+index 97a4e06..6f3d87f 100644
+--- a/mm/Kconfig
++++ b/mm/Kconfig
+@@ -476,6 +476,9 @@ config FRONTSWAP
+ 
+ 	  If unsure, say Y to enable frontswap.
+ 
++config HOLES_IN_ZONE
++        bool
++
+ config CMA
+ 	bool "Contiguous Memory Allocator"
+ 	depends on HAVE_MEMBLOCK && MMU

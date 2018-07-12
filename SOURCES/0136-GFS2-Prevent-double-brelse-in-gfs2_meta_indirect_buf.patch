@@ -1,0 +1,40 @@
+From 61eaadcd52924b8015ee57b9abd3844c5f9e03a8 Mon Sep 17 00:00:00 2001
+From: Bob Peterson <rpeterso@redhat.com>
+Date: Mon, 3 Jul 2017 11:37:02 -0500
+Subject: [PATCH 136/170] GFS2: Prevent double brelse in
+ gfs2_meta_indirect_buffer
+
+Before this patch, problems reading in indirect buffers would send
+an IO error back to the caller, and release the buffer_head with
+brelse() in function gfs2_meta_indirect_buffer, however, it would
+still return the address of the buffer_head it released. After the
+error was discovered, function gfs2_block_map would call function
+release_metapath to free all buffers. That checked:
+if (mp->mp_bh[i] == NULL) but since the value was set after the
+error, it was non-zero, so brelse was called a second time. This
+resulted in the following error:
+
+kernel: WARNING: at fs/buffer.c:1224 __brelse+0x3a/0x40() (Tainted: G        W  -- ------------   )
+kernel: Hardware name: RHEV Hypervisor
+kernel: VFS: brelse: Trying to free free buffer
+
+This patch changes gfs2_meta_indirect_buffer so it only sets
+the buffer_head pointer in cases where it isn't released.
+
+Signed-off-by: Bob Peterson <rpeterso@redhat.com>
+Acked-by: Steven Whitehouse <swhiteho@redhat.com>
+diff --git a/fs/gfs2/meta_io.c b/fs/gfs2/meta_io.c
+index c255880..a50229e 100644
+--- a/fs/gfs2/meta_io.c
++++ b/fs/gfs2/meta_io.c
+@@ -418,8 +418,9 @@ int gfs2_meta_indirect_buffer(struct gfs2_inode *ip, int height, u64 num,
+ 	if (ret == 0 && gfs2_metatype_check(sdp, bh, mtype)) {
+ 		brelse(bh);
+ 		ret = -EIO;
++	} else {
++		*bhp = bh;
+ 	}
+-	*bhp = bh;
+ 	return ret;
+ }
+ 

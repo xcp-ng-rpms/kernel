@@ -1,0 +1,67 @@
+From 611526756a3d0fa7f4d1c519397ba8898f40443f Mon Sep 17 00:00:00 2001
+From: Abhi Das <adas@redhat.com>
+Date: Tue, 5 Apr 2016 12:06:15 -0400
+Subject: [PATCH 038/170] gfs2: Use gfs2 wrapper to sync inode before calling
+ generic_file_splice_read()
+
+gfs2_file_splice_read() f_op grabs and releases the cluster-wide
+inode glock to sync the inode size to the latest.
+
+Without this, generic_file_splice_read() uses an older i_size value
+and can return EOF for valid offsets in the inode.
+
+Signed-off-by: Abhi Das <adas@redhat.com>
+Signed-off-by: Bob Peterson <rpeterso@redhat.com>
+diff --git a/fs/gfs2/file.c b/fs/gfs2/file.c
+index 208efc7..1a9beb7 100644
+--- a/fs/gfs2/file.c
++++ b/fs/gfs2/file.c
+@@ -950,6 +950,30 @@ out_uninit:
+ 	return ret;
+ }
+ 
++static ssize_t gfs2_file_splice_read(struct file *in, loff_t *ppos,
++				     struct pipe_inode_info *pipe, size_t len,
++				     unsigned int flags)
++{
++	struct inode *inode = in->f_mapping->host;
++	struct gfs2_inode *ip = GFS2_I(inode);
++	struct gfs2_holder gh;
++	int ret;
++
++	mutex_lock(&inode->i_mutex);
++
++	ret = gfs2_glock_nq_init(ip->i_gl, LM_ST_SHARED, 0, &gh);
++	if (ret) {
++		mutex_unlock(&inode->i_mutex);
++		return ret;
++	}
++
++	gfs2_glock_dq_uninit(&gh);
++	mutex_unlock(&inode->i_mutex);
++
++	return generic_file_splice_read(in, ppos, pipe, len, flags);
++}
++
++
+ static ssize_t gfs2_file_splice_write(struct pipe_inode_info *pipe,
+ 				      struct file *out, loff_t *ppos,
+ 				      size_t len, unsigned int flags)
+@@ -1112,7 +1136,7 @@ const struct file_operations gfs2_file_fops = {
+ 	.fsync		= gfs2_fsync,
+ 	.lock		= gfs2_lock,
+ 	.flock		= gfs2_flock,
+-	.splice_read	= generic_file_splice_read,
++	.splice_read	= gfs2_file_splice_read,
+ 	.splice_write	= gfs2_file_splice_write,
+ 	.setlease	= simple_nosetlease,
+ 	.fallocate	= gfs2_fallocate,
+@@ -1140,7 +1164,7 @@ const struct file_operations gfs2_file_fops_nolock = {
+ 	.open		= gfs2_open,
+ 	.release	= gfs2_release,
+ 	.fsync		= gfs2_fsync,
+-	.splice_read	= generic_file_splice_read,
++	.splice_read	= gfs2_file_splice_read,
+ 	.splice_write	= gfs2_file_splice_write,
+ 	.setlease	= generic_setlease,
+ 	.fallocate	= gfs2_fallocate,

@@ -1,0 +1,42 @@
+From 17605b961f766757fddec20810453fc51b266e77 Mon Sep 17 00:00:00 2001
+From: David Decotigny <decot@googlers.com>
+Date: Wed, 24 Feb 2016 10:58:07 -0800
+Subject: [PATCH 10/10] net: rdma: use __ethtool_get_ksettings
+
+Signed-off-by: David Decotigny <decot@googlers.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+diff --git a/include/rdma/ib_addr.h b/include/rdma/ib_addr.h
+index a78ff97..40c3b8b 100644
+--- a/include/rdma/ib_addr.h
++++ b/include/rdma/ib_addr.h
+@@ -256,24 +256,22 @@ static inline enum ib_mtu iboe_get_mtu(int mtu)
+ 
+ static inline int iboe_get_rate(struct net_device *dev)
+ {
+-	struct ethtool_cmd cmd;
+-	u32 speed;
++	struct ethtool_link_ksettings cmd;
+ 	int err;
+ 
+ 	rtnl_lock();
+-	err = __ethtool_get_settings(dev, &cmd);
++	err = __ethtool_get_link_ksettings(dev, &cmd);
+ 	rtnl_unlock();
+ 	if (err)
+ 		return IB_RATE_PORT_CURRENT;
+ 
+-	speed = ethtool_cmd_speed(&cmd);
+-	if (speed >= 40000)
++	if (cmd.base.speed >= 40000)
+ 		return IB_RATE_40_GBPS;
+-	else if (speed >= 30000)
++	else if (cmd.base.speed >= 30000)
+ 		return IB_RATE_30_GBPS;
+-	else if (speed >= 20000)
++	else if (cmd.base.speed >= 20000)
+ 		return IB_RATE_20_GBPS;
+-	else if (speed >= 10000)
++	else if (cmd.base.speed >= 10000)
+ 		return IB_RATE_10_GBPS;
+ 	else
+ 		return IB_RATE_PORT_CURRENT;

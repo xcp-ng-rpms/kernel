@@ -1,0 +1,64 @@
+diff --git a/arch/x86/include/asm/xen/hypercall.h b/arch/x86/include/asm/xen/hypercall.h
+index 4c20dd3..f184df1 100644
+--- a/arch/x86/include/asm/xen/hypercall.h
++++ b/arch/x86/include/asm/xen/hypercall.h
+@@ -458,6 +458,13 @@ HYPERVISOR_hvm_op(int op, void *arg)
+        return _hypercall2(unsigned long, hvm_op, op, arg);
+ }
+ 
++static inline int __must_check
++HYPERVISOR_kexec_op(
++        unsigned long op, void *args)
++{
++	return _hypercall2(int, kexec_op, op, args);
++}
++
+ static inline int
+ HYPERVISOR_tmem_op(
+ 	struct tmem_op *op)
+diff --git a/include/xen/interface/kexec.h b/include/xen/interface/kexec.h
+new file mode 100644
+index 0000000..443df8a
+--- /dev/null
++++ b/include/xen/interface/kexec.h
+@@ -0,0 +1,10 @@
++#ifndef _XEN_KEXEC_H
++#define _XEN_KEXEC_H
++
++#define KEXEC_CMD_kexec                    0
++typedef struct xen_kexec_exec {
++	int type;
++} xen_kexec_exec_t;
++
++#endif
++
+diff --git a/kernel/panic.c b/kernel/panic.c
+index 41e2b54..4cf4a07 100644
+--- a/kernel/panic.c
++++ b/kernel/panic.c
+@@ -25,6 +25,12 @@
+ #include <linux/nmi.h>
+ #include <linux/console.h>
+ 
++#ifdef CONFIG_XEN
++#include <xen/xen.h>
++#include <asm/xen/hypercall.h>
++#include <xen/interface/kexec.h>
++#endif
++
+ #define PANIC_TIMER_STEP 100
+ #define PANIC_BLINK_SPD 18
+ 
+@@ -112,6 +118,12 @@ void panic(const char *fmt, ...)
+ 		dump_stack();
+ #endif
+ 
++#ifdef CONFIG_XEN
++	if (xen_initial_domain()) {
++		xen_kexec_exec_t xke = { KEXEC_TYPE_CRASH };
++		HYPERVISOR_kexec_op(KEXEC_CMD_kexec, &xke);
++	}
++#endif
+ 	/*
+ 	 * If we have crashed and we have a crash kernel loaded let it handle
+ 	 * everything else.

@@ -1,0 +1,735 @@
+diff --git a/drivers/net/bonding/bond_alb.c b/drivers/net/bonding/bond_alb.c
+index bb9e9fc..9da6533 100644
+--- a/drivers/net/bonding/bond_alb.c
++++ b/drivers/net/bonding/bond_alb.c
+@@ -31,6 +31,7 @@
+ #include <linux/if_arp.h>
+ #include <linux/if_ether.h>
+ #include <linux/if_bonding.h>
++#include <linux/if_bridge.h>
+ #include <linux/if_vlan.h>
+ #include <linux/in.h>
+ #include <net/ipx.h>
+@@ -82,6 +83,7 @@ static inline struct arp_pkt *arp_pkt(const struct sk_buff *skb)
+ /* Forward declaration */
+ static void alb_send_learning_packets(struct slave *slave, u8 mac_addr[],
+ 				      bool strict_match);
++static void slb_send_learning_packets(struct bonding *bond);
+ static void rlb_purge_src_ip(struct bonding *bond, struct arp_pkt *arp);
+ static void rlb_src_unlink(struct bonding *bond, u32 index);
+ static void rlb_src_link(struct bonding *bond, u32 ip_src_hash,
+@@ -268,6 +270,48 @@ static struct slave *tlb_choose_channel(struct bonding *bond, u32 hash_index,
+ 	return tx_slave;
+ }
+ 
++/*********************** slb specific functions ***************************/
++
++static void slb_send_learning_packets(struct bonding *bond)
++{
++	struct net_device *upper;
++	struct list_head *iter;
++
++	br_send_gratuitous_switch_learning_packet(bond->dev);
++
++	rcu_read_lock();
++	netdev_for_each_all_upper_dev_rcu(bond->dev, upper, iter) {
++		if (is_vlan_dev(upper) && vlan_get_encap_level(upper) == 0)
++			br_send_gratuitous_switch_learning_packet(upper);
++	}
++	rcu_read_unlock();
++}
++
++void bond_info_show_slb(struct seq_file *seq)
++{
++	struct bonding *bond = seq->private;
++	struct alb_bond_info *bond_info = &(BOND_ALB_INFO(bond));
++	struct tlb_client_info *hash_table, *slot;
++	int i;
++
++	spin_lock_bh(&bond->mode_lock);
++
++	hash_table = bond_info->tx_hashtbl;
++	if (hash_table == NULL)
++		goto out;
++
++	seq_puts(seq, "\nSource load balancing info:\n");
++	for (i=0; i<TLB_HASH_TABLE_SIZE; i++) {
++		slot = &hash_table[i];
++		if (slot == NULL || slot->tx_slave == NULL)
++			continue;
++		seq_printf(seq, " [%03d] = %s\n", i, slot->tx_slave->dev->name);
++	}
++out:
++	spin_unlock_bh(&bond->mode_lock);
++}
++
++
+ /*********************** rlb specific functions ***************************/
+ 
+ /* when an ARP REPLY is received from a client update its info
+@@ -1049,7 +1093,8 @@ static void alb_fasten_mac_swap(struct bonding *bond, struct slave *slave1,
+ 
+ 	/* fasten the change in the switch */
+ 	if (bond_slave_can_tx(slave1)) {
+-		alb_send_learning_packets(slave1, slave1->dev->dev_addr, false);
++		if (!bond->alb_info.slb_enabled)
++			alb_send_learning_packets(slave1, slave1->dev->dev_addr, false);
+ 		if (bond->alb_info.rlb_enabled) {
+ 			/* inform the clients that the mac address
+ 			 * has changed
+@@ -1061,7 +1106,8 @@ static void alb_fasten_mac_swap(struct bonding *bond, struct slave *slave1,
+ 	}
+ 
+ 	if (bond_slave_can_tx(slave2)) {
+-		alb_send_learning_packets(slave2, slave2->dev->dev_addr, false);
++		if (!bond->alb_info.slb_enabled)
++			alb_send_learning_packets(slave2, slave2->dev->dev_addr, false);
+ 		if (bond->alb_info.rlb_enabled) {
+ 			/* inform the clients that the mac address
+ 			 * has changed
+@@ -1219,7 +1265,7 @@ static int alb_set_mac_address(struct bonding *bond, void *addr)
+ 	char tmp_addr[ETH_ALEN];
+ 	int res;
+ 
+-	if (bond->alb_info.rlb_enabled)
++	if (bond->alb_info.rlb_enabled || bond->alb_info.slb_enabled)
+ 		return 0;
+ 
+ 	bond_for_each_slave(bond, slave, iter) {
+@@ -1255,7 +1301,7 @@ unwind:
+ 
+ /************************ exported alb funcions ************************/
+ 
+-int bond_alb_initialize(struct bonding *bond, int rlb_enabled)
++int bond_alb_initialize(struct bonding *bond, int mode)
+ {
+ 	int res;
+ 
+@@ -1263,15 +1309,23 @@ int bond_alb_initialize(struct bonding *bond, int rlb_enabled)
+ 	if (res)
+ 		return res;
+ 
+-	if (rlb_enabled) {
++	bond->alb_info.rlb_enabled = 0;
++	bond->alb_info.slb_enabled = 0;
++
++	switch (mode) {
++	case BOND_MODE_ALB:
+ 		bond->alb_info.rlb_enabled = 1;
+ 		res = rlb_initialize(bond);
+ 		if (res) {
+ 			tlb_deinitialize(bond);
+ 			return res;
+ 		}
+-	} else {
+-		bond->alb_info.rlb_enabled = 0;
++		break;
++	case BOND_MODE_SLB:
++		bond->alb_info.slb_enabled = 1;
++		break;
++	case BOND_MODE_TLB:
++		break;
+ 	}
+ 
+ 	return 0;
+@@ -1301,7 +1355,8 @@ static int bond_do_alb_xmit(struct sk_buff *skb, struct bonding *bond,
+ 	}
+ 
+ 	if (tx_slave && bond_slave_can_tx(tx_slave)) {
+-		if (tx_slave != rcu_access_pointer(bond->curr_active_slave)) {
++		if (!bond->alb_info.slb_enabled &&
++		    tx_slave != rcu_access_pointer(bond->curr_active_slave)) {
+ 			ether_addr_copy(eth_data->h_source,
+ 					tx_slave->dev->dev_addr);
+ 		}
+@@ -1376,7 +1431,10 @@ int bond_alb_xmit(struct sk_buff *skb, struct net_device *bond_dev)
+ 	skb_reset_mac_header(skb);
+ 	eth_data = eth_hdr(skb);
+ 
+-	switch (ntohs(skb->protocol)) {
++	if (bond_info->slb_enabled) {
++		hash_start = (char*)&(eth_data->h_source);
++		hash_size = ETH_ALEN;
++	} else switch (ntohs(skb->protocol)) {
+ 	case ETH_P_IP: {
+ 		const struct iphdr *iph = ip_hdr(skb);
+ 
+@@ -1457,6 +1515,7 @@ int bond_alb_xmit(struct sk_buff *skb, struct net_device *bond_dev)
+ 	return bond_do_alb_xmit(skb, bond, tx_slave);
+ }
+ 
++/* Route to a slave based solely on source Ethernet address. */
+ void bond_alb_monitor(struct work_struct *work)
+ {
+ 	struct bonding *bond = container_of(work, struct bonding,
+@@ -1477,7 +1536,8 @@ void bond_alb_monitor(struct work_struct *work)
+ 	bond_info->lp_counter++;
+ 
+ 	/* send learning packets */
+-	if (bond_info->lp_counter >= BOND_ALB_LP_TICKS(bond)) {
++	if (!bond->alb_info.slb_enabled &&
++	    bond_info->lp_counter >= BOND_ALB_LP_TICKS(bond)) {
+ 		bool strict_match;
+ 
+ 		bond_for_each_slave_rcu(bond, slave, iter) {
+@@ -1563,13 +1623,15 @@ int bond_alb_init_slave(struct bonding *bond, struct slave *slave)
+ {
+ 	int res;
+ 
+-	res = alb_set_slave_mac_addr(slave, slave->perm_hwaddr);
+-	if (res)
+-		return res;
++	if (!bond->alb_info.slb_enabled) {
++		res = alb_set_slave_mac_addr(slave, slave->perm_hwaddr);
++		if (res)
++			return res;
+ 
+-	res = alb_handle_addr_collision_on_attach(bond, slave);
+-	if (res)
+-		return res;
++		res = alb_handle_addr_collision_on_attach(bond, slave);
++		if (res)
++			return res;
++	}
+ 
+ 	tlb_init_slave(slave);
+ 
+@@ -1589,7 +1651,7 @@ int bond_alb_init_slave(struct bonding *bond, struct slave *slave)
+  */
+ void bond_alb_deinit_slave(struct bonding *bond, struct slave *slave)
+ {
+-	if (bond_has_slaves(bond))
++	if (!bond->alb_info.slb_enabled && bond_has_slaves(bond))
+ 		alb_change_hw_addr_on_detach(bond, slave);
+ 
+ 	tlb_clear_slave(bond, slave, 0);
+@@ -1609,6 +1671,15 @@ void bond_alb_handle_link_change(struct bonding *bond, struct slave *slave, char
+ 		tlb_clear_slave(bond, slave, 0);
+ 		if (bond->alb_info.rlb_enabled)
+ 			rlb_clear_slave(bond, slave);
++		if (bond->alb_info.slb_enabled) {
++			/*
++			 * The receive path for any MAC addresses
++			 * which were hashed to this slave has now
++			 * gone away. Send a gratuitous packet which
++			 * will cause the switch to update its tables.
++			 */
++			slb_send_learning_packets(bond);
++		}
+ 	} else if (link == BOND_LINK_UP) {
+ 		/* order a rebalance ASAP */
+ 		bond_info->tx_rebalance_counter = BOND_TLB_REBALANCE_TICKS;
+@@ -1656,7 +1727,7 @@ void bond_alb_handle_active_change(struct bonding *bond, struct slave *new_slave
+ 	swap_slave = curr_active;
+ 	rcu_assign_pointer(bond->curr_active_slave, new_slave);
+ 
+-	if (!new_slave || !bond_has_slaves(bond))
++	if (!new_slave || !bond_has_slaves(bond) || bond->alb_info.slb_enabled)
+ 		return;
+ 
+ 	/* set the new curr_active_slave to the bonds mac address
+@@ -1726,7 +1797,7 @@ int bond_alb_set_mac_address(struct net_device *bond_dev, void *addr)
+ 	 * duplications.
+ 	 */
+ 	curr_active = rtnl_dereference(bond->curr_active_slave);
+-	if (!curr_active)
++	if (!curr_active || bond->alb_info.slb_enabled)
+ 		return 0;
+ 
+ 	swap_slave = bond_slave_has_mac(bond, bond_dev->dev_addr);
+diff --git a/drivers/net/bonding/bond_main.c b/drivers/net/bonding/bond_main.c
+index b3d70a7..75243e5 100644
+--- a/drivers/net/bonding/bond_main.c
++++ b/drivers/net/bonding/bond_main.c
+@@ -137,7 +137,7 @@ module_param(mode, charp, 0);
+ MODULE_PARM_DESC(mode, "Mode of operation; 0 for balance-rr, "
+ 		       "1 for active-backup, 2 for balance-xor, "
+ 		       "3 for broadcast, 4 for 802.3ad, 5 for balance-tlb, "
+-		       "6 for balance-alb");
++		       "6 for balance-alb, 7 for balance-slb");
+ module_param(primary, charp, 0);
+ MODULE_PARM_DESC(primary, "Primary network device to use");
+ module_param(primary_reselect, charp, 0);
+@@ -203,7 +203,7 @@ int bond_net_id __read_mostly;
+ 
+ static __be32 arp_target[BOND_MAX_ARP_TARGETS];
+ static int arp_ip_count;
+-static int bond_mode	= BOND_MODE_ROUNDROBIN;
++static int bond_mode	= BOND_MODE_SLB;
+ static int xmit_hashtype = BOND_XMIT_POLICY_LAYER2;
+ static int lacp_fast;
+ 
+@@ -229,9 +229,10 @@ const char *bond_mode_name(int mode)
+ 		[BOND_MODE_8023AD] = "IEEE 802.3ad Dynamic link aggregation",
+ 		[BOND_MODE_TLB] = "transmit load balancing",
+ 		[BOND_MODE_ALB] = "adaptive load balancing",
++		[BOND_MODE_SLB] = "source load balancing",
+ 	};
+ 
+-	if (mode < BOND_MODE_ROUNDROBIN || mode > BOND_MODE_ALB)
++	if (mode < BOND_MODE_ROUNDROBIN || mode > BOND_MODE_SLB)
+ 		return "unknown";
+ 
+ 	return names[mode];
+@@ -496,7 +497,7 @@ static int bond_set_promiscuity(struct bonding *bond, int inc)
+ 	struct list_head *iter;
+ 	int err = 0;
+ 
+-	if (bond_uses_primary(bond)) {
++	if (bond_uses_primary(bond) && BOND_MODE(bond) != BOND_MODE_SLB) {
+ 		struct slave *curr_active = rtnl_dereference(bond->curr_active_slave);
+ 
+ 		if (curr_active)
+@@ -586,8 +587,10 @@ static void bond_hw_addr_swap(struct bonding *bond, struct slave *new_active,
+ 			      struct slave *old_active)
+ {
+ 	if (old_active) {
+-		if (bond->dev->flags & IFF_PROMISC)
++		if (bond->dev->flags & IFF_PROMISC &&
++		    bond->params.mode != BOND_MODE_SLB) {
+ 			dev_set_promiscuity(old_active->dev, -1);
++		}
+ 
+ 		if (bond->dev->flags & IFF_ALLMULTI)
+ 			dev_set_allmulti(old_active->dev, -1);
+@@ -597,8 +600,10 @@ static void bond_hw_addr_swap(struct bonding *bond, struct slave *new_active,
+ 
+ 	if (new_active) {
+ 		/* FIXME: Signal errors upstream. */
+-		if (bond->dev->flags & IFF_PROMISC)
++		if (bond->dev->flags & IFF_PROMISC &&
++		    bond->params.mode != BOND_MODE_SLB) {
+ 			dev_set_promiscuity(new_active->dev, 1);
++		}
+ 
+ 		if (bond->dev->flags & IFF_ALLMULTI)
+ 			dev_set_allmulti(new_active->dev, 1);
+@@ -1143,7 +1148,8 @@ static bool bond_should_deliver_exact_match(struct sk_buff *skb,
+ 					    struct bonding *bond)
+ {
+ 	if (bond_is_slave_inactive(slave)) {
+-		if (BOND_MODE(bond) == BOND_MODE_ALB &&
++		if ((BOND_MODE(bond) == BOND_MODE_ALB ||
++		     BOND_MODE(bond) == BOND_MODE_SLB) &&
+ 		    skb->pkt_type != PACKET_BROADCAST &&
+ 		    skb->pkt_type != PACKET_MULTICAST)
+ 			return false;
+@@ -1513,6 +1519,11 @@ int bond_enslave(struct net_device *bond_dev, struct net_device *slave_dev)
+ 		dev_uc_sync_multiple(slave_dev, bond_dev);
+ 
+ 		netif_addr_unlock_bh(bond_dev);
++	} else if (bond->params.mode == BOND_MODE_SLB) {
++		/* set promiscuity level to new slave */
++		if (bond_dev->flags & IFF_PROMISC) {
++			dev_set_promiscuity(slave_dev, 1);
++		}
+ 	}
+ 
+ 	if (BOND_MODE(bond) == BOND_MODE_8023AD) {
+@@ -1625,6 +1636,7 @@ int bond_enslave(struct net_device *bond_dev, struct net_device *slave_dev)
+ 		break;
+ 	case BOND_MODE_TLB:
+ 	case BOND_MODE_ALB:
++	case BOND_MODE_SLB:
+ 		bond_set_active_slave(new_slave);
+ 		bond_set_slave_inactive_flags(new_slave, BOND_SLAVE_NOTIFY_NOW);
+ 		break;
+@@ -3220,7 +3232,7 @@ static int bond_open(struct net_device *bond_dev)
+ 		/* bond_alb_initialize must be called before the timer
+ 		 * is started.
+ 		 */
+-		if (bond_alb_initialize(bond, (BOND_MODE(bond) == BOND_MODE_ALB)))
++		if (bond_alb_initialize(bond, BOND_MODE(bond)))
+ 			return -ENOMEM;
+ 		if (bond->params.tlb_dynamic_lb)
+ 			queue_delayed_work(bond->wq, &bond->alb_work, 0);
+@@ -3994,6 +4006,7 @@ static netdev_tx_t __bond_start_xmit(struct sk_buff *skb, struct net_device *dev
+ 	case BOND_MODE_BROADCAST:
+ 		return bond_xmit_broadcast(skb, dev);
+ 	case BOND_MODE_ALB:
++	case BOND_MODE_SLB:
+ 		return bond_alb_xmit(skb, dev);
+ 	case BOND_MODE_TLB:
+ 		return bond_tlb_xmit(skb, dev);
+diff --git a/drivers/net/bonding/bond_options.c b/drivers/net/bonding/bond_options.c
+index 55e93b6..dafe1b1 100644
+--- a/drivers/net/bonding/bond_options.c
++++ b/drivers/net/bonding/bond_options.c
+@@ -86,6 +86,7 @@ static const struct bond_opt_value bond_mode_tbl[] = {
+ 	{ "802.3ad",       BOND_MODE_8023AD,       0},
+ 	{ "balance-tlb",   BOND_MODE_TLB,          0},
+ 	{ "balance-alb",   BOND_MODE_ALB,          0},
++	{ "balance-slb",   BOND_MODE_SLB,          0},
+ 	{ NULL,            -1,                     0},
+ };
+ 
+diff --git a/drivers/net/bonding/bond_procfs.c b/drivers/net/bonding/bond_procfs.c
+index f514fe5..2b0491d 100644
+--- a/drivers/net/bonding/bond_procfs.c
++++ b/drivers/net/bonding/bond_procfs.c
+@@ -161,6 +161,11 @@ static void bond_info_show_master(struct seq_file *seq)
+ 			}
+ 		}
+ 	}
++
++	if (bond->params.mode == BOND_MODE_SLB) {
++		extern void bond_info_show_slb(struct seq_file *seq);
++		bond_info_show_slb(seq);
++	}
+ }
+ 
+ static void bond_info_show_slave(struct seq_file *seq,
+@@ -186,6 +191,9 @@ static void bond_info_show_slave(struct seq_file *seq,
+ 	seq_printf(seq, "Permanent HW addr: %pM\n", slave->perm_hwaddr);
+ 	seq_printf(seq, "Slave queue ID: %d\n", slave->queue_id);
+ 
++	seq_printf(seq, "Promiscuity ref count: %i\n", slave->dev->promiscuity);
++	seq_printf(seq, "Flags: 0x%04X\n", slave->dev->flags);
++
+ 	if (BOND_MODE(bond) == BOND_MODE_8023AD) {
+ 		const struct port *port = &SLAVE_AD_INFO(slave)->port;
+ 		const struct aggregator *agg = port->aggregator;
+diff --git a/include/linux/if_bridge.h b/include/linux/if_bridge.h
+index dcb89e3..70b01e3 100644
+--- a/include/linux/if_bridge.h
++++ b/include/linux/if_bridge.h
+@@ -76,4 +76,6 @@ static inline bool br_multicast_has_querier_adjacent(struct net_device *dev,
+ }
+ #endif
+ 
++extern void br_send_gratuitous_switch_learning_packet(struct net_device *dev);
++
+ #endif
+diff --git a/include/net/bond_alb.h b/include/net/bond_alb.h
+index 313a8d3..d50d933 100644
+--- a/include/net/bond_alb.h
++++ b/include/net/bond_alb.h
+@@ -144,6 +144,8 @@ struct alb_bond_info {
+ 	u32			unbalanced_load;
+ 	int			tx_rebalance_counter;
+ 	int			lp_counter;
++	/* -------- slb parameters -------- */
++	int slb_enabled;
+ 	/* -------- rlb parameters -------- */
+ 	int rlb_enabled;
+ 	struct rlb_client_info	*rx_hashtbl;	/* Receive hash table */
+@@ -166,7 +168,7 @@ struct alb_bond_info {
+ 						 */
+ };
+ 
+-int bond_alb_initialize(struct bonding *bond, int rlb_enabled);
++int bond_alb_initialize(struct bonding *bond, int mode);
+ void bond_alb_deinitialize(struct bonding *bond);
+ int bond_alb_init_slave(struct bonding *bond, struct slave *slave);
+ void bond_alb_deinit_slave(struct bonding *bond, struct slave *slave);
+diff --git a/include/net/bonding.h b/include/net/bonding.h
+index 93abe5f..b660b2c 100644
+--- a/include/net/bonding.h
++++ b/include/net/bonding.h
+@@ -278,12 +278,14 @@ static inline bool bond_should_override_tx_queue(struct bonding *bond)
+ static inline bool bond_is_lb(const struct bonding *bond)
+ {
+ 	return BOND_MODE(bond) == BOND_MODE_TLB ||
+-	       BOND_MODE(bond) == BOND_MODE_ALB;
++	       BOND_MODE(bond) == BOND_MODE_ALB ||
++	       BOND_MODE(bond) == BOND_MODE_SLB;
+ }
+ 
+ static inline bool bond_is_nondyn_tlb(const struct bonding *bond)
+ {
+-	return (BOND_MODE(bond) == BOND_MODE_TLB)  &&
++	return (BOND_MODE(bond) == BOND_MODE_TLB
++		|| BOND_MODE(bond) == BOND_MODE_SLB) &&
+ 	       (bond->params.tlb_dynamic_lb == 0);
+ }
+ 
+diff --git a/include/uapi/linux/if_bonding.h b/include/uapi/linux/if_bonding.h
+index 9635a62..ae088fb 100644
+--- a/include/uapi/linux/if_bonding.h
++++ b/include/uapi/linux/if_bonding.h
+@@ -70,6 +70,7 @@
+ #define BOND_MODE_8023AD        4
+ #define BOND_MODE_TLB           5
+ #define BOND_MODE_ALB		6 /* TLB + RLB (receive load balancing) */
++#define BOND_MODE_SLB		7 /* Source load balancing. */
+ 
+ /* each slave's link has 4 states */
+ #define BOND_LINK_UP    0           /* link is up and running */
+diff --git a/include/uapi/linux/if_bridge.h b/include/uapi/linux/if_bridge.h
+index 18db144..2987f6b 100644
+--- a/include/uapi/linux/if_bridge.h
++++ b/include/uapi/linux/if_bridge.h
+@@ -200,4 +200,9 @@ enum {
+ };
+ #define MDBA_SET_ENTRY_MAX (__MDBA_SET_ENTRY_MAX - 1)
+ 
++#ifdef __KERNEL_
++extern struct net_device *br_locate_physical_device(struct net_device *dev);
++extern void br_send_gratuitous_switch_learning_packet(struct net_device *dev);
++#endif
++
+ #endif /* _UAPI_LINUX_IF_BRIDGE_H */
+diff --git a/net/bridge/br_fdb.c b/net/bridge/br_fdb.c
+index 09442e0..97e616c 100644
+--- a/net/bridge/br_fdb.c
++++ b/net/bridge/br_fdb.c
+@@ -561,6 +561,71 @@ int br_fdb_insert(struct net_bridge *br, struct net_bridge_port *source,
+ 	return ret;
+ }
+ 
++static int is_gratuitous_arp(struct sk_buff *skb)
++{
++	static const u8 bcast[ETH_ALEN] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
++#pragma pack(1)
++	struct arp_pkt {
++		u16     hw_addr_space;
++		u16     prot_addr_space;
++		u8      hw_addr_len;
++		u8      prot_addr_len;
++		u16     op_code;
++		u8      mac_src[ETH_ALEN];	/* sender hardware address */
++		u32     ip_src;			/* sender IP address */
++		u8      mac_dst[ETH_ALEN];	/* target hardware address */
++		u32     ip_dst;			/* target IP address */
++	};
++#pragma pack()
++	struct arp_pkt *arp = (struct arp_pkt *)skb->data;
++
++	if (!ether_addr_equal(bcast, eth_hdr(skb)->h_dest))
++		return 0;
++
++	if (!arp)
++		return 0;
++
++	if (skb->len < sizeof(struct arp_pkt))
++		return 0;
++
++	if (eth_hdr(skb)->h_proto != htons(ETH_P_ARP))
++		return 0;
++
++	if (arp->hw_addr_space != htons(ARPHRD_ETHER)
++	    || arp->hw_addr_len != ETH_ALEN)
++		return 0;
++
++	if (arp->prot_addr_space != htons(ETH_P_IP)
++	    || arp->prot_addr_len != 4)
++		return 0;
++
++
++	switch (arp->op_code) {
++	case htons(ARPOP_REQUEST):
++		if (arp->ip_src != arp->ip_dst)
++			return 0;
++
++		break;
++
++	case htons(ARPOP_REPLY):
++		break;
++
++	default:
++		return 0;
++	}
++
++	return 1;
++}
++
++static int is_physical_port(struct net_bridge *br, struct net_bridge_port *port)
++{
++	extern struct net_bridge_port *br_locate_physical_port(struct net_bridge *br);
++
++	struct net_bridge_port *phys_port = br_locate_physical_port(br);
++
++	return phys_port && phys_port == port;
++}
++
+ void br_fdb_update(struct net_bridge *br, struct net_bridge_port *source,
+ 		   const unsigned char *addr, u16 vid, bool added_by_user)
+ {
+diff --git a/net/bridge/br_if.c b/net/bridge/br_if.c
+index ec02f58..c59f238 100644
+--- a/net/bridge/br_if.c
++++ b/net/bridge/br_if.c
+@@ -13,6 +13,7 @@
+ 
+ #include <linux/kernel.h>
+ #include <linux/netdevice.h>
++#include <linux/pkt_sched.h>
+ #include <linux/etherdevice.h>
+ #include <linux/netpoll.h>
+ #include <linux/ethtool.h>
+@@ -343,6 +344,153 @@ static struct net_bridge_port *new_nbp(struct net_bridge *br,
+ 	return p;
+ }
+ 
++struct net_bridge_port *br_locate_physical_port(struct net_bridge *br)
++{
++	struct net_bridge_port *p;
++	if (!br->phys_port) {
++		list_for_each_entry(p, &br->port_list, list) {
++			if (ether_addr_equal(br->dev->dev_addr, p->dev->dev_addr)) {
++				br->phys_port = p;
++				break;
++			}
++		}
++	}
++	return br->phys_port;
++}
++
++struct net_device *br_locate_physical_device(struct net_device *dev)
++{
++	struct net_bridge *br;
++	const struct net_bridge_port *p;
++
++	if (!(dev->priv_flags & IFF_EBRIDGE))
++		return dev;
++
++	br = netdev_priv(dev);
++	p = br_locate_physical_port(br);
++
++	return p ? p->dev : dev;
++}
++EXPORT_SYMBOL(br_locate_physical_device);
++
++static struct sk_buff *create_switch_learning_packet(struct net_device *dev, unsigned char *src_hw)
++{
++	const char *signature = "Citrix XenServer Failover";
++#pragma pack(1)
++	struct learning_pkt {
++		/* 802.2 header */
++		u8 mac_dst[ETH_ALEN];
++		u8 mac_src[ETH_ALEN];
++		u16 mac_len;
++
++		/* LLC header */
++		u8 llc_dsap;
++		u8 llc_ssap;
++		u8 llc_cntl;
++
++		/* SNAP header */
++		u8 snap_org[3];
++		u16 snap_type;
++
++		/* Payload */
++		u8 payload[strlen(signature) + 1 + 2*ETH_ALEN]; /* Sig + NULL + VIF MAC + Host MAC */
++	};
++#pragma pack()
++	struct sk_buff *skb;
++	struct learning_pkt pkt;
++	int size = sizeof(struct learning_pkt);
++	char *data;
++	int len;
++	const unsigned char dest_hw[ETH_ALEN] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
++
++	memset(&pkt, 0, size);
++
++	/* 802.2 header */
++	memcpy(pkt.mac_dst, dest_hw, ETH_ALEN);
++	memcpy(pkt.mac_src, src_hw, ETH_ALEN);
++	pkt.mac_len = __constant_htons(size);
++
++	/*  LLC header */
++	pkt.llc_dsap = 0xaa;
++	pkt.llc_ssap = 0xaa;
++	pkt.llc_cntl = 0x3;
++
++	/* SNAP header */
++	pkt.snap_org[0] = 0x00;
++	pkt.snap_org[1] = 0x16;
++	pkt.snap_org[2] = 0x3e;
++	pkt.snap_type = __constant_htons(0x2134);
++
++	/* Payload */
++	len = sprintf(&pkt.payload[0], signature);
++	len++; /* NULL */
++	memcpy(&pkt.payload[len], src_hw, ETH_ALEN); len += ETH_ALEN;
++	memcpy(&pkt.payload[len], dev->dev_addr, ETH_ALEN); len += ETH_ALEN;
++
++	skb = dev_alloc_skb(size);
++	if (!skb)
++		return NULL;
++
++	data = skb_put(skb, size);
++	memcpy(data, &pkt, size);
++
++	skb->protocol = pkt.mac_len;
++	skb->priority = TC_PRIO_CONTROL;
++	skb->dev = dev;
++
++	return skb;
++}
++
++void br_send_gratuitous_switch_learning_packet(struct net_device *dev)
++{
++	struct net_bridge *br;
++	struct net_bridge_port *br_port;
++	struct sk_buff *skb;
++	int i;
++
++	rcu_read_lock();
++
++	br_port = br_port_get_rcu(dev);
++	
++	if (!br_port)
++		goto out;
++	if (!br_port->br)
++		goto out;
++
++	br = br_port->br;
++
++	for (i = 0; i < BR_HASH_SIZE; i++) {
++		struct net_bridge_fdb_entry *f;
++
++		hlist_for_each_entry_rcu(f, &br->hash[i], hlist) {
++			/* ignore pseudo entry for local MAC address */
++			if (!f->dst)
++				continue;
++
++			if (f->dst != br_port &&
++			    f->dst->dev->addr_len == ETH_ALEN &&
++			    memcmp(&f->dst->dev->dev_addr[0], &f->addr.addr[0], ETH_ALEN) != 0) {
++				skb = create_switch_learning_packet(dev, f->addr.addr);
++
++				if (skb == NULL)
++					goto out;
++
++				dev_queue_xmit(skb);
++
++				f->updated = jiffies;
++			}
++		}
++	}
++
++	skb = create_switch_learning_packet(dev, dev->dev_addr);
++	if (skb)
++		dev_queue_xmit(skb);
++
++out:
++	rcu_read_unlock();
++}
++EXPORT_SYMBOL(br_send_gratuitous_switch_learning_packet);
++
+ int br_add_bridge(struct net *net, const char *name)
+ {
+ 	struct net_device *dev;
+@@ -561,6 +709,9 @@ int br_del_if(struct net_bridge *br, struct net_device *dev)
+ 	if (!p || p->br != br)
+ 		return -EINVAL;
+ 
++	if (p == br->phys_port)
++		br->phys_port = NULL;
++
+ 	/* Since more than one interface can be attached to a bridge,
+ 	 * there still maybe an alternate path for netconsole to use;
+ 	 * therefore there is no reason for a NETDEV_RELEASE event.
+diff --git a/net/bridge/br_private.h b/net/bridge/br_private.h
+index 1001a1b..81f2e4a 100644
+--- a/net/bridge/br_private.h
++++ b/net/bridge/br_private.h
+@@ -254,6 +254,7 @@ struct net_bridge
+ 	spinlock_t			lock;
+ 	struct list_head		port_list;
+ 	struct net_device		*dev;
++	struct net_bridge_port		*phys_port; /* One of our ports will contains the route to the physical world */
+ 
+ 	struct pcpu_sw_netstats		__percpu *stats;
+ 	spinlock_t			hash_lock;

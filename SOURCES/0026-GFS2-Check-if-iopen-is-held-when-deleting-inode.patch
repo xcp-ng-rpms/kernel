@@ -1,0 +1,72 @@
+From 7508abc4bdac43dc87d2fdd31527063f72da7020 Mon Sep 17 00:00:00 2001
+From: Bob Peterson <rpeterso@redhat.com>
+Date: Fri, 18 Dec 2015 11:54:55 -0600
+Subject: [PATCH 026/170] GFS2: Check if iopen is held when deleting inode
+
+This patch fixes an error condition in which an inode is partially
+created in gfs2_create_inode() but then some error is discovered,
+which causes it to fail and call iput() before the iopen glock is
+created or held. In that case, gfs2_delete_inode would try to
+unlock an iopen glock that doesn't yet exist. Therefore, we test
+its holder (which must exist) for the HIF_HOLDER bit before trying
+to dq it.
+
+Signed-off-by: Bob Peterson <rpeterso@redhat.com>
+Acked-by: Steven Whitehouse <swhiteho@redhat.com>
+diff --git a/fs/gfs2/glock.c b/fs/gfs2/glock.c
+index a4ff7b5..5788ebf 100644
+--- a/fs/gfs2/glock.c
++++ b/fs/gfs2/glock.c
+@@ -1015,6 +1015,7 @@ void gfs2_glock_dq(struct gfs2_holder *gh)
+ 		handle_callback(gl, LM_ST_UNLOCKED, 0, false);
+ 
+ 	list_del_init(&gh->gh_list);
++	clear_bit(HIF_HOLDER, &gh->gh_iflags);
+ 	if (find_first_holder(gl) == NULL) {
+ 		if (glops->go_unlock) {
+ 			GLOCK_BUG_ON(gl, test_and_set_bit(GLF_LOCK, &gl->gl_flags));
+diff --git a/fs/gfs2/super.c b/fs/gfs2/super.c
+index 8f960a5..f8a0cd8 100644
+--- a/fs/gfs2/super.c
++++ b/fs/gfs2/super.c
+@@ -1551,12 +1551,16 @@ static void gfs2_evict_inode(struct inode *inode)
+ 			goto out_truncate;
+ 	}
+ 
+-	ip->i_iopen_gh.gh_flags |= GL_NOCACHE;
+-	gfs2_glock_dq_wait(&ip->i_iopen_gh);
+-	gfs2_holder_reinit(LM_ST_EXCLUSIVE, LM_FLAG_TRY_1CB | GL_NOCACHE, &ip->i_iopen_gh);
+-	error = gfs2_glock_nq(&ip->i_iopen_gh);
+-	if (error)
+-		goto out_truncate;
++	if (ip->i_iopen_gh.gh_gl &&
++	    test_bit(HIF_HOLDER, &ip->i_iopen_gh.gh_iflags)) {
++		ip->i_iopen_gh.gh_flags |= GL_NOCACHE;
++		gfs2_glock_dq_wait(&ip->i_iopen_gh);
++		gfs2_holder_reinit(LM_ST_EXCLUSIVE, LM_FLAG_TRY_1CB | GL_NOCACHE,
++				   &ip->i_iopen_gh);
++		error = gfs2_glock_nq(&ip->i_iopen_gh);
++		if (error)
++			goto out_truncate;
++	}
+ 
+ 	/* Case 1 starts here */
+ 
+@@ -1606,11 +1610,13 @@ out_unlock:
+ 	if (gfs2_rs_active(&ip->i_res))
+ 		gfs2_rs_deltree(&ip->i_res);
+ 
+-	if (test_bit(HIF_HOLDER, &ip->i_iopen_gh.gh_iflags)) {
+-		ip->i_iopen_gh.gh_flags |= GL_NOCACHE;
+-		gfs2_glock_dq_wait(&ip->i_iopen_gh);
++	if (ip->i_iopen_gh.gh_gl) {
++		if (test_bit(HIF_HOLDER, &ip->i_iopen_gh.gh_iflags)) {
++			ip->i_iopen_gh.gh_flags |= GL_NOCACHE;
++			gfs2_glock_dq_wait(&ip->i_iopen_gh);
++		}
++		gfs2_holder_uninit(&ip->i_iopen_gh);
+ 	}
+-	gfs2_holder_uninit(&ip->i_iopen_gh);
+ 	gfs2_glock_dq_uninit(&gh);
+ 	if (error && error != GLR_TRYFAILED && error != -EROFS)
+ 		fs_warn(sdp, "gfs2_evict_inode: %d\n", error);

@@ -1,0 +1,59 @@
+From 309e8cda596f6552a32dd14b969ce9b17f837f2f Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Ernesto=20A=2E=20Fern=C3=A1ndez?=
+ <ernesto.mnd.fernandez@gmail.com>
+Date: Thu, 31 Aug 2017 07:53:15 -0500
+Subject: [PATCH 166/170] gfs2: preserve i_mode if __gfs2_set_acl() fails
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+When changing a file's acl mask, __gfs2_set_acl() will first set the
+group bits of i_mode to the value of the mask, and only then set the
+actual extended attribute representing the new acl.
+
+If the second part fails (due to lack of space, for example) and the
+file had no acl attribute to begin with, the system will from now on
+assume that the mask permission bits are actual group permission bits,
+potentially granting access to the wrong users.
+
+Prevent this by only changing the inode mode after the acl has been set.
+
+Signed-off-by: Ernesto A. Fernández <ernesto.mnd.fernandez@gmail.com>
+Signed-off-by: Bob Peterson <rpeterso@redhat.com>
+diff --git a/fs/gfs2/acl.c b/fs/gfs2/acl.c
+index a6d9623..9d5eecb 100644
+--- a/fs/gfs2/acl.c
++++ b/fs/gfs2/acl.c
+@@ -116,6 +116,7 @@ int gfs2_set_acl(struct inode *inode, struct posix_acl *acl, int type)
+ 	struct gfs2_holder gh;
+ 	bool need_unlock = false;
+ 	int ret;
++	umode_t mode;
+ 
+ 	if (acl && acl->a_count > GFS2_ACL_MAX_ENTRIES(GFS2_SB(inode)))
+ 		return -E2BIG;
+@@ -130,17 +131,19 @@ int gfs2_set_acl(struct inode *inode, struct posix_acl *acl, int type)
+ 			return ret;
+ 		need_unlock = true;
+ 	}
+-	if (type == ACL_TYPE_ACCESS && acl) {
+-		umode_t mode = inode->i_mode;
+ 
+-		ret = posix_acl_update_mode(inode, &inode->i_mode, &acl);
++	mode = inode->i_mode;
++	if (type == ACL_TYPE_ACCESS && acl) {
++		ret = posix_acl_update_mode(inode, &mode, &acl);
+ 		if (ret)
+ 			goto unlock;
+-		if (mode != inode->i_mode)
+-			mark_inode_dirty(inode);
+ 	}
+ 
+ 	ret = __gfs2_set_acl(inode, acl, type);
++	if (!ret && mode != inode->i_mode) {
++		inode->i_mode = mode;
++		mark_inode_dirty(inode);
++	}
+ unlock:
+ 	if (need_unlock)
+ 		gfs2_glock_dq_uninit(&gh);

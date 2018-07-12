@@ -1,0 +1,51 @@
+From 48e296a37485d118bf56370fe8e1f142c964fe7c Mon Sep 17 00:00:00 2001
+From: Igor Druzhinin <igor.druzhinin@citrix.com>
+Date: Tue, 17 Jan 2017 18:05:18 +0000
+Subject: [PATCH v2 1/2] xen-netback: fix memory leaks on XenBus disconnect
+
+Eliminate memory leaks introduced several years ago by cleaning the
+queue resources which are allocated on XenBus connection event. Namely, queue
+structure array and pages used for IO rings.
+
+Signed-off-by: Igor Druzhinin <igor.druzhinin@citrix.com>
+---
+ drivers/net/xen-netback/xenbus.c | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/drivers/net/xen-netback/xenbus.c b/drivers/net/xen-netback/xenbus.c
+index 6c57b02..3e99071 100644
+--- a/drivers/net/xen-netback/xenbus.c
++++ b/drivers/net/xen-netback/xenbus.c
+@@ -493,11 +493,20 @@ static int backend_create_xenvif(struct backend_info *be)
+ static void backend_disconnect(struct backend_info *be)
+ {
+ 	if (be->vif) {
++		unsigned int queue_index;
++
+ 		xen_unregister_watchers(be->vif);
+ #ifdef CONFIG_DEBUG_FS
+ 		xenvif_debugfs_delif(be->vif);
+ #endif /* CONFIG_DEBUG_FS */
+ 		xenvif_disconnect_data(be->vif);
++		for (queue_index = 0; queue_index < be->vif->num_queues; ++queue_index)
++			xenvif_deinit_queue(&be->vif->queues[queue_index]);
++
++		vfree(be->vif->queues);
++		be->vif->num_queues = 0;
++		be->vif->queues = NULL;
++
+ 		xenvif_disconnect_ctrl(be->vif);
+ 	}
+ }
+@@ -1026,6 +1035,8 @@ static void connect(struct backend_info *be)
+ err:
+ 	if (be->vif->num_queues > 0)
+ 		xenvif_disconnect_data(be->vif); /* Clean up existing queues */
++	for (queue_index = 0; queue_index < be->vif->num_queues; ++queue_index)
++		xenvif_deinit_queue(&be->vif->queues[queue_index]);
+ 	vfree(be->vif->queues);
+ 	be->vif->queues = NULL;
+ 	be->vif->num_queues = 0;
+-- 
+1.8.3.1
+

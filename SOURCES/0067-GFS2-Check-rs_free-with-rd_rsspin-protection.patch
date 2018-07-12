@@ -1,0 +1,39 @@
+From 44f52122a22004de9c3bae288bbc6dff3624fe9c Mon Sep 17 00:00:00 2001
+From: Bob Peterson <rpeterso@redhat.com>
+Date: Wed, 6 Jul 2016 10:36:43 -0500
+Subject: [PATCH 067/170] GFS2: Check rs_free with rd_rsspin protection
+
+For the last process to close a file opened for write, function
+gfs2_rsqa_delete was deleting the file's inode's block reservation
+out of the rgrp reservations tree. Then it was checking to make sure
+rs_free was 0, but it was performing the check outside the protection
+of rd_rsspin spin_lock. The rd_rsspin spin_lock protection is needed
+to prevent a race between the process freeing the reservation and
+another who is allocating a new set of blocks inside the same rgrp
+for the same inode, thus changing its value.
+
+Signed-off-by: Bob Peterson <rpeterso@redhat.com>
+diff --git a/fs/gfs2/rgrp.c b/fs/gfs2/rgrp.c
+index fba38ca..86ccc015 100644
+--- a/fs/gfs2/rgrp.c
++++ b/fs/gfs2/rgrp.c
+@@ -658,6 +658,7 @@ void gfs2_rs_deltree(struct gfs2_blkreserv *rs)
+ 	if (rgd) {
+ 		spin_lock(&rgd->rd_rsspin);
+ 		__rs_deltree(rs);
++		BUG_ON(rs->rs_free);
+ 		spin_unlock(&rgd->rd_rsspin);
+ 	}
+ }
+@@ -671,10 +672,8 @@ void gfs2_rs_deltree(struct gfs2_blkreserv *rs)
+ void gfs2_rsqa_delete(struct gfs2_inode *ip, atomic_t *wcount)
+ {
+ 	down_write(&ip->i_rw_mutex);
+-	if ((wcount == NULL) || (atomic_read(wcount) <= 1)) {
++	if ((wcount == NULL) || (atomic_read(wcount) <= 1))
+ 		gfs2_rs_deltree(&ip->i_res);
+-		BUG_ON(ip->i_res.rs_free);
+-	}
+ 	up_write(&ip->i_rw_mutex);
+ 	gfs2_qa_delete(ip, wcount);
+ }

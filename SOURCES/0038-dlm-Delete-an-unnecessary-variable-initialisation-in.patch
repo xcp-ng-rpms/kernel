@@ -1,0 +1,24 @@
+From 2ab93ae13822741432338c9d0917a6009e737a5a Mon Sep 17 00:00:00 2001
+From: Markus Elfring <elfring@users.sourceforge.net>
+Date: Sat, 6 May 2017 09:56:55 +0200
+Subject: [PATCH 38/45] dlm: Delete an unnecessary variable initialisation in
+ dlm_ls_start()
+
+The local variable "rv" is reassigned by a statement at the beginning.
+Thus omit the explicit initialisation.
+
+Signed-off-by: Markus Elfring <elfring@users.sourceforge.net>
+Signed-off-by: David Teigland <teigland@redhat.com>
+diff --git a/fs/dlm/member.c b/fs/dlm/member.c
+index 3e56503..3fda383 100644
+--- a/fs/dlm/member.c
++++ b/fs/dlm/member.c
+@@ -670,7 +670,7 @@ int dlm_ls_stop(struct dlm_ls *ls)
+ 
+ int dlm_ls_start(struct dlm_ls *ls)
+ {
+-	struct dlm_recover *rv = NULL, *rv_old;
++	struct dlm_recover *rv, *rv_old;
+ 	struct dlm_config_node *nodes;
+ 	int error, count;
+ 

@@ -1,0 +1,26 @@
+From aa9f1012858bc7f44368f1e4453c989d873b0860 Mon Sep 17 00:00:00 2001
+From: Bob Peterson <rpeterso@redhat.com>
+Date: Wed, 19 Oct 2016 11:34:54 -0400
+Subject: [PATCH 16/45] dlm: don't specify WQ_UNBOUND for the ast callback
+ workqueue
+
+This patch removes the WQ_UNBOUND flag (which implies WQ_HIGHPRI)
+from the DLM's ast work queue, in favor of just WQ_HIGHPRI.
+This has been shown to cause a 19 percent performance increase for
+simultaneous inode creates on GFS2 with fs_mark.
+
+Signed-off-by: Bob Peterson <rpeterso@redhat.com>
+Signed-off-by: David Teigland <teigland@redhat.com>
+diff --git a/fs/dlm/ast.c b/fs/dlm/ast.c
+index dcea1e3..07fed83 100644
+--- a/fs/dlm/ast.c
++++ b/fs/dlm/ast.c
+@@ -268,7 +268,7 @@ void dlm_callback_work(struct work_struct *work)
+ int dlm_callback_start(struct dlm_ls *ls)
+ {
+ 	ls->ls_callback_wq = alloc_workqueue("dlm_callback",
+-					     WQ_UNBOUND | WQ_MEM_RECLAIM, 0);
++					     WQ_HIGHPRI | WQ_MEM_RECLAIM, 0);
+ 	if (!ls->ls_callback_wq) {
+ 		log_print("can't start dlm_callback workqueue");
+ 		return -ENOMEM;

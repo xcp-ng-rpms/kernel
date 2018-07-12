@@ -1,0 +1,47 @@
+From 7d81d2b8714ec72462a99875acbf2f976402f3f1 Mon Sep 17 00:00:00 2001
+From: Kevin Barnett <kevin.barnett@microsemi.com>
+Date: Wed, 31 Aug 2016 14:55:11 -0500
+Subject: [PATCH 12/12] scsi: smartpqi: scsi queuecommand cleanup
+
+minor cleanup of scsi queue command function
+
+Reviewed-by: Scott Teel <scott.teel@microsemi.com>
+Reviewed-by: Scott Benesh <scott.benesh@microsemi.com>
+Reviewed-by: Johannes Thumshirn <jthumshirn@suse.de>
+Reviewed-by: Tomas Henzl <thenzl@redhat.com>
+Signed-off-by: Kevin Barnett <kevin.barnett@microsemi.com>
+Signed-off-by: Don Brace <don.brace@microsemi.com>
+Signed-off-by: Martin K. Petersen <martin.petersen@oracle.com>
+---
+ drivers/scsi/smartpqi/smartpqi_init.c |    8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/scsi/smartpqi/smartpqi_init.c b/drivers/scsi/smartpqi/smartpqi_init.c
+index db248c1..f0672ed 100644
+--- a/drivers/scsi/smartpqi/smartpqi_init.c
++++ b/drivers/scsi/smartpqi/smartpqi_init.c
+@@ -4514,7 +4514,7 @@ static int pqi_aio_submit_io(struct pqi_ctrl_info *ctrl_info,
+ }
+ 
+ static int pqi_scsi_queue_command(struct Scsi_Host *shost,
+-				struct scsi_cmnd *scmd)
++	struct scsi_cmnd *scmd)
+ {
+ 	int rc;
+ 	struct pqi_ctrl_info *ctrl_info;
+@@ -4532,6 +4532,12 @@ static int pqi_scsi_queue_command(struct Scsi_Host *shost,
+ 		return 0;
+ 	}
+ 
++	/*
++	 * This is necessary because the SML doesn't zero out this field during
++	 * error recovery.
++	 */
++	scmd->result = 0;
++
+ 	hwq = blk_mq_unique_tag_to_hwq(blk_mq_unique_tag(scmd->request));
+ 	if (hwq >= ctrl_info->num_queue_groups)
+ 		hwq = 0;
+-- 
+1.7.10.4
+

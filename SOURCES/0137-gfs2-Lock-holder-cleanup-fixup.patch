@@ -1,0 +1,23 @@
+From 283c9a97be1d7ab2cce2630b5f6cc793f3b387a1 Mon Sep 17 00:00:00 2001
+From: Andreas Gruenbacher <agruenba@redhat.com>
+Date: Mon, 17 Jul 2017 13:39:15 -0500
+Subject: [PATCH 137/170] gfs2: Lock holder cleanup (fixup)
+
+Function gfs2_holder_initialized should be used in do_flock as well.
+
+Signed-off-by: Andreas Gruenbacher <agruenba@redhat.com>
+Signed-off-by: Bob Peterson <rpeterso@redhat.com>
+diff --git a/fs/gfs2/file.c b/fs/gfs2/file.c
+index 88e745f..5a1ab2bb 100644
+--- a/fs/gfs2/file.c
++++ b/fs/gfs2/file.c
+@@ -1051,8 +1051,7 @@ static int do_flock(struct file *file, int cmd, struct file_lock *fl)
+ 
+ 	mutex_lock(&fp->f_fl_mutex);
+ 
+-	gl = fl_gh->gh_gl;
+-	if (gl) {
++	if (gfs2_holder_initialized(fl_gh)) {
+ 		if (fl_gh->gh_state == state)
+ 			goto out;
+ 		locks_lock_file_wait(file,

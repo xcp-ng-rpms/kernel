@@ -1,0 +1,40 @@
+From de74025052ef63852d80a444ea19f2bdd7bec63f Mon Sep 17 00:00:00 2001
+From: Pavel Shilovsky <pshilov@microsoft.com>
+Date: Tue, 11 Oct 2016 15:34:07 -0700
+Subject: [PATCH 15/15] CIFS: Reset read oplock to NONE if we have mandatory
+ locks after reopen
+
+We are already doing the same thing for an ordinary open case:
+we can't keep read oplock on a file if we have mandatory byte-range
+locks because pagereading can conflict with these locks on a server.
+Fix it by setting oplock level to NONE.
+
+Signed-off-by: Pavel Shilovsky <pshilov@microsoft.com>
+Signed-off-by: Steve French <smfrench@gmail.com>
+---
+ fs/cifs/file.c |    9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/fs/cifs/file.c b/fs/cifs/file.c
+index 07c14f9..7f5f617 100644
+--- a/fs/cifs/file.c
++++ b/fs/cifs/file.c
+@@ -739,6 +739,15 @@ reopen_success:
+ 	 * to the server to get the new inode info.
+ 	 */
+ 
++	/*
++	 * If the server returned a read oplock and we have mandatory brlocks,
++	 * set oplock level to None.
++	 */
++	if (server->ops->is_read_op(oplock) && cifs_has_mand_locks(cinode)) {
++		cifs_dbg(FYI, "Reset oplock val from read to None due to mand locks\n");
++		oplock = 0;
++	}
++
+ 	server->ops->set_fid(cfile, &cfile->fid, oplock);
+ 	if (oparms.reconnect)
+ 		cifs_relock_file(cfile);
+-- 
+1.7.10.4
+

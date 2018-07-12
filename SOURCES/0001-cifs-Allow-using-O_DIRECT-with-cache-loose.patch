@@ -1,0 +1,51 @@
+From 882137c4d64175e2bb38cd842e25d54e6de31da8 Mon Sep 17 00:00:00 2001
+From: Ross Lagerwall <ross.lagerwall@citrix.com>
+Date: Wed, 2 Dec 2015 14:46:07 +0000
+Subject: [PATCH 1/1] cifs: Allow using O_DIRECT with cache=loose
+
+Currently O_DIRECT is supported with cache=none and cache=strict, but
+not cache=loose. Add support for using O_DIRECT when mounted with
+cache=loose.
+
+Signed-off-by: Ross Lagerwall <ross.lagerwall@citrix.com>
+Signed-off-by: Steve French <smfrench@gmail.com>
+---
+ fs/cifs/cifsfs.c | 15 +++++++++++++++
+ 1 file changed, 15 insertions(+)
+
+diff --git a/fs/cifs/cifsfs.c b/fs/cifs/cifsfs.c
+index 53e343d..565a4c0 100644
+--- a/fs/cifs/cifsfs.c
++++ b/fs/cifs/cifsfs.c
+@@ -754,6 +754,9 @@ cifs_loose_read_iter(struct kiocb *iocb, struct iov_iter *iter)
+ 	ssize_t rc;
+ 	struct inode *inode = file_inode(iocb->ki_filp);
+ 
++	if (iocb->ki_filp->f_flags & O_DIRECT)
++		return cifs_user_readv(iocb, iter);
++
+ 	rc = cifs_revalidate_mapping(inode);
+ 	if (rc)
+ 		return rc;
+@@ -768,6 +771,18 @@ static ssize_t cifs_file_write_iter(struct kiocb *iocb, struct iov_iter *from)
+ 	ssize_t written;
+ 	int rc;
+ 
++	if (iocb->ki_filp->f_flags & O_DIRECT) {
++		written = cifs_user_writev(iocb, from);
++		if (written > 0 && CIFS_CACHE_READ(cinode)) {
++			cifs_zap_mapping(inode);
++			cifs_dbg(FYI,
++				 "Set no oplock for inode=%p after a write operation\n",
++				 inode);
++			cinode->oplock = 0;
++		}
++		return written;
++	}
++
+ 	written = cifs_get_writer(cinode);
+ 	if (written)
+ 		return written;
+-- 
+2.1.4
+

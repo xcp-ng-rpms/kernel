@@ -1,0 +1,47 @@
+From e8a31ebae1669f05254430d2fced99d77c63fc10 Mon Sep 17 00:00:00 2001
+From: Kevin Barnett <kevin.barnett@microsemi.com>
+Date: Wed, 31 Aug 2016 14:55:24 -0500
+Subject: [PATCH 14/14] scsi: smartpqi: update Kconfig
+
+The aacraid driver will not managage Microsemi smartpqi controllers, but
+will still manage older aacraid devices.
+
+Updated help section.
+
+Reviewed-by: Scott Teel <scott.teel@microsemi.com>
+Reviewed-by: Scott Benesh <scott.benesh@microsemi.com>
+Reviewed-by: Kevin Barnett <kevin.barnett@microsemi.com>
+Reviewed-by: Johannes Thumshirn <jthumshirn@suse.de>
+Reviewed-by: Tomas Henzl <thenzl@redhat.com>
+Signed-off-by: Don Brace <don.brace@microsemi.com>
+Signed-off-by: Martin K. Petersen <martin.petersen@oracle.com>
+---
+ drivers/scsi/smartpqi/Kconfig |    8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/scsi/smartpqi/Kconfig b/drivers/scsi/smartpqi/Kconfig
+index 5d77a80..97e159c 100644
+--- a/drivers/scsi/smartpqi/Kconfig
++++ b/drivers/scsi/smartpqi/Kconfig
+@@ -37,7 +37,6 @@
+ 
+ config SCSI_SMARTPQI
+ 	tristate "Microsemi PQI Driver"
+-	default n
+ 	depends on PCI && SCSI && !S390
+ 	select SCSI_SAS_ATTRS
+ 	select RAID_ATTRS
+@@ -47,4 +46,9 @@ config SCSI_SMARTPQI
+ 	<http://www.microsemi.com>
+ 
+ 	To compile this driver as a module, choose M here: the
+-	module will be called smartpqi
++	module will be called smartpqi.
++
++        Note: the aacraid driver will not manage a smartpqi
++              controller. You need to enable smartpqi for smartpqi
++              controllers. For more information, please see
++              Documentation/scsi/smartpqi.txt
+-- 
+1.7.10.4
+

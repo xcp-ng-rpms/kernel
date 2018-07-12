@@ -1,0 +1,61 @@
+From c2d09fde7299f68f29e84fe5a415d5c1a7abae75 Mon Sep 17 00:00:00 2001
+From: Paul Durrant <Paul.Durrant@citrix.com>
+Date: Fri, 13 May 2016 09:37:29 +0100
+Subject: [PATCH 11/11] xen-netback: use hash value from the frontend
+
+My recent patch to include/xen/interface/io/netif.h defines a new extra
+info type that can be used to pass hash values between backend and guest
+frontend.
+
+This patch adds code to xen-netback to use the value in a hash extra
+info fragment passed from the guest frontend in a transmit-side
+(i.e. netback receive side) packet to set the skb hash accordingly.
+
+Signed-off-by: Paul Durrant <paul.durrant@citrix.com>
+Acked-by: Wei Liu <wei.liu2@citrix.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+---
+ drivers/net/xen-netback/netback.c |   27 +++++++++++++++++++++++++++
+ 1 file changed, 27 insertions(+)
+
+diff --git a/drivers/net/xen-netback/netback.c b/drivers/net/xen-netback/netback.c
+index 9d6bd86..edbae0b 100644
+--- a/drivers/net/xen-netback/netback.c
++++ b/drivers/net/xen-netback/netback.c
+@@ -1510,6 +1510,33 @@ static void xenvif_tx_build_gops(struct xenvif_queue *queue,
+ 			}
+ 		}
+ 
++		if (extras[XEN_NETIF_EXTRA_TYPE_HASH - 1].type) {
++			struct xen_netif_extra_info *extra;
++			enum pkt_hash_types type = PKT_HASH_TYPE_NONE;
++
++			extra = &extras[XEN_NETIF_EXTRA_TYPE_HASH - 1];
++
++			switch (extra->u.hash.type) {
++			case _XEN_NETIF_CTRL_HASH_TYPE_IPV4:
++			case _XEN_NETIF_CTRL_HASH_TYPE_IPV6:
++				type = PKT_HASH_TYPE_L3;
++				break;
++
++			case _XEN_NETIF_CTRL_HASH_TYPE_IPV4_TCP:
++			case _XEN_NETIF_CTRL_HASH_TYPE_IPV6_TCP:
++				type = PKT_HASH_TYPE_L4;
++				break;
++
++			default:
++				break;
++			}
++
++			if (type != PKT_HASH_TYPE_NONE)
++				skb_set_hash(skb,
++					     *(u32 *)extra->u.hash.value,
++					     type);
++		}
++
+ 		XENVIF_TX_CB(skb)->pending_idx = pending_idx;
+ 
+ 		__skb_put(skb, data_len);
+-- 
+1.7.10.4
+

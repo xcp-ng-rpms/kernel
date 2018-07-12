@@ -1,0 +1,27 @@
+From 091a9277c69be8d9ae1debca4f3eb1fee82d366a Mon Sep 17 00:00:00 2001
+From: David Decotigny <decot@googlers.com>
+Date: Wed, 24 Feb 2016 10:58:00 -0800
+Subject: [PATCH 3/3] tx4939: use __ethtool_get_ksettings
+
+Signed-off-by: David Decotigny <decot@googlers.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+diff --git a/arch/mips/txx9/generic/setup_tx4939.c b/arch/mips/txx9/generic/setup_tx4939.c
+index e3733cd..402ac2e 100644
+--- a/arch/mips/txx9/generic/setup_tx4939.c
++++ b/arch/mips/txx9/generic/setup_tx4939.c
+@@ -320,11 +320,12 @@ void __init tx4939_sio_init(unsigned int sclk, unsigned int cts_mask)
+ #if IS_ENABLED(CONFIG_TC35815)
+ static u32 tx4939_get_eth_speed(struct net_device *dev)
+ {
+-	struct ethtool_cmd cmd;
+-	if (__ethtool_get_settings(dev, &cmd))
++	struct ethtool_link_ksettings cmd;
++
++	if (__ethtool_get_link_ksettings(dev, &cmd))
+ 		return 100;	/* default 100Mbps */
+ 
+-	return ethtool_cmd_speed(&cmd);
++	return cmd.base.speed;
+ }
+ 
+ static int tx4939_netdev_event(struct notifier_block *this,

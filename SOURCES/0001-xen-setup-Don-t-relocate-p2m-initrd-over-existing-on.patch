@@ -1,0 +1,118 @@
+From 9e03b7bb20e140a7f416baea12dfcb870080ae11 Mon Sep 17 00:00:00 2001
+From: Ross Lagerwall <ross.lagerwall@citrix.com>
+Date: Fri, 25 Nov 2016 13:41:05 +0000
+Subject: [PATCH] xen/setup: Don't relocate p2m/initrd over existing one
+
+When relocating the p2m/initrd, take special care not to relocate it so
+that is overlaps with the current location of the p2m/initrd. This is
+needed since the full extent of the current location is not marked as a
+reserved region in the e820 (and it shouldn't be since it is about to be
+moved).
+
+Signed-off-by: Ross Lagerwall <ross.lagerwall@citrix.com>
+---
+ arch/x86/xen/mmu.c     |  4 ++--
+ arch/x86/xen/setup.c   | 16 ++++++++++------
+ arch/x86/xen/xen-ops.h |  5 +++--
+ 3 files changed, 15 insertions(+), 10 deletions(-)
+
+diff --git a/arch/x86/xen/mmu.c b/arch/x86/xen/mmu.c
+index 6e49f82..bbd51a5 100644
+--- a/arch/x86/xen/mmu.c
++++ b/arch/x86/xen/mmu.c
+@@ -2084,7 +2084,7 @@ static phys_addr_t __init xen_early_virt_to_phys(unsigned long vaddr)
+  * Find a new area for the hypervisor supplied p2m list and relocate the p2m to
+  * this area.
+  */
+-void __init xen_relocate_p2m(void)
++void __init xen_relocate_p2m(phys_addr_t cur_start, phys_addr_t cur_size)
+ {
+ 	phys_addr_t size, new_area, pt_phys, pmd_phys, pud_phys;
+ 	unsigned long p2m_pfn, p2m_pfn_end, n_frames, pfn, pfn_end;
+@@ -2102,7 +2102,7 @@ void __init xen_relocate_p2m(void)
+ 	n_pud = roundup(size, PGDIR_SIZE) >> PGDIR_SHIFT;
+ 	n_frames = n_pte + n_pt + n_pmd + n_pud;
+ 
+-	new_area = xen_find_free_area(PFN_PHYS(n_frames));
++	new_area = xen_find_free_area(PFN_PHYS(n_frames), cur_start, cur_size);
+ 	if (!new_area) {
+ 		xen_raw_console_write("Can't find new memory area for p2m needed due to E820 map conflict\n");
+ 		BUG();
+diff --git a/arch/x86/xen/setup.c b/arch/x86/xen/setup.c
+index 09920f0..cc21a6c 100644
+--- a/arch/x86/xen/setup.c
++++ b/arch/x86/xen/setup.c
+@@ -635,14 +635,15 @@ bool __init xen_is_e820_reserved(phys_addr_t start, phys_addr_t size)
+ }
+ 
+ /*
+- * Find a free area in physical memory not yet reserved and compliant with
+- * E820 map.
++ * Find a free area in physical memory not yet reserved, compliant with the
++ * E820 map and not overlapping with the pre-allocated area.
+  * Used to relocate pre-allocated areas like initrd or p2m list which are in
+  * conflict with the to be used E820 map.
+  * In case no area is found, return 0. Otherwise return the physical address
+  * of the area which is already reserved for convenience.
+  */
+-phys_addr_t __init xen_find_free_area(phys_addr_t size)
++phys_addr_t __init xen_find_free_area(phys_addr_t size, phys_addr_t cur_start,
++				      phys_addr_t cur_size)
+ {
+ 	unsigned mapcnt;
+ 	phys_addr_t addr, start;
+@@ -653,7 +654,8 @@ phys_addr_t __init xen_find_free_area(phys_addr_t size)
+ 			continue;
+ 		start = entry->addr;
+ 		for (addr = start; addr < start + size; addr += PAGE_SIZE) {
+-			if (!memblock_is_reserved(addr))
++			if (!memblock_is_reserved(addr) &&
++			    (addr < cur_start || addr >= cur_start + cur_size))
+ 				continue;
+ 			start = addr + PAGE_SIZE;
+ 			if (start + size > entry->addr + entry->size)
+@@ -727,7 +729,7 @@ static void __init xen_reserve_xen_mfnlist(void)
+ 	xen_raw_console_write("Xen hypervisor allocated p2m list conflicts with E820 map\n");
+ 	BUG();
+ #else
+-	xen_relocate_p2m();
++	xen_relocate_p2m(start, size);
+ #endif
+ }
+ 
+@@ -909,7 +911,9 @@ char * __init xen_memory_setup(void)
+ 				 boot_params.hdr.ramdisk_size)) {
+ 		phys_addr_t new_area, start, size;
+ 
+-		new_area = xen_find_free_area(boot_params.hdr.ramdisk_size);
++		new_area = xen_find_free_area(boot_params.hdr.ramdisk_size,
++					      boot_params.hdr.ramdisk_image,
++					      boot_params.hdr.ramdisk_size);
+ 		if (!new_area) {
+ 			xen_raw_console_write("Can't find new memory area for initrd needed due to E820 map conflict\n");
+ 			BUG();
+diff --git a/arch/x86/xen/xen-ops.h b/arch/x86/xen/xen-ops.h
+index 1399423..28befe5 100644
+--- a/arch/x86/xen/xen-ops.h
++++ b/arch/x86/xen/xen-ops.h
+@@ -41,14 +41,15 @@ void __init xen_pt_check_e820(void);
+ void xen_mm_pin_all(void);
+ void xen_mm_unpin_all(void);
+ #ifdef CONFIG_X86_64
+-void __init xen_relocate_p2m(void);
++void __init xen_relocate_p2m(phys_addr_t cur_start, phys_addr_t cur_size);
+ #endif
+ 
+ bool __init xen_is_e820_reserved(phys_addr_t start, phys_addr_t size);
+ unsigned long __ref xen_chk_extra_mem(unsigned long pfn);
+ void __init xen_inv_extra_mem(void);
+ void __init xen_remap_memory(void);
+-phys_addr_t __init xen_find_free_area(phys_addr_t size);
++phys_addr_t __init xen_find_free_area(phys_addr_t size, phys_addr_t cur_start,
++				      phys_addr_t cur_size);
+ char * __init xen_memory_setup(void);
+ char * xen_auto_xlated_memory_setup(void);
+ void __init xen_arch_setup(void);
+-- 
+2.7.4
+

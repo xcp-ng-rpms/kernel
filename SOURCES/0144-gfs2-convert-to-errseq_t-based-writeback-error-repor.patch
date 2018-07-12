@@ -1,0 +1,29 @@
+From d07a6ac7b6f878c1078b75181cdae060daac5820 Mon Sep 17 00:00:00 2001
+From: Jeff Layton <jlayton@redhat.com>
+Date: Fri, 7 Jul 2017 15:20:53 -0400
+Subject: [PATCH 144/170] gfs2: convert to errseq_t based writeback error
+ reporting for fsync
+
+Also, fix a place where a writeback error might get dropped in the
+gfs2_is_jdata case.
+
+Signed-off-by: Jeff Layton <jlayton@redhat.com>
+
+Revert the API change but keep the error check.
+Signed-off-by: Ross Lagerwall <ross.lagerwall@citrix.com>
+
+diff --git a/fs/gfs2/file.c b/fs/gfs2/file.c
+index 5a1ab2bb..bc4bae6 100644
+--- a/fs/gfs2/file.c
++++ b/fs/gfs2/file.c
+@@ -668,7 +668,9 @@ static int gfs2_fsync(struct file *file, loff_t start, loff_t end,
+ 		if (ret)
+ 			return ret;
+ 		if (gfs2_is_jdata(ip))
+-			filemap_write_and_wait(mapping);
++			ret = filemap_write_and_wait(mapping);
++		if (ret)
++			return ret;
+ 		gfs2_ail_flush(ip->i_gl, 1);
+ 	}
+ 

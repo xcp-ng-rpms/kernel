@@ -1,0 +1,60 @@
+From eebd2e813f7ef688e22cd0b68aea78fb3d1ef19c Mon Sep 17 00:00:00 2001
+From: Andreas Gruenbacher <agruenba@redhat.com>
+Date: Tue, 1 Aug 2017 11:33:17 -0500
+Subject: [PATCH 152/170] gfs2: Get rid of gfs2_set_nlink
+
+Remove gfs2_set_nlink which prevents the link count of an inode from
+becoming non-zero once it has reached zero.  The next commit reduces the
+amount of waiting on glocks when an inode is evicted from memory.  With
+that, an inode can become reallocated before all the remote-unlink
+callbacks from a previous delete are processed, which causes the link
+count to change from zero to non-zero.
+
+Signed-off-by: Andreas Gruenbacher <agruenba@redhat.com>
+Signed-off-by: Bob Peterson <rpeterso@redhat.com>
+diff --git a/fs/gfs2/glops.c b/fs/gfs2/glops.c
+index 28c203a..dac6559 100644
+--- a/fs/gfs2/glops.c
++++ b/fs/gfs2/glops.c
+@@ -329,32 +329,6 @@ static int inode_go_demote_ok(const struct gfs2_glock *gl)
+ 	return 1;
+ }
+ 
+-/**
+- * gfs2_set_nlink - Set the inode's link count based on on-disk info
+- * @inode: The inode in question
+- * @nlink: The link count
+- *
+- * If the link count has hit zero, it must never be raised, whatever the
+- * on-disk inode might say. When new struct inodes are created the link
+- * count is set to 1, so that we can safely use this test even when reading
+- * in on disk information for the first time.
+- */
+-
+-static void gfs2_set_nlink(struct inode *inode, u32 nlink)
+-{
+-	/*
+-	 * We will need to review setting the nlink count here in the
+-	 * light of the forthcoming ro bind mount work. This is a reminder
+-	 * to do that.
+-	 */
+-	if ((inode->i_nlink != nlink) && (inode->i_nlink != 0)) {
+-		if (nlink == 0)
+-			clear_nlink(inode);
+-		else
+-			set_nlink(inode, nlink);
+-	}
+-}
+-
+ static int gfs2_dinode_in(struct gfs2_inode *ip, const void *buf)
+ {
+ 	const struct gfs2_dinode *str = buf;
+@@ -376,7 +350,7 @@ static int gfs2_dinode_in(struct gfs2_inode *ip, const void *buf)
+ 
+ 	i_uid_write(&ip->i_inode, be32_to_cpu(str->di_uid));
+ 	i_gid_write(&ip->i_inode, be32_to_cpu(str->di_gid));
+-	gfs2_set_nlink(&ip->i_inode, be32_to_cpu(str->di_nlink));
++	set_nlink(&ip->i_inode, be32_to_cpu(str->di_nlink));
+ 	i_size_write(&ip->i_inode, be64_to_cpu(str->di_size));
+ 	gfs2_set_inode_blocks(&ip->i_inode, be64_to_cpu(str->di_blocks));
+ 	atime.tv_sec = be64_to_cpu(str->di_atime);

@@ -1,0 +1,43 @@
+From cc1dfa8b7571ea16dec9a29e0f4c4cad90b2a761 Mon Sep 17 00:00:00 2001
+From: Thomas Tai <thomas.tai@oracle.com>
+Date: Tue, 15 Aug 2017 11:54:09 -0500
+Subject: [PATCH 157/170] gfs2: fix slab corruption during mounting and
+ umounting gfs file system
+
+When using cman-3.0.12.1 and gfs2-utils-3.0.12.1, mounting and
+unmounting GFS2 file system would cause kernel to hang. The slab
+allocator suggests that it is likely a double free memory corruption.
+The issue is traced back to v3.9-rc6 where a patch is submitted to
+use kzalloc() for storing a bitmap instead of using a local variable.
+The intention is to allocate memory during mount and to free memory
+during unmount. The original patch misses a code path which has
+already freed the memory and caused memory corruption. This patch sets
+the memory pointer to NULL after the memory is freed, so that double
+free memory corruption will not happen.
+
+gdlm_mount()
+  '-- set_recover_size() which use kzalloc()
+  '-- if dlm does not support ops callbacks then
+          '--- free_recover_size() which use kfree()
+
+gldm_unmount()
+  '-- free_recover_size() which use kfree()
+
+Previous patch which introduced the double free issue is
+commit 57c7310b8eb9 ("GFS2: use kmalloc for lvb bitmap")
+
+Signed-off-by: Thomas Tai <thomas.tai@oracle.com>
+Signed-off-by: Bob Peterson <rpeterso@redhat.com>
+Reviewed-by: Liam R. Howlett <Liam.Howlett@Oracle.com>
+diff --git a/fs/gfs2/lock_dlm.c b/fs/gfs2/lock_dlm.c
+index 8b907c5..9243cdb 100644
+--- a/fs/gfs2/lock_dlm.c
++++ b/fs/gfs2/lock_dlm.c
+@@ -1058,6 +1058,7 @@ static void free_recover_size(struct lm_lockstruct *ls)
+ 	ls->ls_recover_submit = NULL;
+ 	ls->ls_recover_result = NULL;
+ 	ls->ls_recover_size = 0;
++	ls->ls_lvb_bits = NULL;
+ }
+ 
+ /* dlm calls before it does lock recovery */

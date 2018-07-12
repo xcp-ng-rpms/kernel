@@ -1,0 +1,35 @@
+From dc9eab6fd94dd26340749321bba2c58634761516 Mon Sep 17 00:00:00 2001
+From: Paul Durrant <paul.durrant@citrix.com>
+Date: Mon, 13 Feb 2017 17:03:22 +0000
+Subject: [PATCH 1/1] xen/privcmd: return -ENOTTY for unimplemented IOCTLs
+
+The code sets the default return code to -ENOSYS but then overrides this
+to -EINVAL in the switch() statement's default case, which is clearly
+silly.
+
+This patch removes the override and sets the default return code to
+-ENOTTY, which is the conventional return for an unimplemented ioctl.
+
+Signed-off-by: Paul Durrant <paul.durrant@citrix.com>
+Signed-off-by: Boris Ostrovsky <boris.ostrovsky@oracle.com>
+diff --git a/drivers/xen/privcmd.c b/drivers/xen/privcmd.c
+index df2e6f7..f13ab5a 100644
+--- a/drivers/xen/privcmd.c
++++ b/drivers/xen/privcmd.c
+@@ -551,7 +551,7 @@ out_unlock:
+ static long privcmd_ioctl(struct file *file,
+ 			  unsigned int cmd, unsigned long data)
+ {
+-	int ret = -ENOSYS;
++	int ret = -ENOTTY;
+ 	void __user *udata = (void __user *) data;
+ 
+ 	switch (cmd) {
+@@ -572,7 +572,6 @@ static long privcmd_ioctl(struct file *file,
+ 		break;
+ 
+ 	default:
+-		ret = -EINVAL;
+ 		break;
+ 	}
+ 

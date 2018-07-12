@@ -1,0 +1,31 @@
+From 790854becc1921d0cf46180ee55beb4a1787e680 Mon Sep 17 00:00:00 2001
+From: Markus Elfring <elfring@users.sourceforge.net>
+Date: Sat, 6 May 2017 09:19:17 +0200
+Subject: [PATCH 35/45] dlm: Use kmalloc_array() in make_member_array()
+
+* A multiplication for the size determination of a memory allocation
+  indicated that an array data structure should be processed.
+  Thus use the corresponding function "kmalloc_array".
+
+  This issue was detected by using the Coccinelle software.
+
+* Replace the specification of a data type by a pointer dereference
+  to make the corresponding size determination a bit safer according to
+  the Linux coding style convention.
+
+Signed-off-by: Markus Elfring <elfring@users.sourceforge.net>
+Signed-off-by: David Teigland <teigland@redhat.com>
+diff --git a/fs/dlm/member.c b/fs/dlm/member.c
+index 9c47f1c..8925769 100644
+--- a/fs/dlm/member.c
++++ b/fs/dlm/member.c
+@@ -405,8 +405,7 @@ static void make_member_array(struct dlm_ls *ls)
+ 	}
+ 
+ 	ls->ls_total_weight = total;
+-
+-	array = kmalloc(sizeof(int) * total, GFP_NOFS);
++	array = kmalloc_array(total, sizeof(*array), GFP_NOFS);
+ 	if (!array)
+ 		return;
+ 

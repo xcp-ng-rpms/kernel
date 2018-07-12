@@ -1,0 +1,88 @@
+From 0a52aba7c2168636fc71635cf3ccb92a79a96c38 Mon Sep 17 00:00:00 2001
+From: Andreas Gruenbacher <agruenba@redhat.com>
+Date: Tue, 21 Feb 2017 23:19:10 +0100
+Subject: [PATCH 112/170] gfs2: Switch to rhashtable_lookup_get_insert_fast
+
+Switch from rhashtable_lookup_insert_fast + rhashtable_lookup_fast to
+rhashtable_lookup_get_insert_fast, which is cleaner and avoids an extra
+rhashtable lookup.
+
+At the same time, turn the retry loop in gfs2_glock_get into an infinite
+loop.  The lookup or insert will eventually succeed, usually very fast,
+but there is no reason to give up trying at a fixed number of
+iterations.
+
+Signed-off-by: Andreas Gruenbacher <agruenba@redhat.com>
+Signed-off-by: Bob Peterson <rpeterso@redhat.com>
+diff --git a/fs/gfs2/glock.c b/fs/gfs2/glock.c
+index 9bbc9a5..8744911 100644
+--- a/fs/gfs2/glock.c
++++ b/fs/gfs2/glock.c
+@@ -655,10 +655,10 @@ int gfs2_glock_get(struct gfs2_sbd *sdp, u64 number,
+ 	struct lm_lockname name = { .ln_number = number,
+ 				    .ln_type = glops->go_type,
+ 				    .ln_sbd = sdp };
+-	struct gfs2_glock *gl, *tmp = NULL;
++	struct gfs2_glock *gl, *tmp;
+ 	struct address_space *mapping;
+ 	struct kmem_cache *cachep;
+-	int ret, tries = 0;
++	int ret = 0;
+ 
+ 	rcu_read_lock();
+ 	gl = rhashtable_lookup_fast(&gl_hash_table, &name, ht_parms);
+@@ -723,35 +723,32 @@ int gfs2_glock_get(struct gfs2_sbd *sdp, u64 number,
+ 	}
+ 
+ again:
+-	ret = rhashtable_lookup_insert_fast(&gl_hash_table, &gl->gl_node,
+-					    ht_parms);
+-	if (ret == 0) {
++	rcu_read_lock();
++	tmp = rhashtable_lookup_get_insert_fast(&gl_hash_table, &gl->gl_node,
++						ht_parms);
++	if (!tmp) {
+ 		*glp = gl;
+-		return 0;
++		goto out;
+ 	}
+-
+-	if (ret == -EEXIST) {
+-		ret = 0;
+-		rcu_read_lock();
+-		tmp = rhashtable_lookup_fast(&gl_hash_table, &name, ht_parms);
+-		if (tmp == NULL || !lockref_get_not_dead(&tmp->gl_lockref)) {
+-			if (++tries < 100) {
+-				rcu_read_unlock();
+-				cond_resched();
+-				goto again;
+-			}
+-			tmp = NULL;
+-			ret = -ENOMEM;
+-		}
+-		rcu_read_unlock();
+-	} else {
+-		WARN_ON_ONCE(ret);
++	if (IS_ERR(tmp)) {
++		ret = PTR_ERR(tmp);
++		goto out_free;
++	}
++	if (lockref_get_not_dead(&tmp->gl_lockref)) {
++		*glp = tmp;
++		goto out_free;
+ 	}
++	rcu_read_unlock();
++	cond_resched();
++	goto again;
++
++out_free:
+ 	kfree(gl->gl_lksb.sb_lvbptr);
+ 	kmem_cache_free(cachep, gl);
+ 	atomic_dec(&sdp->sd_glock_disposal);
+-	*glp = tmp;
+ 
++out:
++	rcu_read_unlock();
+ 	return ret;
+ }
+ 

@@ -1,0 +1,52 @@
+From d391966a03846176a78ef8d53898de8b4302a2be Mon Sep 17 00:00:00 2001
+From: Hannes Reinecke <hare@suse.de>
+Date: Fri, 5 Aug 2016 14:55:01 +0200
+Subject: [PATCH] scsi: libfc: send LOGO for PLOGI failure
+
+When running in point-to-multipoint mode PLOGI is done after FLOGI
+completed. So when the PLOGI fails we should be sending a LOGO to the
+remote port.
+
+[mkp: Applied by hand]
+
+Signed-off-by: Hannes Reinecke <hare@suse.com>
+Reviewed-by: Chad Dupuis <chad.dupuis@qlogic.com>
+Tested-by: Chad Dupuis <chad.dupuis@qlogic.com>
+Signed-off-by: Martin K. Petersen <martin.petersen@oracle.com>
+---
+ drivers/scsi/libfc/fc_rport.c | 10 +++++++++-
+ 1 file changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/scsi/libfc/fc_rport.c b/drivers/scsi/libfc/fc_rport.c
+index bd9983b..6bfed0f 100644
+--- a/drivers/scsi/libfc/fc_rport.c
++++ b/drivers/scsi/libfc/fc_rport.c
+@@ -547,16 +547,24 @@ static void fc_rport_timeout(struct work_struct *work)
+  */
+ static void fc_rport_error(struct fc_rport_priv *rdata, struct fc_frame *fp)
+ {
++	struct fc_lport *lport = rdata->local_port;
++
+ 	FC_RPORT_DBG(rdata, "Error %ld in state %s, retries %d\n",
+ 		     IS_ERR(fp) ? -PTR_ERR(fp) : 0,
+ 		     fc_rport_state(rdata), rdata->retries);
+ 
+ 	switch (rdata->rp_state) {
+ 	case RPORT_ST_FLOGI:
+-	case RPORT_ST_PLOGI:
+ 		rdata->flags &= ~FC_RP_STARTED;
+ 		fc_rport_enter_delete(rdata, RPORT_EV_FAILED);
+ 		break;
++	case RPORT_ST_PLOGI:
++		if (lport->point_to_multipoint) {
++			rdata->flags &= ~FC_RP_STARTED;
++			fc_rport_enter_delete(rdata, RPORT_EV_FAILED);
++		} else
++			fc_rport_enter_logo(rdata);
++		break;
+ 	case RPORT_ST_RTV:
+ 		fc_rport_enter_ready(rdata);
+ 		break;
+-- 
+1.8.3.1
+

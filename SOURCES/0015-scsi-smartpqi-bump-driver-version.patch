@@ -1,0 +1,40 @@
+From 699bed758b1313f97a5ac78848090e8357d12ab1 Mon Sep 17 00:00:00 2001
+From: Kevin Barnett <kevin.barnett@microsemi.com>
+Date: Wed, 31 Aug 2016 14:55:36 -0500
+Subject: [PATCH 15/15] scsi: smartpqi: bump driver version
+
+[mkp: fixed typo]
+
+Reviewed-by: Scott Teel <scott.teel@microsemi.com>
+Reviewed-by: Scott Benesh <scott.benesh@microsemi.com>
+Reviewed-by: Tomas Henzl <thenzl@redhat.com>
+Signed-off-by: Kevin Barnett <kevin.barnett@microsemi.com>
+Signed-off-by: Don Brace <don.brace@microsemi.com>
+Reviewed-by: Johannes Thumshirn <jthumshirn@suse.de>
+Signed-off-by: Martin K. Petersen <martin.petersen@oracle.com>
+---
+ drivers/scsi/smartpqi/smartpqi_init.c |    6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/scsi/smartpqi/smartpqi_init.c b/drivers/scsi/smartpqi/smartpqi_init.c
+index c6dcb33..52cfa26 100644
+--- a/drivers/scsi/smartpqi/smartpqi_init.c
++++ b/drivers/scsi/smartpqi/smartpqi_init.c
+@@ -38,11 +38,11 @@
+ #define BUILD_TIMESTAMP
+ #endif
+ 
+-#define DRIVER_VERSION		"0.9.9-100"
++#define DRIVER_VERSION		"0.9.13-370"
+ #define DRIVER_MAJOR		0
+ #define DRIVER_MINOR		9
+-#define DRIVER_RELEASE		9
+-#define DRIVER_REVISION		100
++#define DRIVER_RELEASE		13
++#define DRIVER_REVISION		370
+ 
+ #define DRIVER_NAME		"Microsemi PQI Driver (v" DRIVER_VERSION ")"
+ #define DRIVER_NAME_SHORT	"smartpqi"
+-- 
+1.7.10.4
+

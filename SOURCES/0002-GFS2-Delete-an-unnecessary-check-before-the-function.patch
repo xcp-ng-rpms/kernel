@@ -1,0 +1,27 @@
+From 6fde22426be6af261816db5941744b8d3c4c7f96 Mon Sep 17 00:00:00 2001
+From: Markus Elfring <elfring@users.sourceforge.net>
+Date: Fri, 13 Nov 2015 07:55:59 -0600
+Subject: [PATCH 002/170] GFS2: Delete an unnecessary check before the function
+ call "iput"
+
+The iput() function tests whether its argument is NULL and then
+returns immediately. Thus the test around the call is not needed.
+
+This issue was detected by using the Coccinelle software.
+
+Signed-off-by: Markus Elfring <elfring@users.sourceforge.net>
+Signed-off-by: Bob Peterson <rpeterso@redhat.com>
+diff --git a/fs/gfs2/ops_fstype.c b/fs/gfs2/ops_fstype.c
+index baab99b..1f9de17 100644
+--- a/fs/gfs2/ops_fstype.c
++++ b/fs/gfs2/ops_fstype.c
+@@ -910,8 +910,7 @@ fail_qc_i:
+ fail_ut_i:
+ 	iput(sdp->sd_sc_inode);
+ fail:
+-	if (pn)
+-		iput(pn);
++	iput(pn);
+ 	return error;
+ }
+ 

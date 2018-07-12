@@ -1,0 +1,67 @@
+From c4a9d1892f1ce6fe040b717b68bd21e689cc2410 Mon Sep 17 00:00:00 2001
+From: Bob Peterson <rpeterso@redhat.com>
+Date: Wed, 30 Aug 2017 09:26:09 -0500
+Subject: [PATCH 164/170] GFS2: Fix non-recursive truncate bug
+
+Before this patch if you truncated a file to a smaller size it
+wasn't freeing all the blocks properly. There are two reasons.
+
+First, the metapath comparison was not comparing previous heights.
+I added a function, mp_eq_to_hgt, which checks the metapath at
+all heights prior to the target height.
+
+Second, in function find_nonnull_ptr, it needed to zero out all
+pointers for heights following the target height. Translated into
+decimal integer terms, this way a number like 299, when incremented,
+becomes 300, not 399. The 2 gets incremented to 3, and the following
+digits need to be reset.
+
+These two things allow the truncate state machine to properly find
+the blocks it needs to delete.
+
+Signed-off-by: Bob Peterson <rpeterso@redhat.com>
+diff --git a/fs/gfs2/bmap.c b/fs/gfs2/bmap.c
+index c85bd98..4670156 100644
+--- a/fs/gfs2/bmap.c
++++ b/fs/gfs2/bmap.c
+@@ -1102,8 +1102,15 @@ static bool find_nonnull_ptr(struct gfs2_sbd *sdp, struct metapath *mp,
+ 
+ 	while (true) {
+ 		ptr = metapointer(h, mp);
+-		if (*ptr) /* if we have a non-null pointer */
++		if (*ptr) { /* if we have a non-null pointer */
++			/* Now zero the metapath after the current height. */
++			h++;
++			if (h < GFS2_MAX_META_HEIGHT)
++				memset(&mp->mp_list[h], 0,
++				       (GFS2_MAX_META_HEIGHT - h) *
++				       sizeof(mp->mp_list[0]));
+ 			return true;
++		}
+ 
+ 		if (mp->mp_list[h] < ptrs)
+ 			mp->mp_list[h]++;
+@@ -1119,6 +1126,13 @@ enum dealloc_states {
+ 	DEALLOC_DONE = 3,       /* process complete */
+ };
+ 
++static bool mp_eq_to_hgt(struct metapath *mp, __u16 *nbof, unsigned int h)
++{
++	if (memcmp(mp->mp_list, nbof, h * sizeof(mp->mp_list[0])))
++		return false;
++	return true;
++}
++
+ /**
+  * trunc_dealloc - truncate a file down to a desired size
+  * @ip: inode to truncate
+@@ -1196,8 +1210,7 @@ static int trunc_dealloc(struct gfs2_inode *ip, u64 newsize)
+ 			/* If we're truncating to a non-zero size and the mp is
+ 			   at the beginning of file for the strip height, we
+ 			   need to preserve the first metadata pointer. */
+-			preserve1 = (newsize &&
+-				     (mp.mp_list[mp_h] == nbof[mp_h]));
++			preserve1 = (newsize && mp_eq_to_hgt(&mp, nbof, mp_h));
+ 			bh = mp.mp_bh[mp_h];
+ 			gfs2_assert_withdraw(sdp, bh);
+ 			if (gfs2_assert_withdraw(sdp,

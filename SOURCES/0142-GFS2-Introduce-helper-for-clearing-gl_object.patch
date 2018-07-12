@@ -1,0 +1,110 @@
+From df3d87bde121213560fde0edb71bc46f0f75692c Mon Sep 17 00:00:00 2001
+From: Bob Peterson <rpeterso@redhat.com>
+Date: Tue, 18 Jul 2017 11:35:04 -0500
+Subject: [PATCH 142/170] GFS2: Introduce helper for clearing gl_object
+
+This patch introduces a new helper function in glock.h that
+clears gl_object, with an added integrity check. An additional
+integrity check has been added to glock_set_object, plus comments.
+This is step 1 in a series to ensure gl_object integrity.
+
+Signed-off-by: Bob Peterson <rpeterso@redhat.com>
+Reviewed-by: Andreas Gruenbacher <agruenba@redhat.com>
+diff --git a/fs/gfs2/glock.h b/fs/gfs2/glock.h
+index 9ad4a6a..526d212 100644
+--- a/fs/gfs2/glock.h
++++ b/fs/gfs2/glock.h
+@@ -13,6 +13,7 @@
+ #include <linux/sched.h>
+ #include <linux/parser.h>
+ #include "incore.h"
++#include "util.h"
+ 
+ /* Options for hostdata parser */
+ 
+@@ -257,11 +258,44 @@ static inline bool gfs2_holder_initialized(struct gfs2_holder *gh)
+ 	return gh->gh_gl;
+ }
+ 
++/**
++ * glock_set_object - set the gl_object field of a glock
++ * @gl: the glock
++ * @object: the object
++ */
+ static inline void glock_set_object(struct gfs2_glock *gl, void *object)
+ {
+ 	spin_lock(&gl->gl_lockref.lock);
++	if (gfs2_assert_warn(gl->gl_name.ln_sbd, gl->gl_object == NULL))
++		gfs2_dump_glock(NULL, gl);
+ 	gl->gl_object = object;
+ 	spin_unlock(&gl->gl_lockref.lock);
+ }
+ 
++/**
++ * glock_clear_object - clear the gl_object field of a glock
++ * @gl: the glock
++ * @object: the object
++ *
++ * I'd love to similarly add this:
++ *	else if (gfs2_assert_warn(gl->gl_sbd, gl->gl_object == object))
++ *		gfs2_dump_glock(NULL, gl);
++ * Unfortunately, that's not possible because as soon as gfs2_delete_inode
++ * frees the block in the rgrp, another process can reassign it for an I_NEW
++ * inode in gfs2_create_inode because that calls new_inode, not gfs2_iget.
++ * That means gfs2_delete_inode may subsequently try to call this function
++ * for a glock that's already pointing to a brand new inode. If we clear the
++ * new inode's gl_object, we'll introduce metadata corruption. Function
++ * gfs2_delete_inode calls clear_inode which calls gfs2_clear_inode which also
++ * tries to clear gl_object, so it's more than just gfs2_delete_inode.
++ *
++ */
++static inline void glock_clear_object(struct gfs2_glock *gl, void *object)
++{
++	spin_lock(&gl->gl_lockref.lock);
++	if (gl->gl_object == object)
++		gl->gl_object = NULL;
++	spin_unlock(&gl->gl_lockref.lock);
++}
++
+ #endif /* __GLOCK_DOT_H__ */
+diff --git a/fs/gfs2/inode.c b/fs/gfs2/inode.c
+index 237b95d..2876f51 100644
+--- a/fs/gfs2/inode.c
++++ b/fs/gfs2/inode.c
+@@ -201,14 +201,14 @@ struct inode *gfs2_inode_lookup(struct super_block *sb, unsigned int type,
+ 
+ fail_refresh:
+ 	ip->i_iopen_gh.gh_flags |= GL_NOCACHE;
+-	glock_set_object(ip->i_iopen_gh.gh_gl, NULL);
++	glock_clear_object(ip->i_iopen_gh.gh_gl, ip);
+ 	gfs2_glock_dq_uninit(&ip->i_iopen_gh);
+ fail_put:
+ 	if (io_gl)
+ 		gfs2_glock_put(io_gl);
+ 	if (gfs2_holder_initialized(&i_gh))
+ 		gfs2_glock_dq_uninit(&i_gh);
+-	glock_set_object(ip->i_gl, NULL);
++	glock_clear_object(ip->i_gl, ip);
+ fail:
+ 	iget_failed(inode);
+ 	return ERR_PTR(error);
+diff --git a/fs/gfs2/super.c b/fs/gfs2/super.c
+index 455aa64..03075db 100644
+--- a/fs/gfs2/super.c
++++ b/fs/gfs2/super.c
+@@ -1640,13 +1640,13 @@ out:
+ 	gfs2_ordered_del_inode(ip);
+ 	clear_inode(inode);
+ 	gfs2_dir_hash_inval(ip);
+-	glock_set_object(ip->i_gl, NULL);
++	glock_clear_object(ip->i_gl, ip);
+ 	wait_on_bit_io(&ip->i_flags, GIF_GLOP_PENDING, TASK_UNINTERRUPTIBLE);
+ 	gfs2_glock_add_to_lru(ip->i_gl);
+ 	gfs2_glock_put(ip->i_gl);
+ 	ip->i_gl = NULL;
+ 	if (gfs2_holder_initialized(&ip->i_iopen_gh)) {
+-		glock_set_object(ip->i_iopen_gh.gh_gl, NULL);
++		glock_clear_object(ip->i_iopen_gh.gh_gl, ip);
+ 		ip->i_iopen_gh.gh_flags |= GL_NOCACHE;
+ 		gfs2_glock_dq_uninit(&ip->i_iopen_gh);
+ 	}

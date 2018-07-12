@@ -1,0 +1,41 @@
+From e5a20009dae054344d71a79e9bfbea84152f3eb8 Mon Sep 17 00:00:00 2001
+From: Hannes Reinecke <hare@suse.de>
+Date: Fri, 30 Sep 2016 11:01:17 +0200
+Subject: [PATCH] scsi: libfc: Do not drop down to FLOGI for fc_rport_login()
+
+When fc_rport_login() is called while the rport is not
+in RPORT_ST_INIT, RPORT_ST_READY, or RPORT_ST_DELETE
+login is already in progress and there's no need to
+drop down to FLOGI; doing so will only confuse the
+other side.
+
+Signed-off-by: Hannes Reinecke <hare@suse.com>
+Acked-by: Johannes Thumshirn <jth@kernel.org>
+Signed-off-by: Martin K. Petersen <martin.petersen@oracle.com>
+---
+ drivers/scsi/libfc/fc_rport.c | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/scsi/libfc/fc_rport.c b/drivers/scsi/libfc/fc_rport.c
+index ff33ae6..4e4087a 100644
+--- a/drivers/scsi/libfc/fc_rport.c
++++ b/drivers/scsi/libfc/fc_rport.c
+@@ -427,10 +427,14 @@ static int fc_rport_login(struct fc_rport_priv *rdata)
+ 	case RPORT_ST_DELETE:
+ 		FC_RPORT_DBG(rdata, "Restart deleted port\n");
+ 		break;
+-	default:
++	case RPORT_ST_INIT:
+ 		FC_RPORT_DBG(rdata, "Login to port\n");
+ 		fc_rport_enter_flogi(rdata);
+ 		break;
++	default:
++		FC_RPORT_DBG(rdata, "Login in progress, state %s\n",
++			     fc_rport_state(rdata));
++		break;
+ 	}
+ 	mutex_unlock(&rdata->rp_mutex);
+ 
+-- 
+1.8.3.1
+

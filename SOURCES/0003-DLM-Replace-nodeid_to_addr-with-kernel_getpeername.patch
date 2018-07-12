@@ -1,0 +1,27 @@
+From 1a31833d085a339cf42573de0717209e8b2172e8 Mon Sep 17 00:00:00 2001
+From: Bob Peterson <rpeterso@redhat.com>
+Date: Mon, 18 Jan 2016 12:29:15 -0500
+Subject: [PATCH 03/45] DLM: Replace nodeid_to_addr with kernel_getpeername
+
+This patch replaces the call to nodeid_to_addr with a call to
+kernel_getpeername. This avoids taking a spinlock because it may
+potentially be called from a softirq context.
+
+Signed-off-by: Bob Peterson <rpeterso@redhat.com>
+Signed-off-by: David Teigland <teigland@redhat.com>
+diff --git a/fs/dlm/lowcomms.c b/fs/dlm/lowcomms.c
+index 9d7a4a7..3f2f8a9 100644
+--- a/fs/dlm/lowcomms.c
++++ b/fs/dlm/lowcomms.c
+@@ -469,8 +469,10 @@ static void lowcomms_error_report(struct sock *sk)
+ {
+ 	struct connection *con = sock2con(sk);
+ 	struct sockaddr_storage saddr;
++	int buflen;
+ 
+-	if (nodeid_to_addr(con->nodeid, &saddr, NULL, false)) {
++	if (con->sock == NULL ||
++	    kernel_getpeername(con->sock, (struct sockaddr *)&saddr, &buflen)) {
+ 		printk_ratelimited(KERN_ERR "dlm: node %d: socket error "
+ 				   "sending to node %d, port %d, "
+ 				   "sk_err=%d/%d\n", dlm_our_nodeid(),

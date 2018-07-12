@@ -1,0 +1,25 @@
+From 102e67d4e35858644e525ab7d798f1c89d7f4231 Mon Sep 17 00:00:00 2001
+From: Markus Elfring <elfring@users.sourceforge.net>
+Date: Sat, 6 May 2017 08:48:29 +0200
+Subject: [PATCH 33/45] dlm: Improve a size determination in
+ dlm_recover_waiters_pre()
+
+Replace the specification of a data structure by a pointer dereference
+as the parameter for the operator "sizeof" to make the corresponding size
+determination a bit safer according to the Linux coding style convention.
+
+Signed-off-by: Markus Elfring <elfring@users.sourceforge.net>
+Signed-off-by: David Teigland <teigland@redhat.com>
+diff --git a/fs/dlm/lock.c b/fs/dlm/lock.c
+index e3e608c..72bfb3f 100644
+--- a/fs/dlm/lock.c
++++ b/fs/dlm/lock.c
+@@ -5120,7 +5120,7 @@ void dlm_recover_waiters_pre(struct dlm_ls *ls)
+ 	int wait_type, stub_unlock_result, stub_cancel_result;
+ 	int dir_nodeid;
+ 
+-	ms_stub = kmalloc(sizeof(struct dlm_message), GFP_KERNEL);
++	ms_stub = kmalloc(sizeof(*ms_stub), GFP_KERNEL);
+ 	if (!ms_stub) {
+ 		log_error(ls, "dlm_recover_waiters_pre no mem");
+ 		return;

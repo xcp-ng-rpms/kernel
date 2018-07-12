@@ -1,0 +1,32 @@
+From 16e5c1fc36040e592128a164499bc25eb138a80f Mon Sep 17 00:00:00 2001
+From: Al Viro <viro@zeniv.linux.org.uk>
+Date: Thu, 24 Dec 2015 00:06:05 -0500
+Subject: [PATCH 01/45] convert a bunch of open-coded instances of
+ memdup_user_nul()
+
+A _lot_ of ->write() instances were open-coding it; some are
+converted to memdup_user_nul(), a lot more remain...
+
+Signed-off-by: Al Viro <viro@zeniv.linux.org.uk>
+diff --git a/fs/dlm/user.c b/fs/dlm/user.c
+index 173b387..1925d6d 100644
+--- a/fs/dlm/user.c
++++ b/fs/dlm/user.c
+@@ -515,14 +515,9 @@ static ssize_t device_write(struct file *file, const char __user *buf,
+ 	if (count > sizeof(struct dlm_write_request) + DLM_RESNAME_MAXLEN)
+ 		return -EINVAL;
+ 
+-	kbuf = kzalloc(count + 1, GFP_NOFS);
+-	if (!kbuf)
+-		return -ENOMEM;
+-
+-	if (copy_from_user(kbuf, buf, count)) {
+-		error = -EFAULT;
+-		goto out_free;
+-	}
++	kbuf = memdup_user_nul(buf, count);
++	if (!IS_ERR(kbuf))
++		return PTR_ERR(kbuf);
+ 
+ 	if (check_version(kbuf)) {
+ 		error = -EBADE;

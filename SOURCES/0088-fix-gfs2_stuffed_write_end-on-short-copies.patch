@@ -1,0 +1,36 @@
+From 43388b21e72d36204822bcc3119e42abe6ebceef Mon Sep 17 00:00:00 2001
+From: Al Viro <viro@zeniv.linux.org.uk>
+Date: Mon, 5 Sep 2016 22:06:35 -0400
+Subject: [PATCH 088/170] fix gfs2_stuffed_write_end() on short copies
+
+a) the page is uptodate - ->write_begin() would either fail (in which
+case we don't reach ->write_end()), or unstuff the inode, or find the
+page already uptodate, or do a successful call of stuffed_readpage(),
+which would've made it uptodate
+
+b) zeroing the tail in pagecache is wrong.  kill -9 at the right time
+while writing unmodified file contents to the same file should _not_
+leave us in a situation when read() from the file will be reporting
+it full of zeroes.  Especially since that effect will be transient -
+at some later point the page will be evicted and then we'll be back
+to the real file contents.
+
+Signed-off-by: Al Viro <viro@zeniv.linux.org.uk>
+diff --git a/fs/gfs2/aops.c b/fs/gfs2/aops.c
+index 79819bf..16944eb 100644
+--- a/fs/gfs2/aops.c
++++ b/fs/gfs2/aops.c
+@@ -839,12 +839,10 @@ static int gfs2_stuffed_write_end(struct inode *inode, struct buffer_head *dibh,
+ 	BUG_ON((pos + len) > (dibh->b_size - sizeof(struct gfs2_dinode)));
+ 	kaddr = kmap_atomic(page);
+ 	memcpy(buf + pos, kaddr + pos, copied);
+-	memset(kaddr + pos + copied, 0, len - copied);
+ 	flush_dcache_page(page);
+ 	kunmap_atomic(kaddr);
+ 
+-	if (!PageUptodate(page))
+-		SetPageUptodate(page);
++	WARN_ON(!PageUptodate(page));
+ 	unlock_page(page);
+ 	put_page(page);
+ 

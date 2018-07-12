@@ -1,0 +1,35 @@
+From 80f4781d2c0ba63bf9ab4de90a6829a1368b80a3 Mon Sep 17 00:00:00 2001
+From: Abhi Das <adas@redhat.com>
+Date: Mon, 2 May 2016 07:07:01 -0500
+Subject: [PATCH 047/170] gfs2: use inode_lock/unlock instead of accessing
+ i_mutex directly
+
+i_mutex has been replaced by i_rwsem and directly accessing the
+non-existent i_mutex breaks the kernel build.
+
+Signed-off-by: Abhi Das <adas@redhat.com>
+Signed-off-by: Bob Peterson <rpeterso@redhat.com>
+diff --git a/fs/gfs2/file.c b/fs/gfs2/file.c
+index 3f27ab2..76e2054 100644
+--- a/fs/gfs2/file.c
++++ b/fs/gfs2/file.c
+@@ -960,16 +960,16 @@ static ssize_t gfs2_file_splice_read(struct file *in, loff_t *ppos,
+ 	struct gfs2_holder gh;
+ 	int ret;
+ 
+-	mutex_lock(&inode->i_mutex);
++	inode_lock(inode);
+ 
+ 	ret = gfs2_glock_nq_init(ip->i_gl, LM_ST_SHARED, 0, &gh);
+ 	if (ret) {
+-		mutex_unlock(&inode->i_mutex);
++		inode_unlock(inode);
+ 		return ret;
+ 	}
+ 
+ 	gfs2_glock_dq_uninit(&gh);
+-	mutex_unlock(&inode->i_mutex);
++	inode_unlock(inode);
+ 
+ 	return generic_file_splice_read(in, ppos, pipe, len, flags);
+ }

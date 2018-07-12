@@ -1,0 +1,130 @@
+From fbc872c38c8fed31948c85683b5326ee5ab9fccc Mon Sep 17 00:00:00 2001
+From: David Vrabel <david.vrabel@citrix.com>
+Date: Mon, 11 Jul 2016 15:45:51 +0100
+Subject: [PATCH 1/1] xen/evtchn: add IOCTL_EVTCHN_RESTRICT
+
+IOCTL_EVTCHN_RESTRICT limits the file descriptor to being able to bind
+to interdomain event channels from a specific domain.  Event channels
+that are already bound continue to work for sending and receiving
+notifications.
+
+This is useful as part of deprivileging a user space PV backend or
+device model (QEMU).  e.g., Once the device model as bound to the
+ioreq server event channels it can restrict the file handle so an
+exploited DM cannot use it to create or bind to arbitrary event
+channels.
+
+Signed-off-by: David Vrabel <david.vrabel@citrix.com>
+Reviewed-by: Boris Ostrovsky <boris.ostrovsky@oracle.com>
+diff --git a/drivers/xen/evtchn.c b/drivers/xen/evtchn.c
+index f4edd6df..7efd1cb 100644
+--- a/drivers/xen/evtchn.c
++++ b/drivers/xen/evtchn.c
+@@ -73,8 +73,12 @@ struct per_user_data {
+ 	wait_queue_head_t evtchn_wait;
+ 	struct fasync_struct *evtchn_async_queue;
+ 	const char *name;
++
++	domid_t restrict_domid;
+ };
+ 
++#define UNRESTRICTED_DOMID ((domid_t)-1)
++
+ struct user_evtchn {
+ 	struct rb_node node;
+ 	struct per_user_data *user;
+@@ -443,6 +447,10 @@ static long evtchn_ioctl(struct file *file,
+ 		struct ioctl_evtchn_bind_virq bind;
+ 		struct evtchn_bind_virq bind_virq;
+ 
++		rc = -EACCES;
++		if (u->restrict_domid != UNRESTRICTED_DOMID)
++			break;
++
+ 		rc = -EFAULT;
+ 		if (copy_from_user(&bind, uarg, sizeof(bind)))
+ 			break;
+@@ -468,6 +476,11 @@ static long evtchn_ioctl(struct file *file,
+ 		if (copy_from_user(&bind, uarg, sizeof(bind)))
+ 			break;
+ 
++		rc = -EACCES;
++		if (u->restrict_domid != UNRESTRICTED_DOMID &&
++		    u->restrict_domid != bind.remote_domain)
++			break;
++
+ 		bind_interdomain.remote_dom  = bind.remote_domain;
+ 		bind_interdomain.remote_port = bind.remote_port;
+ 		rc = HYPERVISOR_event_channel_op(EVTCHNOP_bind_interdomain,
+@@ -485,6 +498,10 @@ static long evtchn_ioctl(struct file *file,
+ 		struct ioctl_evtchn_bind_unbound_port bind;
+ 		struct evtchn_alloc_unbound alloc_unbound;
+ 
++		rc = -EACCES;
++		if (u->restrict_domid != UNRESTRICTED_DOMID)
++			break;
++
+ 		rc = -EFAULT;
+ 		if (copy_from_user(&bind, uarg, sizeof(bind)))
+ 			break;
+@@ -553,6 +570,27 @@ static long evtchn_ioctl(struct file *file,
+ 		break;
+ 	}
+ 
++	case IOCTL_EVTCHN_RESTRICT_DOMID: {
++		struct ioctl_evtchn_restrict_domid ierd;
++
++		rc = -EACCES;
++		if (u->restrict_domid != UNRESTRICTED_DOMID)
++			break;
++
++		rc = -EFAULT;
++		if (copy_from_user(&ierd, uarg, sizeof(ierd)))
++		    break;
++
++		rc = -EINVAL;
++		if (ierd.domid == 0 || ierd.domid >= DOMID_FIRST_RESERVED)
++			break;
++
++		u->restrict_domid = ierd.domid;
++		rc = 0;
++
++		break;
++	}
++
+ 	default:
+ 		rc = -ENOSYS;
+ 		break;
+@@ -601,6 +639,8 @@ static int evtchn_open(struct inode *inode, struct file *filp)
+ 	mutex_init(&u->ring_cons_mutex);
+ 	spin_lock_init(&u->ring_prod_lock);
+ 
++	u->restrict_domid = UNRESTRICTED_DOMID;
++
+ 	filp->private_data = u;
+ 
+ 	return nonseekable_open(inode, filp);
+diff --git a/include/uapi/xen/evtchn.h b/include/uapi/xen/evtchn.h
+index 14e833ee4..cb4aa4b 100644
+--- a/include/uapi/xen/evtchn.h
++++ b/include/uapi/xen/evtchn.h
+@@ -85,4 +85,19 @@ struct ioctl_evtchn_notify {
+ #define IOCTL_EVTCHN_RESET				\
+ 	_IOC(_IOC_NONE, 'E', 5, 0)
+ 
++/*
++ * Restrict this file descriptor so that it can only be used to bind
++ * new interdomain events from one domain.
++ *
++ * Once a file descriptor has been restricted it cannot be
++ * de-restricted, and must be closed and re-opened.  Event channels
++ * which were bound before restricting remain bound afterwards, and
++ * can be notified as usual.
++ */
++#define IOCTL_EVTCHN_RESTRICT_DOMID			\
++	_IOC(_IOC_NONE, 'E', 6, sizeof(struct ioctl_evtchn_restrict_domid))
++struct ioctl_evtchn_restrict_domid {
++	domid_t domid;
++};
++
+ #endif /* __LINUX_PUBLIC_EVTCHN_H__ */

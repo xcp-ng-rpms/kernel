@@ -1,0 +1,194 @@
+From b58bf407ca4669a2dfcc00f5888ee719d9c34150 Mon Sep 17 00:00:00 2001
+From: Bob Peterson <rpeterso@redhat.com>
+Date: Fri, 24 Jul 2015 09:45:43 -0500
+Subject: [PATCH 011/170] GFS2: Reduce size of incore inode
+
+This patch makes no functional changes. Its goal is to reduce the
+size of the gfs2 inode in memory by rearranging structures and
+changing the size of some variables within the structure.
+
+Signed-off-by: Bob Peterson <rpeterso@redhat.com>
+diff --git a/fs/gfs2/file.c b/fs/gfs2/file.c
+index 3ead27d..8604080 100644
+--- a/fs/gfs2/file.c
++++ b/fs/gfs2/file.c
+@@ -1013,7 +1013,7 @@ static int do_flock(struct file *file, int cmd, struct file_lock *fl)
+ 	struct gfs2_inode *ip = GFS2_I(file_inode(file));
+ 	struct gfs2_glock *gl;
+ 	unsigned int state;
+-	int flags;
++	u16 flags;
+ 	int error = 0;
+ 	int sleeptime;
+ 
+diff --git a/fs/gfs2/glock.c b/fs/gfs2/glock.c
+index 430326e..68484ef 100644
+--- a/fs/gfs2/glock.c
++++ b/fs/gfs2/glock.c
+@@ -446,7 +446,7 @@ __acquires(&gl->gl_lockref.lock)
+ {
+ 	const struct gfs2_glock_operations *glops = gl->gl_ops;
+ 	struct gfs2_sbd *sdp = gl->gl_name.ln_sbd;
+-	unsigned int lck_flags = gh ? gh->gh_flags : 0;
++	unsigned int lck_flags = (unsigned int)(gh ? gh->gh_flags : 0);
+ 	int ret;
+ 
+ 	lck_flags &= (LM_FLAG_TRY | LM_FLAG_TRY_1CB | LM_FLAG_NOEXP |
+@@ -750,7 +750,7 @@ again:
+  *
+  */
+ 
+-void gfs2_holder_init(struct gfs2_glock *gl, unsigned int state, unsigned flags,
++void gfs2_holder_init(struct gfs2_glock *gl, unsigned int state, u16 flags,
+ 		      struct gfs2_holder *gh)
+ {
+ 	INIT_LIST_HEAD(&gh->gh_list);
+@@ -774,7 +774,7 @@ void gfs2_holder_init(struct gfs2_glock *gl, unsigned int state, unsigned flags,
+  *
+  */
+ 
+-void gfs2_holder_reinit(unsigned int state, unsigned flags, struct gfs2_holder *gh)
++void gfs2_holder_reinit(unsigned int state, u16 flags, struct gfs2_holder *gh)
+ {
+ 	gh->gh_state = state;
+ 	gh->gh_flags = flags;
+@@ -1080,7 +1080,7 @@ void gfs2_glock_dq_uninit(struct gfs2_holder *gh)
+ 
+ int gfs2_glock_nq_num(struct gfs2_sbd *sdp, u64 number,
+ 		      const struct gfs2_glock_operations *glops,
+-		      unsigned int state, int flags, struct gfs2_holder *gh)
++		      unsigned int state, u16 flags, struct gfs2_holder *gh)
+ {
+ 	struct gfs2_glock *gl;
+ 	int error;
+@@ -1539,7 +1539,7 @@ static const char *state2str(unsigned state)
+ 	return "??";
+ }
+ 
+-static const char *hflags2str(char *buf, unsigned flags, unsigned long iflags)
++static const char *hflags2str(char *buf, u16 flags, unsigned long iflags)
+ {
+ 	char *p = buf;
+ 	if (flags & LM_FLAG_TRY)
+diff --git a/fs/gfs2/glock.h b/fs/gfs2/glock.h
+index f7cdaa8..46ab67f 100644
+--- a/fs/gfs2/glock.h
++++ b/fs/gfs2/glock.h
+@@ -79,15 +79,15 @@ enum {
+  * requested had acquired and released the lock.
+  */
+ 
+-#define LM_FLAG_TRY		0x00000001
+-#define LM_FLAG_TRY_1CB		0x00000002
+-#define LM_FLAG_NOEXP		0x00000004
+-#define LM_FLAG_ANY		0x00000008
+-#define LM_FLAG_PRIORITY	0x00000010
+-#define GL_ASYNC		0x00000040
+-#define GL_EXACT		0x00000080
+-#define GL_SKIP			0x00000100
+-#define GL_NOCACHE		0x00000400
++#define LM_FLAG_TRY		0x0001
++#define LM_FLAG_TRY_1CB		0x0002
++#define LM_FLAG_NOEXP		0x0004
++#define LM_FLAG_ANY		0x0008
++#define LM_FLAG_PRIORITY	0x0010
++#define GL_ASYNC		0x0040
++#define GL_EXACT		0x0080
++#define GL_SKIP			0x0100
++#define GL_NOCACHE		0x0400
+   
+ /*
+  * lm_async_cb return flags
+@@ -183,8 +183,8 @@ extern int gfs2_glock_get(struct gfs2_sbd *sdp, u64 number,
+ 			  int create, struct gfs2_glock **glp);
+ extern void gfs2_glock_put(struct gfs2_glock *gl);
+ extern void gfs2_holder_init(struct gfs2_glock *gl, unsigned int state,
+-			     unsigned flags, struct gfs2_holder *gh);
+-extern void gfs2_holder_reinit(unsigned int state, unsigned flags,
++			     u16 flags, struct gfs2_holder *gh);
++extern void gfs2_holder_reinit(unsigned int state, u16 flags,
+ 			       struct gfs2_holder *gh);
+ extern void gfs2_holder_uninit(struct gfs2_holder *gh);
+ extern int gfs2_glock_nq(struct gfs2_holder *gh);
+@@ -195,7 +195,7 @@ extern void gfs2_glock_dq_wait(struct gfs2_holder *gh);
+ extern void gfs2_glock_dq_uninit(struct gfs2_holder *gh);
+ extern int gfs2_glock_nq_num(struct gfs2_sbd *sdp, u64 number,
+ 			     const struct gfs2_glock_operations *glops,
+-			     unsigned int state, int flags,
++			     unsigned int state, u16 flags,
+ 			     struct gfs2_holder *gh);
+ extern int gfs2_glock_nq_m(unsigned int num_gh, struct gfs2_holder *ghs);
+ extern void gfs2_glock_dq_m(unsigned int num_gh, struct gfs2_holder *ghs);
+@@ -215,7 +215,7 @@ void gfs2_print_dbg(struct seq_file *seq, const char *fmt, ...);
+  */
+ 
+ static inline int gfs2_glock_nq_init(struct gfs2_glock *gl,
+-				     unsigned int state, int flags,
++				     unsigned int state, u16 flags,
+ 				     struct gfs2_holder *gh)
+ {
+ 	int error;
+diff --git a/fs/gfs2/incore.h b/fs/gfs2/incore.h
+index 25d0f12a..921304e 100644
+--- a/fs/gfs2/incore.h
++++ b/fs/gfs2/incore.h
+@@ -259,8 +259,8 @@ struct gfs2_holder {
+ 
+ 	struct gfs2_glock *gh_gl;
+ 	struct pid *gh_owner_pid;
+-	unsigned int gh_state;
+-	unsigned gh_flags;
++	u16 gh_flags;
++	u16 gh_state;
+ 
+ 	int gh_error;
+ 	unsigned long gh_iflags; /* HIF_... */
+diff --git a/fs/gfs2/quota.c b/fs/gfs2/quota.c
+index 63a72109..be6d9c4 100644
+--- a/fs/gfs2/quota.c
++++ b/fs/gfs2/quota.c
+@@ -620,7 +620,7 @@ out:
+ void gfs2_quota_unhold(struct gfs2_inode *ip)
+ {
+ 	struct gfs2_sbd *sdp = GFS2_SB(&ip->i_inode);
+-	unsigned int x;
++	u32 x;
+ 
+ 	if (ip->i_qadata == NULL)
+ 		return;
+@@ -1036,7 +1036,7 @@ int gfs2_quota_lock(struct gfs2_inode *ip, kuid_t uid, kgid_t gid)
+ {
+ 	struct gfs2_sbd *sdp = GFS2_SB(&ip->i_inode);
+ 	struct gfs2_quota_data *qd;
+-	unsigned int x;
++	u32 x;
+ 	int error = 0;
+ 
+ 	if (capable(CAP_SYS_RESOURCE) ||
+@@ -1109,7 +1109,7 @@ void gfs2_quota_unlock(struct gfs2_inode *ip)
+ 	struct gfs2_sbd *sdp = GFS2_SB(&ip->i_inode);
+ 	struct gfs2_quota_data *qda[4];
+ 	unsigned int count = 0;
+-	unsigned int x;
++	u32 x;
+ 	int found;
+ 
+ 	if (!test_and_clear_bit(GIF_QD_LOCKED, &ip->i_flags))
+@@ -1191,7 +1191,7 @@ int gfs2_quota_check(struct gfs2_inode *ip, kuid_t uid, kgid_t gid,
+ 	struct gfs2_sbd *sdp = GFS2_SB(&ip->i_inode);
+ 	struct gfs2_quota_data *qd;
+ 	s64 value, warn, limit;
+-	unsigned int x;
++	u32 x;
+ 	int error = 0;
+ 
+ 	ap->allowed = UINT_MAX; /* Assume we are permitted a whole lot */
+@@ -1249,7 +1249,7 @@ void gfs2_quota_change(struct gfs2_inode *ip, s64 change,
+ 		       kuid_t uid, kgid_t gid)
+ {
+ 	struct gfs2_quota_data *qd;
+-	unsigned int x;
++	u32 x;
+ 	struct gfs2_sbd *sdp = GFS2_SB(&ip->i_inode);
+ 
+ 	if (sdp->sd_args.ar_quota != GFS2_QUOTA_ON ||

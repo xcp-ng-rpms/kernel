@@ -1,0 +1,175 @@
+From adfeb3e00e8e1b9fb4ad19eb7367e7c272d16003 Mon Sep 17 00:00:00 2001
+From: Steve French <smfrench@gmail.com>
+Date: Fri, 18 Dec 2015 12:31:36 -0600
+Subject: [PATCH 1/1] cifs: Make echo interval tunable
+
+Currently the echo interval is set to 60 seconds using a macro. This
+setting determines the interval at which echo requests are sent to the
+server on an idling connection. This setting also affects the time
+required for a connection to an unresponsive server to timeout.
+
+Making this setting a tunable allows users to control the echo interval
+times as well as control the time after which the connecting to an
+unresponsive server times out.
+
+To set echo interval, pass the echo_interval=n mount option.
+
+Version four of the patch.
+v2: Change MIN and MAX timeout values
+v3: Remove incorrect comment in cifs_get_tcp_session
+v4: Fix bug in setting echo_intervalw
+
+Signed-off-by: Sachin Prabhu <sprabhu@redhat.com>
+Acked-by: Shirish Pargaonkar <shirishpargaonkar@gmail.com>
+diff --git a/fs/cifs/cifsfs.c b/fs/cifs/cifsfs.c
+index 4f4fc9f..b359b4e 100644
+--- a/fs/cifs/cifsfs.c
++++ b/fs/cifs/cifsfs.c
+@@ -507,6 +507,8 @@ cifs_show_options(struct seq_file *s, struct dentry *root)
+ 
+ 	seq_printf(s, ",rsize=%u", cifs_sb->rsize);
+ 	seq_printf(s, ",wsize=%u", cifs_sb->wsize);
++	seq_printf(s, ",echo_interval=%lu",
++			tcon->ses->server->echo_interval / HZ);
+ 	/* convert actimeo and display it in seconds */
+ 	seq_printf(s, ",actimeo=%lu", cifs_sb->actimeo / HZ);
+ 
+diff --git a/fs/cifs/cifsglob.h b/fs/cifs/cifsglob.h
+index b768836..1e8287bb 100644
+--- a/fs/cifs/cifsglob.h
++++ b/fs/cifs/cifsglob.h
+@@ -70,8 +70,10 @@
+ #define SERVER_NAME_LENGTH 40
+ #define SERVER_NAME_LEN_WITH_NULL     (SERVER_NAME_LENGTH + 1)
+ 
+-/* SMB echo "timeout" -- FIXME: tunable? */
+-#define SMB_ECHO_INTERVAL (60 * HZ)
++/* echo interval in seconds */
++#define SMB_ECHO_INTERVAL_MIN 1
++#define SMB_ECHO_INTERVAL_MAX 600
++#define SMB_ECHO_INTERVAL_DEFAULT 60
+ 
+ #include "cifspdu.h"
+ 
+@@ -507,6 +509,7 @@ struct smb_vol {
+ 	struct sockaddr_storage dstaddr; /* destination address */
+ 	struct sockaddr_storage srcaddr; /* allow binding to a local IP */
+ 	struct nls_table *local_nls;
++	unsigned int echo_interval; /* echo interval in secs */
+ };
+ 
+ #define CIFS_MOUNT_MASK (CIFS_MOUNT_NO_PERM | CIFS_MOUNT_SET_UID | \
+@@ -630,6 +633,7 @@ struct TCP_Server_Info {
+ 	struct delayed_work reconnect; /* reconnect workqueue job */
+ 	struct mutex reconnect_mutex; /* prevent simultaneous reconnects */
+ #endif /* CONFIG_CIFS_SMB2 */
++	unsigned long echo_interval;
+ };
+ 
+ static inline unsigned int
+diff --git a/fs/cifs/connect.c b/fs/cifs/connect.c
+index 5d59f25..5c383a6 100644
+--- a/fs/cifs/connect.c
++++ b/fs/cifs/connect.c
+@@ -98,6 +98,7 @@ enum {
+ 	Opt_cruid, Opt_gid, Opt_file_mode,
+ 	Opt_dirmode, Opt_port,
+ 	Opt_rsize, Opt_wsize, Opt_actimeo,
++	Opt_echo_interval,
+ 
+ 	/* Mount options which take string value */
+ 	Opt_user, Opt_pass, Opt_ip,
+@@ -191,6 +192,7 @@ static const match_table_t cifs_mount_option_tokens = {
+ 	{ Opt_rsize, "rsize=%s" },
+ 	{ Opt_wsize, "wsize=%s" },
+ 	{ Opt_actimeo, "actimeo=%s" },
++	{ Opt_echo_interval, "echo_interval=%s" },
+ 
+ 	{ Opt_blank_user, "user=" },
+ 	{ Opt_blank_user, "username=" },
+@@ -421,6 +423,7 @@ cifs_echo_request(struct work_struct *work)
+ 	int rc;
+ 	struct TCP_Server_Info *server = container_of(work,
+ 					struct TCP_Server_Info, echo.work);
++	unsigned long echo_interval = server->echo_interval;
+ 
+ 	/*
+ 	 * We cannot send an echo if it is disabled or until the
+@@ -432,7 +435,7 @@ cifs_echo_request(struct work_struct *work)
+ 	if (server->tcpStatus == CifsNeedReconnect ||
+ 	    server->tcpStatus == CifsExiting || server->tcpStatus == CifsNew ||
+ 	    (server->ops->can_echo && !server->ops->can_echo(server)) ||
+-	    time_before(jiffies, server->lstrp + SMB_ECHO_INTERVAL - HZ))
++	    time_before(jiffies, server->lstrp + echo_interval - HZ))
+ 		goto requeue_echo;
+ 
+ 	rc = server->ops->echo ? server->ops->echo(server) : -ENOSYS;
+@@ -441,7 +444,7 @@ cifs_echo_request(struct work_struct *work)
+ 			 server->hostname);
+ 
+ requeue_echo:
+-	queue_delayed_work(cifsiod_wq, &server->echo, SMB_ECHO_INTERVAL);
++	queue_delayed_work(cifsiod_wq, &server->echo, echo_interval);
+ }
+ 
+ static bool
+@@ -492,9 +495,9 @@ server_unresponsive(struct TCP_Server_Info *server)
+ 	 *     a response in >60s.
+ 	 */
+ 	if (server->tcpStatus == CifsGood &&
+-	    time_after(jiffies, server->lstrp + 2 * SMB_ECHO_INTERVAL)) {
+-		cifs_dbg(VFS, "Server %s has not responded in %d seconds. Reconnecting...\n",
+-			 server->hostname, (2 * SMB_ECHO_INTERVAL) / HZ);
++	    time_after(jiffies, server->lstrp + 2 * server->echo_interval)) {
++		cifs_dbg(VFS, "Server %s has not responded in %lu seconds. Reconnecting...\n",
++			 server->hostname, (2 * server->echo_interval) / HZ);
+ 		cifs_reconnect(server);
+ 		wake_up(&server->response_q);
+ 		return true;
+@@ -1629,6 +1632,14 @@ cifs_parse_mount_options(const char *mountdata, const char *devname,
+ 				goto cifs_parse_mount_err;
+ 			}
+ 			break;
++		case Opt_echo_interval:
++			if (get_option_ul(args, &option)) {
++				cifs_dbg(VFS, "%s: Invalid echo interval value\n",
++					 __func__);
++				goto cifs_parse_mount_err;
++			}
++			vol->echo_interval = option;
++			break;
+ 
+ 		/* String Arguments */
+ 
+@@ -2094,6 +2105,9 @@ static int match_server(struct TCP_Server_Info *server, struct smb_vol *vol)
+ 	if (!match_security(server, vol))
+ 		return 0;
+ 
++	if (server->echo_interval != vol->echo_interval)
++		return 0;
++
+ 	return 1;
+ }
+ 
+@@ -2230,6 +2244,12 @@ cifs_get_tcp_session(struct smb_vol *volume_info)
+ 	tcp_ses->tcpStatus = CifsNew;
+ 	++tcp_ses->srv_count;
+ 
++	if (volume_info->echo_interval >= SMB_ECHO_INTERVAL_MIN &&
++		volume_info->echo_interval <= SMB_ECHO_INTERVAL_MAX)
++		tcp_ses->echo_interval = volume_info->echo_interval * HZ;
++	else
++		tcp_ses->echo_interval = SMB_ECHO_INTERVAL_DEFAULT * HZ;
++
+ 	rc = ip_connect(tcp_ses);
+ 	if (rc < 0) {
+ 		cifs_dbg(VFS, "Error connecting to socket. Aborting operation.\n");
+@@ -2259,7 +2279,7 @@ cifs_get_tcp_session(struct smb_vol *volume_info)
+ 	cifs_fscache_get_client_cookie(tcp_ses);
+ 
+ 	/* queue echo request delayed work */
+-	queue_delayed_work(cifsiod_wq, &tcp_ses->echo, SMB_ECHO_INTERVAL);
++	queue_delayed_work(cifsiod_wq, &tcp_ses->echo, tcp_ses->echo_interval);
+ 
+ 	return tcp_ses;
+ 

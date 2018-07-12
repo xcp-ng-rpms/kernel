@@ -1,0 +1,21 @@
+acpi_pm: Ignore when running under dom0
+
+dom0 detects the presence of the ACPI PM timer but cannot access it
+because Xen explicitly denies access. Keep it enabled in case it is
+needed under kexec or for testing native boot but don't detect it for
+dom0.
+
+diff --git a/arch/x86/kernel/acpi/boot.c b/arch/x86/kernel/acpi/boot.c
+index e759076..e95602d 100644
+--- a/arch/x86/kernel/acpi/boot.c
++++ b/arch/x86/kernel/acpi/boot.c
+@@ -915,6 +915,9 @@ static int __init acpi_parse_fadt(struct acpi_table_header *table)
+ {
+ 
+ #ifdef CONFIG_X86_PM_TIMER
++	if (xen_initial_domain())
++		return 0;
++
+ 	/* detect the location of the ACPI PM Timer */
+ 	if (acpi_gbl_FADT.header.revision >= FADT2_REVISION_ID) {
+ 		/* FADT rev. 2 */

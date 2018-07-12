@@ -1,0 +1,54 @@
+CIFS: store results of cifs_reopen_file to avoid infinite wait
+
+From: Germano Percossi <germano.percossi@citrix.com>
+
+This fixes Continuous Availability when errors during
+file reopen are encountered.
+
+cifs_user_readv and cifs_user_writev would wait for ever if
+results of cifs_reopen_file are not stored and for later inspection.
+
+In fact, results are checked and, in case of errors, a chain
+of function calls leading to reads and writes to be scheduled in
+a separate thread is skipped.
+These threads will wake up the corresponding waiters once reads
+and writes are done.
+
+However, given the return value is not stored, when rc is checked
+for errors a previous one (always zero) is inspected instead.
+This leads to pending reads/writes added to the list, making
+cifs_user_readv and cifs_user_writev wait for ever.
+
+Signed-off-by: Germano Percossi <germano.percossi@citrix.com>
+
+diff --git a/fs/cifs/file.c b/fs/cifs/file.c
+index 71a945a..c3e9919 100644
+--- a/fs/cifs/file.c
++++ b/fs/cifs/file.c
+@@ -2589,7 +2589,7 @@ cifs_write_from_iter(loff_t offset, size_t len, struct iov_iter *from,
+ 		wdata->credits = credits;
+ 
+ 		if (!wdata->cfile->invalidHandle ||
+-		    !cifs_reopen_file(wdata->cfile, false))
++		    !(rc = cifs_reopen_file(wdata->cfile, false)))
+ 			rc = server->ops->async_writev(wdata,
+ 					cifs_uncached_writedata_release);
+ 		if (rc) {
+@@ -2997,7 +2997,7 @@ cifs_send_async_read(loff_t offset, size_t len, struct cifsFileInfo *open_file,
+ 		rdata->credits = credits;
+ 
+ 		if (!rdata->cfile->invalidHandle ||
+-		    !cifs_reopen_file(rdata->cfile, true))
++		    !(rc = cifs_reopen_file(rdata->cfile, true)))
+ 			rc = server->ops->async_readv(rdata);
+ error:
+ 		if (rc) {
+@@ -3583,7 +3583,7 @@ static int cifs_readpages(struct file *file, struct address_space *mapping,
+ 		}
+ 
+ 		if (!rdata->cfile->invalidHandle ||
+-		    !cifs_reopen_file(rdata->cfile, true))
++		    !(rc = cifs_reopen_file(rdata->cfile, true)))
+ 			rc = server->ops->async_readv(rdata);
+ 		if (rc) {
+ 			add_credits_and_wake_if(server, rdata->credits, 0);

@@ -1,0 +1,75 @@
+From f07b352021483a3a38f081dc284928400a9c1d2c Mon Sep 17 00:00:00 2001
+From: Bob Peterson <rpeterso@redhat.com>
+Date: Thu, 5 Jan 2017 16:01:45 -0500
+Subject: [PATCH 093/170] GFS2: Made logd daemon take into account log demand
+
+Before this patch, the logd daemon only tried to flush things when
+the log blocks pinned exceeded a certain threshold. But when we're
+deleting very large files, it may require a huge number of journal
+blocks, and that, in turn, may exceed the threshold. This patch
+factors that into account.
+
+Signed-off-by: Bob Peterson <rpeterso@redhat.com>
+diff --git a/fs/gfs2/incore.h b/fs/gfs2/incore.h
+index a6a3389..00d8dc2 100644
+--- a/fs/gfs2/incore.h
++++ b/fs/gfs2/incore.h
+@@ -794,6 +794,7 @@ struct gfs2_sbd {
+ 	atomic_t sd_log_thresh1;
+ 	atomic_t sd_log_thresh2;
+ 	atomic_t sd_log_blks_free;
++	atomic_t sd_log_blks_needed;
+ 	wait_queue_head_t sd_log_waitq;
+ 	wait_queue_head_t sd_logd_waitq;
+ 
+diff --git a/fs/gfs2/log.c b/fs/gfs2/log.c
+index 0ff028c..d715985 100644
+--- a/fs/gfs2/log.c
++++ b/fs/gfs2/log.c
+@@ -349,6 +349,7 @@ int gfs2_log_reserve(struct gfs2_sbd *sdp, unsigned int blks)
+ 	if (gfs2_assert_warn(sdp, blks) ||
+ 	    gfs2_assert_warn(sdp, blks <= sdp->sd_jdesc->jd_blocks))
+ 		return -EINVAL;
++	atomic_add(blks, &sdp->sd_log_blks_needed);
+ retry:
+ 	free_blocks = atomic_read(&sdp->sd_log_blks_free);
+ 	if (unlikely(free_blocks <= wanted)) {
+@@ -370,6 +371,7 @@ retry:
+ 			wake_up(&sdp->sd_reserving_log_wait);
+ 		goto retry;
+ 	}
++	atomic_sub(blks, &sdp->sd_log_blks_needed);
+ 	trace_gfs2_log_blocks(sdp, -blks);
+ 
+ 	/*
+@@ -891,13 +893,16 @@ void gfs2_log_shutdown(struct gfs2_sbd *sdp)
+ 
+ static inline int gfs2_jrnl_flush_reqd(struct gfs2_sbd *sdp)
+ {
+-	return (atomic_read(&sdp->sd_log_pinned) >= atomic_read(&sdp->sd_log_thresh1));
++	return (atomic_read(&sdp->sd_log_pinned) +
++		atomic_read(&sdp->sd_log_blks_needed) >=
++		atomic_read(&sdp->sd_log_thresh1));
+ }
+ 
+ static inline int gfs2_ail_flush_reqd(struct gfs2_sbd *sdp)
+ {
+ 	unsigned int used_blocks = sdp->sd_jdesc->jd_blocks - atomic_read(&sdp->sd_log_blks_free);
+-	return used_blocks >= atomic_read(&sdp->sd_log_thresh2);
++	return used_blocks + atomic_read(&sdp->sd_log_blks_needed) >=
++		atomic_read(&sdp->sd_log_thresh2);
+ }
+ 
+ /**
+diff --git a/fs/gfs2/ops_fstype.c b/fs/gfs2/ops_fstype.c
+index 4f9c668..c35c559 100644
+--- a/fs/gfs2/ops_fstype.c
++++ b/fs/gfs2/ops_fstype.c
+@@ -682,6 +682,7 @@ static int init_journal(struct gfs2_sbd *sdp, int undo)
+ 		goto fail_jindex;
+ 	}
+ 
++	atomic_set(&sdp->sd_log_blks_needed, 0);
+ 	if (sdp->sd_args.ar_spectator) {
+ 		sdp->sd_jdesc = gfs2_jdesc_find(sdp, 0);
+ 		atomic_set(&sdp->sd_log_blks_free, sdp->sd_jdesc->jd_blocks);

@@ -1,0 +1,33 @@
+From d12ad1a96434793a58d2b9bfef8eb54787034206 Mon Sep 17 00:00:00 2001
+From: Markus Elfring <elfring@users.sourceforge.net>
+Date: Sat, 6 May 2017 09:45:59 +0200
+Subject: [PATCH 37/45] dlm: Improve a size determination in two functions
+
+Replace the specification of two data structures by pointer dereferences
+as the parameter for the operator "sizeof" to make the corresponding size
+determination a bit safer according to the Linux coding style convention.
+
+Signed-off-by: Markus Elfring <elfring@users.sourceforge.net>
+Signed-off-by: David Teigland <teigland@redhat.com>
+diff --git a/fs/dlm/member.c b/fs/dlm/member.c
+index 92c601a..3e56503 100644
+--- a/fs/dlm/member.c
++++ b/fs/dlm/member.c
+@@ -318,7 +318,7 @@ static int dlm_add_member(struct dlm_ls *ls, struct dlm_config_node *node)
+ 	struct dlm_member *memb;
+ 	int error;
+ 
+-	memb = kzalloc(sizeof(struct dlm_member), GFP_NOFS);
++	memb = kzalloc(sizeof(*memb), GFP_NOFS);
+ 	if (!memb)
+ 		return -ENOMEM;
+ 
+@@ -674,7 +674,7 @@ int dlm_ls_start(struct dlm_ls *ls)
+ 	struct dlm_config_node *nodes;
+ 	int error, count;
+ 
+-	rv = kzalloc(sizeof(struct dlm_recover), GFP_NOFS);
++	rv = kzalloc(sizeof(*rv), GFP_NOFS);
+ 	if (!rv)
+ 		return -ENOMEM;
+ 

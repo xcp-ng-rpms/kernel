@@ -1,0 +1,49 @@
+DLM: increase socket backlog to avoid hangs with 16 nodes
+
+From: Edwin Török <edvin.torok@citrix.com>
+
+On a 16 node virtual cluster with e1000 NICs joining the 12th node prints SYN
+flood warnings for the DLM port:
+Dec 21 01:46:41 localhost kernel: [ 2146.516664] TCP: request_sock_TCP: Possible SYN flooding on port 21064. Sending cookies.  Check SNMP counters.
+
+And then joining a DLM lockspace hangs:
+Dec 21 01:49:00 localhost kernel: [ 2285.780913] INFO: task xapi-clusterd:17638 blocked for more than 120 seconds.                                                                     │
+Dec 21 01:49:00 localhost kernel: [ 2285.786476]       Not tainted 4.4.0+10 #1                                                                                                         │
+Dec 21 01:49:00 localhost kernel: [ 2285.789043] "echo 0 > /proc/sys/kernel/hung_task_timeout_secs" disables this message.                                                             │
+Dec 21 01:49:00 localhost kernel: [ 2285.794611] xapi-clusterd   D ffff88001930bc58     0 17638      1 0x00000000                                                                      │
+Dec 21 01:49:00 localhost kernel: [ 2285.794615]  ffff88001930bc58 ffff880025593800 ffff880022433800 ffff88001930c000                                                                  │
+Dec 21 01:49:00 localhost kernel: [ 2285.794617]  ffff88000ef4a660 ffff88000ef4a658 ffff880022433800 ffff88000ef4a000                                                                  │
+Dec 21 01:49:00 localhost kernel: [ 2285.794619]  ffff88001930bc70 ffffffff8159f6b4 7fffffffffffffff ffff88001930bd10
+Dec 21 01:49:00 localhost kernel: [ 2285.794644]  [<ffffffff811570fe>] ? printk+0x4d/0x4f                                                                                              │
+Dec 21 01:49:00 localhost kernel: [ 2285.794647]  [<ffffffff810b1741>] ? __raw_callee_save___pv_queued_spin_unlock+0x11/0x20                                                           │
+Dec 21 01:49:00 localhost kernel: [ 2285.794649]  [<ffffffff815a085d>] wait_for_completion+0x9d/0x110                                                                                  │
+Dec 21 01:49:00 localhost kernel: [ 2285.794653]  [<ffffffff810979e0>] ? wake_up_q+0x80/0x80                                                                                           │
+Dec 21 01:49:00 localhost kernel: [ 2285.794661]  [<ffffffffa03fa4b8>] dlm_new_lockspace+0x908/0xac0 [dlm]                                                                             │
+Dec 21 01:49:00 localhost kernel: [ 2285.794665]  [<ffffffff810aaa60>] ? prepare_to_wait_event+0x100/0x100                                                                             │
+Dec 21 01:49:00 localhost kernel: [ 2285.794670]  [<ffffffffa0402e37>] device_write+0x497/0x6b0 [dlm]                                                                                  │
+Dec 21 01:49:00 localhost kernel: [ 2285.794673]  [<ffffffff811834f0>] ? handle_mm_fault+0x7f0/0x13b0                                                                                  │
+Dec 21 01:49:00 localhost kernel: [ 2285.794677]  [<ffffffff811b4438>] __vfs_write+0x28/0xd0                                                                                           │
+Dec 21 01:49:00 localhost kernel: [ 2285.794679]  [<ffffffff811b4b7f>] ? rw_verify_area+0x6f/0xd0                                                                                      ┤
+Dec 21 01:49:00 localhost kernel: [ 2285.794681]  [<ffffffff811b4dc1>] vfs_write+0xb1/0x190                                                                                            │
+Dec 21 01:49:00 localhost kernel: [ 2285.794686]  [<ffffffff8105ffc2>] ? __do_page_fault+0x302/0x420                                                                                   │
+Dec 21 01:49:00 localhost kernel: [ 2285.794688]  [<ffffffff811b5986>] SyS_write+0x46/0xa0                                                                                             │
+Dec 21 01:49:00 localhost kernel: [ 2285.794690]  [<ffffffff815a31ae>] entry_SYSCALL_64_fastpath+0x12/0x71
+
+Although the join hanging forever like that is still a bug, if the SYN cookies
+consistently trigger it lets try to avoid the bug by avoiding the SYN cookies.
+
+Signed-off-by: Edwin Török <edvin.torok@citrix.com>
+
+diff --git a/fs/dlm/lowcomms.c b/fs/dlm/lowcomms.c
+index 9d7a4a7..09eb8e4 100644
+--- a/fs/dlm/lowcomms.c
++++ b/fs/dlm/lowcomms.c
+@@ -1209,7 +1209,7 @@ static struct socket *tcp_create_listen_sock(struct connection *con,
+ 		log_print("Set keepalive failed: %d", result);
+ 	}
+ 
+-	result = sock->ops->listen(sock, 5);
++	result = sock->ops->listen(sock, 128);
+ 	if (result < 0) {
+ 		log_print("Can't listen on port %d", dlm_config.ci_tcp_port);
+ 		sock_release(sock);

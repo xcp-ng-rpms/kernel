@@ -1,0 +1,48 @@
+From f86911e2de129fb3c8ca402c251138d12c4a9d37 Mon Sep 17 00:00:00 2001
+From: Paul Durrant <Paul.Durrant@citrix.com>
+Date: Wed, 18 May 2016 08:53:01 +0100
+Subject: [PATCH 12/12] xen-netback: correct length checks on hash copy_ops
+
+The length checks on the grant table copy_ops for setting hash key and
+hash mapping are checking the local 'len' value which is correct in
+the case of the former but not the latter. This was picked up by
+static analysis checks.
+
+This patch replaces checks of 'len' with 'copy_op.len' in both cases
+to correct the incorrect check, keep the two checks consistent, and to
+make it clear what the checks are for.
+
+Signed-off-by: Paul Durrant <paul.durrant@citrix.com>
+Reported-by: Dan Carpenter <dan.carpenter@oracle.com>
+Cc: Wei Liu <wei.liu2@citrix.com>
+Acked-by: Wei Liu <wei.liu2@citrix.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+---
+ drivers/net/xen-netback/hash.c |    4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/net/xen-netback/hash.c b/drivers/net/xen-netback/hash.c
+index 392e392..fb87cb3 100644
+--- a/drivers/net/xen-netback/hash.c
++++ b/drivers/net/xen-netback/hash.c
+@@ -311,7 +311,7 @@ u32 xenvif_set_hash_key(struct xenvif *vif, u32 gref, u32 len)
+ 	if (len > XEN_NETBK_MAX_HASH_KEY_SIZE)
+ 		return XEN_NETIF_CTRL_STATUS_INVALID_PARAMETER;
+ 
+-	if (len != 0) {
++	if (copy_op.len != 0) {
+ 		gnttab_batch_copy(&copy_op, 1);
+ 
+ 		if (copy_op.status != GNTST_okay)
+@@ -359,7 +359,7 @@ u32 xenvif_set_hash_mapping(struct xenvif *vif, u32 gref, u32 len,
+ 		if (mapping[off++] >= vif->num_queues)
+ 			return XEN_NETIF_CTRL_STATUS_INVALID_PARAMETER;
+ 
+-	if (len != 0) {
++	if (copy_op.len != 0) {
+ 		gnttab_batch_copy(&copy_op, 1);
+ 
+ 		if (copy_op.status != GNTST_okay)
+-- 
+1.7.10.4
+

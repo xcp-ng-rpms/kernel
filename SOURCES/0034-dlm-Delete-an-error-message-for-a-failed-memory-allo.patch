@@ -1,0 +1,27 @@
+From 0d37eca752e0bd90b26bf6e7be6c68ed5d1178f2 Mon Sep 17 00:00:00 2001
+From: Markus Elfring <elfring@users.sourceforge.net>
+Date: Sat, 6 May 2017 08:55:43 +0200
+Subject: [PATCH 34/45] dlm: Delete an error message for a failed memory
+ allocation in dlm_recover_waiters_pre()
+
+Omit an extra message for a memory allocation failure in this function.
+
+Link: http://events.linuxfoundation.org/sites/events/files/slides/LCJ16-Refactor_Strings-WSang_0.pdf
+Signed-off-by: Markus Elfring <elfring@users.sourceforge.net>
+Signed-off-by: David Teigland <teigland@redhat.com>
+diff --git a/fs/dlm/lock.c b/fs/dlm/lock.c
+index 72bfb3f..44bf8cc 100644
+--- a/fs/dlm/lock.c
++++ b/fs/dlm/lock.c
+@@ -5121,10 +5121,8 @@ void dlm_recover_waiters_pre(struct dlm_ls *ls)
+ 	int dir_nodeid;
+ 
+ 	ms_stub = kmalloc(sizeof(*ms_stub), GFP_KERNEL);
+-	if (!ms_stub) {
+-		log_error(ls, "dlm_recover_waiters_pre no mem");
++	if (!ms_stub)
+ 		return;
+-	}
+ 
+ 	mutex_lock(&ls->ls_waiters_mutex);
+ 

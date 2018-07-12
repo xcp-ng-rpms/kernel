@@ -1,0 +1,61 @@
+From 92ecd73a887c4a2b94daf5fc35179d75d1c4ef95 Mon Sep 17 00:00:00 2001
+From: Andreas Gruenbacher <agruenba@redhat.com>
+Date: Thu, 9 Mar 2017 09:48:05 -0500
+Subject: [PATCH 109/170] gfs2: Deduplicate gfs2_{glocks,glstats}_open
+
+Both functions are identical except for the seq_operations used.
+
+Signed-off-by: Andreas Gruenbacher <agruenba@redhat.com>
+Signed-off-by: Bob Peterson <rpeterso@redhat.com>
+diff --git a/fs/gfs2/glock.c b/fs/gfs2/glock.c
+index afa72d1..3f210ac 100644
+--- a/fs/gfs2/glock.c
++++ b/fs/gfs2/glock.c
+@@ -1920,10 +1920,10 @@ static const struct seq_operations gfs2_sbstats_seq_ops = {
+ 
+ #define GFS2_SEQ_GOODSIZE min(PAGE_SIZE << PAGE_ALLOC_COSTLY_ORDER, 65536UL)
+ 
+-static int gfs2_glocks_open(struct inode *inode, struct file *file)
++static int __gfs2_glocks_open(struct inode *inode, struct file *file,
++			      const struct seq_operations *ops)
+ {
+-	int ret = seq_open_private(file, &gfs2_glock_seq_ops,
+-				   sizeof(struct gfs2_glock_iter));
++	int ret = seq_open_private(file, ops, sizeof(struct gfs2_glock_iter));
+ 	if (ret == 0) {
+ 		struct seq_file *seq = file->private_data;
+ 		struct gfs2_glock_iter *gi = seq->private;
+@@ -1939,6 +1939,11 @@ static int gfs2_glocks_open(struct inode *inode, struct file *file)
+ 	return ret;
+ }
+ 
++static int gfs2_glocks_open(struct inode *inode, struct file *file)
++{
++	return __gfs2_glocks_open(inode, file, &gfs2_glock_seq_ops);
++}
++
+ static int gfs2_glocks_release(struct inode *inode, struct file *file)
+ {
+ 	struct seq_file *seq = file->private_data;
+@@ -1951,20 +1956,7 @@ static int gfs2_glocks_release(struct inode *inode, struct file *file)
+ 
+ static int gfs2_glstats_open(struct inode *inode, struct file *file)
+ {
+-	int ret = seq_open_private(file, &gfs2_glstats_seq_ops,
+-				   sizeof(struct gfs2_glock_iter));
+-	if (ret == 0) {
+-		struct seq_file *seq = file->private_data;
+-		struct gfs2_glock_iter *gi = seq->private;
+-		gi->sdp = inode->i_private;
+-		gi->last_pos = 0;
+-		seq->buf = kmalloc(GFS2_SEQ_GOODSIZE, GFP_KERNEL | __GFP_NOWARN);
+-		if (seq->buf)
+-			seq->size = GFS2_SEQ_GOODSIZE;
+-		gi->gl = NULL;
+-		ret = rhashtable_walk_init(&gl_hash_table, &gi->hti, GFP_KERNEL);
+-	}
+-	return ret;
++	return __gfs2_glocks_open(inode, file, &gfs2_glstats_seq_ops);
+ }
+ 
+ static int gfs2_sbstats_open(struct inode *inode, struct file *file)

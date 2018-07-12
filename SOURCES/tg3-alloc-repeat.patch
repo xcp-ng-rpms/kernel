@@ -1,0 +1,45 @@
+tg3: Use __GFP_REPEAT when performing large order allocations
+
+Several order 4 & 5 allocations are required when setting up the
+interface. These may fail if the interface is reconfigured some time
+after boot due to external memory fragmentation. These buffers must be
+contiguous (for DMA) and they cannot be pre-allocated at boot because
+they are dependent on the number of queues, which is configurable (apart
+from wasting memory if the interface is not up).  Use the __GFP_REPEAT
+flag when performing these allocations so that direct reclaim and
+compaction has a better chance of working, making the allocations less
+likely to fail.
+
+Signed-off-by: Ross Lagerwall <ross.lagerwall@citrix.com>
+
+diff --git a/drivers/net/ethernet/broadcom/tg3.c b/drivers/net/ethernet/broadcom/tg3.c
+index 49056c3..ef0b1c5 100644
+--- a/drivers/net/ethernet/broadcom/tg3.c
++++ b/drivers/net/ethernet/broadcom/tg3.c
+@@ -8489,7 +8489,7 @@ static int tg3_rx_prodring_init(struct tg3 *tp,
+ 	tpr->rx_std = dma_alloc_coherent(&tp->pdev->dev,
+ 					 TG3_RX_STD_RING_BYTES(tp),
+ 					 &tpr->rx_std_mapping,
+-					 GFP_KERNEL);
++					 GFP_KERNEL | __GFP_REPEAT);
+ 	if (!tpr->rx_std)
+ 		goto err_out;
+ 
+@@ -8502,7 +8502,7 @@ static int tg3_rx_prodring_init(struct tg3 *tp,
+ 		tpr->rx_jmb = dma_alloc_coherent(&tp->pdev->dev,
+ 						 TG3_RX_JMB_RING_BYTES(tp),
+ 						 &tpr->rx_jmb_mapping,
+-						 GFP_KERNEL);
++						 GFP_KERNEL | __GFP_REPEAT);
+ 		if (!tpr->rx_jmb)
+ 			goto err_out;
+ 	}
+@@ -8688,7 +8688,7 @@ static int tg3_mem_rx_acquire(struct tg3 *tp)
+ 		tnapi->rx_rcb = dma_zalloc_coherent(&tp->pdev->dev,
+ 						    TG3_RX_RCB_RING_BYTES(tp),
+ 						    &tnapi->rx_rcb_mapping,
+-						    GFP_KERNEL);
++						    GFP_KERNEL | __GFP_REPEAT);
+ 		if (!tnapi->rx_rcb)
+ 			goto err_out;
+ 	}

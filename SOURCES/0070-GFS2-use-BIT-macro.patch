@@ -1,0 +1,239 @@
+From 47a9a527946842dd8d83d4c8c8be22b2615b65f5 Mon Sep 17 00:00:00 2001
+From: Fabian Frederick <fabf@skynet.be>
+Date: Tue, 2 Aug 2016 12:05:27 -0500
+Subject: [PATCH 070/170] GFS2: use BIT() macro
+
+Replace 1 << value shift by more explicit BIT() macro
+
+Also fixes two bare unsigned definitions:
+
+WARNING: Prefer 'unsigned int' to bare use of 'unsigned'
++		unsigned hsize = BIT(ip->i_depth);
+
+Signed-off-by: Fabian Frederick <fabf@skynet.be>
+Signed-off-by: Bob Peterson <rpeterso@redhat.com>
+diff --git a/fs/gfs2/aops.c b/fs/gfs2/aops.c
+index 69f13ac..f29f0a6 100644
+--- a/fs/gfs2/aops.c
++++ b/fs/gfs2/aops.c
+@@ -187,7 +187,7 @@ static int __gfs2_jdata_writepage(struct page *page, struct writeback_control *w
+ 		ClearPageChecked(page);
+ 		if (!page_has_buffers(page)) {
+ 			create_empty_buffers(page, inode->i_sb->s_blocksize,
+-					     (1 << BH_Dirty)|(1 << BH_Uptodate));
++					     BIT(BH_Dirty)|BIT(BH_Uptodate));
+ 		}
+ 		gfs2_page_add_databufs(ip, page, 0, sdp->sd_vfs->s_blocksize-1);
+ 	}
+diff --git a/fs/gfs2/bmap.c b/fs/gfs2/bmap.c
+index 24ce1cd..a93e011 100644
+--- a/fs/gfs2/bmap.c
++++ b/fs/gfs2/bmap.c
+@@ -82,8 +82,8 @@ static int gfs2_unstuffer_page(struct gfs2_inode *ip, struct buffer_head *dibh,
+ 	}
+ 
+ 	if (!page_has_buffers(page))
+-		create_empty_buffers(page, 1 << inode->i_blkbits,
+-				     (1 << BH_Uptodate));
++		create_empty_buffers(page, BIT(inode->i_blkbits),
++				     BIT(BH_Uptodate));
+ 
+ 	bh = page_buffers(page);
+ 
+@@ -689,7 +689,7 @@ int gfs2_extent_map(struct inode *inode, u64 lblock, int *new, u64 *dblock, unsi
+ 	BUG_ON(!dblock);
+ 	BUG_ON(!new);
+ 
+-	bh.b_size = 1 << (inode->i_blkbits + (create ? 0 : 5));
++	bh.b_size = BIT(inode->i_blkbits + (create ? 0 : 5));
+ 	ret = gfs2_block_map(inode, lblock, &bh, create);
+ 	*extlen = bh.b_size >> inode->i_blkbits;
+ 	*dblock = bh.b_blocknr;
+diff --git a/fs/gfs2/dir.c b/fs/gfs2/dir.c
+index e30cc9f..8fd3afc 100644
+--- a/fs/gfs2/dir.c
++++ b/fs/gfs2/dir.c
+@@ -351,7 +351,7 @@ static __be64 *gfs2_dir_get_hash_table(struct gfs2_inode *ip)
+ 	if (hc)
+ 		return hc;
+ 
+-	hsize = 1 << ip->i_depth;
++	hsize = BIT(ip->i_depth);
+ 	hsize *= sizeof(__be64);
+ 	if (hsize != i_size_read(&ip->i_inode)) {
+ 		gfs2_consist_inode(ip);
+@@ -819,8 +819,8 @@ static struct gfs2_dirent *gfs2_dirent_search(struct inode *inode,
+ 
+ 	if (ip->i_diskflags & GFS2_DIF_EXHASH) {
+ 		struct gfs2_leaf *leaf;
+-		unsigned hsize = 1 << ip->i_depth;
+-		unsigned index;
++		unsigned int hsize = BIT(ip->i_depth);
++		unsigned int index;
+ 		u64 ln;
+ 		if (hsize * sizeof(u64) != i_size_read(inode)) {
+ 			gfs2_consist_inode(ip);
+@@ -932,7 +932,7 @@ static int dir_make_exhash(struct inode *inode)
+ 		return -ENOSPC;
+ 	bn = bh->b_blocknr;
+ 
+-	gfs2_assert(sdp, dip->i_entries < (1 << 16));
++	gfs2_assert(sdp, dip->i_entries < BIT(16));
+ 	leaf->lf_entries = cpu_to_be16(dip->i_entries);
+ 
+ 	/*  Copy dirents  */
+@@ -1041,7 +1041,7 @@ static int dir_split_leaf(struct inode *inode, const struct qstr *name)
+ 	bn = nbh->b_blocknr;
+ 
+ 	/*  Compute the start and len of leaf pointers in the hash table.  */
+-	len = 1 << (dip->i_depth - be16_to_cpu(oleaf->lf_depth));
++	len = BIT(dip->i_depth - be16_to_cpu(oleaf->lf_depth));
+ 	half_len = len >> 1;
+ 	if (!half_len) {
+ 		pr_warn("i_depth %u lf_depth %u index %u\n",
+@@ -1163,7 +1163,7 @@ static int dir_double_exhash(struct gfs2_inode *dip)
+ 	int x;
+ 	int error = 0;
+ 
+-	hsize = 1 << dip->i_depth;
++	hsize = BIT(dip->i_depth);
+ 	hsize_bytes = hsize * sizeof(__be64);
+ 
+ 	hc = gfs2_dir_get_hash_table(dip);
+@@ -1539,7 +1539,7 @@ static int dir_e_read(struct inode *inode, struct dir_context *ctx,
+ 	int error = 0;
+ 	unsigned depth = 0;
+ 
+-	hsize = 1 << dip->i_depth;
++	hsize = BIT(dip->i_depth);
+ 	hash = gfs2_dir_offset2hash(ctx->pos);
+ 	index = hash >> (32 - dip->i_depth);
+ 
+@@ -1558,7 +1558,7 @@ static int dir_e_read(struct inode *inode, struct dir_context *ctx,
+ 		if (error)
+ 			break;
+ 
+-		len = 1 << (dip->i_depth - depth);
++		len = BIT(dip->i_depth - depth);
+ 		index = (index & ~(len - 1)) + len;
+ 	}
+ 
+@@ -2113,7 +2113,7 @@ int gfs2_dir_exhash_dealloc(struct gfs2_inode *dip)
+ 	u64 leaf_no;
+ 	int error = 0, last;
+ 
+-	hsize = 1 << dip->i_depth;
++	hsize = BIT(dip->i_depth);
+ 
+ 	lp = gfs2_dir_get_hash_table(dip);
+ 	if (IS_ERR(lp))
+@@ -2126,7 +2126,7 @@ int gfs2_dir_exhash_dealloc(struct gfs2_inode *dip)
+ 			if (error)
+ 				goto out;
+ 			leaf = (struct gfs2_leaf *)bh->b_data;
+-			len = 1 << (dip->i_depth - be16_to_cpu(leaf->lf_depth));
++			len = BIT(dip->i_depth - be16_to_cpu(leaf->lf_depth));
+ 
+ 			next_index = (index & ~(len - 1)) + len;
+ 			last = ((next_index >= hsize) ? 1 : 0);
+diff --git a/fs/gfs2/glock.c b/fs/gfs2/glock.c
+index 3a90b2b..c8e2e7f 100644
+--- a/fs/gfs2/glock.c
++++ b/fs/gfs2/glock.c
+@@ -69,7 +69,7 @@ static atomic_t lru_count = ATOMIC_INIT(0);
+ static DEFINE_SPINLOCK(lru_lock);
+ 
+ #define GFS2_GL_HASH_SHIFT      15
+-#define GFS2_GL_HASH_SIZE       (1 << GFS2_GL_HASH_SHIFT)
++#define GFS2_GL_HASH_SIZE       BIT(GFS2_GL_HASH_SHIFT)
+ 
+ static struct rhashtable_params ht_parms = {
+ 	.nelem_hint = GFS2_GL_HASH_SIZE * 3 / 4,
+diff --git a/fs/gfs2/inode.h b/fs/gfs2/inode.h
+index 7710dfd..aace8ce 100644
+--- a/fs/gfs2/inode.h
++++ b/fs/gfs2/inode.h
+@@ -85,7 +85,7 @@ static inline int gfs2_check_internal_file_size(struct inode *inode,
+ 	u64 size = i_size_read(inode);
+ 	if (size < minsize || size > maxsize)
+ 		goto err;
+-	if (size & ((1 << inode->i_blkbits) - 1))
++	if (size & (BIT(inode->i_blkbits) - 1))
+ 		goto err;
+ 	return 0;
+ err:
+diff --git a/fs/gfs2/ops_fstype.c b/fs/gfs2/ops_fstype.c
+index dd7a634..4f9c668 100644
+--- a/fs/gfs2/ops_fstype.c
++++ b/fs/gfs2/ops_fstype.c
+@@ -58,7 +58,7 @@ static void gfs2_tune_init(struct gfs2_tune *gt)
+ 	gt->gt_quota_scale_num = 1;
+ 	gt->gt_quota_scale_den = 1;
+ 	gt->gt_new_files_jdata = 0;
+-	gt->gt_max_readahead = 1 << 18;
++	gt->gt_max_readahead = BIT(18);
+ 	gt->gt_complain_secs = 10;
+ }
+ 
+@@ -283,7 +283,7 @@ static int gfs2_read_sb(struct gfs2_sbd *sdp, int silent)
+ 
+ 	sdp->sd_fsb2bb_shift = sdp->sd_sb.sb_bsize_shift -
+ 			       GFS2_BASIC_BLOCK_SHIFT;
+-	sdp->sd_fsb2bb = 1 << sdp->sd_fsb2bb_shift;
++	sdp->sd_fsb2bb = BIT(sdp->sd_fsb2bb_shift);
+ 	sdp->sd_diptrs = (sdp->sd_sb.sb_bsize -
+ 			  sizeof(struct gfs2_dinode)) / sizeof(u64);
+ 	sdp->sd_inptrs = (sdp->sd_sb.sb_bsize -
+@@ -301,7 +301,7 @@ static int gfs2_read_sb(struct gfs2_sbd *sdp, int silent)
+ 
+ 	/* Compute maximum reservation required to add a entry to a directory */
+ 
+-	hash_blocks = DIV_ROUND_UP(sizeof(u64) * (1 << GFS2_DIR_MAX_DEPTH),
++	hash_blocks = DIV_ROUND_UP(sizeof(u64) * BIT(GFS2_DIR_MAX_DEPTH),
+ 			     sdp->sd_jbsize);
+ 
+ 	ind_blocks = 0;
+@@ -1088,7 +1088,7 @@ static int fill_super(struct super_block *sb, struct gfs2_args *args, int silent
+ 	sdp->sd_sb.sb_bsize_shift = sb->s_blocksize_bits;
+ 	sdp->sd_fsb2bb_shift = sdp->sd_sb.sb_bsize_shift -
+                                GFS2_BASIC_BLOCK_SHIFT;
+-	sdp->sd_fsb2bb = 1 << sdp->sd_fsb2bb_shift;
++	sdp->sd_fsb2bb = BIT(sdp->sd_fsb2bb_shift);
+ 
+ 	sdp->sd_tune.gt_logd_secs = sdp->sd_args.ar_commit;
+ 	sdp->sd_tune.gt_quota_quantum = sdp->sd_args.ar_quota_quantum;
+diff --git a/fs/gfs2/quota.c b/fs/gfs2/quota.c
+index 6c657b2..dd78a7e 100644
+--- a/fs/gfs2/quota.c
++++ b/fs/gfs2/quota.c
+@@ -75,7 +75,7 @@
+ #include "util.h"
+ 
+ #define GFS2_QD_HASH_SHIFT      12
+-#define GFS2_QD_HASH_SIZE       (1 << GFS2_QD_HASH_SHIFT)
++#define GFS2_QD_HASH_SIZE       BIT(GFS2_QD_HASH_SHIFT)
+ #define GFS2_QD_HASH_MASK       (GFS2_QD_HASH_SIZE - 1)
+ 
+ /* Lock order: qd_lock -> bucket lock -> qd->lockref.lock -> lru lock */
+@@ -384,7 +384,7 @@ static int bh_get(struct gfs2_quota_data *qd)
+ 	block = qd->qd_slot / sdp->sd_qc_per_block;
+ 	offset = qd->qd_slot % sdp->sd_qc_per_block;
+ 
+-	bh_map.b_size = 1 << ip->i_inode.i_blkbits;
++	bh_map.b_size = BIT(ip->i_inode.i_blkbits);
+ 	error = gfs2_block_map(&ip->i_inode, block, &bh_map, 0);
+ 	if (error)
+ 		goto fail;
+diff --git a/fs/gfs2/super.c b/fs/gfs2/super.c
+index 3a7e60b..e3ee387 100644
+--- a/fs/gfs2/super.c
++++ b/fs/gfs2/super.c
+@@ -359,7 +359,7 @@ int gfs2_jdesc_check(struct gfs2_jdesc *jd)
+ 	struct gfs2_sbd *sdp = GFS2_SB(jd->jd_inode);
+ 	u64 size = i_size_read(jd->jd_inode);
+ 
+-	if (gfs2_check_internal_file_size(jd->jd_inode, 8 << 20, 1 << 30))
++	if (gfs2_check_internal_file_size(jd->jd_inode, 8 << 20, BIT(30)))
+ 		return -EIO;
+ 
+ 	jd->jd_blocks = size >> sdp->sd_sb.sb_bsize_shift;

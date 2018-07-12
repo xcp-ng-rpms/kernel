@@ -1,0 +1,90 @@
+From e0b62e21b71bbe6d1015fe3e891cd9f50d04e660 Mon Sep 17 00:00:00 2001
+From: Andreas Gruenbacher <agruenba@redhat.com>
+Date: Fri, 30 Jun 2017 08:16:46 -0500
+Subject: [PATCH 130/170] gfs2: gfs2_create_inode: Keep glock across iput
+
+On failure, keep the inode glock across the final iput of the new inode
+so that gfs2_evict_inode doesn't have to re-acquire the glock.  That
+way, gfs2_evict_inode won't need to revalidate the block type.
+
+Signed-off-by: Andreas Gruenbacher <agruenba@redhat.com>
+Signed-off-by: Bob Peterson <rpeterso@redhat.com>
+diff --git a/fs/gfs2/inode.c b/fs/gfs2/inode.c
+index 6ddc106..8870f3d 100644
+--- a/fs/gfs2/inode.c
++++ b/fs/gfs2/inode.c
+@@ -608,6 +608,7 @@ static int gfs2_create_inode(struct inode *dir, struct dentry *dentry,
+ 	error = gfs2_glock_nq_init(dip->i_gl, LM_ST_EXCLUSIVE, 0, ghs);
+ 	if (error)
+ 		goto fail;
++	gfs2_holder_mark_uninitialized(ghs + 1);
+ 
+ 	error = create_ok(dip, name, mode);
+ 	if (error)
+@@ -779,7 +780,6 @@ fail_gunlock3:
+ fail_gunlock2:
+ 	if (io_gl)
+ 		clear_bit(GLF_INODE_CREATING, &io_gl->gl_flags);
+-	gfs2_glock_dq_uninit(ghs + 1);
+ fail_free_inode:
+ 	if (ip->i_gl)
+ 		gfs2_glock_put(ip->i_gl);
+@@ -800,6 +800,8 @@ fail_gunlock:
+ 			&GFS2_I(inode)->i_flags);
+ 		iput(inode);
+ 	}
++	if (gfs2_holder_initialized(ghs + 1))
++		gfs2_glock_dq_uninit(ghs + 1);
+ fail:
+ 	return error;
+ }
+diff --git a/fs/gfs2/super.c b/fs/gfs2/super.c
+index f1a52fb..455aa64 100644
+--- a/fs/gfs2/super.c
++++ b/fs/gfs2/super.c
+@@ -1538,6 +1538,12 @@ static void gfs2_evict_inode(struct inode *inode)
+ 	if (inode->i_nlink || (sb->s_flags & MS_RDONLY))
+ 		goto out;
+ 
++	if (test_bit(GIF_ALLOC_FAILED, &ip->i_flags)) {
++		BUG_ON(!gfs2_glock_is_locked_by_me(ip->i_gl));
++		gfs2_holder_mark_uninitialized(&gh);
++		goto alloc_failed;
++	}
++
+ 	/* Must not read inode block until block type has been verified */
+ 	error = gfs2_glock_nq_init(ip->i_gl, LM_ST_EXCLUSIVE, GL_SKIP, &gh);
+ 	if (unlikely(error)) {
+@@ -1546,11 +1552,9 @@ static void gfs2_evict_inode(struct inode *inode)
+ 		goto out;
+ 	}
+ 
+-	if (!test_bit(GIF_ALLOC_FAILED, &ip->i_flags)) {
+-		error = gfs2_check_blk_type(sdp, ip->i_no_addr, GFS2_BLKST_UNLINKED);
+-		if (error)
+-			goto out_truncate;
+-	}
++	error = gfs2_check_blk_type(sdp, ip->i_no_addr, GFS2_BLKST_UNLINKED);
++	if (error)
++		goto out_truncate;
+ 
+ 	if (test_bit(GIF_INVALID, &ip->i_flags)) {
+ 		error = gfs2_inode_refresh(ip);
+@@ -1558,6 +1562,7 @@ static void gfs2_evict_inode(struct inode *inode)
+ 			goto out_truncate;
+ 	}
+ 
++alloc_failed:
+ 	if (gfs2_holder_initialized(&ip->i_iopen_gh) &&
+ 	    test_bit(HIF_HOLDER, &ip->i_iopen_gh.gh_iflags)) {
+ 		ip->i_iopen_gh.gh_flags |= GL_NOCACHE;
+@@ -1624,7 +1629,8 @@ out_unlock:
+ 		}
+ 		gfs2_holder_uninit(&ip->i_iopen_gh);
+ 	}
+-	gfs2_glock_dq_uninit(&gh);
++	if (gfs2_holder_initialized(&gh))
++		gfs2_glock_dq_uninit(&gh);
+ 	if (error && error != GLR_TRYFAILED && error != -EROFS)
+ 		fs_warn(sdp, "gfs2_evict_inode: %d\n", error);
+ out:

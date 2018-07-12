@@ -1,0 +1,54 @@
+CIFS: remove bad_network_name flag
+
+From: Germano Percossi <germano.percossi@citrix.com>
+
+STATUS_BAD_NETWORK_NAME can be received during node failover,
+causing the flag to be set and making the reconnect thread
+always unsuccessful, thereafter.
+
+Once the only place where it is set is removed, the remaining
+bits are rendered moot.
+
+Removing it does not prevent "mount" from failing when a non
+existent share is passed.
+
+What happens when the share really ceases to exist while the
+share is mounted is undefined now as much as it was before.
+
+Signed-off-by: Germano Percossi <germano.percossi@citrix.com>
+
+diff --git a/fs/cifs/cifsglob.h b/fs/cifs/cifsglob.h
+index 3c67482..0165f34 100644
+--- a/fs/cifs/cifsglob.h
++++ b/fs/cifs/cifsglob.h
+@@ -927,7 +927,6 @@ struct cifs_tcon {
+ 	bool use_persistent:1; /* use persistent instead of durable handles */
+ #ifdef CONFIG_CIFS_SMB2
+ 	bool print:1;		/* set if connection to printer share */
+-	bool bad_network_name:1; /* set if ret status STATUS_BAD_NETWORK_NAME */
+ 	__le32 capabilities;
+ 	__u32 share_flags;
+ 	__u32 maximal_access;
+diff --git a/fs/cifs/smb2pdu.c b/fs/cifs/smb2pdu.c
+index 0d1f0b6..32ddb28 100644
+--- a/fs/cifs/smb2pdu.c
++++ b/fs/cifs/smb2pdu.c
+@@ -1087,9 +1087,6 @@ SMB2_tcon(const unsigned int xid, struct cifs_ses *ses, const char *tree,
+ 	else
+ 		return -EIO;
+ 
+-	if (tcon && tcon->bad_network_name)
+-		return -ENOENT;
+-
+ 	if ((tcon && tcon->seal) &&
+ 	    ((ses->server->capabilities & SMB2_GLOBAL_CAP_ENCRYPTION) == 0)) {
+ 		cifs_dbg(VFS, "encryption requested but no server support");
+@@ -1187,8 +1184,6 @@ tcon_exit:
+ tcon_error_exit:
+ 	if (rsp->hdr.Status == STATUS_BAD_NETWORK_NAME) {
+ 		cifs_dbg(VFS, "BAD_NETWORK_NAME: %s\n", tree);
+-		if (tcon)
+-			tcon->bad_network_name = true;
+ 	}
+ 	goto tcon_exit;
+ }

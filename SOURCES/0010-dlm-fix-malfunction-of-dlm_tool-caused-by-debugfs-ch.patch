@@ -1,0 +1,134 @@
+From 079d37df3397d48aab0f014986c1b0a1ca6256aa Mon Sep 17 00:00:00 2001
+From: Eric Ren <zren@suse.com>
+Date: Thu, 25 Aug 2016 17:20:59 +0800
+Subject: [PATCH 10/45] dlm: fix malfunction of dlm_tool caused by debugfs
+ changes
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+With the current kernel, `dlm_tool lockdebug` fails as below:
+
+"dlm_tool lockdebug ED0BD86DCE724393918A1AE8FDBF1EE3
+can't open /sys/kernel/debug/dlm/ED0BD86DCE724393918A1AE8FDBF1EE3:
+Operation not permitted"
+
+This is because table_open() depends on file->f_op to tell which
+seq_file ops should be passed down. But, the original file ops in
+file->f_op is replaced by "debugfs_full_proxy_file_operations" with
+commit 49d200deaa68 ("debugfs: prevent access to removed files'
+private data").
+
+Currently, I can think up 2 solutions: 1st, replace
+debugfs_create_file() with debugfs_create_file_unsafe();
+2nd, make different table_open#() accordingly. The 1st one
+is neat, but I don't thoroughly understand its risk. Maybe
+someone has a better one.
+
+Signed-off-by: Eric Ren <zren@suse.com>
+Signed-off-by: David Teigland <teigland@redhat.com>
+diff --git a/fs/dlm/debug_fs.c b/fs/dlm/debug_fs.c
+index eea6491..466f7d6 100644
+--- a/fs/dlm/debug_fs.c
++++ b/fs/dlm/debug_fs.c
+@@ -607,20 +607,54 @@ static const struct file_operations format2_fops;
+ static const struct file_operations format3_fops;
+ static const struct file_operations format4_fops;
+ 
+-static int table_open(struct inode *inode, struct file *file)
++static int table_open1(struct inode *inode, struct file *file)
+ {
+ 	struct seq_file *seq;
+-	int ret = -1;
++	int ret;
+ 
+-	if (file->f_op == &format1_fops)
+-		ret = seq_open(file, &format1_seq_ops);
+-	else if (file->f_op == &format2_fops)
+-		ret = seq_open(file, &format2_seq_ops);
+-	else if (file->f_op == &format3_fops)
+-		ret = seq_open(file, &format3_seq_ops);
+-	else if (file->f_op == &format4_fops)
+-		ret = seq_open(file, &format4_seq_ops);
++	ret = seq_open(file, &format1_seq_ops);
++	if (ret)
++		return ret;
++
++	seq = file->private_data;
++	seq->private = inode->i_private; /* the dlm_ls */
++	return 0;
++}
++
++static int table_open2(struct inode *inode, struct file *file)
++{
++	struct seq_file *seq;
++	int ret;
++
++	ret = seq_open(file, &format2_seq_ops);
++	if (ret)
++		return ret;
++
++	seq = file->private_data;
++	seq->private = inode->i_private; /* the dlm_ls */
++	return 0;
++}
++
++static int table_open3(struct inode *inode, struct file *file)
++{
++	struct seq_file *seq;
++	int ret;
++
++	ret = seq_open(file, &format3_seq_ops);
++	if (ret)
++		return ret;
++
++	seq = file->private_data;
++	seq->private = inode->i_private; /* the dlm_ls */
++	return 0;
++}
++
++static int table_open4(struct inode *inode, struct file *file)
++{
++	struct seq_file *seq;
++	int ret;
+ 
++	ret = seq_open(file, &format4_seq_ops);
+ 	if (ret)
+ 		return ret;
+ 
+@@ -631,7 +665,7 @@ static int table_open(struct inode *inode, struct file *file)
+ 
+ static const struct file_operations format1_fops = {
+ 	.owner   = THIS_MODULE,
+-	.open    = table_open,
++	.open    = table_open1,
+ 	.read    = seq_read,
+ 	.llseek  = seq_lseek,
+ 	.release = seq_release
+@@ -639,7 +673,7 @@ static const struct file_operations format1_fops = {
+ 
+ static const struct file_operations format2_fops = {
+ 	.owner   = THIS_MODULE,
+-	.open    = table_open,
++	.open    = table_open2,
+ 	.read    = seq_read,
+ 	.llseek  = seq_lseek,
+ 	.release = seq_release
+@@ -647,7 +681,7 @@ static const struct file_operations format2_fops = {
+ 
+ static const struct file_operations format3_fops = {
+ 	.owner   = THIS_MODULE,
+-	.open    = table_open,
++	.open    = table_open3,
+ 	.read    = seq_read,
+ 	.llseek  = seq_lseek,
+ 	.release = seq_release
+@@ -655,7 +689,7 @@ static const struct file_operations format3_fops = {
+ 
+ static const struct file_operations format4_fops = {
+ 	.owner   = THIS_MODULE,
+-	.open    = table_open,
++	.open    = table_open4,
+ 	.read    = seq_read,
+ 	.llseek  = seq_lseek,
+ 	.release = seq_release

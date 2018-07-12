@@ -1,0 +1,23 @@
+From 7023a0b16f66a2f1358c95989d23142d8191fd6e Mon Sep 17 00:00:00 2001
+From: Andreas Gruenbacher <agruenba@redhat.com>
+Date: Wed, 30 Aug 2017 07:46:24 -0500
+Subject: [PATCH 162/170] GFS2: Fix gl_object warnings
+
+The following cleanup is needed to avoid spilling the syslog with
+false warnings.
+
+Signed-off-by: Andreas Gruenbacher <agruenba@redhat.com>
+Signed-off-by: Bob Peterson <rpeterso@redhat.com>
+diff --git a/fs/gfs2/rgrp.c b/fs/gfs2/rgrp.c
+index 29fbeee..95b2a57 100644
+--- a/fs/gfs2/rgrp.c
++++ b/fs/gfs2/rgrp.c
+@@ -705,7 +705,7 @@ void gfs2_clear_rgrpd(struct gfs2_sbd *sdp)
+ 		rb_erase(n, &sdp->sd_rindex_tree);
+ 
+ 		if (gl) {
+-			glock_set_object(gl, NULL);
++			glock_clear_object(gl, rgd);
+ 			gfs2_glock_put(gl);
+ 		}
+ 
