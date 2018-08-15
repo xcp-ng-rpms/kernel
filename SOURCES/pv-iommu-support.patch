@@ -1,5 +1,5 @@
 diff --git a/arch/x86/include/asm/xen/hypercall.h b/arch/x86/include/asm/xen/hypercall.h
-index c9540e6..28a0714 100644
+index c9540e6b32fb..28a07141d7ef 100644
 --- a/arch/x86/include/asm/xen/hypercall.h
 +++ b/arch/x86/include/asm/xen/hypercall.h
 @@ -47,6 +47,7 @@
@@ -10,21 +10,21 @@ index c9540e6..28a0714 100644
  #include <xen/interface/platform.h>
  #include <xen/interface/xen-mca.h>
  #include <xen/interface/domctl.h>
-@@ -350,6 +351,12 @@ HYPERVISOR_multicall(void *call_list, uint32_t nr_calls)
+@@ -349,6 +350,12 @@ HYPERVISOR_multicall(void *call_list, uint32_t nr_calls)
+ 	return _hypercall2(int, multicall, call_list, nr_calls);
  }
  
- static inline int
++static inline int
 +HYPERVISOR_iommu_op(void *uop, unsigned int count)
 +{
 +       return _hypercall2(int, iommu_op, uop, count);
 +}
 +
-+static inline int
+ static inline int
  HYPERVISOR_update_va_mapping(unsigned long va, pte_t new_val,
  			     unsigned long flags)
- {
 diff --git a/arch/x86/xen/p2m.c b/arch/x86/xen/p2m.c
-index cab9f76..71eeee8 100644
+index cab9f766bb06..71eeee807151 100644
 --- a/arch/x86/xen/p2m.c
 +++ b/arch/x86/xen/p2m.c
 @@ -700,7 +700,6 @@ bool set_phys_to_machine(unsigned long pfn, unsigned long mfn)
@@ -36,7 +36,7 @@ index cab9f76..71eeee8 100644
  }
  
 diff --git a/arch/x86/xen/pci-swiotlb-xen.c b/arch/x86/xen/pci-swiotlb-xen.c
-index a5d180a..b7df210 100644
+index a5d180a12240..b7df210d130f 100644
 --- a/arch/x86/xen/pci-swiotlb-xen.c
 +++ b/arch/x86/xen/pci-swiotlb-xen.c
 @@ -2,21 +2,77 @@
@@ -421,7 +421,7 @@ index a5d180a..b7df210 100644
 -		  NULL);
 +		  pci_xen_pv_iommu_late_init);
 diff --git a/drivers/xen/Makefile b/drivers/xen/Makefile
-index 84aa7f1..474c32c 100644
+index 84aa7f1e3a17..474c32cb9d12 100644
 --- a/drivers/xen/Makefile
 +++ b/drivers/xen/Makefile
 @@ -27,6 +27,7 @@ obj-$(CONFIG_XEN_SYS_HYPERVISOR)	+= sys-hypervisor.o
@@ -433,7 +433,7 @@ index 84aa7f1..474c32c 100644
  obj-$(CONFIG_XEN_PCIDEV_BACKEND)	+= xen-pciback/
  obj-$(CONFIG_XEN_PRIVCMD)		+= xen-privcmd.o
 diff --git a/drivers/xen/balloon.c b/drivers/xen/balloon.c
-index 7edb76c..0b29b91 100644
+index 7edb76c9c09f..0b29b9161542 100644
 --- a/drivers/xen/balloon.c
 +++ b/drivers/xen/balloon.c
 @@ -112,6 +112,10 @@ static struct ctl_table xen_root[] = {
@@ -504,12 +504,12 @@ index 7edb76c..0b29b91 100644
  #endif
  		list_del(&page->lru);
 diff --git a/drivers/xen/ioemu.c b/drivers/xen/ioemu.c
-index 369b897..7cb2584 100644
+index 7c89d11043b2..e9a8022d8e15 100644
 --- a/drivers/xen/ioemu.c
 +++ b/drivers/xen/ioemu.c
-@@ -51,4 +51,49 @@ int xen_ioemu_inject_msi(domid_t domid, uint64_t addr, uint32_t data)
+@@ -83,4 +83,49 @@ int xen_ioemu_inject_msi(domid_t domid, uint64_t addr, uint32_t data)
  
- 	return HYPERVISOR_hvm_op(HVMOP_inject_msi, &xinfo);
+ 	return HYPERVISOR_dm_op(domid, 1, &op_buf);
  }
 +
 +/**
@@ -559,7 +559,7 @@ index 369b897..7cb2584 100644
 +EXPORT_SYMBOL(xen_ioemu_unmap_foreign_gfn_to_bfn);
 diff --git a/drivers/xen/pv-iommu-xen.c b/drivers/xen/pv-iommu-xen.c
 new file mode 100644
-index 0000000..463fe96
+index 000000000000..463fe96cf0e7
 --- /dev/null
 +++ b/drivers/xen/pv-iommu-xen.c
 @@ -0,0 +1,134 @@
@@ -699,7 +699,7 @@ index 0000000..463fe96
 +EXPORT_SYMBOL_GPL(xen_pv_iommu_map_sg_attrs);
 diff --git a/include/xen/interface/iommu.h b/include/xen/interface/iommu.h
 new file mode 100644
-index 0000000..ffe527c
+index 000000000000..ffe527cedf41
 --- /dev/null
 +++ b/include/xen/interface/iommu.h
 @@ -0,0 +1,38 @@
@@ -743,7 +743,7 @@ index 0000000..ffe527c
 +#endif
 diff --git a/include/xen/interface/pv-iommu.h b/include/xen/interface/pv-iommu.h
 new file mode 100644
-index 0000000..0cc4ecc
+index 000000000000..0cc4ecce7480
 --- /dev/null
 +++ b/include/xen/interface/pv-iommu.h
 @@ -0,0 +1,90 @@
@@ -838,7 +838,7 @@ index 0000000..0cc4ecc
 + * End:
 + */
 diff --git a/include/xen/interface/xen.h b/include/xen/interface/xen.h
-index 24a5e04..3d8a610 100644
+index 24a5e04ff29e..3d8a6102a78f 100644
 --- a/include/xen/interface/xen.h
 +++ b/include/xen/interface/xen.h
 @@ -93,6 +93,7 @@
@@ -850,7 +850,7 @@ index 24a5e04..3d8a610 100644
   * VIRTUAL INTERRUPTS
   *
 diff --git a/include/xen/ioemu.h b/include/xen/ioemu.h
-index 95eb4e7..21ca898 100644
+index 95eb4e7c5060..21ca898b8d53 100644
 --- a/include/xen/ioemu.h
 +++ b/include/xen/ioemu.h
 @@ -29,7 +29,9 @@
@@ -864,7 +864,7 @@ index 95eb4e7..21ca898 100644
  
  #endif /* #ifndef _XEN_IOEMU_H */
 diff --git a/include/xen/swiotlb-xen.h b/include/xen/swiotlb-xen.h
-index 6408888..e3f4835 100644
+index 64088887a611..e3f483582ec5 100644
 --- a/include/xen/swiotlb-xen.h
 +++ b/include/xen/swiotlb-xen.h
 @@ -62,4 +62,6 @@ xen_swiotlb_set_dma_mask(struct device *dev, u64 dma_mask);
@@ -875,7 +875,7 @@ index 6408888..e3f4835 100644
 +
  #endif /* __LINUX_SWIOTLB_XEN_H */
 diff --git a/lib/swiotlb.c b/lib/swiotlb.c
-index 76f29ec..1ff07fc 100644
+index 76f29ecba8f4..1ff07fc9bb18 100644
 --- a/lib/swiotlb.c
 +++ b/lib/swiotlb.c
 @@ -60,7 +60,10 @@ int swiotlb_force;

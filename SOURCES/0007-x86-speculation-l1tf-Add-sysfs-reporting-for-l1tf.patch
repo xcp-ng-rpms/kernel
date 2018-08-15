@@ -1,0 +1,122 @@
+From bbc0e08f16d56764cb14f6e2a969dea3344a8747 Mon Sep 17 00:00:00 2001
+From: Andi Kleen <ak@linux.intel.com>
+Date: Wed, 13 Jun 2018 15:48:26 -0700
+Subject: [PATCH 07/10] x86/speculation/l1tf: Add sysfs reporting for l1tf
+
+L1TF core kernel workarounds are cheap and normally always enabled, However
+they still should be reported in sysfs if the system is vulnerable or
+mitigated. Add the necessary CPU feature/bug bits.
+
+- Extend the existing checks for Meltdowns to determine if the system is
+  vulnerable. All CPUs which are not vulnerable to Meltdown are also not
+  vulnerable to L1TF
+
+- Check for 32bit non PAE and emit a warning as there is no practical way
+  for mitigation due to the limited physical address bits
+
+- If the system has more than MAX_PA/2 physical memory the invert page
+  workarounds don't protect the system against the L1TF attack anymore,
+  because an inverted physical address will also point to valid
+  memory. Print a warning in this case and report that the system is
+  vulnerable.
+
+Add a function which returns the PFN limit for the L1TF mitigation, which
+will be used in follow up patches for sanity and range checks.
+
+[ tglx: Renamed the CPU feature bit to L1TF_PTEINV ]
+
+Signed-off-by: Andi Kleen <ak@linux.intel.com>
+Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
+Reviewed-by: Josh Poimboeuf <jpoimboe@redhat.com>
+Acked-by: Dave Hansen <dave.hansen@intel.com>
+diff --git a/arch/x86/include/asm/cpufeature.h b/arch/x86/include/asm/cpufeature.h
+index 5afc85fe8031..c6e93deda26d 100644
+--- a/arch/x86/include/asm/cpufeature.h
++++ b/arch/x86/include/asm/cpufeature.h
+@@ -198,6 +198,7 @@
+ #define X86_FEATURE_HWP_EPP	( 7*32+13) /* Intel HWP_EPP */
+ #define X86_FEATURE_HWP_PKG_REQ ( 7*32+14) /* Intel HWP_PKG_REQ */
+ #define X86_FEATURE_INTEL_PT	( 7*32+15) /* Intel Processor Trace */
++#define X86_FEATURE_L1TF_PTEINV	( 7*32+29) /* "" L1TF workaround PTE inversion */
+ 
+ /* Virtualization flags: Linux defined, word 8 */
+ #define X86_FEATURE_TPR_SHADOW  ( 8*32+ 0) /* Intel TPR Shadow */
+@@ -273,6 +274,7 @@
+ #define X86_BUG_FXSAVE_LEAK	X86_BUG(6) /* FXSAVE leaks FOP/FIP/FOP */
+ #define X86_BUG_CLFLUSH_MONITOR	X86_BUG(7) /* AAI65, CLFLUSH required before MONITOR */
+ #define X86_BUG_SYSRET_SS_ATTRS	X86_BUG(8) /* SYSRET doesn't fix up SS attrs */
++#define X86_BUG_L1TF		X86_BUG(18) /* CPU is affected by L1 Terminal Fault */
+ 
+ #if defined(__KERNEL__) && !defined(__ASSEMBLY__)
+ 
+diff --git a/arch/x86/include/asm/processor.h b/arch/x86/include/asm/processor.h
+index 68e2e65a6744..11bfdd8f5753 100644
+--- a/arch/x86/include/asm/processor.h
++++ b/arch/x86/include/asm/processor.h
+@@ -173,6 +173,11 @@ extern const struct seq_operations cpuinfo_op;
+ 
+ extern void cpu_detect(struct cpuinfo_x86 *c);
+ 
++static inline unsigned long l1tf_pfn_limit(void)
++{
++	return BIT(boot_cpu_data.x86_phys_bits - 1 - PAGE_SHIFT) - 1;
++}
++
+ extern void early_cpu_init(void);
+ extern void identify_boot_cpu(void);
+ extern void identify_secondary_cpu(struct cpuinfo_x86 *);
+diff --git a/arch/x86/kernel/cpu/bugs.c b/arch/x86/kernel/cpu/bugs.c
+index a44ef52184df..f8e3265f05ee 100644
+--- a/arch/x86/kernel/cpu/bugs.c
++++ b/arch/x86/kernel/cpu/bugs.c
+@@ -18,6 +18,9 @@
+ #include <asm/alternative.h>
+ #include <asm/pgtable.h>
+ #include <asm/cacheflush.h>
++#include <asm/e820.h>
++
++static void __init l1tf_select_mitigation(void);
+ 
+ void __init check_bugs(void)
+ {
+@@ -28,6 +31,9 @@ void __init check_bugs(void)
+ 		print_cpu_info(&boot_cpu_data);
+ 	}
+ 
++	setup_force_cpu_bug(X86_BUG_L1TF);
++	l1tf_select_mitigation();
++
+ #ifdef CONFIG_X86_32
+ 	/*
+ 	 * Check whether we are able to run this kernel safely on SMP.
+@@ -59,3 +65,30 @@ void __init check_bugs(void)
+ 		set_memory_4k((unsigned long)__va(0), 1);
+ #endif
+ }
++
++static void __init l1tf_select_mitigation(void)
++{
++	u64 half_pa;
++
++	if (!boot_cpu_has_bug(X86_BUG_L1TF))
++		return;
++
++#if CONFIG_PGTABLE_LEVELS == 2
++	pr_warn("Kernel not compiled for PAE. No mitigation for L1TF\n");
++	return;
++#endif
++
++	/*
++	 * This is extremely unlikely to happen because almost all
++	 * systems have far more MAX_PA/2 than RAM can be fit into
++	 * DIMM slots.
++	 */
++	half_pa = (u64)l1tf_pfn_limit() << PAGE_SHIFT;
++	if (e820_any_mapped(half_pa, ULLONG_MAX - half_pa, E820_RAM)) {
++		pr_warn("System has more than MAX_PA/2 memory. L1TF mitigation not effective.\n");
++		return;
++	}
++
++	setup_force_cpu_cap(X86_FEATURE_L1TF_PTEINV);
++	pr_warn("Enabled L1TF mitigations\n");
++}
