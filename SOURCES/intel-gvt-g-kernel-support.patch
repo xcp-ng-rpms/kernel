@@ -1,97 +1,5 @@
-diff --git a/arch/x86/xen/mmu.c b/arch/x86/xen/mmu.c
-index cb5e266..6e49f82 100644
---- a/arch/x86/xen/mmu.c
-+++ b/arch/x86/xen/mmu.c
-@@ -2932,3 +2932,87 @@ int xen_unmap_domain_gfn_range(struct vm_area_struct *vma,
- #endif
- }
- EXPORT_SYMBOL_GPL(xen_unmap_domain_gfn_range);
-+
-+/* Note: here 'mfn' is actually gfn!!! */
-+struct vm_struct * xen_remap_domain_mfn_range_in_kernel(unsigned long mfn,
-+		int nr, unsigned domid)
-+{
-+	struct vm_struct *area;
-+	struct remap_data rmd;
-+	struct mmu_update mmu_update[REMAP_BATCH_SIZE];
-+	int batch;
-+	unsigned long range, addr;
-+	pgprot_t prot;
-+	int err;
-+
-+	WARN_ON(in_interrupt() || irqs_disabled());
-+
-+	area = alloc_vm_area(nr << PAGE_SHIFT, NULL);
-+	if (!area)
-+		return NULL;
-+
-+	addr = (unsigned long)area->addr;
-+
-+	prot = __pgprot(pgprot_val(PAGE_KERNEL));
-+
-+	rmd.mfn = &mfn;
-+	rmd.prot = prot;
-+
-+	while (nr) {
-+		batch = min(REMAP_BATCH_SIZE, nr);
-+		range = (unsigned long)batch << PAGE_SHIFT;
-+
-+		rmd.mmu_update = mmu_update;
-+		err = apply_to_page_range(&init_mm, addr, range,
-+					  remap_area_mfn_pte_fn, &rmd);
-+		if (err || HYPERVISOR_mmu_update(mmu_update, batch, NULL, domid) < 0)
-+			goto err;
-+
-+		nr -= batch;
-+		addr += range;
-+	}
-+
-+	xen_flush_tlb_all();
-+	return area;
-+err:
-+	free_vm_area(area);
-+	xen_flush_tlb_all();
-+	return NULL;
-+}
-+EXPORT_SYMBOL_GPL(xen_remap_domain_mfn_range_in_kernel);
-+
-+void xen_unmap_domain_mfn_range_in_kernel(struct vm_struct *area, int nr,
-+		unsigned domid)
-+{
-+	struct remap_data rmd;
-+	struct mmu_update mmu_update[REMAP_BATCH_SIZE];
-+	int batch;
-+	unsigned long range, addr = (unsigned long)area->addr;
-+#define INVALID_MFN (~0UL)
-+	unsigned long invalid_mfn = INVALID_MFN;
-+	int err;
-+
-+	WARN_ON(in_interrupt() || irqs_disabled());
-+
-+	rmd.mfn = &invalid_mfn;
-+	rmd.prot = PAGE_NONE;
-+
-+	while (nr) {
-+		batch = min(REMAP_BATCH_SIZE, nr);
-+		range = (unsigned long)batch << PAGE_SHIFT;
-+
-+		rmd.mmu_update = mmu_update;
-+		err = apply_to_page_range(&init_mm, addr, range,
-+					  remap_area_mfn_pte_fn, &rmd);
-+		BUG_ON(err);
-+		BUG_ON(HYPERVISOR_mmu_update(mmu_update, batch, NULL, domid) < 0);
-+
-+		nr -= batch;
-+		addr += range;
-+	}
-+
-+	free_vm_area(area);
-+	xen_flush_tlb_all();
-+}
-+EXPORT_SYMBOL_GPL(xen_unmap_domain_mfn_range_in_kernel);
-+
 diff --git a/arch/x86/include/asm/xen/hypercall.h b/arch/x86/include/asm/xen/hypercall.h
-index f184df1..1db95b7 100644
+index f3274a9..c9540e6 100644
 --- a/arch/x86/include/asm/xen/hypercall.h
 +++ b/arch/x86/include/asm/xen/hypercall.h
 @@ -49,6 +49,7 @@
@@ -129,11 +37,104 @@ index 62ca03e..496ecee 100644
  DEFINE_GUEST_HANDLE(char);
  DEFINE_GUEST_HANDLE(int);
  DEFINE_GUEST_HANDLE(void);
+diff --git a/arch/x86/xen/mmu.c b/arch/x86/xen/mmu.c
+index ae831a3..bb44bba 100644
+--- a/arch/x86/xen/mmu.c
++++ b/arch/x86/xen/mmu.c
+@@ -2932,3 +2932,88 @@ int xen_unmap_domain_gfn_range(struct vm_area_struct *vma,
+ #endif
+ }
+ EXPORT_SYMBOL_GPL(xen_unmap_domain_gfn_range);
++
++/* Note: here 'mfn' is actually gfn!!! */
++struct vm_struct * xen_remap_domain_mfn_range_in_kernel(unsigned long mfn,
++		int nr, unsigned domid)
++{
++	struct vm_struct *area;
++	struct remap_data rmd;
++	struct mmu_update mmu_update[REMAP_BATCH_SIZE];
++	int batch;
++	unsigned long range, addr;
++	pgprot_t prot;
++	int err;
++
++	WARN_ON(in_interrupt() || irqs_disabled());
++
++	area = alloc_vm_area(nr << PAGE_SHIFT, NULL);
++	if (!area)
++		return NULL;
++
++	addr = (unsigned long)area->addr;
++
++	prot = __pgprot(pgprot_val(PAGE_KERNEL));
++
++	rmd.mfn = &mfn;
++	rmd.contiguous = true;
++	rmd.prot = prot;
++
++	while (nr) {
++		batch = min(REMAP_BATCH_SIZE, nr);
++		range = (unsigned long)batch << PAGE_SHIFT;
++
++		rmd.mmu_update = mmu_update;
++		err = apply_to_page_range(&init_mm, addr, range,
++					  remap_area_mfn_pte_fn, &rmd);
++		if (err || HYPERVISOR_mmu_update(mmu_update, batch, NULL, domid) < 0)
++			goto err;
++
++		nr -= batch;
++		addr += range;
++	}
++
++	xen_flush_tlb_all();
++	return area;
++err:
++	free_vm_area(area);
++	xen_flush_tlb_all();
++	return NULL;
++}
++EXPORT_SYMBOL_GPL(xen_remap_domain_mfn_range_in_kernel);
++
++void xen_unmap_domain_mfn_range_in_kernel(struct vm_struct *area, int nr,
++		unsigned domid)
++{
++	struct remap_data rmd;
++	struct mmu_update mmu_update[REMAP_BATCH_SIZE];
++	int batch;
++	unsigned long range, addr = (unsigned long)area->addr;
++	unsigned long invalid_mfns[REMAP_BATCH_SIZE] = { 0 };
++	int err;
++
++	WARN_ON(in_interrupt() || irqs_disabled());
++
++	rmd.contiguous = false;
++	rmd.prot = PAGE_NONE;
++
++	while (nr) {
++		batch = min(REMAP_BATCH_SIZE, nr);
++		range = (unsigned long)batch << PAGE_SHIFT;
++
++		rmd.mfn = invalid_mfns;
++		rmd.mmu_update = mmu_update;
++		err = apply_to_page_range(&init_mm, addr, range,
++					  remap_area_mfn_pte_fn, &rmd);
++		BUG_ON(err);
++		BUG_ON(HYPERVISOR_mmu_update(mmu_update, batch, NULL, domid) < 0);
++
++		nr -= batch;
++		addr += range;
++	}
++
++	free_vm_area(area);
++	xen_flush_tlb_all();
++}
++EXPORT_SYMBOL_GPL(xen_unmap_domain_mfn_range_in_kernel);
++
 diff --git a/drivers/pci/quirks.c b/drivers/pci/quirks.c
-index fe3333a..43b2f14 100644
+index 3df306f..2e4f3cd 100644
 --- a/drivers/pci/quirks.c
 +++ b/drivers/pci/quirks.c
-@@ -3019,6 +3019,12 @@ static void fixup_debug_report(struct pci_dev *dev, ktime_t calltime,
+@@ -3031,6 +3031,12 @@ static void fixup_debug_report(struct pci_dev *dev, ktime_t calltime,
  	}
  }
  
@@ -146,7 +147,7 @@ index fe3333a..43b2f14 100644
  /*
   * Some BIOS implementations leave the Intel GPU interrupts enabled,
   * even though no one is handling them (f.e. i915 driver is never loaded).
-@@ -3052,6 +3058,7 @@ static void disable_igfx_irq(struct pci_dev *dev)
+@@ -3064,6 +3070,7 @@ static void disable_igfx_irq(struct pci_dev *dev)
  DECLARE_PCI_FIXUP_FINAL(PCI_VENDOR_ID_INTEL, 0x0102, disable_igfx_irq);
  DECLARE_PCI_FIXUP_FINAL(PCI_VENDOR_ID_INTEL, 0x010a, disable_igfx_irq);
  DECLARE_PCI_FIXUP_FINAL(PCI_VENDOR_ID_INTEL, 0x0152, disable_igfx_irq);
