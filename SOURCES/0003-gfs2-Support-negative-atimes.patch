@@ -1,0 +1,39 @@
+From 38eedf2841b03b779710e8ad0442810a4747a348 Mon Sep 17 00:00:00 2001
+From: Andreas Gruenbacher <agruenba@redhat.com>
+Date: Fri, 22 Sep 2017 08:34:46 -0500
+Subject: [PATCH 3/3] gfs2: Support negative atimes
+
+When inodes are read from disk, GFS2 will only update in-memory atimes
+older than the on-disk atimes; this prevents atimes from going
+backwards.  The atimes of newly allocated inodes are initialized to 0.
+This means that when an atime is explicitly set to a negative value,
+this value will not persist.
+
+Fix by setting the atime of newly allocated inodes to the lowest
+possible value instead of 0.
+
+Fixes xfstest generic/258.
+
+Signed-off-by: Andreas Gruenbacher <agruenba@redhat.com>
+Signed-off-by: Bob Peterson <rpeterso@redhat.com>
+---
+ fs/gfs2/inode.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/fs/gfs2/inode.c b/fs/gfs2/inode.c
+index 863749e..b288cf2 100644
+--- a/fs/gfs2/inode.c
++++ b/fs/gfs2/inode.c
+@@ -189,7 +189,8 @@ struct inode *gfs2_inode_lookup(struct super_block *sb, unsigned int type,
+ 
+ 		gfs2_set_iop(inode);
+ 
+-		inode->i_atime.tv_sec = 0;
++		/* Lowest possible timestamp; will be overwritten in gfs2_dinode_in. */
++		inode->i_atime.tv_sec = 1LL << (8 * sizeof(inode->i_atime.tv_sec) - 1);
+ 		inode->i_atime.tv_nsec = 0;
+ 
+ 		unlock_new_inode(inode);
+-- 
+1.8.3.1
+

@@ -1,0 +1,103 @@
+From 294e7e458763dc1d229cbbe7147a6034bfc6e39a Mon Sep 17 00:00:00 2001
+From: "tsutomu.owa@toshiba.co.jp" <tsutomu.owa@toshiba.co.jp>
+Date: Fri, 15 Sep 2017 14:17:23 -0500
+Subject: [PATCH 13/13] DLM: fix conversion deadlock when DLM_LKF_NODLCKWT flag
+ is set
+
+When the DLM_LKF_NODLCKWT flag was set, even if conversion deadlock
+was detected, the caller of can_be_granted() was unknown.
+We change the behavior of can_be_granted() and change it to detect
+conversion deadlock regardless of whether the DLM_LKF_NODLCKWT flag
+is set or not. And depending on whether the DLM_LKF_NODLCKWT flag
+is set or not, we change the behavior at the caller of can_be_granted().
+
+This fix has no effect except when using DLM_LKF_NODLCKWT flag.
+Currently, ocfs2 uses the DLM_LKF_NODLCKWT flag and does not expect a
+cancel operation from conversion deadlock when calling dlm_lock().
+ocfs2 is implemented to perform a cancel operation by requesting
+BASTs (callback).
+
+Signed-off-by: Tadashi Miyauchi <miyauchi@toshiba-tops.co.jp>
+Signed-off-by: Tsutomu Owa <tsutomu.owa@toshiba.co.jp>
+Signed-off-by: David Teigland <teigland@redhat.com>
+---
+ fs/dlm/lock.c | 42 +++++++++++++++++++++++-------------------
+ 1 file changed, 23 insertions(+), 19 deletions(-)
+
+diff --git a/fs/dlm/lock.c b/fs/dlm/lock.c
+index d4aadde..f145a2a 100644
+--- a/fs/dlm/lock.c
++++ b/fs/dlm/lock.c
+@@ -2465,14 +2465,12 @@ static int can_be_granted(struct dlm_rsb *r, struct dlm_lkb *lkb, int now,
+ 		if (lkb->lkb_exflags & DLM_LKF_CONVDEADLK) {
+ 			lkb->lkb_grmode = DLM_LOCK_NL;
+ 			lkb->lkb_sbflags |= DLM_SBF_DEMOTED;
+-		} else if (!(lkb->lkb_exflags & DLM_LKF_NODLCKWT)) {
+-			if (err)
+-				*err = -EDEADLK;
+-			else {
+-				log_print("can_be_granted deadlock %x now %d",
+-					  lkb->lkb_id, now);
+-				dlm_dump_rsb(r);
+-			}
++		} else if (err) {
++			*err = -EDEADLK;
++		} else {
++			log_print("can_be_granted deadlock %x now %d",
++				  lkb->lkb_id, now);
++			dlm_dump_rsb(r);
+ 		}
+ 		goto out;
+ 	}
+@@ -2501,13 +2499,6 @@ static int can_be_granted(struct dlm_rsb *r, struct dlm_lkb *lkb, int now,
+ 	return rv;
+ }
+ 
+-/* FIXME: I don't think that can_be_granted() can/will demote or find deadlock
+-   for locks pending on the convert list.  Once verified (watch for these
+-   log_prints), we should be able to just call _can_be_granted() and not
+-   bother with the demote/deadlk cases here (and there's no easy way to deal
+-   with a deadlk here, we'd have to generate something like grant_lock with
+-   the deadlk error.) */
+-
+ /* Returns the highest requested mode of all blocked conversions; sets
+    cw if there's a blocked conversion to DLM_LOCK_CW. */
+ 
+@@ -2545,9 +2536,22 @@ static int grant_pending_convert(struct dlm_rsb *r, int high, int *cw,
+ 		}
+ 
+ 		if (deadlk) {
+-			log_print("WARN: pending deadlock %x node %d %s",
+-				  lkb->lkb_id, lkb->lkb_nodeid, r->res_name);
+-			dlm_dump_rsb(r);
++			/*
++			 * If DLM_LKB_NODLKWT flag is set and conversion
++			 * deadlock is detected, we request blocking AST and
++			 * down (or cancel) conversion.
++			 */
++			if (lkb->lkb_exflags & DLM_LKF_NODLCKWT) {
++				if (lkb->lkb_highbast < lkb->lkb_rqmode) {
++					queue_bast(r, lkb, lkb->lkb_rqmode);
++					lkb->lkb_highbast = lkb->lkb_rqmode;
++				}
++			} else {
++				log_print("WARN: pending deadlock %x node %d %s",
++					  lkb->lkb_id, lkb->lkb_nodeid,
++					  r->res_name);
++				dlm_dump_rsb(r);
++			}
+ 			continue;
+ 		}
+ 
+@@ -3123,7 +3127,7 @@ static int do_convert(struct dlm_rsb *r, struct dlm_lkb *lkb)
+ 	   deadlock, so we leave it on the granted queue and return EDEADLK in
+ 	   the ast for the convert. */
+ 
+-	if (deadlk) {
++	if (deadlk && !(lkb->lkb_exflags & DLM_LKF_NODLCKWT)) {
+ 		/* it's left on the granted queue */
+ 		revert_lock(r, lkb);
+ 		queue_cast(r, lkb, -EDEADLK);
+-- 
+1.8.3.1
+

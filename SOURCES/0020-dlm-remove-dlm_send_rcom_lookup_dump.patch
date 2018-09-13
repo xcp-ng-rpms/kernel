@@ -1,0 +1,84 @@
+From 9250e523592a8ced3ecd14abe29fbb1e036bd7eb Mon Sep 17 00:00:00 2001
+From: David Teigland <teigland@redhat.com>
+Date: Mon, 9 Oct 2017 09:29:31 -0500
+Subject: [PATCH 20/20] dlm: remove dlm_send_rcom_lookup_dump
+
+This function was only for debugging.  It would be
+called in a condition that should not happen, and
+should probably have been removed from the final
+version of the original commit.
+
+Remove it because it does mutex lock under spin lock.
+
+Signed-off-by: David Teigland <teigland@redhat.com>
+---
+ fs/dlm/lock.c |  1 -
+ fs/dlm/rcom.c | 20 +-------------------
+ fs/dlm/rcom.h |  1 -
+ 3 files changed, 1 insertion(+), 21 deletions(-)
+
+diff --git a/fs/dlm/lock.c b/fs/dlm/lock.c
+index f145a2a..cc91963 100644
+--- a/fs/dlm/lock.c
++++ b/fs/dlm/lock.c
+@@ -1003,7 +1003,6 @@ int dlm_master_lookup(struct dlm_ls *ls, int from_nodeid, char *name, int len,
+ 		if (r->res_master_nodeid == our_nodeid) {
+ 			log_error(ls, "from_master %d our_master", from_nodeid);
+ 			dlm_dump_rsb(r);
+-			dlm_send_rcom_lookup_dump(r, from_nodeid);
+ 			goto out_found;
+ 		}
+ 
+diff --git a/fs/dlm/rcom.c b/fs/dlm/rcom.c
+index 4ff061d..70c6259 100644
+--- a/fs/dlm/rcom.c
++++ b/fs/dlm/rcom.c
+@@ -338,25 +338,6 @@ int dlm_send_rcom_lookup(struct dlm_rsb *r, int dir_nodeid)
+ 	return error;
+ }
+ 
+-int dlm_send_rcom_lookup_dump(struct dlm_rsb *r, int to_nodeid)
+-{
+-	struct dlm_rcom *rc;
+-	struct dlm_mhandle *mh;
+-	struct dlm_ls *ls = r->res_ls;
+-	int error;
+-
+-	error = create_rcom(ls, to_nodeid, DLM_RCOM_LOOKUP, r->res_length,
+-			    &rc, &mh);
+-	if (error)
+-		goto out;
+-	memcpy(rc->rc_buf, r->res_name, r->res_length);
+-	rc->rc_id = 0xFFFFFFFF;
+-
+-	send_rcom(ls, mh, rc);
+- out:
+-	return error;
+-}
+-
+ static void receive_rcom_lookup(struct dlm_ls *ls, struct dlm_rcom *rc_in)
+ {
+ 	struct dlm_rcom *rc;
+@@ -368,6 +349,7 @@ static void receive_rcom_lookup(struct dlm_ls *ls, struct dlm_rcom *rc_in)
+ 	if (error)
+ 		return;
+ 
++	/* Old code would send this special id to trigger a debug dump. */
+ 	if (rc_in->rc_id == 0xFFFFFFFF) {
+ 		log_error(ls, "receive_rcom_lookup dump from %d", nodeid);
+ 		dlm_dump_rsb_name(ls, rc_in->rc_buf, len);
+diff --git a/fs/dlm/rcom.h b/fs/dlm/rcom.h
+index f8e2434..206723a 100644
+--- a/fs/dlm/rcom.h
++++ b/fs/dlm/rcom.h
+@@ -17,7 +17,6 @@
+ int dlm_rcom_status(struct dlm_ls *ls, int nodeid, uint32_t status_flags);
+ int dlm_rcom_names(struct dlm_ls *ls, int nodeid, char *last_name,int last_len);
+ int dlm_send_rcom_lookup(struct dlm_rsb *r, int dir_nodeid);
+-int dlm_send_rcom_lookup_dump(struct dlm_rsb *r, int to_nodeid);
+ int dlm_send_rcom_lock(struct dlm_rsb *r, struct dlm_lkb *lkb);
+ void dlm_receive_rcom(struct dlm_ls *ls, struct dlm_rcom *rc, int nodeid);
+ int dlm_send_ls_not_ready(int nodeid, struct dlm_rcom *rc_in);
+-- 
+1.8.3.1
+
