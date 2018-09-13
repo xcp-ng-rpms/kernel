@@ -1,0 +1,43 @@
+From 26b41099e7e97d6d44769fd159e822a98c98afa2 Mon Sep 17 00:00:00 2001
+From: "tsutomu.owa@toshiba.co.jp" <tsutomu.owa@toshiba.co.jp>
+Date: Tue, 12 Sep 2017 09:02:10 +0000
+Subject: [PATCH 18/18] DLM: fix NULL pointer dereference in send_to_sock()
+
+The writequeue and writequeue_lock member of othercon was not initialized.
+If lowcomms_state_change() is called from network layer, othercon->swork
+may be scheduled. In this case, send_to_sock() will generate a NULL pointer
+reference. We avoid this problem by correctly initializing writequeue and
+writequeue_lock member of othercon.
+
+Signed-off-by: Tadashi Miyauchi <miyauchi@toshiba-tops.co.jp>
+Signed-off-by: Tsutomu Owa <tsutomu.owa@toshiba.co.jp>
+Signed-off-by: David Teigland <teigland@redhat.com>
+---
+ fs/dlm/lowcomms.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/fs/dlm/lowcomms.c b/fs/dlm/lowcomms.c
+index c64e39f..0570785 100644
+--- a/fs/dlm/lowcomms.c
++++ b/fs/dlm/lowcomms.c
+@@ -802,6 +802,8 @@ static int tcp_accept_from_sock(struct connection *con)
+ 			othercon->nodeid = nodeid;
+ 			othercon->rx_action = receive_from_sock;
+ 			mutex_init(&othercon->sock_mutex);
++			INIT_LIST_HEAD(&othercon->writequeue);
++			spin_lock_init(&othercon->writequeue_lock);
+ 			INIT_WORK(&othercon->swork, process_send_sockets);
+ 			INIT_WORK(&othercon->rwork, process_recv_sockets);
+ 			set_bit(CF_IS_OTHERCON, &othercon->flags);
+@@ -920,6 +922,8 @@ static int sctp_accept_from_sock(struct connection *con)
+ 			othercon->nodeid = nodeid;
+ 			othercon->rx_action = receive_from_sock;
+ 			mutex_init(&othercon->sock_mutex);
++			INIT_LIST_HEAD(&othercon->writequeue);
++			spin_lock_init(&othercon->writequeue_lock);
+ 			INIT_WORK(&othercon->swork, process_send_sockets);
+ 			INIT_WORK(&othercon->rwork, process_recv_sockets);
+ 			set_bit(CF_IS_OTHERCON, &othercon->flags);
+-- 
+1.8.3.1
+

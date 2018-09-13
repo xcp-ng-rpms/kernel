@@ -1,0 +1,41 @@
+From c553e173b022347dcb34721688f55167c654466d Mon Sep 17 00:00:00 2001
+From: "tsutomu.owa@toshiba.co.jp" <tsutomu.owa@toshiba.co.jp>
+Date: Tue, 12 Sep 2017 08:56:15 +0000
+Subject: [PATCH 9/9] DLM: close othercon at send/receive error
+
+If an error occurs in the sending / receiving process, if othercon
+exists, sending / receiving processing using othercon may also result
+in an error. We fix to pre-close othercon as well.
+
+Signed-off-by: Tadashi Miyauchi <miyauchi@toshiba-tops.co.jp>
+Signed-off-by: Tsutomu Owa <tsutomu.owa@toshiba.co.jp>
+Signed-off-by: David Teigland <teigland@redhat.com>
+---
+ fs/dlm/lowcomms.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/fs/dlm/lowcomms.c b/fs/dlm/lowcomms.c
+index b275813..b486407 100644
+--- a/fs/dlm/lowcomms.c
++++ b/fs/dlm/lowcomms.c
+@@ -703,7 +703,7 @@ out_resched:
+ out_close:
+ 	mutex_unlock(&con->sock_mutex);
+ 	if (ret != -EAGAIN) {
+-		close_connection(con, false, true, false);
++		close_connection(con, true, true, false);
+ 		/* Reconnect when there is something to send */
+ 	}
+ 	/* Don't return success if we really got EOF */
+@@ -1530,7 +1530,7 @@ out:
+ 
+ send_error:
+ 	mutex_unlock(&con->sock_mutex);
+-	close_connection(con, false, false, true);
++	close_connection(con, true, false, true);
+ 	/* Requeue the send work. When the work daemon runs again, it will try
+ 	   a new connection, then call this function again. */
+ 	queue_work(send_workqueue, &con->swork);
+-- 
+1.8.3.1
+

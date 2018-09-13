@@ -1,0 +1,42 @@
+From e412f9201de255a503ae3d67f46aae580c79006c Mon Sep 17 00:00:00 2001
+From: "tsutomu.owa@toshiba.co.jp" <tsutomu.owa@toshiba.co.jp>
+Date: Tue, 12 Sep 2017 08:56:30 +0000
+Subject: [PATCH 10/10] DLM: fix race condition between dlm_recoverd_stop and
+ dlm_recoverd
+
+When dlm_recoverd_stop() is called between kthread_should_stop() and
+set_task_state(TASK_INTERRUPTIBLE), dlm_recoverd will not wake up.
+
+Signed-off-by: Tadashi Miyauchi <miyauchi@toshiba-tops.co.jp>
+Signed-off-by: Tsutomu Owa <tsutomu.owa@toshiba.co.jp>
+Signed-off-by: David Teigland <teigland@redhat.com>
+---
+ fs/dlm/recoverd.c | 11 ++++++++++-
+ 1 file changed, 10 insertions(+), 1 deletion(-)
+
+diff --git a/fs/dlm/recoverd.c b/fs/dlm/recoverd.c
+index 6859b4b..d2ad1ca 100644
+--- a/fs/dlm/recoverd.c
++++ b/fs/dlm/recoverd.c
+@@ -287,8 +287,17 @@ static int dlm_recoverd(void *arg)
+ 	set_bit(LSFL_RECOVER_LOCK, &ls->ls_flags);
+ 	wake_up(&ls->ls_recover_lock_wait);
+ 
+-	while (!kthread_should_stop()) {
++	while (1) {
++		/*
++		 * We call kthread_should_stop() after set_current_state().
++		 * This is because it works correctly if kthread_stop() is
++		 * called just before set_current_state().
++		 */
+ 		set_current_state(TASK_INTERRUPTIBLE);
++		if (kthread_should_stop()) {
++			set_current_state(TASK_RUNNING);
++			break;
++		}
+ 		if (!test_bit(LSFL_RECOVER_WORK, &ls->ls_flags) &&
+ 		    !test_bit(LSFL_RECOVER_DOWN, &ls->ls_flags))
+ 			schedule();
+-- 
+1.8.3.1
+

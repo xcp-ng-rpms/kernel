@@ -1,0 +1,72 @@
+From d0920a9cd7e735c429c510b523a100db82c937a1 Mon Sep 17 00:00:00 2001
+From: Andreas Gruenbacher <agruenba@redhat.com>
+Date: Fri, 13 Oct 2017 00:39:38 +0200
+Subject: [PATCH 15/15] gfs2: Allow gfs2_xattr_set to be called with the glock
+ held
+
+On the following call path:
+
+  gfs2_setattr -> setattr_prepare -> ... ->
+    cap_inode_killpriv -> ... ->
+      gfs2_xattr_set
+
+the glock is locked in gfs2_setattr, so check for recursive locking in
+gfs2_xattr_set as gfs2_xattr_get already does.  While at it, get rid of
+need_unlock in gfs2_xattr_get.
+
+Fixes xfstest generic/093.
+
+Signed-off-by: Andreas Gruenbacher <agruenba@redhat.com>
+Acked-by: Abhijith Das <adas@redhat.com>
+Signed-off-by: Bob Peterson <rpeterso@redhat.com>
+diff --git a/fs/gfs2/xattr.c b/fs/gfs2/xattr.c
+index 92c1d50..38d168f 100644
+--- a/fs/gfs2/xattr.c
++++ b/fs/gfs2/xattr.c
+@@ -611,7 +611,6 @@ static int gfs2_xattr_get(const struct xattr_handler *handler,
+ 	struct inode *inode = d_inode(dentry);
+ 	struct gfs2_inode *ip = GFS2_I(inode);
+ 	struct gfs2_holder gh;
+-	bool need_unlock = false;
+ 	int ret;
+ 
+ 	/* During lookup, SELinux calls this function with the glock locked. */
+@@ -620,10 +619,11 @@ static int gfs2_xattr_get(const struct xattr_handler *handler,
+ 		ret = gfs2_glock_nq_init(ip->i_gl, LM_ST_SHARED, LM_FLAG_ANY, &gh);
+ 		if (ret)
+ 			return ret;
+-		need_unlock = true;
++	} else {
++		gfs2_holder_mark_uninitialized(&gh);
+ 	}
+ 	ret = __gfs2_xattr_get(inode, name, buffer, size, handler->flags);
+-	if (need_unlock)
++	if (gfs2_holder_initialized(&gh))
+ 		gfs2_glock_dq_uninit(&gh);
+ 	return ret;
+ }
+@@ -1245,11 +1245,20 @@ static int gfs2_xattr_set(const struct xattr_handler *handler,
+ 	if (ret)
+ 		return ret;
+ 
+-	ret = gfs2_glock_nq_init(ip->i_gl, LM_ST_EXCLUSIVE, 0, &gh);
+-	if (ret)
+-		return ret;
++	/* May be called from gfs_setattr with the glock locked. */
++
++	if (!gfs2_glock_is_locked_by_me(ip->i_gl)) {
++		ret = gfs2_glock_nq_init(ip->i_gl, LM_ST_EXCLUSIVE, 0, &gh);
++		if (ret)
++			return ret;
++	} else {
++		if (WARN_ON_ONCE(ip->i_gl->gl_state != LM_ST_EXCLUSIVE))
++			return -EIO;
++		gfs2_holder_mark_uninitialized(&gh);
++	}
+ 	ret = __gfs2_xattr_set(inode, name, value, size, flags, handler->flags);
+-	gfs2_glock_dq_uninit(&gh);
++	if (gfs2_holder_initialized(&gh))
++		gfs2_glock_dq_uninit(&gh);
+ 	return ret;
+ }
+ 

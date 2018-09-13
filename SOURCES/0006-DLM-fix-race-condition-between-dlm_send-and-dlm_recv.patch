@@ -1,0 +1,53 @@
+From b2a6662932c52304eee11323701f8a01aa110e37 Mon Sep 17 00:00:00 2001
+From: "tsutomu.owa@toshiba.co.jp" <tsutomu.owa@toshiba.co.jp>
+Date: Tue, 12 Sep 2017 08:55:50 +0000
+Subject: [PATCH 6/6] DLM: fix race condition between dlm_send and dlm_recv
+
+When kernel_sendpage(in send_to_sock) and kernel_recvmsg
+(in receive_from_sock) return error, close_connection may works at the
+same time. At that time, they may wait for each other by cancel_work_sync.
+
+Signed-off-by: Tadashi Miyauchi <miayuchi@toshiba-tops.co.jp>
+Signed-off-by: Tsutomu Owa <tsutomu.owa@toshiba.co.jp>
+Signed-off-by: David Teigland <teigland@redhat.com>
+---
+ fs/dlm/lowcomms.c | 8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/fs/dlm/lowcomms.c b/fs/dlm/lowcomms.c
+index 980c58b..420946d 100644
+--- a/fs/dlm/lowcomms.c
++++ b/fs/dlm/lowcomms.c
+@@ -110,6 +110,7 @@ struct connection {
+ #define CF_IS_OTHERCON 5
+ #define CF_CLOSE 6
+ #define CF_APP_LIMITED 7
++#define CF_CLOSING 8
+ 	struct list_head writequeue;  /* List of outgoing writequeue_entries */
+ 	spinlock_t writequeue_lock;
+ 	int (*rx_action) (struct connection *);	/* What to do when active */
+@@ -581,9 +582,11 @@ static void make_sockaddr(struct sockaddr_storage *saddr, uint16_t port,
+ static void close_connection(struct connection *con, bool and_other,
+ 			     bool tx, bool rx)
+ {
+-	if (tx && cancel_work_sync(&con->swork))
++	bool closing = test_and_set_bit(CF_CLOSING, &con->flags);
++
++	if (tx && !closing && cancel_work_sync(&con->swork))
+ 		log_print("canceled swork for node %d", con->nodeid);
+-	if (rx && cancel_work_sync(&con->rwork))
++	if (rx && !closing && cancel_work_sync(&con->rwork))
+ 		log_print("canceled rwork for node %d", con->nodeid);
+ 
+ 	mutex_lock(&con->sock_mutex);
+@@ -603,6 +606,7 @@ static void close_connection(struct connection *con, bool and_other,
+ 
+ 	con->retries = 0;
+ 	mutex_unlock(&con->sock_mutex);
++	clear_bit(CF_CLOSING, &con->flags);
+ }
+ 
+ /* Data received from remote end */
+-- 
+1.8.3.1
+
