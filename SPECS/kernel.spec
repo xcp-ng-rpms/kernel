@@ -459,7 +459,7 @@ Patch415: CA-290024-pv-iommu-sysfs-node.patch
 Patch416: amd-mxgpu.patch
 Patch417: debug-pwq-null-point-deref.patch
 Patch418: abi-version
-Source1: kernel-%{_arch}.config
+Source1: kernel-x86_64.config
 Source2: macros.kernel
 %if %{do_kabichk}
 Source3: check-kabi
