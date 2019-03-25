@@ -22,7 +22,7 @@
 Name: kernel
 License: GPLv2
 Version: 4.4.52
-Release: 4.0.12
+Release: 4.0.12.1%{dist}
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
