@@ -1,0 +1,83 @@
+diff --git a/drivers/gpu/drm/i915/gvt/gtt.c b/drivers/gpu/drm/i915/gvt/gtt.c
+index 05a6849..de13563 100644
+--- a/drivers/gpu/drm/i915/gvt/gtt.c
++++ b/drivers/gpu/drm/i915/gvt/gtt.c
+@@ -1882,7 +1882,9 @@ struct intel_vgpu_mm *intel_vgpu_create_ppgtt_mm(struct intel_vgpu *vgpu,
+ 	}
+ 
+ 	list_add_tail(&mm->ppgtt_mm.list, &vgpu->gtt.ppgtt_mm_list_head);
++	mutex_lock(&gvt->gtt_lock);
+ 	list_add_tail(&mm->ppgtt_mm.lru_list, &gvt->gtt.ppgtt_mm_lru_list_head);
++	mutex_unlock(&gvt->gtt_lock);
+ 	return mm;
+ }
+ 
+@@ -1925,7 +1927,9 @@ void _intel_vgpu_mm_release(struct kref *mm_ref)
+ 
+ 	if (mm->type == INTEL_GVT_MM_PPGTT) {
+ 		list_del(&mm->ppgtt_mm.list);
++		mutex_lock(&mm->vgpu->gvt->gtt_lock);
+ 		list_del(&mm->ppgtt_mm.lru_list);
++		mutex_unlock(&mm->vgpu->gvt->gtt_lock);
+ 		invalidate_ppgtt_mm(mm);
+ 	} else {
+ 		vfree(mm->ggtt_mm.virtual_ggtt);
+@@ -1967,9 +1971,10 @@ int intel_vgpu_pin_mm(struct intel_vgpu_mm *mm)
+ 		if (ret)
+ 			return ret;
+ 
++		mutex_lock(&mm->vgpu->gvt->gtt_lock);
+ 		list_move_tail(&mm->ppgtt_mm.lru_list,
+ 			       &mm->vgpu->gvt->gtt.ppgtt_mm_lru_list_head);
+-
++		mutex_unlock(&mm->vgpu->gvt->gtt_lock);
+ 	}
+ 
+ 	return 0;
+@@ -1980,6 +1985,7 @@ static int reclaim_one_ppgtt_mm(struct intel_gvt *gvt)
+ 	struct intel_vgpu_mm *mm;
+ 	struct list_head *pos, *n;
+ 
++	mutex_lock(&gvt->gtt_lock);
+ 	list_for_each_safe(pos, n, &gvt->gtt.ppgtt_mm_lru_list_head) {
+ 		mm = container_of(pos, struct intel_vgpu_mm, ppgtt_mm.lru_list);
+ 
+@@ -1987,9 +1993,11 @@ static int reclaim_one_ppgtt_mm(struct intel_gvt *gvt)
+ 			continue;
+ 
+ 		list_del_init(&mm->ppgtt_mm.lru_list);
++		mutex_unlock(&gvt->gtt_lock);
+ 		invalidate_ppgtt_mm(mm);
+ 		return 1;
+ 	}
++	mutex_unlock(&gvt->gtt_lock);
+ 	return 0;
+ }
+ 
+diff --git a/drivers/gpu/drm/i915/gvt/gvt.c b/drivers/gpu/drm/i915/gvt/gvt.c
+index 975a2c6..f789fda 100644
+--- a/drivers/gpu/drm/i915/gvt/gvt.c
++++ b/drivers/gpu/drm/i915/gvt/gvt.c
+@@ -374,6 +374,7 @@ int intel_gvt_init_device(struct drm_i915_private *dev_priv)
+ 	spin_lock_init(&gvt->scheduler.mmio_context_lock);
+ 	mutex_init(&gvt->lock);
+ 	mutex_init(&gvt->sched_lock);
++	mutex_init(&gvt->gtt_lock);
+ 	gvt->dev_priv = dev_priv;
+ 
+ 	init_device_info(gvt);
+diff --git a/drivers/gpu/drm/i915/gvt/gvt.h b/drivers/gpu/drm/i915/gvt/gvt.h
+index 4970325..6e7353d 100644
+--- a/drivers/gpu/drm/i915/gvt/gvt.h
++++ b/drivers/gpu/drm/i915/gvt/gvt.h
+@@ -310,6 +310,10 @@ struct intel_gvt {
+ 	struct mutex lock;
+ 	/* scheduler scope lock, protect gvt and vgpu schedule related data */
+ 	struct mutex sched_lock;
++	/* GVT scope lock, protect gtt related structures,
++	 * only ppgtt_mm_lru_list_head for now while oos SPTs are disabled
++	 */
++	struct mutex gtt_lock;
+ 
+ 	struct drm_i915_private *dev_priv;
+ 	struct idr vgpu_idr;	/* vGPU IDR pool */

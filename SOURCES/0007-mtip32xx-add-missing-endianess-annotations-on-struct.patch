@@ -1,0 +1,25 @@
+From 643b5f68d0f9b5a269ebbcc9f0e6c658b41b864e Mon Sep 17 00:00:00 2001
+From: Christoph Hellwig <hch@lst.de>
+Date: Fri, 9 Nov 2018 14:48:58 +0100
+Subject: [PATCH 7/7] mtip32xx: add missing endianess annotations on struct
+ smart_attr
+
+Signed-off-by: Christoph Hellwig <hch@lst.de>
+Signed-off-by: Jens Axboe <axboe@kernel.dk>
+diff --git a/drivers/block/mtip32xx/mtip32xx.h b/drivers/block/mtip32xx/mtip32xx.h
+index 0aa1ea210822..e8b4b3d5365a 100644
+--- a/drivers/block/mtip32xx/mtip32xx.h
++++ b/drivers/block/mtip32xx/mtip32xx.h
+@@ -172,10 +172,10 @@ enum {
+ 
+ struct smart_attr {
+ 	u8 attr_id;
+-	u16 flags;
++	__le16 flags;
+ 	u8 cur;
+ 	u8 worst;
+-	u32 data;
++	__le32 data;
+ 	u8 res[3];
+ } __packed;
+ 

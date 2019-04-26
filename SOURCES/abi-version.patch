@@ -1,0 +1,16 @@
+diff --git a/Makefile b/Makefile
+index 36d9de4..1183f59 100644
+--- a/Makefile
++++ b/Makefile
+@@ -1,8 +1,9 @@
+ # SPDX-License-Identifier: GPL-2.0
+ VERSION = 4
+ PATCHLEVEL = 19
+-SUBLEVEL = 19
+-EXTRAVERSION =
++SUBLEVEL = 0
++EXTRAVERSION = +1
++STABLE_SUBLEVEL = 19
+ NAME = "People's Front"
+ 
+ # *DOCUMENTATION*

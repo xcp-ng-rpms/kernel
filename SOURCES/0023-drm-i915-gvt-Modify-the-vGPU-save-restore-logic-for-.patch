@@ -1,0 +1,297 @@
+From 1b2d5c41ae52b51b971ce5482518b6f42161d9aa Mon Sep 17 00:00:00 2001
+From: Yulei Zhang <yulei.zhang@intel.com>
+Date: Wed, 30 Aug 2017 14:47:43 +0800
+Subject: [PATCH 23/45] drm/i915/gvt: Modify the vGPU save/restore logic for
+ XENGT
+
+Add XENGT specific states into vGPU save/restore logic to support
+live migration.
+
+Signed-off-by: Yulei Zhang <yulei.zhang@intel.com>
+---
+ drivers/gpu/drm/i915/gvt/gvt.h     |  1 +
+ drivers/gpu/drm/i915/gvt/migrate.c | 99 +++++++++++++++++++++++++++++++++++++-
+ drivers/gpu/drm/i915/gvt/migrate.h |  1 +
+ drivers/gpu/drm/i915/gvt/xengt.c   | 17 ++++---
+ drivers/gpu/drm/i915/gvt/xengt.h   |  1 -
+ 5 files changed, 109 insertions(+), 10 deletions(-)
+
+diff --git a/drivers/gpu/drm/i915/gvt/gvt.h b/drivers/gpu/drm/i915/gvt/gvt.h
+index c7045d2..3b4ec92 100644
+--- a/drivers/gpu/drm/i915/gvt/gvt.h
++++ b/drivers/gpu/drm/i915/gvt/gvt.h
+@@ -199,6 +199,7 @@ struct intel_vgpu {
+ 	u32 hws_pga[I915_NUM_ENGINES];
+ 
+ 	struct dentry *debugfs;
++	unsigned long low_mem_max_gpfn;
+ 
+ #if IS_ENABLED(CONFIG_DRM_I915_GVT_KVMGT)
+ 	struct {
+diff --git a/drivers/gpu/drm/i915/gvt/migrate.c b/drivers/gpu/drm/i915/gvt/migrate.c
+index 68d4378..ef253da 100644
+--- a/drivers/gpu/drm/i915/gvt/migrate.c
++++ b/drivers/gpu/drm/i915/gvt/migrate.c
+@@ -48,7 +48,7 @@
+ #define MIGRATION_UNIT(_s, _t, _m, _ops) {		\
+ .img		= NULL,					\
+ .region.type	= _t,					\
+-.region.size	= _m,				\
++.region.size	= _m,					\
+ .ops		= &(_ops),				\
+ .name		= "["#_s":"#_t"]\0"			\
+ }
+@@ -75,6 +75,9 @@ static int workload_load(const struct gvt_migration_obj_t *obj, u32 size);
+ static int workload_save(const struct gvt_migration_obj_t *obj);
+ static int ppgtt_load(const struct gvt_migration_obj_t *obj, u32 size);
+ static int ppgtt_save(const struct gvt_migration_obj_t *obj);
++static int opregion_load(const struct gvt_migration_obj_t *obj, u32 size);
++static int opregion_save(const struct gvt_migration_obj_t *obj);
++
+ /***********************************************
+  * Internal Static Functions
+  ***********************************************/
+@@ -127,6 +130,13 @@ struct gvt_migration_operation_t ppgtt_ops = {
+ 	.post_load = NULL,
+ };
+ 
++struct gvt_migration_operation_t opregion_ops = {
++	.pre_copy = NULL,
++	.pre_save = opregion_save,
++	.pre_load = opregion_load,
++	.post_load = NULL,
++};
++
+ /* gvt_device_objs[] are list of gvt_migration_obj_t objs
+  * Each obj has its operation method to save to qemu image
+  * and restore from qemu image during the migration.
+@@ -178,6 +188,9 @@ static struct gvt_migration_obj_t gvt_device_objs[] = {
+ 	MIGRATION_UNIT(struct intel_vgpu,
+ 			GVT_MIGRATION_WORKLOAD,
+ 			0, workload_ops),
++	MIGRATION_UNIT(struct intel_vgpu,
++			GVT_MIGRATION_OPREGION,
++			INTEL_GVT_OPREGION_SIZE, opregion_ops),
+ 	MIGRATION_END,
+ };
+ 
+@@ -215,6 +228,7 @@ static int image_header_save(const struct gvt_migration_obj_t *obj)
+ {
+ 	struct gvt_region_t region;
+ 	struct gvt_image_header_t header;
++	struct intel_vgpu *vgpu = (struct intel_vgpu *) obj->vgpu;
+ 
+ 	region.type = GVT_MIGRATION_HEAD;
+ 	region.size = sizeof(struct gvt_image_header_t);
+@@ -224,6 +238,10 @@ static int image_header_save(const struct gvt_migration_obj_t *obj)
+ 	header.data_size = obj->offset;
+ 	header.crc_check = 0; /* CRC check skipped for now*/
+ 
++	if (intel_gvt_host.hypervisor_type == INTEL_GVT_HYPERVISOR_XEN) {
++		header.global_data[0] = vgpu->low_mem_max_gpfn;
++	}
++
+ 	memcpy(obj->img + sizeof(struct gvt_region_t), &header,
+ 			sizeof(struct gvt_image_header_t));
+ 
+@@ -233,6 +251,7 @@ static int image_header_save(const struct gvt_migration_obj_t *obj)
+ static int image_header_load(const struct gvt_migration_obj_t *obj, u32 size)
+ {
+ 	struct gvt_image_header_t header;
++	struct intel_vgpu *vgpu = (struct intel_vgpu *) obj->vgpu;
+ 
+ 	if (unlikely(size != sizeof(struct gvt_image_header_t))) {
+ 		gvt_err("migration obj size isn't match between target and image!"
+@@ -245,6 +264,10 @@ static int image_header_load(const struct gvt_migration_obj_t *obj, u32 size)
+ 	memcpy(&header, obj->img + obj->offset,
+ 		sizeof(struct gvt_image_header_t));
+ 
++	if (intel_gvt_host.hypervisor_type == INTEL_GVT_HYPERVISOR_XEN) {
++		vgpu->low_mem_max_gpfn = header.global_data[0];
++	}
++
+ 	return header.data_size;
+ }
+ 
+@@ -267,7 +290,7 @@ static int vcfg_space_save(const struct gvt_migration_obj_t *obj)
+ static int vcfg_space_load(const struct gvt_migration_obj_t *obj, u32 size)
+ {
+ 	struct intel_vgpu *vgpu = (struct intel_vgpu *) obj->vgpu;
+-	void *dest = vgpu->cfg_space.virtual_cfg_space;
++	char *dest = vgpu->cfg_space.virtual_cfg_space;
+ 	int n_transfer = INV;
+ 
+ 	if (unlikely(size != obj->region.size)) {
+@@ -281,6 +304,36 @@ static int vcfg_space_load(const struct gvt_migration_obj_t *obj, u32 size)
+ 		memcpy(dest, obj->img + obj->offset, n_transfer);
+ 	}
+ 
++	if (intel_gvt_host.hypervisor_type == INTEL_GVT_HYPERVISOR_XEN) {
++#define MIG_CFG_SPACE_WRITE(off) {					\
++	u32 data;							\
++	data = *((u32 *)(dest + (off)));				\
++	intel_vgpu_emulate_cfg_write(vgpu, (off), &data, sizeof(data));	\
++	}
++
++#define MIG_CFG_SPACE_WRITE_BAR(bar) {					\
++	u32 data = 0x500;						\
++	vgpu_cfg_space(vgpu)[PCI_COMMAND] = 0;				\
++	intel_vgpu_emulate_cfg_write(vgpu, PCI_COMMAND, &data, 2);	\
++	data = *((u32 *)(dest + (bar)));				\
++	intel_vgpu_emulate_cfg_write(vgpu, (bar), &data, sizeof(data));	\
++	data = *((u32 *)(dest + (bar)+4));				\
++	intel_vgpu_emulate_cfg_write(vgpu, (bar)+4, &data, sizeof(data));\
++	data = 0x503;							\
++	intel_vgpu_emulate_cfg_write(vgpu, PCI_COMMAND, &data, 2);	\
++	}
++
++		/* reconfig bar0,1,2 with source VM's base address.
++		 * TargetVM and SourceVM must have same bar base.
++		 */
++		MIG_CFG_SPACE_WRITE_BAR(PCI_BASE_ADDRESS_0);
++		MIG_CFG_SPACE_WRITE_BAR(PCI_BASE_ADDRESS_2);
++		MIG_CFG_SPACE_WRITE_BAR(PCI_BASE_ADDRESS_4);
++
++		/* restore OpRegion */
++		MIG_CFG_SPACE_WRITE(INTEL_GVT_PCI_OPREGION);
++		MIG_CFG_SPACE_WRITE(INTEL_GVT_PCI_SWSCI);
++	}
+ 	return n_transfer;
+ }
+ 
+@@ -320,6 +373,44 @@ static int sreg_load(const struct gvt_migration_obj_t *obj, u32 size)
+ 	return n_transfer;
+ }
+ 
++static int opregion_save(const struct gvt_migration_obj_t *obj)
++{
++	struct intel_vgpu *vgpu = (struct intel_vgpu *) obj->vgpu;
++	int n_transfer = INV;
++	void *src = vgpu->opregion.va;
++	void *des = obj->img + obj->offset;
++
++	memcpy(des, &obj->region, sizeof(struct gvt_region_t));
++
++	des += sizeof(struct gvt_region_t);
++	n_transfer = obj->region.size;
++
++	memcpy(des, src, n_transfer);
++	return sizeof(struct gvt_region_t) + n_transfer;
++}
++
++static int opregion_load(const struct gvt_migration_obj_t *obj, u32 size)
++{
++	struct intel_vgpu *vgpu = (struct intel_vgpu *) obj->vgpu;
++	int n_transfer = INV;
++
++	if (unlikely(size != obj->region.size)) {
++		gvt_err("migration object size is not match between target \
++				and image!!! memsize=%d imgsize=%d\n",
++		obj->region.size,
++		size);
++		return n_transfer;
++	} else {
++		vgpu_opregion(vgpu)->va = (void *)__get_free_pages(GFP_KERNEL |
++			__GFP_ZERO,
++			get_order(INTEL_GVT_OPREGION_SIZE));
++		n_transfer = obj->region.size;
++		memcpy(vgpu_opregion(vgpu)->va, obj->img + obj->offset, n_transfer);
++	}
++
++	return n_transfer;
++}
++
+ static int ppgtt_save(const struct gvt_migration_obj_t *obj)
+ {
+ 	struct intel_vgpu *vgpu = (struct intel_vgpu *) obj->vgpu;
+@@ -661,6 +752,10 @@ static int vgpu_save(const void *img)
+ 	FOR_EACH_OBJ(node, gvt_device_objs) {
+ 		int n_img = INV;
+ 
++		if ((node->region.type == GVT_MIGRATION_OPREGION) &&
++			(intel_gvt_host.hypervisor_type == INTEL_GVT_HYPERVISOR_KVM))
++			continue;
++
+ 		/* obj will copy data to image file img.offset */
+ 		update_image_region_start_pos(node, n_img_actual_saved);
+ 		if (node->ops->pre_save == NULL) {
+diff --git a/drivers/gpu/drm/i915/gvt/migrate.h b/drivers/gpu/drm/i915/gvt/migrate.h
+index 7a1d9f6..11f6ffc 100644
+--- a/drivers/gpu/drm/i915/gvt/migrate.h
++++ b/drivers/gpu/drm/i915/gvt/migrate.h
+@@ -42,6 +42,7 @@ enum gvt_migration_type_t {
+ 	GVT_MIGRATION_GTT,
+ 	GVT_MIGRATION_PPGTT,
+ 	GVT_MIGRATION_WORKLOAD,
++	GVT_MIGRATION_OPREGION,
+ };
+ 
+ struct gvt_ppgtt_entry_t {
+diff --git a/drivers/gpu/drm/i915/gvt/xengt.c b/drivers/gpu/drm/i915/gvt/xengt.c
+index 5db5811..987f103 100644
+--- a/drivers/gpu/drm/i915/gvt/xengt.c
++++ b/drivers/gpu/drm/i915/gvt/xengt.c
+@@ -967,8 +967,8 @@ static int xengt_hvm_vmem_init(struct intel_vgpu *vgpu)
+ 
+ 		/* for <4G GPFNs: skip the hole after low_mem_max_gpfn */
+ 		if (gpfn < (1 << (32 - PAGE_SHIFT)) &&
+-			info->low_mem_max_gpfn != 0 &&
+-			gpfn > info->low_mem_max_gpfn)
++			vgpu->low_mem_max_gpfn != 0 &&
++			gpfn > vgpu->low_mem_max_gpfn)
+ 			continue;
+ 
+ 		for (j = gpfn;
+@@ -1173,12 +1173,11 @@ static bool xengt_write_cfg_space(struct intel_vgpu *vgpu,
+ {
+ 	/* Low 32 bit of addr is real address, high 32 bit is bdf */
+ 	unsigned int port = addr & 0xffffffff;
+-	struct xengt_hvm_dev *info = (struct xengt_hvm_dev *)vgpu->handle;
+ 
+ 	if (port == PCI_VENDOR_ID) {
+ 		/* Low 20 bit of val are valid low mem gpfn. */
+ 		val &= 0xfffff;
+-		info->low_mem_max_gpfn = val;
++		vgpu->low_mem_max_gpfn = val;
+ 		return true;
+ 	}
+ 	if (intel_gvt_ops->emulate_cfg_write(vgpu, port, &val, bytes))
+@@ -1516,8 +1515,12 @@ static void *xengt_gpa_to_va(unsigned long handle, unsigned long gpa)
+ 				(gpa & (PAGE_SIZE-1));
+ 
+ 	if (gpa > info->vmem_sz) {
+-		gvt_err("vGT try to access invalid gpa=0x%lx\n", gpa);
+-		return NULL;
++		if (info->vmem_sz == 0)
++			xengt_hvm_vmem_init(info->vgpu);
++		else {
++			gvt_err("vGT try to access invalid gpa=0x%lx\n", gpa);
++			return NULL;
++		}
+ 	}
+ 
+ 	/* handle the low 1MB memory */
+@@ -1537,7 +1540,7 @@ static void *xengt_gpa_to_va(unsigned long handle, unsigned long gpa)
+ 	if (!info->vmem_vma[buck_index]) {
+ 		buck_4k_index = gpa >> PAGE_SHIFT;
+ 		if (!info->vmem_vma_4k[buck_4k_index]) {
+-			if (buck_4k_index > info->low_mem_max_gpfn)
++			if (buck_4k_index > info->vgpu->low_mem_max_gpfn)
+ 				gvt_err("vGT failed to map gpa=0x%lx?\n", gpa);
+ 			return NULL;
+ 		}
+diff --git a/drivers/gpu/drm/i915/gvt/xengt.h b/drivers/gpu/drm/i915/gvt/xengt.h
+index 18a26d8..71073aa 100644
+--- a/drivers/gpu/drm/i915/gvt/xengt.h
++++ b/drivers/gpu/drm/i915/gvt/xengt.h
+@@ -43,7 +43,6 @@ struct xengt_hvm_dev {
+ 	struct vm_struct **vmem_vma;
+ 	/* for >1MB memory of HVM: each vm_struct means 4KB */
+ 	struct vm_struct **vmem_vma_4k;
+-	unsigned long low_mem_max_gpfn;
+ 	void *dev_state;
+ };
+ 
+-- 
+2.7.4
+

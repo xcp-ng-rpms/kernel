@@ -1,0 +1,25 @@
+From 698b53b3119c45a59eef10b516d780b3e9a5402d Mon Sep 17 00:00:00 2001
+From: Colin Ian King <colin.king@canonical.com>
+Date: Tue, 30 Oct 2018 11:29:42 +0000
+Subject: [PATCH 2/2] mtip32xx: clean an indentation issue, remove extraneous
+ tabs
+
+Trivial fix to clean up an indentation issue, remove tabs
+
+Signed-off-by: Colin Ian King <colin.king@canonical.com>
+Signed-off-by: Jens Axboe <axboe@kernel.dk>
+diff --git a/drivers/block/mtip32xx/mtip32xx.c b/drivers/block/mtip32xx/mtip32xx.c
+index dbb0c5c2d4a9..641448a91536 100644
+--- a/drivers/block/mtip32xx/mtip32xx.c
++++ b/drivers/block/mtip32xx/mtip32xx.c
+@@ -1942,8 +1942,8 @@ static int exec_drive_taskfile(struct driver_data *dd,
+ 				dev_warn(&dd->pdev->dev,
+ 					"data movement but "
+ 					"sect_count is 0\n");
+-					err = -EINVAL;
+-					goto abort;
++				err = -EINVAL;
++				goto abort;
+ 			}
+ 		}
+ 	}

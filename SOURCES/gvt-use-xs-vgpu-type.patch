@@ -1,0 +1,36 @@
+gvt: Update VGPU type to match the one used by previous versions of XenServer
+
+diff --git a/drivers/gpu/drm/i915/gvt/display.h b/drivers/gpu/drm/i915/gvt/display.h
+index ea7c1c525b8c..c029abe9955d 100644
+--- a/drivers/gpu/drm/i915/gvt/display.h
++++ b/drivers/gpu/drm/i915/gvt/display.h
+@@ -156,6 +156,7 @@ struct intel_vgpu_port {
+ 
+ enum intel_vgpu_edid {
+ 	GVT_EDID_1024_768,
++	GVT_EDID_1920_1080,
+ 	GVT_EDID_1920_1200,
+ 	GVT_EDID_NUM,
+ };
+@@ -165,6 +166,8 @@ static inline char *vgpu_edid_str(enum intel_vgpu_edid id)
+ 	switch (id) {
+ 	case GVT_EDID_1024_768:
+ 		return "1024x768";
++	case GVT_EDID_1920_1080:
++		return "1920x1080";
+ 	case GVT_EDID_1920_1200:
+ 		return "1920x1200";
+ 	default:
+diff --git a/drivers/gpu/drm/i915/gvt/vgpu.c b/drivers/gpu/drm/i915/gvt/vgpu.c
+index 51f6147bf707..96c22db50071 100644
+--- a/drivers/gpu/drm/i915/gvt/vgpu.c
++++ b/drivers/gpu/drm/i915/gvt/vgpu.c
+@@ -90,7 +90,7 @@ static struct {
+ } vgpu_types[] = {
+ /* Fixed vGPU type table */
+ 	{ MB_TO_BYTES(64), MB_TO_BYTES(384), 4, VGPU_WEIGHT(8), GVT_EDID_1024_768, "8" },
+-	{ MB_TO_BYTES(128), MB_TO_BYTES(512), 4, VGPU_WEIGHT(4), GVT_EDID_1920_1200, "4" },
++	{ MB_TO_BYTES(128), MB_TO_BYTES(384), 4, VGPU_WEIGHT(8), GVT_EDID_1920_1080, "8" },
+ 	{ MB_TO_BYTES(256), MB_TO_BYTES(1024), 4, VGPU_WEIGHT(2), GVT_EDID_1920_1200, "2" },
+ 	{ MB_TO_BYTES(512), MB_TO_BYTES(2048), 4, VGPU_WEIGHT(1), GVT_EDID_1920_1200, "1" },
+ };

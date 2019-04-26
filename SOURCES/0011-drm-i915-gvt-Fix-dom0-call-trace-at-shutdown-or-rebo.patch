@@ -1,0 +1,37 @@
+From eebccae96e1f4d7fe6678fcacdc6699301c60114 Mon Sep 17 00:00:00 2001
+From: Xiong Zhang <xiong.y.zhang@intel.com>
+Date: Thu, 1 Jun 2017 10:07:57 +0800
+Subject: [PATCH 11/45] drm/i915/gvt: Fix dom0 call trace at shutdown or reboot
+ sometimes
+
+Sometimes call trace exists at shutdown or reboot, as vgpu->handle
+isn't clear to NULL when vgpu is destroyed.
+
+Signed-off-by: Xiong Zhang <xiong.y.zhang@intel.com>
+---
+ drivers/gpu/drm/i915/gvt/xengt.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/gpu/drm/i915/gvt/xengt.c b/drivers/gpu/drm/i915/gvt/xengt.c
+index f32b6eb..0a8668c 100644
+--- a/drivers/gpu/drm/i915/gvt/xengt.c
++++ b/drivers/gpu/drm/i915/gvt/xengt.c
+@@ -163,7 +163,6 @@ static int xengt_sysfs_add_instance(struct xengt_hvm_params *vp)
+ 		ret = -EINVAL;
+ 	} else {
+ 		info = (struct xengt_hvm_dev *) vgpu->handle;
+-		info->vm_id = vp->vm_id;
+ 		xengt_priv.vgpus[vgpu->id - 1] = vgpu;
+ 		gvt_dbg_core("add xengt instance for vm-%d with vgpu-%d.\n",
+ 			vp->vm_id, vgpu->id);
+@@ -1309,6 +1308,7 @@ void xengt_instance_destroy(struct intel_vgpu *vgpu)
+ 
+ out1:
+ 	xengt_vmem_destroy(vgpu);
++	vgpu->handle = (unsigned long)NULL;
+ 	kfree(info);
+ 
+ free_vgpu:
+-- 
+2.7.4
+

@@ -1,0 +1,41 @@
+From 1ba84fdd2c80c4d144d0de53423383b17e2bc4ab Mon Sep 17 00:00:00 2001
+From: Anoob Soman <anoob.soman@citrix.com>
+Date: Thu, 11 Oct 2018 17:45:11 +0100
+Subject: [PATCH] cifs: Change the default value SecFlags to 0x83
+
+With 4.14 kernel cifs module has soft dependencies (pre) on crypto
+modules, which makes kmod ignore commands in modprobe.d/cifs.conf.
+
+Instead of modprobe.d/cifs.conf hack, change the default value of SecurityFlags
+by introducing a patch.
+
+This is an extract from the commit which change value of SecurityFlags
+to 0x83.
+For the 3.10 kernel CIFS SecurityFlags, we use 0x87, which means:
+- allow NTLMSSP
+- allow NTLMv2
+- allow NTLM
+- allow signing
+However, specifying both NTLM and NTLMv2 does not make sense because
+only one of them will be picked. With the 3.10 kernel, it always picks
+NTLM. With newer kernels (v3.11+), due to Linux kernel commit
+3f618223dc0b ("move sectype to the cifs_ses instead of
+TCP_Server_Info"), it always picks NTLMv2. Because some storage
+appliances cannot use NTLMv2, always use NTLM. Therefore, set the
+SecurityFlags to 0x83:
+- allow NTLMSSP
+- allow NTLM
+- allow signing
+diff --git a/fs/cifs/cifsglob.h b/fs/cifs/cifsglob.h
+index f29cdb1..c61a43f 100644
+--- a/fs/cifs/cifsglob.h
++++ b/fs/cifs/cifsglob.h
+@@ -1570,7 +1570,7 @@ static inline void free_dfs_info_array(struct dfs_info3_param *param,
+ #define   CIFSSEC_MUST_SEAL	0x40040 /* not supported yet */
+ #define   CIFSSEC_MUST_NTLMSSP	0x80080 /* raw ntlmssp with ntlmv2 */
+ 
+-#define   CIFSSEC_DEF (CIFSSEC_MAY_SIGN | CIFSSEC_MAY_NTLMV2 | CIFSSEC_MAY_NTLMSSP)
++#define   CIFSSEC_DEF (CIFSSEC_MAY_SIGN | CIFSSEC_MAY_NTLM | CIFSSEC_MAY_NTLMSSP)
+ #define   CIFSSEC_MAX (CIFSSEC_MUST_SIGN | CIFSSEC_MUST_NTLMV2)
+ #define   CIFSSEC_AUTH_MASK (CIFSSEC_MAY_NTLM | CIFSSEC_MAY_NTLMV2 | CIFSSEC_MAY_LANMAN | CIFSSEC_MAY_PLNTXT | CIFSSEC_MAY_KRB5 | CIFSSEC_MAY_NTLMSSP)
+ /*

@@ -1,0 +1,29 @@
+From 475b31ed7d6cf645e012f753fc1ee431c2757aed Mon Sep 17 00:00:00 2001
+From: Xiong Zhang <xiong.y.zhang@intel.com>
+Date: Thu, 25 May 2017 11:36:20 +0800
+Subject: [PATCH 10/45] drm/i915/gvt/xengt: Correctly get low mem max gfn
+
+Currently info->low_mem_max_gpfn is wrong. As the uper 32 bit of
+val is wrong. Only the low 20bit is valid.
+
+Signed-off-by: Xiong Zhang <xiong.y.zhang@intel.com>
+---
+ drivers/gpu/drm/i915/gvt/xengt.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/drivers/gpu/drm/i915/gvt/xengt.c b/drivers/gpu/drm/i915/gvt/xengt.c
+index 91a2ee8..f32b6eb 100644
+--- a/drivers/gpu/drm/i915/gvt/xengt.c
++++ b/drivers/gpu/drm/i915/gvt/xengt.c
+@@ -1074,6 +1074,8 @@ static bool xengt_write_cfg_space(struct intel_vgpu *vgpu,
+ 	struct xengt_hvm_dev *info = (struct xengt_hvm_dev *)vgpu->handle;
+ 
+ 	if (port == PCI_VENDOR_ID) {
++		/* Low 20 bit of val are valid low mem gpfn. */
++		val &= 0xfffff;
+ 		info->low_mem_max_gpfn = val;
+ 		return true;
+ 	}
+-- 
+2.7.4
+

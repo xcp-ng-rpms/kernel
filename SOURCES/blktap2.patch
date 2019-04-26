@@ -1,8 +1,32 @@
+diff --git a/block/elevator.c b/block/elevator.c
+index fae58b2f906f..034e46fa5b18 100644
+--- a/block/elevator.c
++++ b/block/elevator.c
+@@ -1109,6 +1109,19 @@ static int __elevator_change(struct request_queue *q, const char *name)
+ 	return elevator_switch(q, e);
+ }
+ 
++int elevator_change(struct request_queue *q, const char *name)
++{
++	int ret;
++
++	/* Protect q->elevator from elevator_init() */
++	mutex_lock(&q->sysfs_lock);
++	ret = __elevator_change(q, name);
++	mutex_unlock(&q->sysfs_lock);
++
++	return ret;
++}
++EXPORT_SYMBOL(elevator_change);
++
+ static inline bool elv_support_iosched(struct request_queue *q)
+ {
+ 	if (q->mq_ops && q->tag_set && (q->tag_set->flags &
 diff --git a/drivers/block/Kconfig b/drivers/block/Kconfig
-index 29819e7..5b13175 100644
+index d4913516823f..d2adbbcdaf13 100644
 --- a/drivers/block/Kconfig
 +++ b/drivers/block/Kconfig
-@@ -547,4 +547,13 @@ config BLK_DEV_RSXX
+@@ -481,4 +481,13 @@ config BLK_DEV_RSXX
  	  To compile this driver as a module, choose M here: the
  	  module will be called rsxx.
  
@@ -17,10 +41,10 @@ index 29819e7..5b13175 100644
 +
  endif # BLK_DEV
 diff --git a/drivers/block/Makefile b/drivers/block/Makefile
-index 6713290..f953ad4 100644
+index 8566b188368b..6095e302af71 100644
 --- a/drivers/block/Makefile
 +++ b/drivers/block/Makefile
-@@ -45,3 +45,5 @@ obj-$(CONFIG_ZRAM) += zram/
+@@ -44,3 +44,5 @@ null_blk-$(CONFIG_BLK_DEV_ZONED) += null_blk_zoned.o
  
  skd-y		:= skd_main.o
  swim_mod-y	:= swim.o swim_asm.o
@@ -28,7 +52,7 @@ index 6713290..f953ad4 100644
 +obj-$(CONFIG_BLK_DEV_TAP)	+= blktap2/
 diff --git a/drivers/block/blktap2/Makefile b/drivers/block/blktap2/Makefile
 new file mode 100644
-index 0000000..6ea05a9
+index 000000000000..6ea05a9b6bde
 --- /dev/null
 +++ b/drivers/block/blktap2/Makefile
 @@ -0,0 +1,7 @@
@@ -41,13 +65,14 @@ index 0000000..6ea05a9
 +blktap-objs += sysfs.o
 diff --git a/drivers/block/blktap2/blktap.h b/drivers/block/blktap2/blktap.h
 new file mode 100644
-index 0000000..df8365c
+index 000000000000..0b511e5b0f5b
 --- /dev/null
 +++ b/drivers/block/blktap2/blktap.h
-@@ -0,0 +1,183 @@
+@@ -0,0 +1,184 @@
 +#ifndef _BLKTAP_H_
 +#define _BLKTAP_H_
 +
++#include <linux/blk_types.h>
 +#include <linux/mm.h>
 +#include <linux/fs.h>
 +#include <linux/cdev.h>
@@ -208,7 +233,7 @@ index 0000000..df8365c
 +int blktap_device_destroy(struct blktap *);
 +void blktap_device_destroy_sync(struct blktap *);
 +void blktap_device_run_queue(struct blktap *);
-+void blktap_device_end_request(struct blktap *, struct blktap_request *, int);
++void blktap_device_end_request(struct blktap *, struct blktap_request *, blk_status_t);
 +void blktap_device_start_queue(struct blktap *tap);
 +
 +int blktap_page_pool_init(struct kobject *);
@@ -230,7 +255,7 @@ index 0000000..df8365c
 +#endif
 diff --git a/drivers/block/blktap2/control.c b/drivers/block/blktap2/control.c
 new file mode 100644
-index 0000000..63480d4
+index 000000000000..1c12d293fce7
 --- /dev/null
 +++ b/drivers/block/blktap2/control.c
 @@ -0,0 +1,321 @@
@@ -239,7 +264,7 @@ index 0000000..63480d4
 +#include <linux/miscdevice.h>
 +#include <linux/device.h>
 +#include <linux/slab.h>
-+#include <asm/uaccess.h>
++#include <linux/uaccess.h>
 +
 +#include "blktap.h"
 +
@@ -557,10 +582,10 @@ index 0000000..63480d4
 +MODULE_LICENSE("Dual BSD/GPL");
 diff --git a/drivers/block/blktap2/device.c b/drivers/block/blktap2/device.c
 new file mode 100644
-index 0000000..2fb0ce9
+index 000000000000..4461f4acc5a2
 --- /dev/null
 +++ b/drivers/block/blktap2/device.c
-@@ -0,0 +1,645 @@
+@@ -0,0 +1,644 @@
 +#include <linux/fs.h>
 +#include <linux/blkdev.h>
 +#include <linux/cdrom.h>
@@ -725,35 +750,33 @@ index 0000000..2fb0ce9
 +	blk_start_request(rq);
 +}
 +
-+/* NB. err == 0 indicates success, failures < 0 */
-+
 +static inline void
-+__blktap_end_queued_rq(struct request *rq, int err)
++__blktap_end_queued_rq(struct request *rq, blk_status_t status)
 +{
 +	blk_start_request(rq);
-+	__blk_end_request(rq, err, blk_rq_bytes(rq));
++	__blk_end_request(rq, status, blk_rq_bytes(rq));
 +}
 +
 +static inline void
-+__blktap_end_rq(struct request *rq, int err)
++__blktap_end_rq(struct request *rq, blk_status_t status)
 +{
-+	__blk_end_request(rq, err, blk_rq_bytes(rq));
++	__blk_end_request(rq, status, blk_rq_bytes(rq));
 +}
 +
 +static inline void
-+blktap_end_rq(struct request *rq, int err)
++blktap_end_rq(struct request *rq, blk_status_t status)
 +{
 +	struct request_queue *q = rq->q;
 +
 +	spin_lock_irq(q->queue_lock);
-+	__blktap_end_rq(rq, err);
++	__blktap_end_rq(rq, status);
 +	spin_unlock_irq(q->queue_lock);
 +}
 +
 +void
 +blktap_device_end_request(struct blktap *tap,
 +			  struct blktap_request *request,
-+			  int error)
++			  blk_status_t status)
 +{
 +	struct blktap_device *tapdev = &tap->device;
 +	struct request *rq = request->rq;
@@ -763,10 +786,10 @@ index 0000000..2fb0ce9
 +	blktap_ring_free_request(tap, request);
 +
 +	dev_dbg(disk_to_dev(tapdev->gd),
-+		"end_request: op=%d error=%d bytes=%d\n",
-+		rq_data_dir(rq), error, blk_rq_bytes(rq));
++		"end_request: op=%d status=%u bytes=%d\n",
++		rq_data_dir(rq), status, blk_rq_bytes(rq));
 +
-+	blktap_end_rq(rq, error);
++	blktap_end_rq(rq, status);
 +}
 +
 +int
@@ -827,6 +850,19 @@ index 0000000..2fb0ce9
 +}
 +
 +/*
++ * The tapdev lock is the same lock as the queue lock. Queue flags are cleared
++ * while the tapdev lock is held. The block layer does not export an unlocked
++ * variant of blk_queue_flag_clear so add an unlocked variant here
++ * (from * block/blk.h).
++ */
++static inline void queue_flag_clear(unsigned int flag, struct request_queue *q)
++{
++	if (q->queue_lock)
++		lockdep_assert_held(q->queue_lock);
++	__clear_bit(flag, &q->queue_flags);
++}
++
++/*
 + * called from tapdisk context
 + */
 +void
@@ -850,8 +886,8 @@ index 0000000..2fb0ce9
 +		if (!rq)
 +			break;
 +
-+		if (rq->cmd_type != REQ_TYPE_FS) {
-+			__blktap_end_queued_rq(rq, -EOPNOTSUPP);
++		if (blk_rq_is_passthrough(rq)) {
++			__blktap_end_queued_rq(rq, BLK_STS_NOTSUPP);
 +			continue;
 +		}
 +
@@ -870,7 +906,7 @@ index 0000000..2fb0ce9
 +		__blktap_dequeue_rq(rq);
 +
 +		if (unlikely(err))
-+			__blktap_end_rq(rq, err);
++			__blktap_end_rq(rq, errno_to_blk_status(err));
 +	} while (1);
 +
 +	spin_unlock_irq(&tapdev->lock);
@@ -1028,7 +1064,7 @@ index 0000000..2fb0ce9
 +		if (!rq)
 +			break;
 +
-+		__blktap_end_queued_rq(rq, -EIO);
++		__blktap_end_queued_rq(rq, BLK_STS_IOERR);
 +	} while (1);
 +
 +	spin_unlock_irq(&tapdev->lock);
@@ -1060,7 +1096,7 @@ index 0000000..2fb0ce9
 +int
 +__blktap_device_create(struct blktap *tap, struct blktap_device_info *info)
 +{
-+	int minor, err;
++	int minor;
 +	struct gendisk *gd;
 +	struct request_queue *rq;
 +	struct blktap_device *tapdev;
@@ -1077,10 +1113,8 @@ index 0000000..2fb0ce9
 +		return -EINVAL;
 +
 +	gd = alloc_disk(1);
-+	if (!gd) {
-+		err = -ENOMEM;
-+		goto fail;
-+	}
++	if (!gd)
++		return -ENOMEM;
 +
 +	if (minor < 26) {
 +		sprintf(gd->disk_name, "td%c", 'a' + minor % 26);
@@ -1103,11 +1137,9 @@ index 0000000..2fb0ce9
 +	spin_lock_init(&tapdev->lock);
 +	rq = blk_init_queue(blktap_device_do_request, &tapdev->lock);
 +	if (!rq) {
-+		err = -ENOMEM;
-+		goto fail;
++		put_disk(gd);
++		return -ENOMEM;
 +	}
-+ 
-+	elevator_change(rq, "noop");
 +
 +	gd->queue     = rq;
 +	rq->queuedata = tapdev;
@@ -1124,14 +1156,6 @@ index 0000000..2fb0ce9
 +		 (unsigned long long)get_capacity(gd));
 +
 +	return 0;
-+
-+fail:
-+	if (gd)
-+		del_gendisk(gd);
-+	if (rq)
-+		blk_cleanup_queue(rq);
-+
-+	return err;
 +}
 +
 +int
@@ -1208,7 +1232,7 @@ index 0000000..2fb0ce9
 +}
 diff --git a/drivers/block/blktap2/request.c b/drivers/block/blktap2/request.c
 new file mode 100644
-index 0000000..f38d586
+index 000000000000..f38d5866bd68
 --- /dev/null
 +++ b/drivers/block/blktap2/request.c
 @@ -0,0 +1,472 @@
@@ -1686,10 +1710,10 @@ index 0000000..f38d586
 +}
 diff --git a/drivers/block/blktap2/ring.c b/drivers/block/blktap2/ring.c
 new file mode 100644
-index 0000000..8dc7efb
+index 000000000000..01500b6d915c
 --- /dev/null
 +++ b/drivers/block/blktap2/ring.c
-@@ -0,0 +1,586 @@
+@@ -0,0 +1,585 @@
 +
 +#include <linux/device.h>
 +#include <linux/signal.h>
@@ -1715,25 +1739,26 @@ index 0000000..8dc7efb
 +{
 +	struct blktap_ring *ring = &tap->ring;
 +	struct blktap_request *request;
-+	int usr_idx, err;
++	int usr_idx;
++	blk_status_t status;
 +
 +	request = NULL;
 +
 +	usr_idx = rsp->id;
 +	if (usr_idx < 0 || usr_idx >= BLKTAP_RING_SIZE) {
-+		err = -ERANGE;
++		status = BLK_STS_IOERR;
 +		goto invalid;
 +	}
 +
 +	request = ring->pending[usr_idx];
 +
 +	if (!request) {
-+		err = -ESRCH;
++		status = BLK_STS_IOERR;
 +		goto invalid;
 +	}
 +
 +	if (rsp->operation != request->operation) {
-+		err = -EINVAL;
++		status = BLK_STS_IOERR;
 +		goto invalid;
 +	}
 +
@@ -1741,17 +1766,17 @@ index 0000000..8dc7efb
 +		"request %d [%p] response: %d\n",
 +		request->usr_idx, request, rsp->status);
 +
-+	err = rsp->status == BLKTAP_RSP_OKAY ? 0 : -EIO;
++	status = rsp->status == BLKTAP_RSP_OKAY ? BLK_STS_OK : BLK_STS_IOERR;
 +end_request:
-+	blktap_device_end_request(tap, request, err);
++	blktap_device_end_request(tap, request, status);
 +	return;
 +
 +invalid:
 +	dev_warn(ring->dev,
-+		 "invalid response, idx:%d status:%d op:%d/%d: err %d\n",
++		 "invalid response, idx:%d status:%d op:%d/%d: status %u\n",
 +		 usr_idx, rsp->status,
 +		 rsp->operation, request->operation,
-+		 err);
++		 status);
 +	if (request)
 +		goto end_request;
 +}
@@ -1780,7 +1805,7 @@ index 0000000..8dc7efb
 +	 ((_req) * BLKTAP_SEGMENT_MAX * BLKTAP_PAGE_SIZE) +	\
 +	 ((_seg) * BLKTAP_PAGE_SIZE))
 +
-+static int blktap_ring_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
++static int blktap_ring_fault(struct vm_fault *vmf)
 +{
 +	return VM_FAULT_SIGBUS;
 +}
@@ -1797,7 +1822,7 @@ index 0000000..8dc7efb
 +		if (!request)
 +			continue;
 +
-+		blktap_device_end_request(tap, request, -EIO);
++		blktap_device_end_request(tap, request, BLK_STS_IOERR);
 +	}
 +}
 +
@@ -1810,7 +1835,7 @@ index 0000000..8dc7efb
 +
 +	blktap_ring_fail_pending(tap);
 +
-+	zap_page_range(vma, vma->vm_start, PAGE_SIZE, NULL);
++	zap_page_range(vma, vma->vm_start, PAGE_SIZE);
 +	ClearPageReserved(page);
 +	__free_page(page);
 +
@@ -1878,7 +1903,7 @@ index 0000000..8dc7efb
 +		for (seg = 0; seg < request->nr_pages; seg++)
 +			blktap_request_bounce(tap, request, seg, !read);
 +
-+	zap_page_range(ring->vma, uaddr, size, NULL);
++	zap_page_range(ring->vma, uaddr, size);
 +}
 +
 +void
@@ -2052,7 +2077,7 @@ index 0000000..8dc7efb
 +
 +fail:
 +	if (page) {
-+		zap_page_range(vma, vma->vm_start, PAGE_SIZE, NULL);
++		zap_page_range(vma, vma->vm_start, PAGE_SIZE);
 +		ClearPageReserved(page);
 +		__free_page(page);
 +	}
@@ -2102,10 +2127,8 @@ index 0000000..8dc7efb
 +		if (err)
 +			return err;
 +
-+		if (params.name[0]) {
-+			strncpy(tap->name, params.name, sizeof(params.name));
-+			tap->name[sizeof(tap->name)-1] = 0;
-+		}
++		if (params.name[0])
++			strlcpy(tap->name, params.name, sizeof(tap->name));
 +
 +		return 0;
 +	}
@@ -2278,10 +2301,10 @@ index 0000000..8dc7efb
 +}
 diff --git a/drivers/block/blktap2/sysfs.c b/drivers/block/blktap2/sysfs.c
 new file mode 100644
-index 0000000..34a3c5f
+index 000000000000..bf5b0093eeee
 --- /dev/null
 +++ b/drivers/block/blktap2/sysfs.c
-@@ -0,0 +1,244 @@
+@@ -0,0 +1,241 @@
 +#include <linux/types.h>
 +#include <linux/device.h>
 +#include <linux/module.h>
@@ -2450,15 +2473,14 @@ index 0000000..34a3c5f
 +}
 +
 +static ssize_t
-+blktap_sysfs_show_verbosity(struct class *class, struct class_attribute *attr, 
-+			    char *buf)
++verbosity_show(struct class *class, struct class_attribute *attr, char *buf)
 +{
 +	return sprintf(buf, "%d\n", blktap_debug_level);
 +}
 +
 +static ssize_t
-+blktap_sysfs_set_verbosity(struct class *class, struct class_attribute *attr,
-+			   const char *buf, size_t size)
++verbosity_store(struct class *class, struct class_attribute *attr,
++		const char *buf, size_t size)
 +{
 +	int level;
 +
@@ -2469,12 +2491,10 @@ index 0000000..34a3c5f
 +
 +	return -EINVAL;
 +}
-+static CLASS_ATTR(verbosity, S_IRUGO|S_IWUSR,
-+		  blktap_sysfs_show_verbosity, blktap_sysfs_set_verbosity);
++static CLASS_ATTR_RW(verbosity);
 +
 +static ssize_t
-+blktap_sysfs_show_devices(struct class *class, struct class_attribute *attr, 
-+			  char *buf)
++devices_show(struct class *class, struct class_attribute *attr, char *buf)
 +{
 +	int i, ret;
 +	struct blktap *tap;
@@ -2497,7 +2517,7 @@ index 0000000..34a3c5f
 +
 +	return ret;
 +}
-+static CLASS_ATTR(devices, S_IRUGO, blktap_sysfs_show_devices, NULL);
++static CLASS_ATTR_RO(devices);
 +
 +void
 +blktap_sysfs_exit(void)
@@ -2528,7 +2548,7 @@ index 0000000..34a3c5f
 +}
 diff --git a/include/linux/blktap.h b/include/linux/blktap.h
 new file mode 100644
-index 0000000..eeee457
+index 000000000000..eeee457be017
 --- /dev/null
 +++ b/include/linux/blktap.h
 @@ -0,0 +1,95 @@
@@ -2627,15 +2647,15 @@ index 0000000..eeee457
 +};
 +
 +#endif /* _LINUX_BLKTAP_H */
-diff --git a/include/uapi/linux/Kbuild b/include/uapi/linux/Kbuild
-index ebd10e6..5dec113 100644
---- a/include/uapi/linux/Kbuild
-+++ b/include/uapi/linux/Kbuild
-@@ -69,6 +69,7 @@ header-y += bcm933xx_hcs.h
- header-y += bfs_fs.h
- header-y += binfmts.h
- header-y += blkpg.h
-+header-y += blktap.h
- header-y += blktrace_api.h
- header-y += bpf_common.h
- header-y += bpf.h
+diff --git a/include/linux/elevator.h b/include/linux/elevator.h
+index a02deea30185..6f3ca694e44a 100644
+--- a/include/linux/elevator.h
++++ b/include/linux/elevator.h
+@@ -218,6 +218,7 @@ extern void elv_unregister(struct elevator_type *);
+ extern ssize_t elv_iosched_show(struct request_queue *, char *);
+ extern ssize_t elv_iosched_store(struct request_queue *, const char *, size_t);
+ 
++extern int elevator_change(struct request_queue *, const char *);
+ extern bool elv_bio_merge_ok(struct request *, struct bio *);
+ extern struct elevator_queue *elevator_alloc(struct request_queue *,
+ 					struct elevator_type *);

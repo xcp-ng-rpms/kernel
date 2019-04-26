@@ -1,0 +1,32 @@
+From 2fd617b04decdacaa190ac6c9cddb7177945c956 Mon Sep 17 00:00:00 2001
+From: Tina Zhang <tina.zhang@intel.com>
+Date: Fri, 19 Jan 2018 15:02:35 +0800
+Subject: [PATCH 36/45] drm/i915/gvt: Use copy_to_user to return opregion
+
+If it's decided to read the total 8K in one read call, copy_to_user needs
+be introduced to take care the process copying 8k data to userspace buffer.
+
+Signed-off-by: Tina Zhang <tina.zhang@intel.com>
+---
+ drivers/gpu/drm/i915/gvt/kvmgt.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/gpu/drm/i915/gvt/kvmgt.c b/drivers/gpu/drm/i915/gvt/kvmgt.c
+index 1bb6fb5..f868a1c 100644
+--- a/drivers/gpu/drm/i915/gvt/kvmgt.c
++++ b/drivers/gpu/drm/i915/gvt/kvmgt.c
+@@ -489,9 +489,9 @@ static size_t intel_vgpu_reg_rw_opregion(struct intel_vgpu *vgpu, char *buf,
+ 		return -EINVAL;
+ 	}
+ 	count = min(count, (size_t)(vgpu->vdev.region[i].size - pos));
+-	memcpy(buf, base + pos, count);
+ 
+-	return 0;
++	return copy_to_user(buf, base + pos, count) ?
++		0 : count;
+ }
+ 
+ static void intel_vgpu_reg_release_opregion(struct intel_vgpu *vgpu,
+-- 
+2.7.4
+

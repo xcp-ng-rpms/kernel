@@ -23,7 +23,7 @@ this.
 
 Signed-off-by: David Vrabel <david.vrabel@citrix.com>
 diff --git a/drivers/xen/xen-pciback/pci_stub.c b/drivers/xen/xen-pciback/pci_stub.c
-index 258b7c3..00197ad 100644
+index 097410a..9016d40 100644
 --- a/drivers/xen/xen-pciback/pci_stub.c
 +++ b/drivers/xen/xen-pciback/pci_stub.c
 @@ -17,6 +17,7 @@
@@ -34,7 +34,7 @@ index 258b7c3..00197ad 100644
  #include <xen/events.h>
  #include <asm/xen/pci.h>
  #include <asm/xen/hypervisor.h>
-@@ -63,6 +64,114 @@ static LIST_HEAD(pcistub_devices);
+@@ -65,6 +66,114 @@ struct pcistub_device {
  static int initialize_devices;
  static LIST_HEAD(seized_devices);
  
@@ -149,17 +149,17 @@ index 258b7c3..00197ad 100644
  static struct pcistub_device *pcistub_device_alloc(struct pci_dev *dev)
  {
  	struct pcistub_device *psdev;
-@@ -103,7 +212,8 @@ static void pcistub_device_release(struct kref *kref)
+@@ -105,7 +214,8 @@ static void pcistub_device_release(struct kref *kref)
  	/* Call the reset function which does not take lock as this
  	 * is called from "unbind" which takes a device_lock mutex.
  	 */
 -	__pci_reset_function_locked(dev);
 +	__pcistub_reset_function(psdev->dev);
 +
- 	if (pci_load_and_free_saved_state(dev, &dev_data->pci_saved_state))
+ 	if (dev_data &&
+ 	    pci_load_and_free_saved_state(dev, &dev_data->pci_saved_state))
  		dev_info(&dev->dev, "Could not reload PCI state\n");
- 	else
-@@ -281,7 +391,7 @@ void pcistub_put_pci_dev(struct pci_dev *dev)
+@@ -284,7 +394,7 @@ void pcistub_put_pci_dev(struct pci_dev *dev)
  	 * (so it's ready for the next domain)
  	 */
  	device_lock_assert(&dev->dev);
@@ -168,7 +168,7 @@ index 258b7c3..00197ad 100644
  
  	dev_data = pci_get_drvdata(dev);
  	ret = pci_load_saved_state(dev, dev_data->pci_saved_state);
-@@ -415,7 +525,7 @@ static int pcistub_init_device(struct pci_dev *dev)
+@@ -418,7 +528,7 @@ static int pcistub_init_device(struct pci_dev *dev)
  		dev_err(&dev->dev, "Could not store PCI conf saved state!\n");
  	else {
  		dev_dbg(&dev->dev, "resetting (FLR, D3, etc) the device\n");
@@ -177,18 +177,20 @@ index 258b7c3..00197ad 100644
  		pci_restore_state(dev);
  	}
  	/* Now disable the device (this also ensures some private device
-@@ -424,6 +534,10 @@ static int pcistub_init_device(struct pci_dev *dev)
+@@ -427,6 +537,12 @@ static int pcistub_init_device(struct pci_dev *dev)
  	dev_dbg(&dev->dev, "reset device\n");
  	xen_pcibk_reset_device(dev);
  
 +	err = pcistub_try_create_reset_file(dev);
-+	if (err < 0)
++	if (err < 0) {
++		pci_load_and_free_saved_state(dev, &dev_data->pci_saved_state);
 +		goto config_release;
++	}
 +
  	pci_set_dev_assigned(dev);
  	return 0;
  
-@@ -551,6 +665,8 @@ static void pcistub_remove(struct pci_dev *dev)
+@@ -604,6 +720,8 @@ static void pcistub_remove(struct pci_dev *dev)
  
  	dev_dbg(&dev->dev, "removing\n");
  
@@ -198,10 +200,10 @@ index 258b7c3..00197ad 100644
  
  	xen_pcibk_config_quirk_release(dev);
 diff --git a/drivers/xen/xen-pciback/pciback.h b/drivers/xen/xen-pciback/pciback.h
-index 4d529f3..e9c7534 100644
+index 263c059..1a92ec4 100644
 --- a/drivers/xen/xen-pciback/pciback.h
 +++ b/drivers/xen/xen-pciback/pciback.h
-@@ -43,6 +43,7 @@ struct xen_pcibk_device {
+@@ -44,6 +44,7 @@ struct xen_pcibk_device {
  struct xen_pcibk_dev_data {
  	struct list_head config_fields;
  	struct pci_saved_state *pci_saved_state;

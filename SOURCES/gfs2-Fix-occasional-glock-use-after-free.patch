@@ -1,0 +1,149 @@
+gfs2: Fix occasional glock use-after-free
+
+Each gfs2_bufdata stores a reference to a glock but the reference count
+isn't incremented. This causes an occasional use-after-free of the
+glock. Fix by taking a reference on the glock during allocation and
+dropping it when freeing.
+
+Found by KASAN:
+
+BUG: KASAN: use-after-free in revoke_lo_after_commit+0x8e/0xe0 [gfs2]
+Write of size 4 at addr ffff88801aff6134 by task kworker/0:2H/20371
+
+CPU: 0 PID: 20371 Comm: kworker/0:2H Tainted: G           O      4.19.0+0 #1
+Hardware name: Dell Inc. PowerEdge R805/0D456H, BIOS 4.2.1 04/14/2010
+Workqueue: glock_workqueue glock_work_func [gfs2]
+Call Trace:
+ dump_stack+0x71/0xab
+ print_address_description+0x6a/0x270
+ kasan_report+0x258/0x380
+ ? revoke_lo_after_commit+0x8e/0xe0 [gfs2]
+ revoke_lo_after_commit+0x8e/0xe0 [gfs2]
+ gfs2_log_flush+0x511/0xa70 [gfs2]
+ ? gfs2_log_shutdown+0x1f0/0x1f0 [gfs2]
+ ? __brelse+0x48/0x50
+ ? gfs2_log_commit+0x4de/0x6e0 [gfs2]
+ ? gfs2_trans_end+0x18d/0x340 [gfs2]
+ gfs2_ail_empty_gl+0x1ab/0x1c0 [gfs2]
+ ? inode_go_dump+0xe0/0xe0 [gfs2]
+ ? inode_go_sync+0xe4/0x220 [gfs2]
+ inode_go_sync+0xe4/0x220 [gfs2]
+ do_xmote+0x12b/0x290 [gfs2]
+ glock_work_func+0x6f/0x160 [gfs2]
+ process_one_work+0x461/0x790
+ worker_thread+0x69/0x6b0
+ ? process_one_work+0x790/0x790
+ kthread+0x1ae/0x1d0
+ ? kthread_create_worker_on_cpu+0xc0/0xc0
+ ret_from_fork+0x22/0x40
+
+Allocated by task 20805:
+ kasan_kmalloc+0xa0/0xd0
+ kmem_cache_alloc+0xb5/0x1b0
+ gfs2_glock_get+0x14b/0x620 [gfs2]
+ gfs2_inode_lookup+0x20c/0x640 [gfs2]
+ gfs2_dir_search+0x150/0x180 [gfs2]
+ gfs2_lookupi+0x272/0x360 [gfs2]
+ __gfs2_lookup+0x8b/0x1d0 [gfs2]
+ gfs2_atomic_open+0x77/0x100 [gfs2]
+ path_openat+0x1454/0x1c10
+ do_filp_open+0x124/0x1d0
+ do_sys_open+0x213/0x2c0
+ do_syscall_64+0x69/0x160
+ entry_SYSCALL_64_after_hwframe+0x44/0xa9
+
+Freed by task 0:
+ __kasan_slab_free+0x130/0x180
+ kmem_cache_free+0x78/0x1e0
+ rcu_process_callbacks+0x2ad/0x6c0
+ __do_softirq+0x111/0x38c
+
+The buggy address belongs to the object at ffff88801aff6040
+ which belongs to the cache gfs2_glock(aspace) of size 560
+The buggy address is located 244 bytes inside of
+ 560-byte region [ffff88801aff6040, ffff88801aff6270)
+...
+
+Signed-off-by: Ross Lagerwall <ross.lagerwall@citrix.com>
+diff --git a/fs/gfs2/aops.c b/fs/gfs2/aops.c
+index 31e8270d0b26..4f1e0a40844d 100644
+--- a/fs/gfs2/aops.c
++++ b/fs/gfs2/aops.c
+@@ -868,9 +868,8 @@ int gfs2_releasepage(struct page *page, gfp_t gfp_mask)
+ 			gfs2_assert_warn(sdp, bd->bd_bh == bh);
+ 			if (!list_empty(&bd->bd_list))
+ 				list_del_init(&bd->bd_list);
+-			bd->bd_bh = NULL;
+ 			bh->b_private = NULL;
+-			kmem_cache_free(gfs2_bufdata_cachep, bd);
++			gfs2_free_bufdata(bd);
+ 		}
+ 
+ 		bh = bh->b_this_page;
+diff --git a/fs/gfs2/lops.c b/fs/gfs2/lops.c
+index f2567f958d00..429366964c9e 100644
+--- a/fs/gfs2/lops.c
++++ b/fs/gfs2/lops.c
+@@ -664,7 +664,7 @@ static void revoke_lo_after_commit(struct gfs2_sbd *sdp, struct gfs2_trans *tr)
+ 		gl = bd->bd_gl;
+ 		atomic_dec(&gl->gl_revokes);
+ 		clear_bit(GLF_LFLUSH, &gl->gl_flags);
+-		kmem_cache_free(gfs2_bufdata_cachep, bd);
++		gfs2_free_bufdata(bd);
+ 	}
+ }
+ 
+diff --git a/fs/gfs2/meta_io.c b/fs/gfs2/meta_io.c
+index be9c0bf697fe..868caa0eb104 100644
+--- a/fs/gfs2/meta_io.c
++++ b/fs/gfs2/meta_io.c
+@@ -355,7 +355,7 @@ void gfs2_remove_from_journal(struct buffer_head *bh, int meta)
+ 			gfs2_trans_add_revoke(sdp, bd);
+ 		} else if (was_pinned) {
+ 			bh->b_private = NULL;
+-			kmem_cache_free(gfs2_bufdata_cachep, bd);
++			gfs2_free_bufdata(bd);
+ 		}
+ 		spin_unlock(&sdp->sd_ail_lock);
+ 	}
+diff --git a/fs/gfs2/trans.c b/fs/gfs2/trans.c
+index 064c9a0ef046..990f83176cfe 100644
+--- a/fs/gfs2/trans.c
++++ b/fs/gfs2/trans.c
+@@ -135,9 +135,16 @@ static struct gfs2_bufdata *gfs2_alloc_bufdata(struct gfs2_glock *gl,
+ 	bd->bd_ops = lops;
+ 	INIT_LIST_HEAD(&bd->bd_list);
+ 	bh->b_private = bd;
++	gfs2_glock_hold(gl);
+ 	return bd;
+ }
+ 
++void gfs2_free_bufdata(struct gfs2_bufdata *bd)
++{
++	gfs2_glock_put(bd->bd_gl);
++	kmem_cache_free(gfs2_bufdata_cachep, bd);
++}
++
+ /**
+  * gfs2_trans_add_data - Add a databuf to the transaction.
+  * @gl: The inode glock associated with the buffer
+@@ -266,7 +273,7 @@ void gfs2_trans_add_unrevoke(struct gfs2_sbd *sdp, u64 blkno, unsigned int len)
+ 			list_del_init(&bd->bd_list);
+ 			gfs2_assert_withdraw(sdp, sdp->sd_log_num_revoke);
+ 			sdp->sd_log_num_revoke--;
+-			kmem_cache_free(gfs2_bufdata_cachep, bd);
++			gfs2_free_bufdata(bd);
+ 			tr->tr_num_revoke_rm++;
+ 			if (--n == 0)
+ 				break;
+diff --git a/fs/gfs2/trans.h b/fs/gfs2/trans.h
+index ad70087d0597..276ddca7bbe9 100644
+--- a/fs/gfs2/trans.h
++++ b/fs/gfs2/trans.h
+@@ -46,4 +46,6 @@ extern void gfs2_trans_add_meta(struct gfs2_glock *gl, struct buffer_head *bh);
+ extern void gfs2_trans_add_revoke(struct gfs2_sbd *sdp, struct gfs2_bufdata *bd);
+ extern void gfs2_trans_add_unrevoke(struct gfs2_sbd *sdp, u64 blkno, unsigned int len);
+ 
++void gfs2_free_bufdata(struct gfs2_bufdata *bd);
++
+ #endif /* __TRANS_DOT_H__ */

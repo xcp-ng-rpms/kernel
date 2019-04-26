@@ -1,0 +1,28 @@
+From 8fb6e723073f316c81ee23ceee3b4dfcb85b0ef6 Mon Sep 17 00:00:00 2001
+From: Zhao Yan <yan.y.zhao@intel.com>
+Date: Sun, 22 Jul 2018 20:19:10 -0400
+Subject: [PATCH 40/45] drm/i915/gvt: migration: copy vregs on vreg load
+
+after virtualizing mmio write, need to copy vreg again, because some
+mmios got rewritten during virtualiation write.
+
+Signed-off-by: Zhao Yan <yan.y.zhao@intel.com>
+---
+ drivers/gpu/drm/i915/gvt/migrate.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/gpu/drm/i915/gvt/migrate.c b/drivers/gpu/drm/i915/gvt/migrate.c
+index 57b67d7..786e9aa 100644
+--- a/drivers/gpu/drm/i915/gvt/migrate.c
++++ b/drivers/gpu/drm/i915/gvt/migrate.c
+@@ -543,6 +543,7 @@ static int vreg_load(const struct gvt_migration_obj_t *obj, u32 size)
+ 		MIG_VREG_RESTORE(vgpu,
+ 			i915_mmio_reg_offset(RING_HWS_PGA(engine->mmio_base)));
+ 
++	memcpy(dest, obj->img + obj->offset, n_transfer);
+ 	return n_transfer;
+ }
+ 
+-- 
+2.7.4
+

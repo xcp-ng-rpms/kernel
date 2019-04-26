@@ -1,0 +1,36 @@
+From 0b81cd036b8cac7189874190cbfefc9ef8e9308d Mon Sep 17 00:00:00 2001
+From: Yulei Zhang <yulei.zhang@intel.com>
+Date: Fri, 11 May 2018 16:24:07 +0800
+Subject: [PATCH 32/45] drm/i915/gvt: Fix xengt opregion handling in migration
+
+opregion will be allocated when create the vgpu instance, will
+reuse the opregion instead of ceating a new one after migrate.
+
+Signed-off-by: Yulei Zhang <yulei.zhang@intel.com>
+---
+ drivers/gpu/drm/i915/gvt/migrate.c | 9 ++++++---
+ 1 file changed, 6 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/gpu/drm/i915/gvt/migrate.c b/drivers/gpu/drm/i915/gvt/migrate.c
+index ea728bc..a10117e 100644
+--- a/drivers/gpu/drm/i915/gvt/migrate.c
++++ b/drivers/gpu/drm/i915/gvt/migrate.c
+@@ -401,9 +401,12 @@ static int opregion_load(const struct gvt_migration_obj_t *obj, u32 size)
+ 		size);
+ 		return n_transfer;
+ 	} else {
+-		vgpu_opregion(vgpu)->va = (void *)__get_free_pages(GFP_KERNEL |
+-			__GFP_ZERO,
+-			get_order(INTEL_GVT_OPREGION_SIZE));
++		if (vgpu_opregion(vgpu)->va == NULL) {
++			vgpu_opregion(vgpu)->va = (void *)__get_free_pages(GFP_KERNEL |
++				__GFP_ZERO,
++				get_order(INTEL_GVT_OPREGION_SIZE));
++		}
++
+ 		n_transfer = obj->region.size;
+ 		memcpy(vgpu_opregion(vgpu)->va, obj->img + obj->offset, n_transfer);
+ 	}
+-- 
+2.7.4
+

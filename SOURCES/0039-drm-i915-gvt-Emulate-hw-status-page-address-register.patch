@@ -1,0 +1,33 @@
+From 59d37ee73f95b1d74d7bb9727fe1a2ec8b30f570 Mon Sep 17 00:00:00 2001
+From: Zhao Yan <yan.y.zhao@intel.com>
+Date: Tue, 17 Jul 2018 01:40:13 -0400
+Subject: [PATCH 39/45] drm/i915/gvt: Emulate hw status page address register
+ restore for migration
+
+In vGPU restore phase during live migration, emulate the hw status page
+address register write to setup proper hw status page for target vGPU.
+
+Signed-off-by: Zhao Yan <yan.y.zhao@intel.com>
+---
+ drivers/gpu/drm/i915/gvt/migrate.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/drivers/gpu/drm/i915/gvt/migrate.c b/drivers/gpu/drm/i915/gvt/migrate.c
+index 621240c..57b67d7 100644
+--- a/drivers/gpu/drm/i915/gvt/migrate.c
++++ b/drivers/gpu/drm/i915/gvt/migrate.c
+@@ -538,6 +538,11 @@ static int vreg_load(const struct gvt_migration_obj_t *obj, u32 size)
+ 	for_each_engine(engine, dev_priv, id)
+ 		MIG_VREG_RESTORE(vgpu, i915_mmio_reg_offset(RING_MODE_GEN7(engine)));
+ 
++	//restore hw status page for variable to keep it in host
++	for_each_engine(engine, dev_priv, id)
++		MIG_VREG_RESTORE(vgpu,
++			i915_mmio_reg_offset(RING_HWS_PGA(engine->mmio_base)));
++
+ 	return n_transfer;
+ }
+ 
+-- 
+2.7.4
+

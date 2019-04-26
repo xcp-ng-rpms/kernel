@@ -1,0 +1,35 @@
+From adb4241f3ed4368ae62493534a976b6bde99bd54 Mon Sep 17 00:00:00 2001
+From: Xiong Zhang <xiong.y.zhang@intel.com>
+Date: Wed, 17 May 2017 07:53:04 +0800
+Subject: [PATCH 09/45] drm/i915/gvt: Don't output error message when DomU max
+ gfn don't align to 1M
+
+Currently XenGT couldn't make sure DomU max gfn is aligned to 1MB, as
+xl use xc_core_arch_get_scratch_gpfn() to allocate a scratch gfn,
+which just increment DomU max gfn.
+
+Fix Bug: 1578
+
+Signed-off-by: Xiong Zhang <xiong.y.zhang@intel.com>
+---
+ drivers/gpu/drm/i915/gvt/xengt.c | 4 ----
+ 1 file changed, 4 deletions(-)
+
+diff --git a/drivers/gpu/drm/i915/gvt/xengt.c b/drivers/gpu/drm/i915/gvt/xengt.c
+index 00ae135..91a2ee8 100644
+--- a/drivers/gpu/drm/i915/gvt/xengt.c
++++ b/drivers/gpu/drm/i915/gvt/xengt.c
+@@ -822,10 +822,6 @@ static int xengt_hvm_vmem_init(struct intel_vgpu *vgpu)
+ 	info->vmem_sz = xen_get_max_gpfn(info->vm_id);
+ 	info->vmem_sz <<= PAGE_SHIFT;
+ 
+-	/* warn on non-1MB-aligned memory layout of HVM */
+-	if (info->vmem_sz & ~VMEM_BUCK_MASK)
+-		gvt_err("VM%d: vmem_sz=0x%llx!\n", info->vm_id, info->vmem_sz);
+-
+ 	nr_low_1mb_bkt = VMEM_1MB >> PAGE_SHIFT;
+ 	nr_high_bkt = (info->vmem_sz >> VMEM_BUCK_SHIFT);
+ 	nr_high_4k_bkt = (info->vmem_sz >> PAGE_SHIFT);
+-- 
+2.7.4
+

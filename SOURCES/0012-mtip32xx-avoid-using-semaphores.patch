@@ -1,0 +1,57 @@
+From e4025e46f093d4549d3043c2c54d444cec480d2b Mon Sep 17 00:00:00 2001
+From: Arnd Bergmann <arnd@arndb.de>
+Date: Mon, 10 Dec 2018 22:34:39 +0100
+Subject: [PATCH 12/12] mtip32xx: avoid using semaphores
+
+The "cmd_slot_unal" semaphore is never used in a blocking way
+but only as an atomic counter. Change the code to using
+atomic_dec_if_positive() as a better API.
+
+Signed-off-by: Arnd Bergmann <arnd@arndb.de>
+Signed-off-by: Jens Axboe <axboe@kernel.dk>
+diff --git a/drivers/block/mtip32xx/mtip32xx.c b/drivers/block/mtip32xx/mtip32xx.c
+index 73f89f2a4a5e..1a76311e1c6c 100644
+--- a/drivers/block/mtip32xx/mtip32xx.c
++++ b/drivers/block/mtip32xx/mtip32xx.c
+@@ -2680,7 +2680,7 @@ static void mtip_softirq_done_fn(struct request *rq)
+ 							cmd->direction);
+ 
+ 	if (unlikely(cmd->unaligned))
+-		up(&dd->port->cmd_slot_unal);
++		atomic_inc(&dd->port->cmd_slot_unal);
+ 
+ 	blk_mq_end_request(rq, cmd->status);
+ }
+@@ -2991,7 +2991,7 @@ static int mtip_hw_init(struct driver_data *dd)
+ 	else
+ 		dd->unal_qdepth = 0;
+ 
+-	sema_init(&dd->port->cmd_slot_unal, dd->unal_qdepth);
++	atomic_set(&dd->port->cmd_slot_unal, dd->unal_qdepth);
+ 
+ 	/* Spinlock to prevent concurrent issue */
+ 	for (i = 0; i < MTIP_MAX_SLOT_GROUPS; i++)
+@@ -3534,7 +3534,7 @@ static bool mtip_check_unal_depth(struct blk_mq_hw_ctx *hctx,
+ 			cmd->unaligned = 1;
+ 	}
+ 
+-	if (cmd->unaligned && down_trylock(&dd->port->cmd_slot_unal))
++	if (cmd->unaligned && atomic_dec_if_positive(&dd->port->cmd_slot_unal) >= 0)
+ 		return true;
+ 
+ 	return false;
+diff --git a/drivers/block/mtip32xx/mtip32xx.h b/drivers/block/mtip32xx/mtip32xx.h
+index c33f8c3d9fb4..abce25f27f57 100644
+--- a/drivers/block/mtip32xx/mtip32xx.h
++++ b/drivers/block/mtip32xx/mtip32xx.h
+@@ -433,8 +433,8 @@ struct mtip_port {
+ 	 */
+ 	unsigned long ic_pause_timer;
+ 
+-	/* Semaphore to control queue depth of unaligned IOs */
+-	struct semaphore cmd_slot_unal;
++	/* Counter to control queue depth of unaligned IOs */
++	atomic_t cmd_slot_unal;
+ 
+ 	/* Spinlock for working around command-issue bug. */
+ 	spinlock_t cmd_issue_lock[MTIP_MAX_SLOT_GROUPS];

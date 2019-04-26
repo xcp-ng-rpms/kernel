@@ -1,0 +1,65 @@
+From 673df94119c07eeab20a7eeeaa358e4be8415c60 Mon Sep 17 00:00:00 2001
+From: Yulei Zhang <yulei.zhang@intel.com>
+Date: Sat, 27 May 2017 12:25:20 +0800
+Subject: [PATCH 13/45] drm/i915/gvt: Apply g2h adjust for GTT mmio access
+
+Apply guest to host gma conversion while guest try to access the
+GTT mmio registers, as after enable live migration the host gma
+will be changed due to the resourece re-allocation, but guest
+gma should be remaining unchanged, thus g2h conversion is request
+for it.
+
+Signed-off-by: Yulei Zhang <yulei.zhang@intel.com>
+Signed-off-by: Zhenyu Wang <zhenyuw@linux.intel.com>
+---
+ drivers/gpu/drm/i915/gvt/gtt.c | 12 +++++-------
+ 1 file changed, 5 insertions(+), 7 deletions(-)
+
+diff --git a/drivers/gpu/drm/i915/gvt/gtt.c b/drivers/gpu/drm/i915/gvt/gtt.c
+index a1487fd..6cdc204 100644
+--- a/drivers/gpu/drm/i915/gvt/gtt.c
++++ b/drivers/gpu/drm/i915/gvt/gtt.c
+@@ -66,8 +66,7 @@ bool intel_gvt_ggtt_validate_range(struct intel_vgpu *vgpu, u64 addr, u32 size)
+ /* translate a guest gmadr to host gmadr */
+ int intel_gvt_ggtt_gmadr_g2h(struct intel_vgpu *vgpu, u64 g_addr, u64 *h_addr)
+ {
+-	if (WARN(!vgpu_gmadr_is_valid(vgpu, g_addr),
+-		 "invalid guest gmadr %llx\n", g_addr))
++	if (!vgpu_gmadr_is_valid(vgpu, g_addr))
+ 		return -EACCES;
+ 
+ 	if (vgpu_gmadr_is_aperture(vgpu, g_addr))
+@@ -2165,7 +2164,8 @@ static int emulate_ggtt_mmio_write(struct intel_vgpu *vgpu, unsigned int off,
+ 	struct intel_vgpu_mm *ggtt_mm = vgpu->gtt.ggtt_mm;
+ 	struct intel_gvt_gtt_pte_ops *ops = gvt->gtt.pte_ops;
+ 	unsigned long g_gtt_index = off >> info->gtt_entry_size_shift;
+-	unsigned long gma, gfn;
++	unsigned long gfn;
++	unsigned long h_gtt_index;
+ 	struct intel_gvt_gtt_entry e, m;
+ 	dma_addr_t dma_addr;
+ 	int ret;
+@@ -2173,10 +2173,8 @@ static int emulate_ggtt_mmio_write(struct intel_vgpu *vgpu, unsigned int off,
+ 	if (bytes != 4 && bytes != 8)
+ 		return -EINVAL;
+ 
+-	gma = g_gtt_index << I915_GTT_PAGE_SHIFT;
+-
+ 	/* the VM may configure the whole GM space when ballooning is used */
+-	if (!vgpu_gmadr_is_valid(vgpu, gma))
++	if (intel_gvt_ggtt_index_g2h(vgpu, g_gtt_index, &h_gtt_index))
+ 		return 0;
+ 
+ 	ggtt_get_guest_entry(ggtt_mm, &e, g_gtt_index);
+@@ -2271,7 +2269,7 @@ static int emulate_ggtt_mmio_write(struct intel_vgpu *vgpu, unsigned int off,
+ 	}
+ 
+ out:
+-	ggtt_set_host_entry(ggtt_mm, &m, g_gtt_index);
++	ggtt_set_host_entry(ggtt_mm, &m, h_gtt_index);
+ 	ggtt_invalidate(gvt->dev_priv);
+ 	ggtt_set_guest_entry(ggtt_mm, &e, g_gtt_index);
+ 	return 0;
+-- 
+2.7.4
+

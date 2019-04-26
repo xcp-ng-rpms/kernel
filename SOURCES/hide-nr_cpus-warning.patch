@@ -9,35 +9,35 @@ Example warning:
 [ 0.000000] ACPI: NR_CPUS/possible_cpus limit of 24 reached. Processor 27/0x3c ignored.
 
 diff --git a/arch/x86/kernel/apic/apic.c b/arch/x86/kernel/apic/apic.c
-index a3e1f84..8cc649d 100644
+index 2e64178..cebaa2d 100644
 --- a/arch/x86/kernel/apic/apic.c
 +++ b/arch/x86/kernel/apic/apic.c
-@@ -2049,9 +2049,10 @@ int generic_processor_info(int apicid, int version)
+@@ -2198,9 +2198,10 @@ int generic_processor_info(int apicid, int version)
  	if (num_processors >= nr_cpu_ids) {
  		int thiscpu = max + disabled_cpus;
  
--		pr_warning(
--			"ACPI: NR_CPUS/possible_cpus limit of %i reached."
--			"  Processor %d/0x%x ignored.\n", max, thiscpu, apicid);
+-		pr_warning("APIC: NR_CPUS/possible_cpus limit of %i "
+-			   "reached. Processor %d/0x%x ignored.\n",
+-			   max, thiscpu, apicid);
 +		if (!xen_initial_domain())
-+			pr_warn(
-+				"ACPI: NR_CPUS/possible_cpus limit of %i reached."
-+				"  Processor %d/0x%x ignored.\n", max, thiscpu, apicid);
++			pr_warning("APIC: NR_CPUS/possible_cpus limit of %i "
++				   "reached. Processor %d/0x%x ignored.\n",
++				   max, thiscpu, apicid);
  
  		disabled_cpus++;
  		return -EINVAL;
 diff --git a/arch/x86/kernel/smpboot.c b/arch/x86/kernel/smpboot.c
-index fbabe4f..0ff18f2 100644
+index 5ebb0db..21ac2d3 100644
 --- a/arch/x86/kernel/smpboot.c
 +++ b/arch/x86/kernel/smpboot.c
-@@ -1303,8 +1303,9 @@ __init void prefill_possible_map(void)
+@@ -1467,8 +1467,9 @@ __init void prefill_possible_map(void)
  
  	/* nr_cpu_ids could be reduced via nr_cpus= */
  	if (possible > nr_cpu_ids) {
--		pr_warn("%d Processors exceeds NR_CPUS limit of %d\n",
+-		pr_warn("%d Processors exceeds NR_CPUS limit of %u\n",
 -			possible, nr_cpu_ids);
 +		if (!xen_initial_domain())
-+			pr_warn("%d Processors exceeds NR_CPUS limit of %d\n",
++			pr_warn("%d Processors exceeds NR_CPUS limit of %u\n",
 +				possible, nr_cpu_ids);
  		possible = nr_cpu_ids;
  	}

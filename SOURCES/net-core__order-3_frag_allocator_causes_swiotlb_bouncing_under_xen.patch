@@ -21,11 +21,11 @@ driver domains, and there are lots of situations where this is not possible.
 Signed-off-by: Zoltan Kiss <zoltan.kiss@citrix.com>
 
 diff --git a/net/core/sock.c b/net/core/sock.c
-index 0d91f7d..da6a252 100644
+index 68d08ed5521e..05160c26ea3d 100644
 --- a/net/core/sock.c
 +++ b/net/core/sock.c
-@@ -1916,7 +1916,7 @@ int sock_cmsg_send(struct sock *sk, struct msghdr *msg,
- EXPORT_SYMBOL(sock_cmsg_send);
+@@ -2168,7 +2168,7 @@ static void sk_leave_memory_pressure(struct sock *sk)
+ }
  
  /* On 32bit arches, an skb frag is limited to 2^15 */
 -#define SKB_FRAG_PAGE_ORDER	get_order(32768)
