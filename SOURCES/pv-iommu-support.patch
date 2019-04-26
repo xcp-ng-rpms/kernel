@@ -1,16 +1,16 @@
 diff --git a/arch/x86/include/asm/xen/hypercall.h b/arch/x86/include/asm/xen/hypercall.h
-index c9540e6..28a0714 100644
+index 4028744..9ba479e 100644
 --- a/arch/x86/include/asm/xen/hypercall.h
 +++ b/arch/x86/include/asm/xen/hypercall.h
-@@ -47,6 +47,7 @@
+@@ -49,6 +49,7 @@
  #include <xen/interface/xen.h>
  #include <xen/interface/sched.h>
  #include <xen/interface/physdev.h>
 +#include <xen/interface/pv-iommu.h>
  #include <xen/interface/platform.h>
  #include <xen/interface/xen-mca.h>
- #include <xen/interface/domctl.h>
-@@ -350,6 +351,12 @@ HYPERVISOR_multicall(void *call_list, uint32_t nr_calls)
+ 
+@@ -322,6 +323,12 @@
  }
  
  static inline int
@@ -23,23 +23,11 @@ index c9540e6..28a0714 100644
  HYPERVISOR_update_va_mapping(unsigned long va, pte_t new_val,
  			     unsigned long flags)
  {
-diff --git a/arch/x86/xen/p2m.c b/arch/x86/xen/p2m.c
-index cab9f76..71eeee8 100644
---- a/arch/x86/xen/p2m.c
-+++ b/arch/x86/xen/p2m.c
-@@ -700,7 +700,6 @@ bool set_phys_to_machine(unsigned long pfn, unsigned long mfn)
- 
- 		return __set_phys_to_machine(pfn, mfn);
- 	}
--
- 	return true;
- }
- 
 diff --git a/arch/x86/xen/pci-swiotlb-xen.c b/arch/x86/xen/pci-swiotlb-xen.c
-index a5d180a..b7df210 100644
+index 37c6056..125cc0f7 100644
 --- a/arch/x86/xen/pci-swiotlb-xen.c
 +++ b/arch/x86/xen/pci-swiotlb-xen.c
-@@ -2,21 +2,77 @@
+@@ -2,21 +2,232 @@
  
  #include <linux/dma-mapping.h>
  #include <linux/pci.h>
@@ -99,32 +87,25 @@ index a5d180a..b7df210 100644
 +
 +int xen_pv_iommu_map_sg_attrs(struct device *hwdev, struct scatterlist *sgl,
 +			 int nelems, enum dma_data_direction dir,
-+			 struct dma_attrs *attrs);
++			 unsigned long attrs);
 +
 +dma_addr_t xen_pv_iommu_map_page(struct device *dev, struct page *page,
 +				unsigned long offset, size_t size,
 +				enum dma_data_direction dir,
-+				struct dma_attrs *attrs);
++				unsigned long attrs);
 +
 +void *xen_pv_iommu_alloc_coherent(struct device *hwdev, size_t size,
 +					dma_addr_t *dma_handle, gfp_t flags,
-+					struct dma_attrs *attrs);
++					unsigned long attrs);
 +
 +void xen_pv_iommu_free_coherent(struct device *dev, size_t size,
 +				      void *vaddr, dma_addr_t dma_addr,
-+				      struct dma_attrs *attrs);
++				      unsigned long attrs);
 +
- 
- static struct dma_map_ops xen_swiotlb_dma_ops = {
- 	.mapping_error = xen_swiotlb_dma_mapping_error,
-@@ -34,6 +90,165 @@ static struct dma_map_ops xen_swiotlb_dma_ops = {
- 	.get_required_mask = xen_swiotlb_get_required_mask,
- };
- 
 +static struct dma_map_ops xen_pv_iommu_dma_ops = {
 +	.mapping_error = swiotlb_dma_mapping_error,
-+	.alloc = x86_swiotlb_alloc_coherent,
-+	.free = x86_swiotlb_free_coherent,
++	.alloc = swiotlb_alloc,
++	.free = swiotlb_free,
 +	.map_sg = xen_pv_iommu_map_sg_attrs,
 +	.map_page = xen_pv_iommu_map_page,
 +	.unmap_sg = swiotlb_unmap_sg_attrs,
@@ -203,9 +184,6 @@ index a5d180a..b7df210 100644
 +	return res;
 +}
 +
-+
-+
-+
 +static int pv_iommu_setup(void *data)
 +{
 +	int pfn, count = 0;
@@ -279,11 +257,10 @@ index a5d180a..b7df210 100644
 +	pv_iommu_1_to_1_setup_complete = true;
 +	return 0;
 +}
-+
+ 
  /*
   * pci_xen_swiotlb_detect - set xen_swiotlb to 1 if necessary
-  *
-@@ -42,10 +257,96 @@ static struct dma_map_ops xen_swiotlb_dma_ops = {
+@@ -26,10 +237,96 @@
   */
  int __init pci_xen_swiotlb_detect(void)
  {
@@ -381,7 +358,7 @@ index a5d180a..b7df210 100644
  	/* If running as PV guest, either iommu=soft, or swiotlb=force will
  	 * activate this IOMMU. If running as PV privileged, activate it
  	 * irregardless.
-@@ -70,6 +371,15 @@ int __init pci_xen_swiotlb_detect(void)
+@@ -54,6 +351,15 @@ int __init pci_xen_swiotlb_detect(void)
  	return xen_swiotlb;
  }
  
@@ -397,7 +374,7 @@ index a5d180a..b7df210 100644
  void __init pci_xen_swiotlb_init(void)
  {
  	if (xen_swiotlb) {
-@@ -81,6 +391,16 @@ void __init pci_xen_swiotlb_init(void)
+@@ -65,6 +371,16 @@ void __init pci_xen_swiotlb_init(void)
  		pci_request_acs();
  #endif
  	}
@@ -414,17 +391,17 @@ index a5d180a..b7df210 100644
  }
  
  int pci_xen_swiotlb_init_late(void)
-@@ -107,4 +427,4 @@ EXPORT_SYMBOL_GPL(pci_xen_swiotlb_init_late);
+@@ -91,4 +407,4 @@ int pci_xen_swiotlb_init_late(void)
  IOMMU_INIT_FINISH(pci_xen_swiotlb_detect,
  		  NULL,
  		  pci_xen_swiotlb_init,
 -		  NULL);
 +		  pci_xen_pv_iommu_late_init);
 diff --git a/drivers/xen/Makefile b/drivers/xen/Makefile
-index 84aa7f1..474c32c 100644
+index 5d58370..6db17a6 100644
 --- a/drivers/xen/Makefile
 +++ b/drivers/xen/Makefile
-@@ -27,6 +27,7 @@ obj-$(CONFIG_XEN_SYS_HYPERVISOR)	+= sys-hypervisor.o
+@@ -28,6 +28,7 @@ obj-$(CONFIG_XEN_SYS_HYPERVISOR)	+= sys-hypervisor.o
  obj-$(CONFIG_XEN_PVHVM)			+= platform-pci.o
  obj-$(CONFIG_XEN_TMEM)			+= tmem.o
  obj-$(CONFIG_SWIOTLB_XEN)		+= swiotlb-xen.o
@@ -433,21 +410,20 @@ index 84aa7f1..474c32c 100644
  obj-$(CONFIG_XEN_PCIDEV_BACKEND)	+= xen-pciback/
  obj-$(CONFIG_XEN_PRIVCMD)		+= xen-privcmd.o
 diff --git a/drivers/xen/balloon.c b/drivers/xen/balloon.c
-index 7edb76c..0b29b91 100644
+index 7ab6cae..81218fb 100644
 --- a/drivers/xen/balloon.c
 +++ b/drivers/xen/balloon.c
-@@ -112,6 +112,10 @@ static struct ctl_table xen_root[] = {
+@@ -113,6 +113,9 @@
  
  #endif
  
-+extern int xen_iommu_map_page(unsigned long pfn, unsigned long mfn);
 +extern int xen_iommu_unmap_page(unsigned long pfn);
 +extern dma_addr_t pv_iommu_1_to_1_offset;
 +
  /*
   * Use one extent per PAGE_SIZE to avoid to break down the page into
   * multiple frame.
-@@ -365,6 +369,15 @@ static enum bp_state reserve_additional_memory(void)
+@@ -368,6 +371,15 @@ static enum bp_state reserve_additional_memory(void)
  
  static void xen_online_page(struct page *page)
  {
@@ -463,46 +439,36 @@ index 7edb76c..0b29b91 100644
  	__online_page_set_limits(page);
  
  	mutex_lock(&balloon_mutex);
-@@ -451,12 +464,29 @@ static enum bp_state increase_reservation(unsigned long nr_pages)
+diff --git a/drivers/xen/biomerge.c b/drivers/xen/biomerge.c
+index 55ed80c..bdf57c6 100644
+--- a/drivers/xen/biomerge.c
++++ b/drivers/xen/biomerge.c
+@@ -3,13 +3,23 @@
+ #include <linux/io.h>
+ #include <linux/export.h>
+ #include <xen/page.h>
++#include <xen/swiotlb-xen.h>
  
- 		if (!xen_feature(XENFEAT_auto_translated_physmap)) {
- 			unsigned long pfn = page_to_pfn(page);
-+			int ret;
- 
- 			set_phys_to_machine(pfn, frame_list[i]);
- 
-+			/*
-+			 * Update the IOMMU mapping for this BFN (==
-+			 * PFN) now that we have the new MFN.
-+			 *
-+			 * If this fails, leak the page as its not
-+			 * safe to use it (any DMA will go somewhere
-+			 * unexpected causing memory corruption).
-+			 */
-+			if (pv_iommu_1_to_1_offset) {
-+				ret = xen_iommu_map_page(pfn, frame_list[i]);
-+				if (ret < 0) {
-+					pr_err("leaking pfn %lx (iommu map failed: %d)\n",
-+					       pfn, ret);
-+					continue;
-+				}
-+			}
+ bool xen_biovec_phys_mergeable(const struct bio_vec *vec1,
+ 			       const struct bio_vec *vec2)
+ {
+ #if XEN_PAGE_SIZE == PAGE_SIZE
+-	unsigned long bfn1 = pfn_to_bfn(page_to_pfn(vec1->bv_page));
+-	unsigned long bfn2 = pfn_to_bfn(page_to_pfn(vec2->bv_page));
++	unsigned long pfn1 = page_to_pfn(vec1->bv_page);
++	unsigned long pfn2 = page_to_pfn(vec2->bv_page);
++	unsigned long bfn1, bfn2;
 +
- 			/* Link back into the page tables if not highmem. */
- 			if (!PageHighMem(page)) {
--				int ret;
- 				ret = HYPERVISOR_update_va_mapping(
- 						(unsigned long)__va(pfn << PAGE_SHIFT),
- 						mfn_pte(frame_list[i], PAGE_KERNEL),
-@@ -538,6 +568,8 @@ static enum bp_state decrease_reservation(unsigned long nr_pages, gfp_t gfp)
- 				BUG_ON(ret);
- 			}
- 			__set_phys_to_machine(pfn, INVALID_P2M_ENTRY);
-+			if (pv_iommu_1_to_1_offset)
-+				xen_iommu_unmap_page(pfn);
- 		}
- #endif
- 		list_del(&page->lru);
++	if (!pv_iommu_1_to_1_offset) {
++		bfn1 = pfn_to_bfn(pfn1);
++		bfn2 = pfn_to_bfn(pfn2);
++	} else {
++		bfn1 = pfn1;
++		bfn2 = pfn2;
++	}
+ 
+ 	return bfn1 + PFN_DOWN(vec1->bv_offset + vec1->bv_len) == bfn2;
+ #else
 diff --git a/drivers/xen/ioemu.c b/drivers/xen/ioemu.c
 index 7c89d11..e9a8022 100644
 --- a/drivers/xen/ioemu.c
@@ -557,9 +523,68 @@ index 7c89d11..e9a8022 100644
  EXPORT_SYMBOL(xen_ioemu_inject_msi);
 +EXPORT_SYMBOL(xen_ioemu_map_foreign_gfn_to_bfn);
 +EXPORT_SYMBOL(xen_ioemu_unmap_foreign_gfn_to_bfn);
+diff --git a/drivers/xen/mem-reservation.c b/drivers/xen/mem-reservation.c
+index 3782cf0..1df1ede 100644
+--- a/drivers/xen/mem-reservation.c
++++ b/drivers/xen/mem-reservation.c
+@@ -16,6 +16,10 @@
+ #include <xen/mem-reservation.h>
+ #include <linux/moduleparam.h>
+ 
++extern int xen_iommu_map_page(unsigned long pfn, unsigned long mfn);
++extern int xen_iommu_unmap_page(unsigned long pfn);
++extern dma_addr_t pv_iommu_1_to_1_offset;
++
+ bool __read_mostly xen_scrub_pages = IS_ENABLED(CONFIG_XEN_SCRUB_PAGES_DEFAULT);
+ core_param(xen_scrub_pages, xen_scrub_pages, bool, 0);
+ 
+@@ -35,6 +39,7 @@ void __xenmem_reservation_va_mapping_update(unsigned long count,
+ 	for (i = 0; i < count; i++) {
+ 		struct page *page = pages[i];
+ 		unsigned long pfn = page_to_pfn(page);
++		int ret;
+ 
+ 		BUG_ON(!page);
+ 
+@@ -46,10 +51,24 @@ void __xenmem_reservation_va_mapping_update(unsigned long count,
+ 
+ 		set_phys_to_machine(pfn, frames[i]);
+ 
++		/*
++		 * Update the IOMMU mapping for this BFN (== PFN) now that we
++		 * have the new MFN.
++		 *
++		 * If this fails, leak the page as its not safe to use it (any
++		 * DMA will go somewhere unexpected causing memory corruption).
++		 */
++		if (pv_iommu_1_to_1_offset) {
++			ret = xen_iommu_map_page(pfn, frames[i]);
++			if (ret < 0) {
++				pr_err("leaking pfn %lx (iommu map failed: %d)\n",
++				       pfn, ret);
++				continue;
++			}
++		}
++
+ 		/* Link back into the page tables if not highmem. */
+ 		if (!PageHighMem(page)) {
+-			int ret;
+-
+ 			ret = HYPERVISOR_update_va_mapping(
+ 					(unsigned long)__va(pfn << PAGE_SHIFT),
+ 					mfn_pte(frames[i], PAGE_KERNEL),
+@@ -84,6 +103,8 @@ void __xenmem_reservation_va_mapping_reset(unsigned long count,
+ 			BUG_ON(ret);
+ 		}
+ 		__set_phys_to_machine(pfn, INVALID_P2M_ENTRY);
++		if (pv_iommu_1_to_1_offset)
++			xen_iommu_unmap_page(pfn);
+ 	}
+ }
+ EXPORT_SYMBOL_GPL(__xenmem_reservation_va_mapping_reset);
 diff --git a/drivers/xen/pv-iommu-xen.c b/drivers/xen/pv-iommu-xen.c
 new file mode 100644
-index 0000000..463fe96
+index 0000000..23f84ba
 --- /dev/null
 +++ b/drivers/xen/pv-iommu-xen.c
 @@ -0,0 +1,134 @@
@@ -580,7 +605,7 @@ index 0000000..463fe96
 + */
 +
 +#include <linux/bootmem.h>
-+#include <linux/dma-mapping.h>
++#include <linux/dma-direct.h>
 +#include <linux/export.h>
 +#include <xen/swiotlb-xen.h>
 +#include <asm/swiotlb.h>
@@ -618,7 +643,7 @@ index 0000000..463fe96
 +dma_addr_t xen_pv_iommu_map_page(struct device *dev, struct page *page,
 +				unsigned long offset, size_t size,
 +				enum dma_data_direction dir,
-+				struct dma_attrs *attrs)
++				unsigned long attrs)
 +{
 +	unsigned long p2m_entry = get_phys_to_machine(page_to_pfn(page));
 +
@@ -630,7 +655,7 @@ index 0000000..463fe96
 +		} else {
 +			phys_addr_t map = swiotlb_tbl_map_single(dev, io_tlb_start,
 +							page_to_phys(page) + offset,
-+							size, dir);
++							size, dir, attrs);
 +			trace_swiotlb_bounced(dev, phys, size, 0);
 +			return phys_to_dma(dev, map);
 +		}
@@ -660,7 +685,7 @@ index 0000000..463fe96
 +int
 +xen_pv_iommu_map_sg_attrs(struct device *hwdev, struct scatterlist *sgl,
 +			 int nelems, enum dma_data_direction dir,
-+			 struct dma_attrs *attrs)
++			 unsigned long attrs)
 +{
 +	struct scatterlist *sg;
 +	int i;
@@ -676,7 +701,7 @@ index 0000000..463fe96
 +		/* Check if device can DMA to bus address */
 +		if (!dma_capable(hwdev, dev_addr, sg->length)){
 +			phys_addr_t map = swiotlb_tbl_map_single(hwdev, io_tlb_start,
-+						paddr, sg->length, dir);
++						paddr, sg->length, dir, attrs);
 +			trace_swiotlb_bounced(hwdev, dev_addr, sg->length, 0);
 +			if (map == SWIOTLB_MAP_ERROR) {
 +				/* Don't panic here, we expect map_sg users
@@ -838,7 +863,7 @@ index 0000000..0cc4ecc
 + * End:
 + */
 diff --git a/include/xen/interface/xen.h b/include/xen/interface/xen.h
-index 24a5e04..3d8a610 100644
+index 8bfb242..484058e 100644
 --- a/include/xen/interface/xen.h
 +++ b/include/xen/interface/xen.h
 @@ -93,6 +93,7 @@
@@ -850,10 +875,10 @@ index 24a5e04..3d8a610 100644
   * VIRTUAL INTERRUPTS
   *
 diff --git a/include/xen/ioemu.h b/include/xen/ioemu.h
-index 95eb4e7..21ca898 100644
+index 95eb4e7..fc44d772 100644
 --- a/include/xen/ioemu.h
 +++ b/include/xen/ioemu.h
-@@ -29,7 +29,9 @@
+@@ -29,7 +29,10 @@
   */
  #ifndef _XEN_IOEMU_H
  #define _XEN_IOEMU_H
@@ -861,24 +886,25 @@ index 95eb4e7..21ca898 100644
  
  int xen_ioemu_inject_msi(domid_t domid, uint64_t addr, uint32_t data);
 +int xen_ioemu_map_foreign_gfn_to_bfn(struct pv_iommu_op *ops, int count);
++int xen_ioemu_unmap_foreign_gfn_to_bfn(struct pv_iommu_op *ops, int count);
  
  #endif /* #ifndef _XEN_IOEMU_H */
 diff --git a/include/xen/swiotlb-xen.h b/include/xen/swiotlb-xen.h
-index 6408888..e3f4835 100644
+index ff66b40..5d39bf4 100644
 --- a/include/xen/swiotlb-xen.h
 +++ b/include/xen/swiotlb-xen.h
-@@ -62,4 +62,6 @@ xen_swiotlb_set_dma_mask(struct device *dev, u64 dma_mask);
+@@ -10,4 +10,6 @@
  extern u64
  xen_swiotlb_get_required_mask(struct device *dev);
  
 +extern dma_addr_t pv_iommu_1_to_1_offset;
 +
  #endif /* __LINUX_SWIOTLB_XEN_H */
-diff --git a/lib/swiotlb.c b/lib/swiotlb.c
-index 76f29ec..1ff07fc 100644
---- a/lib/swiotlb.c
-+++ b/lib/swiotlb.c
-@@ -60,7 +60,10 @@ int swiotlb_force;
+diff --git a/kernel/dma/swiotlb.c b/kernel/dma/swiotlb.c
+index 4f8a6db..530b0c3 100644
+--- a/kernel/dma/swiotlb.c
++++ b/kernel/dma/swiotlb.c
+@@ -64,7 +64,10 @@
   * swiotlb_tbl_sync_single_*, to see if the memory was in fact allocated by this
   * API.
   */
@@ -890,3 +916,33 @@ index 76f29ec..1ff07fc 100644
  
  /*
   * The number of IO TLB blocks (in groups of 64) between io_tlb_start and
+diff --git a/kernel/ksysfs.c b/kernel/ksysfs.c
+index 46ba853..c0b63ab 100644
+--- a/kernel/ksysfs.c
++++ b/kernel/ksysfs.c
+@@ -184,6 +184,17 @@ static ssize_t rcu_normal_store(struct kobject *kobj,
+ KERNEL_ATTR_RW(rcu_normal);
+ #endif /* #ifndef CONFIG_TINY_RCU */
+ 
++extern dma_addr_t pv_iommu_1_to_1_offset;
++extern bool pv_iommu_1_to_1_setup_complete;
++
++static ssize_t pv_iommu_ready_show(struct kobject *kobj,
++				  struct kobj_attribute *attr, char *buf)
++{
++	return sprintf(buf, "%u\n", !pv_iommu_1_to_1_offset ||
++                       pv_iommu_1_to_1_setup_complete);
++}
++KERNEL_ATTR_RO(pv_iommu_ready);
++
+ /*
+  * Make /sys/kernel/notes give the raw contents of our kernel .notes section.
+  */
+@@ -231,6 +242,7 @@ static ssize_t notes_read(struct file *filp, struct kobject *kobj,
+ 	&rcu_expedited_attr.attr,
+ 	&rcu_normal_attr.attr,
+ #endif
++	&pv_iommu_ready_attr.attr,
+ 	NULL
+ };
+ 

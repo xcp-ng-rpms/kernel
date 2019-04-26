@@ -1,0 +1,60 @@
+From f4094c1da762f2aeec3ef4d65a27f64dbcb8d5a9 Mon Sep 17 00:00:00 2001
+From: Xiong Zhang <xiong.y.zhang@intel.com>
+Date: Tue, 6 Mar 2018 22:06:12 +0800
+Subject: [PATCH 27/45] drm/i915/gvt/xengt: Impliment
+ mpt->dma_map/unmap_guest_page
+
+Commit b2079a4352a7(drm/i915/gvt: Fix guest vGPU hang caused by very
+high dma setup overhead) add a mandatory mpt interface
+dma_map/unmap_guest_page, xengt should implement it. it has the same
+function as gfn_to_mfn in xengt.
+
+Signed-off-by: Xiong Zhang <xiong.y.zhang@intel.com>
+---
+ drivers/gpu/drm/i915/gvt/xengt.c | 23 +++++++++++++++++++++++
+ 1 file changed, 23 insertions(+)
+
+diff --git a/drivers/gpu/drm/i915/gvt/xengt.c b/drivers/gpu/drm/i915/gvt/xengt.c
+index 4eed86b..effa6e8 100644
+--- a/drivers/gpu/drm/i915/gvt/xengt.c
++++ b/drivers/gpu/drm/i915/gvt/xengt.c
+@@ -1801,6 +1801,27 @@ static unsigned long xengt_gfn_to_pfn(unsigned long handle, unsigned long gfn)
+ 	return pfn;
+ }
+ 
++static int xengt_dma_map_guest_page(unsigned long handle, unsigned long gfn,
++			unsigned long size, dma_addr_t *dma_addr)
++{
++	unsigned long pfn;
++
++	BUG_ON(size != PAGE_SIZE);
++	pfn = xengt_gfn_to_pfn(handle, gfn);
++
++	if (pfn < 0)
++		return -EINVAL;
++
++	*dma_addr = pfn << PAGE_SHIFT;
++
++	return 0;
++}
++
++static void xengt_dma_unmap_guest_page(unsigned long handle,
++			dma_addr_t dma_addr)
++{
++}
++
+ struct intel_gvt_mpt xengt_mpt = {
+ 	//.detect_host = xengt_detect_host,
+ 	.host_init = xengt_host_init,
+@@ -1814,6 +1835,8 @@ struct intel_gvt_mpt xengt_mpt = {
+ 	.read_gpa = xengt_read_gpa,
+ 	.write_gpa = xengt_write_gpa,
+ 	.gfn_to_mfn = xengt_gfn_to_pfn,
++	.dma_map_guest_page = xengt_dma_map_guest_page,
++	.dma_unmap_guest_page = xengt_dma_unmap_guest_page,
+ 	.map_gfn_to_mfn = xengt_map_gfn_to_mfn,
+ 	.set_trap_area = xengt_set_trap_area,
+ };
+-- 
+2.7.4
+

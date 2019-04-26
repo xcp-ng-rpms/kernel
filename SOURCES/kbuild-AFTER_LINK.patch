@@ -1,3 +1,4 @@
+From 5cb256fefb61660da855316ec384128303e6747c Mon Sep 17 00:00:00 2001
 From: Roland McGrath <roland@redhat.com>
 Date: Mon, 6 Oct 2008 23:03:03 -0700
 Subject: [PATCH] kbuild: AFTER_LINK
@@ -10,7 +11,7 @@ Upstream-status: ??
 
 Signed-off-by: Roland McGrath <roland@redhat.com>
 diff --git a/arch/arm64/kernel/vdso/Makefile b/arch/arm64/kernel/vdso/Makefile
-index b467fd0..7578d29 100644
+index b215c712d897..e18cd2a3ea53 100644
 --- a/arch/arm64/kernel/vdso/Makefile
 +++ b/arch/arm64/kernel/vdso/Makefile
 @@ -55,7 +55,8 @@ $(obj-vdso): %.o: %.S FORCE
@@ -19,88 +20,88 @@ index b467fd0..7578d29 100644
  quiet_cmd_vdsold = VDSOL   $@
 -      cmd_vdsold = $(CC) $(c_flags) -Wl,-n -Wl,-T $^ -o $@
 +      cmd_vdsold = $(CC) $(c_flags) -Wl,-n -Wl,-T $^ -o $@ \
-+		$(if $(AFTER_LINK),;$(AFTER_LINK))
++				    $(if $(AFTER_LINK),;$(AFTER_LINK))
  quiet_cmd_vdsoas = VDSOA   $@
        cmd_vdsoas = $(CC) $(a_flags) -c -o $@ $<
  
 diff --git a/arch/powerpc/kernel/vdso32/Makefile b/arch/powerpc/kernel/vdso32/Makefile
-index 6abffb7..7b103bb 100644
+index 50112d4473bb..cca42ab6bc30 100644
 --- a/arch/powerpc/kernel/vdso32/Makefile
 +++ b/arch/powerpc/kernel/vdso32/Makefile
-@@ -43,7 +43,8 @@ $(obj-vdso32): %.o: %.S
+@@ -52,7 +52,8 @@ $(obj-vdso32): %.o: %.S FORCE
  
  # actual build commands
  quiet_cmd_vdso32ld = VDSO32L $@
--      cmd_vdso32ld = $(CROSS32CC) $(c_flags) -Wl,-T $^ -o $@
-+      cmd_vdso32ld = $(CROSS32CC) $(c_flags) -Wl,-T $^ -o $@ \
+-      cmd_vdso32ld = $(VDSOCC) $(c_flags) $(CC32FLAGS) -o $@ -Wl,-T$(filter %.lds,$^) $(filter %.o,$^)
++      cmd_vdso32ld = $(VDSOCC) $(c_flags) $(CC32FLAGS) -o $@ -Wl,-T$(filter %.lds,$^) $(filter %.o,$^) \
 +		     $(if $(AFTER_LINK),; $(AFTER_LINK))
  quiet_cmd_vdso32as = VDSO32A $@
-       cmd_vdso32as = $(CROSS32CC) $(a_flags) -c -o $@ $<
+       cmd_vdso32as = $(VDSOCC) $(a_flags) $(CC32FLAGS) -c -o $@ $<
  
 diff --git a/arch/powerpc/kernel/vdso64/Makefile b/arch/powerpc/kernel/vdso64/Makefile
-index 8c8f2ae..a743ebe 100644
+index 69cecb346269..5769131eaf61 100644
 --- a/arch/powerpc/kernel/vdso64/Makefile
 +++ b/arch/powerpc/kernel/vdso64/Makefile
-@@ -36,7 +36,8 @@ $(obj-vdso64): %.o: %.S
+@@ -34,7 +34,8 @@ $(obj)/%.so: $(obj)/%.so.dbg FORCE
  
  # actual build commands
  quiet_cmd_vdso64ld = VDSO64L $@
--      cmd_vdso64ld = $(CC) $(c_flags) -Wl,-T $^ -o $@
-+      cmd_vdso64ld = $(CC) $(c_flags) -Wl,-T $^ -o $@ \
-+		     $(if $(AFTER_LINK),; $(AFTER_LINK))
- quiet_cmd_vdso64as = VDSO64A $@
-       cmd_vdso64as = $(CC) $(a_flags) -c -o $@ $<
+-      cmd_vdso64ld = $(CC) $(c_flags) -o $@ -Wl,-T$(filter %.lds,$^) $(filter %.o,$^)
++      cmd_vdso64ld = $(CC) $(c_flags) -o $@ -Wl,-T$(filter %.lds,$^) $(filter %.o,$^) \
++		    $(if $(AFTER_LINK),; $(AFTER_LINK))
  
+ # install commands for the unstripped file
+ quiet_cmd_vdso_install = INSTALL $@
 diff --git a/arch/s390/kernel/vdso32/Makefile b/arch/s390/kernel/vdso32/Makefile
-index ee8a18e..63e33fa 100644
+index 04dd3e2c3bd9..ac9e56e5ccf9 100644
 --- a/arch/s390/kernel/vdso32/Makefile
 +++ b/arch/s390/kernel/vdso32/Makefile
-@@ -43,7 +43,8 @@ $(obj-vdso32): %.o: %.S
+@@ -50,7 +50,8 @@ $(obj-vdso32): %.o: %.S FORCE
  
  # actual build commands
  quiet_cmd_vdso32ld = VDSO32L $@
--      cmd_vdso32ld = $(CC) $(c_flags) -Wl,-T $^ -o $@
-+      cmd_vdso32ld = $(CC) $(c_flags) -Wl,-T $^ -o $@ \
-+		     $(if $(AFTER_LINK),; $(AFTER_LINK))
+-      cmd_vdso32ld = $(CC) $(c_flags) -Wl,-T $(filter %.lds %.o,$^) -o $@
++      cmd_vdso32ld = $(CC) $(c_flags) -Wl,-T $(filter %.lds %.o,$^) -o $@ \
++		$(if $(AFTER_LINK),; $(AFTER_LINK))
  quiet_cmd_vdso32as = VDSO32A $@
        cmd_vdso32as = $(CC) $(a_flags) -c -o $@ $<
  
 diff --git a/arch/s390/kernel/vdso64/Makefile b/arch/s390/kernel/vdso64/Makefile
-index c4b03f9..550450f 100644
+index ddebc26cd949..87def94a520b 100644
 --- a/arch/s390/kernel/vdso64/Makefile
 +++ b/arch/s390/kernel/vdso64/Makefile
-@@ -43,7 +43,8 @@ $(obj-vdso64): %.o: %.S
+@@ -50,7 +50,8 @@ $(obj-vdso64): %.o: %.S FORCE
  
  # actual build commands
  quiet_cmd_vdso64ld = VDSO64L $@
--      cmd_vdso64ld = $(CC) $(c_flags) -Wl,-T $^ -o $@
-+      cmd_vdso64ld = $(CC) $(c_flags) -Wl,-T $^ -o $@ \
-+		     $(if $(AFTER_LINK),; $(AFTER_LINK))
+-      cmd_vdso64ld = $(CC) $(c_flags) -Wl,-T $(filter %.lds %.o,$^) -o $@
++      cmd_vdso64ld = $(CC) $(c_flags) -Wl,-T $(filter %.lds %.o,$^) -o $@ \
++		$(if $(AFTER_LINK),; $(AFTER_LINK))
  quiet_cmd_vdso64as = VDSO64A $@
        cmd_vdso64as = $(CC) $(a_flags) -c -o $@ $<
  
 diff --git a/arch/x86/entry/vdso/Makefile b/arch/x86/entry/vdso/Makefile
-index 265c0ed..fd90c7d 100644
+index c3d7ccd25381..7c03993ea881 100644
 --- a/arch/x86/entry/vdso/Makefile
 +++ b/arch/x86/entry/vdso/Makefile
-@@ -159,8 +159,9 @@ $(obj)/vdso32.so.dbg: FORCE \
+@@ -167,8 +167,9 @@ $(obj)/vdso32.so.dbg: FORCE \
  quiet_cmd_vdso = VDSO    $@
-       cmd_vdso = $(CC) -nostdlib -o $@ \
+       cmd_vdso = $(LD) -nostdlib -o $@ \
  		       $(VDSO_LDFLAGS) $(VDSO_LDFLAGS_$(filter %.lds,$(^F))) \
--		       -Wl,-T,$(filter %.lds,$^) $(filter %.o,$^) && \
+-		       -T $(filter %.lds,$^) $(filter %.o,$^) && \
 -		 sh $(srctree)/$(src)/checkundef.sh '$(NM)' '$@'
-+		       -Wl,-T,$(filter %.lds,$^) $(filter %.o,$^) \
++		       -T $(filter %.lds,$^) $(filter %.o,$^) \
 +		$(if $(AFTER_LINK),; $(AFTER_LINK)) && \
 +		sh $(srctree)/$(src)/checkundef.sh '$(NM)' '$@'
  
- VDSO_LDFLAGS = -fPIC -shared $(call cc-ldoption, -Wl$(comma)--hash-style=both) \
- 	$(call cc-ldoption, -Wl$(comma)--build-id) -Wl,-Bsymbolic $(LTO_CFLAGS)
+ VDSO_LDFLAGS = -shared $(call ld-option, --hash-style=both) \
+ 	$(call ld-option, --build-id) $(call ld-option, --eh-frame-hdr) \
 diff --git a/scripts/link-vmlinux.sh b/scripts/link-vmlinux.sh
-index ba6c34e..245501e 100755
+index c8cf45362bd6..ee9c4d8e1ddf 100755
 --- a/scripts/link-vmlinux.sh
 +++ b/scripts/link-vmlinux.sh
-@@ -65,6 +65,10 @@ vmlinux_link()
- 			-lutil -lrt -lpthread ${1}
+@@ -112,6 +112,10 @@ vmlinux_link()
+ 			-lutil -lrt -lpthread
  		rm -f linux
  	fi
 +	if [ -n "${AFTER_LINK}" ]; then

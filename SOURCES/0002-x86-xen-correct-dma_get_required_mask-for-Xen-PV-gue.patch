@@ -19,11 +19,18 @@ generic dma_get_required_mask_from_pfn().
 Under Xen, the required DMA mask can then be set to always 64-bits.
 
 Signed-off-by: David Vrabel <david.vrabel@citrix.com>
+---
+ arch/x86/include/asm/device.h | 2 ++
+ arch/x86/kernel/pci-dma.c     | 8 ++++++++
+ drivers/xen/swiotlb-xen.c     | 8 ++++++++
+ include/xen/swiotlb-xen.h     | 3 +++
+ 4 files changed, 21 insertions(+)
+
 diff --git a/arch/x86/include/asm/device.h b/arch/x86/include/asm/device.h
-index 03dd729..10bc628 100644
+index 5e12c63..17a4d89 100644
 --- a/arch/x86/include/asm/device.h
 +++ b/arch/x86/include/asm/device.h
-@@ -13,4 +13,6 @@ struct dev_archdata {
+@@ -21,4 +21,6 @@ struct dma_domain {
  struct pdev_archdata {
  };
  
@@ -31,10 +38,10 @@ index 03dd729..10bc628 100644
 +
  #endif /* _ASM_X86_DEVICE_H */
 diff --git a/arch/x86/kernel/pci-dma.c b/arch/x86/kernel/pci-dma.c
-index 6ba014c..c64e81c 100644
+index 599d746..59b5246 100644
 --- a/arch/x86/kernel/pci-dma.c
 +++ b/arch/x86/kernel/pci-dma.c
-@@ -144,6 +144,14 @@ bool arch_dma_alloc_attrs(struct device **dev, gfp_t *gfp)
+@@ -149,6 +149,14 @@ bool arch_dma_alloc_attrs(struct device **dev, gfp_t *gfp)
  }
  EXPORT_SYMBOL(arch_dma_alloc_attrs);
  
@@ -49,25 +56,13 @@ index 6ba014c..c64e81c 100644
  /*
   * See <Documentation/x86/x86_64/boot-options.txt> for the iommu kernel
   * parameter documentation.
-diff --git a/arch/x86/xen/pci-swiotlb-xen.c b/arch/x86/xen/pci-swiotlb-xen.c
-index 0e98e5d..a5d180a 100644
---- a/arch/x86/xen/pci-swiotlb-xen.c
-+++ b/arch/x86/xen/pci-swiotlb-xen.c
-@@ -31,6 +31,7 @@ static struct dma_map_ops xen_swiotlb_dma_ops = {
- 	.map_page = xen_swiotlb_map_page,
- 	.unmap_page = xen_swiotlb_unmap_page,
- 	.dma_supported = xen_swiotlb_dma_supported,
-+	.get_required_mask = xen_swiotlb_get_required_mask,
- };
- 
- /*
 diff --git a/drivers/xen/swiotlb-xen.c b/drivers/xen/swiotlb-xen.c
-index 7399782..0426e50 100644
+index f98b8c1..b7facaa 100644
 --- a/drivers/xen/swiotlb-xen.c
 +++ b/drivers/xen/swiotlb-xen.c
-@@ -668,6 +668,13 @@ xen_swiotlb_dma_supported(struct device *hwdev, u64 mask)
+@@ -711,6 +711,13 @@ static int xen_swiotlb_mapping_error(struct device *dev, dma_addr_t dma_addr)
+ 	return dma_addr == XEN_SWIOTLB_ERROR_CODE;
  }
- EXPORT_SYMBOL_GPL(xen_swiotlb_dma_supported);
  
 +u64
 +xen_swiotlb_get_required_mask(struct device *dev)
@@ -76,18 +71,23 @@ index 7399782..0426e50 100644
 +}
 +EXPORT_SYMBOL_GPL(xen_swiotlb_get_required_mask);
 +
- int
- xen_swiotlb_set_dma_mask(struct device *dev, u64 dma_mask)
- {
+ const struct dma_map_ops xen_swiotlb_dma_ops = {
+ 	.alloc = xen_swiotlb_alloc_coherent,
+ 	.free = xen_swiotlb_free_coherent,
+@@ -726,4 +733,5 @@ static int xen_swiotlb_mapping_error(struct device *dev, dma_addr_t dma_addr)
+ 	.mmap = xen_swiotlb_dma_mmap,
+ 	.get_sgtable = xen_swiotlb_get_sgtable,
+ 	.mapping_error	= xen_swiotlb_mapping_error,
++	.get_required_mask = xen_swiotlb_get_required_mask,
+ };
 diff --git a/include/xen/swiotlb-xen.h b/include/xen/swiotlb-xen.h
-index 8b2eb93..6408888 100644
+index 5e4b83f..ff66b40 100644
 --- a/include/xen/swiotlb-xen.h
 +++ b/include/xen/swiotlb-xen.h
-@@ -58,4 +58,8 @@ xen_swiotlb_dma_supported(struct device *hwdev, u64 mask);
+@@ -7,4 +7,7 @@
+ extern int xen_swiotlb_init(int verbose, bool early);
+ extern const struct dma_map_ops xen_swiotlb_dma_ops;
  
- extern int
- xen_swiotlb_set_dma_mask(struct device *dev, u64 dma_mask);
-+
 +extern u64
 +xen_swiotlb_get_required_mask(struct device *dev);
 +

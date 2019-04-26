@@ -1,0 +1,33 @@
+gfs2: Take log_flush lock during recovery
+
+Recovery sets sd_log_flush_head but does not take any locks which means
+a concurrent call to gfs2_log_flush can result in sd_log_head being set
+to sd_log_flush_head. A later call to gfs2_log_flush will then hit an
+assertion failure in log_pull_tail because the mismatch between
+sd_log_head and sd_log_tail means too many blocks are freed.
+
+gfs2: fsid=xapi-clusterd:88a31b8e-4072-b0.1: fatal: assertion "atomic_read(&sdp->sd_log_blks_free) <= sdp->sd_jdesc->jd_blocks" failed
+function = log_pull_tail, file = fs/gfs2/log.c, line = 510
+
+diff --git a/fs/gfs2/recovery.c b/fs/gfs2/recovery.c
+index 0f501f938d1c..5f7c3271e909 100644
+--- a/fs/gfs2/recovery.c
++++ b/fs/gfs2/recovery.c
+@@ -498,6 +498,8 @@ void gfs2_recover_func(struct work_struct *work)
+ 			goto fail_gunlock_thaw;
+ 		}
+ 
++		down_write(&sdp->sd_log_flush_lock);
++
+ 		t_tlck = ktime_get();
+ 		fs_info(sdp, "jid=%u: Replaying journal...\n", jd->jd_jid);
+ 
+@@ -512,6 +514,8 @@ void gfs2_recover_func(struct work_struct *work)
+ 
+ 		clean_journal(jd, &head);
+ 
++		up_write(&sdp->sd_log_flush_lock);
++
+ 		gfs2_glock_dq_uninit(&thaw_gh);
+ 		t_rep = ktime_get();
+ 		fs_info(sdp, "jid=%u: Journal replayed in %lldms [jlck:%lldms, "

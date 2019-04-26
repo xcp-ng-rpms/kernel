@@ -1,0 +1,83 @@
+From 1c45bdb911e32bdca33b707a0f66e10e735fd9df Mon Sep 17 00:00:00 2001
+From: Xiong Zhang <xiong.y.zhang@intel.com>
+Date: Thu, 12 Oct 2017 09:16:14 +0800
+Subject: [PATCH 25/45] drm/i915/gvt/xengt: Add iosrv_enabled to track iosrv
+ status
+
+Currently hvm_claim_ioreq_server_type() is called twice during
+DomU reboot. This generates error message in dmesg.
+
+this patch add iosrv_enabled to track iosrv status. Then we
+won't disable iosrv again when iosrc has already disabled.
+
+Signed-off-by: Xiong Zhang <xiong.y.zhang@intel.com>
+---
+ drivers/gpu/drm/i915/gvt/xengt.c | 16 ++++++++++++----
+ drivers/gpu/drm/i915/gvt/xengt.h |  1 +
+ 2 files changed, 13 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/gpu/drm/i915/gvt/xengt.c b/drivers/gpu/drm/i915/gvt/xengt.c
+index 5291c9e..778ea57 100644
+--- a/drivers/gpu/drm/i915/gvt/xengt.c
++++ b/drivers/gpu/drm/i915/gvt/xengt.c
+@@ -409,14 +409,14 @@ static ssize_t xengt_sysfs_vgpu_schedule(struct kobject *kobj,
+ 	}
+ 
+ 	if (running) {
+-		if (info->iosrv_id == 0) {
++		if (info->iosrv_enabled == 0) {
+ 			hvm_claim_ioreq_server_type(info, 1);
+ 			xen_hvm_toggle_iorequest_server(info, true);
+ 		}
+ 		intel_gvt_ops->vgpu_activate(vgpu);
+ 	} else {
+ 		intel_gvt_ops->vgpu_deactivate(vgpu);
+-		if (info->iosrv_id != 0) {
++		if (info->iosrv_enabled != 0) {
+ 			hvm_claim_ioreq_server_type(info, 0);
+ 			xen_hvm_toggle_iorequest_server(info, false);
+ 		}
+@@ -668,6 +668,11 @@ static int xen_hvm_toggle_iorequest_server(struct xengt_hvm_dev *info, bool enab
+ 	struct xen_dm_op_set_ioreq_server_state *data;
+ 	int r;
+ 
++	if (info->iosrv_enabled == !!enable)
++		return 0;
++
++	info->iosrv_enabled = !!enable;
++
+ 	memset(&op, 0, sizeof(op));
+ 
+ 	op.op = XEN_DMOP_set_ioreq_server_state;
+@@ -1448,11 +1453,14 @@ void xengt_instance_destroy(struct intel_vgpu *vgpu)
+ 	if (!info->nr_vcpu || info->evtchn_irq == NULL)
+ 		goto out1;
+ 
+-	if (info->iosrv_id != 0) {
++	if (info->iosrv_enabled != 0) {
+ 		hvm_claim_ioreq_server_type(info, 0);
+-		xen_hvm_destroy_iorequest_server(info);
++		xen_hvm_toggle_iorequest_server(info, false);
+ 	}
+ 
++	if (info->iosrv_id != 0)
++		xen_hvm_destroy_iorequest_server(info);
++
+ 	for (vcpu = 0; vcpu < info->nr_vcpu; vcpu++) {
+ 		if (info->evtchn_irq[vcpu] >= 0)
+ 			unbind_from_irqhandler(info->evtchn_irq[vcpu], vgpu);
+diff --git a/drivers/gpu/drm/i915/gvt/xengt.h b/drivers/gpu/drm/i915/gvt/xengt.h
+index 3485b35..fd9be53 100644
+--- a/drivers/gpu/drm/i915/gvt/xengt.h
++++ b/drivers/gpu/drm/i915/gvt/xengt.h
+@@ -32,6 +32,7 @@ struct xengt_hvm_dev {
+ 	int nr_vcpu;
+ 	int *evtchn_irq;
+ 	ioservid_t iosrv_id;    /* io-request server id */
++	int iosrv_enabled;
+ 	struct task_struct *emulation_thread;
+ 	DECLARE_BITMAP(ioreq_pending, MAX_HVM_VCPUS_SUPPORTED);
+ 	wait_queue_head_t io_event_wq;
+-- 
+2.7.4
+

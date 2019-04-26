@@ -1,0 +1,98 @@
+From d58ab59effb04f888aac50632da7db7808a8b930 Mon Sep 17 00:00:00 2001
+From: Tina Zhang <tina.zhang@intel.com>
+Date: Wed, 31 Jan 2018 13:19:58 +0800
+Subject: [PATCH 37/45] drm/i915/gvt: Expose opregion in vgpu open
+
+Opregion, fully virtualized by device model, is needed by hypervisors
+for display. That's why the emulated opregion is created and destroyed
+in MPT interface. For different hypervisors, this piece of memory might
+be wrapped into different interfaces. E.g. for KVM/VFIO, it is wrapped
+into a VFIO region during vGPU opening.
+
+This patch puts the opregion registration in vgpu_open for KVM/VFIO.
+
+Signed-off-by: Tina Zhang <tina.zhang@intel.com>
+---
+ drivers/gpu/drm/i915/gvt/hypercall.h |  1 -
+ drivers/gpu/drm/i915/gvt/kvmgt.c     |  3 ++-
+ drivers/gpu/drm/i915/gvt/mpt.h       | 15 ---------------
+ drivers/gpu/drm/i915/gvt/vgpu.c      |  4 ----
+ 4 files changed, 2 insertions(+), 21 deletions(-)
+
+diff --git a/drivers/gpu/drm/i915/gvt/hypercall.h b/drivers/gpu/drm/i915/gvt/hypercall.h
+index 5af11cf..ae9b94a 100644
+--- a/drivers/gpu/drm/i915/gvt/hypercall.h
++++ b/drivers/gpu/drm/i915/gvt/hypercall.h
+@@ -60,7 +60,6 @@ struct intel_gvt_mpt {
+ 			      unsigned long mfn, unsigned int nr, bool map);
+ 	int (*set_trap_area)(unsigned long handle, u64 start, u64 end,
+ 			     bool map);
+-	int (*set_opregion)(void *vgpu);
+ 	int (*get_vfio_device)(void *vgpu);
+ 	void (*put_vfio_device)(void *vgpu);
+ 	bool (*is_valid_gfn)(unsigned long handle, unsigned long gfn);
+diff --git a/drivers/gpu/drm/i915/gvt/kvmgt.c b/drivers/gpu/drm/i915/gvt/kvmgt.c
+index f868a1c..3ca736b 100644
+--- a/drivers/gpu/drm/i915/gvt/kvmgt.c
++++ b/drivers/gpu/drm/i915/gvt/kvmgt.c
+@@ -730,6 +730,8 @@ static int intel_vgpu_open(struct mdev_device *mdev)
+ 	if (ret)
+ 		goto undo_group;
+ 
++	kvmgt_set_opregion(vgpu);
++
+ 	kvmgt_init_migration(vgpu);
+ 
+ 	intel_gvt_ops->vgpu_activate(vgpu);
+@@ -1979,7 +1981,6 @@ struct intel_gvt_mpt kvmgt_mpt = {
+ 	.gfn_to_mfn = kvmgt_gfn_to_pfn,
+ 	.dma_map_guest_page = kvmgt_dma_map_guest_page,
+ 	.dma_unmap_guest_page = kvmgt_dma_unmap_guest_page,
+-	.set_opregion = kvmgt_set_opregion,
+ 	.get_vfio_device = kvmgt_get_vfio_device,
+ 	.put_vfio_device = kvmgt_put_vfio_device,
+ 	.is_valid_gfn = kvmgt_is_valid_gfn,
+diff --git a/drivers/gpu/drm/i915/gvt/mpt.h b/drivers/gpu/drm/i915/gvt/mpt.h
+index 67f19992..d16bc40 100644
+--- a/drivers/gpu/drm/i915/gvt/mpt.h
++++ b/drivers/gpu/drm/i915/gvt/mpt.h
+@@ -301,21 +301,6 @@ static inline int intel_gvt_hypervisor_set_trap_area(
+ }
+ 
+ /**
+- * intel_gvt_hypervisor_set_opregion - Set opregion for guest
+- * @vgpu: a vGPU
+- *
+- * Returns:
+- * Zero on success, negative error code if failed.
+- */
+-static inline int intel_gvt_hypervisor_set_opregion(struct intel_vgpu *vgpu)
+-{
+-	if (!intel_gvt_host.mpt->set_opregion)
+-		return 0;
+-
+-	return intel_gvt_host.mpt->set_opregion(vgpu);
+-}
+-
+-/**
+  * intel_gvt_hypervisor_get_vfio_device - increase vfio device ref count
+  * @vgpu: a vGPU
+  *
+diff --git a/drivers/gpu/drm/i915/gvt/vgpu.c b/drivers/gpu/drm/i915/gvt/vgpu.c
+index 7676dcf..51f6147 100644
+--- a/drivers/gpu/drm/i915/gvt/vgpu.c
++++ b/drivers/gpu/drm/i915/gvt/vgpu.c
+@@ -424,10 +424,6 @@ static struct intel_vgpu *__intel_gvt_create_vgpu(struct intel_gvt *gvt,
+ 	if (ret)
+ 		goto out_clean_sched_policy;
+ 
+-	ret = intel_gvt_hypervisor_set_opregion(vgpu);
+-	if (ret)
+-		goto out_clean_sched_policy;
+-
+ 	return vgpu;
+ 
+ out_clean_sched_policy:
+-- 
+2.7.4
+

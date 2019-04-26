@@ -1,0 +1,75 @@
+From 211c2478f81aceae992a60ec6ac1709786a997c3 Mon Sep 17 00:00:00 2001
+From: Xiong Zhang <xiong.y.zhang@intel.com>
+Date: Mon, 9 Apr 2018 20:03:01 +0800
+Subject: [PATCH 38/45] drm/i915/gvt/xengt: Don't shutdown vm at ioreq failure
+
+Recent win10RS4 image has wired ppgtt write error:
+gvt:guest page write error -22,gfn 0x2f842, pa 0x2f842001, var 0x2, len 1
+The ppgtt write should have length 4 or 8, but here the length is 1.
+Once this error happens, xengt will shutdown the VM. This
+is too serious to continue stress test.
+
+So this patch just through an error message and let vm continue running
+when this error happen.
+
+Signed-off-by: Xiong Zhang <xiong.y.zhang@intel.com>
+---
+ drivers/gpu/drm/i915/gvt/xengt.c | 35 ++---------------------------------
+ 1 file changed, 2 insertions(+), 33 deletions(-)
+
+diff --git a/drivers/gpu/drm/i915/gvt/xengt.c b/drivers/gpu/drm/i915/gvt/xengt.c
+index 944aa18..c10ff55 100644
+--- a/drivers/gpu/drm/i915/gvt/xengt.c
++++ b/drivers/gpu/drm/i915/gvt/xengt.c
+@@ -507,35 +507,6 @@ static int xen_get_max_gpfn(domid_t vm_id)
+ 	return max_gpfn;
+ }
+ 
+-static int xen_pause_domain(domid_t vm_id)
+-{
+-	int rc;
+-	struct xen_domctl domctl;
+-
+-	domctl.domain = vm_id;
+-	domctl.cmd = XEN_DOMCTL_pausedomain;
+-	domctl.interface_version = XEN_DOMCTL_INTERFACE_VERSION;
+-
+-	rc = HYPERVISOR_domctl(&domctl);
+-	if (rc != 0)
+-		gvt_dbg_core("xen_pause_domain fail: %d!\n", rc);
+-
+-	return rc;
+-}
+-
+-static int xen_shutdown_domain(domid_t  vm_id)
+-{
+-	int rc;
+-	struct sched_remote_shutdown r;
+-
+-	r.reason = SHUTDOWN_crash;
+-	r.domain_id = vm_id;
+-	rc = HYPERVISOR_sched_op(SCHEDOP_remote_shutdown, &r);
+-	if (rc != 0)
+-		gvt_dbg_core("xen_shutdown_domain failed: %d\n", rc);
+-	return rc;
+-}
+-
+ static int xen_domain_iomem_perm(domid_t domain_id, uint64_t first_mfn,
+ 							uint64_t nr_mfns, uint8_t allow_access)
+ {
+@@ -1384,10 +1355,8 @@ static int xengt_emulation_thread(void *priv)
+ 			if (ioreq == NULL)
+ 				continue;
+ 
+-			if (xengt_do_ioreq(vgpu, ioreq)) {
+-				xen_pause_domain(info->vm_id);
+-				xen_shutdown_domain(info->vm_id);
+-			}
++			if (xengt_do_ioreq(vgpu, ioreq))
++				gvt_err("Please note fatal ioreq failure\n");
+ 
+ 			ioreq->state = STATE_IORESP_READY;
+ 
+-- 
+2.7.4
+

@@ -1,0 +1,259 @@
+From 16ded28ed702761814b9b617de557c0ff62294b5 Mon Sep 17 00:00:00 2001
+From: Yulei Zhang <yulei.zhang@intel.com>
+Date: Sat, 27 May 2017 16:25:01 +0800
+Subject: [PATCH 18/45] drm/i915/gvt: Add support to new VFIO subregion
+ VFIO_REGION_SUBTYPE_DEVICE_STATE
+
+Add new VFIO subregion VFIO_REGION_SUBTYPE_DEVICE_STATE
+support for mdev device, through this new region it can
+fetch or store the status of mdev device for migration
+usage.
+
+Signed-off-by: Yulei Zhang <yulei.zhang@intel.com>
+---
+ drivers/gpu/drm/i915/gvt/gvt.h     |  1 +
+ drivers/gpu/drm/i915/gvt/kvmgt.c   | 57 ++++++++++++++++++++++++
+ drivers/gpu/drm/i915/gvt/migrate.h | 88 ++++++++++++++++++++++++++++++++++++++
+ include/uapi/linux/vfio.h          |  9 ++--
+ 4 files changed, 152 insertions(+), 3 deletions(-)
+ create mode 100644 drivers/gpu/drm/i915/gvt/migrate.h
+
+diff --git a/drivers/gpu/drm/i915/gvt/gvt.h b/drivers/gpu/drm/i915/gvt/gvt.h
+index a6014aa..b2fc645 100644
+--- a/drivers/gpu/drm/i915/gvt/gvt.h
++++ b/drivers/gpu/drm/i915/gvt/gvt.h
+@@ -46,6 +46,7 @@
+ #include "sched_policy.h"
+ #include "mmio_context.h"
+ #include "cmd_parser.h"
++#include "migrate.h"
+ #include "fb_decoder.h"
+ #include "dmabuf.h"
+ #include "page_track.h"
+diff --git a/drivers/gpu/drm/i915/gvt/kvmgt.c b/drivers/gpu/drm/i915/gvt/kvmgt.c
+index f7f0e96..515978d 100644
+--- a/drivers/gpu/drm/i915/gvt/kvmgt.c
++++ b/drivers/gpu/drm/i915/gvt/kvmgt.c
+@@ -399,6 +399,23 @@ static void kvmgt_protect_table_del(struct kvmgt_guest_info *info,
+ 	}
+ }
+ 
++static size_t intel_vgpu_reg_rw_device_state(struct intel_vgpu *vgpu, char *buf,
++		size_t count, loff_t *ppos, bool iswrite)
++{
++	return 0;
++}
++
++static void intel_vgpu_reg_release_device_state(struct intel_vgpu *vgpu,
++		struct vfio_region *region)
++{
++	vfree(region->data);
++}
++
++static const struct intel_vgpu_regops intel_vgpu_regops_device_state = {
++	.rw	 = intel_vgpu_reg_rw_device_state,
++	.release = intel_vgpu_reg_release_device_state,
++};
++
+ static size_t intel_vgpu_reg_rw_opregion(struct intel_vgpu *vgpu, char *buf,
+ 		size_t count, loff_t *ppos, bool iswrite)
+ {
+@@ -501,6 +518,28 @@ static void kvmgt_put_vfio_device(void *vgpu)
+ 	vfio_device_put(((struct intel_vgpu *)vgpu)->vdev.vfio_device);
+ }
+ 
++static int kvmgt_init_migration(struct intel_vgpu *vgpu)
++{
++	void *base;
++	int ret;
++
++	base = vzalloc(MIGRATION_IMG_MAX_SIZE);
++	if (base == NULL)
++		return -ENOMEM;
++
++	ret = intel_vgpu_register_region(vgpu,
++			PCI_VENDOR_ID_INTEL | VFIO_REGION_TYPE_PCI_VENDOR_TYPE,
++			VFIO_REGION_SUBTYPE_DEVICE_STATE,
++			&intel_vgpu_regops_device_state, MIGRATION_IMG_MAX_SIZE,
++			VFIO_REGION_INFO_FLAG_READ |
++			VFIO_REGION_INFO_FLAG_WRITE,
++			base);
++	if (ret)
++		vfree(base);
++
++	return ret;
++}
++
+ static int intel_vgpu_create(struct kobject *kobj, struct mdev_device *mdev)
+ {
+ 	struct intel_vgpu *vgpu = NULL;
+@@ -631,6 +670,8 @@ static int intel_vgpu_open(struct mdev_device *mdev)
+ 	if (ret)
+ 		goto undo_group;
+ 
++	kvmgt_init_migration(vgpu);
++
+ 	intel_gvt_ops->vgpu_activate(vgpu);
+ 
+ 	atomic_set(&vgpu->vdev.released, 0);
+@@ -662,6 +703,7 @@ static void __intel_vgpu_release(struct intel_vgpu *vgpu)
+ {
+ 	struct kvmgt_guest_info *info;
+ 	int ret;
++	int i;
+ 
+ 	if (!handle_valid(vgpu->handle))
+ 		return;
+@@ -671,6 +713,13 @@ static void __intel_vgpu_release(struct intel_vgpu *vgpu)
+ 
+ 	intel_gvt_ops->vgpu_release(vgpu);
+ 
++	for (i = 0; i < vgpu->vdev.num_regions; i++)
++		vgpu->vdev.region[i].ops->release(vgpu, &vgpu->vdev.region[i]);
++
++	vgpu->vdev.num_regions = 0;
++	kfree(vgpu->vdev.region);
++	vgpu->vdev.region = NULL;
++
+ 	ret = vfio_unregister_notifier(mdev_dev(vgpu->vdev.mdev), VFIO_IOMMU_NOTIFY,
+ 					&vgpu->vdev.iommu_notifier);
+ 	WARN(ret, "vfio_unregister_notifier for iommu failed: %d\n", ret);
+@@ -851,6 +900,10 @@ static ssize_t intel_vgpu_read(struct mdev_device *mdev, char __user *buf,
+ {
+ 	unsigned int done = 0;
+ 	int ret;
++	unsigned int index = VFIO_PCI_OFFSET_TO_INDEX(*ppos);
++
++	if (index >= VFIO_PCI_NUM_REGIONS)
++		return intel_vgpu_rw(mdev, (char *)buf, count, ppos, false);
+ 
+ 	while (count) {
+ 		size_t filled;
+@@ -925,6 +978,10 @@ static ssize_t intel_vgpu_write(struct mdev_device *mdev,
+ {
+ 	unsigned int done = 0;
+ 	int ret;
++	unsigned int index = VFIO_PCI_OFFSET_TO_INDEX(*ppos);
++
++	if (index >= VFIO_PCI_NUM_REGIONS)
++		return intel_vgpu_rw(mdev, (char *)buf, count, ppos, true);
+ 
+ 	while (count) {
+ 		size_t filled;
+diff --git a/drivers/gpu/drm/i915/gvt/migrate.h b/drivers/gpu/drm/i915/gvt/migrate.h
+new file mode 100644
+index 0000000..fbd9855
+--- /dev/null
++++ b/drivers/gpu/drm/i915/gvt/migrate.h
+@@ -0,0 +1,88 @@
++/*
++ * Copyright(c) 2011-2016 Intel Corporation. All rights reserved.
++ *
++ * Permission is hereby granted, free of charge, to any person obtaining a
++ * copy of this software and associated documentation files (the "Software"),
++ * to deal in the Software without restriction, including without limitation
++ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
++ * and/or sell copies of the Software, and to permit persons to whom the
++ * Software is furnished to do so, subject to the following conditions:
++ *
++ * The above copyright notice and this permission notice (including the next
++ * paragraph) shall be included in all copies or substantial portions of the
++ * Software.
++ *
++ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
++ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
++ * SOFTWARE.
++ */
++
++#ifndef __GVT_MIGRATE_H__
++#define __GVT_MIGRATE_H__
++
++/* Assume 9MB is eough to descript VM kernel state */
++#define MIGRATION_IMG_MAX_SIZE (9*1024UL*1024UL)
++#define GVT_MMIO_SIZE (2*1024UL*1024UL)
++#define GVT_MIGRATION_VERSION	0
++
++enum gvt_migration_type_t {
++	GVT_MIGRATION_NONE,
++	GVT_MIGRATION_HEAD,
++	GVT_MIGRATION_CFG_SPACE,
++	GVT_MIGRATION_VREG,
++	GVT_MIGRATION_SREG,
++	GVT_MIGRATION_GTT,
++	GVT_MIGRATION_PPGTT,
++	GVT_MIGRATION_WORKLOAD,
++};
++
++struct gvt_ppgtt_entry_t {
++	int page_table_level;
++	u32 pdp[8];
++};
++
++struct gvt_pending_workload_t {
++	int ring_id;
++	struct intel_vgpu_elsp_dwords elsp_dwords;
++};
++
++struct gvt_region_t {
++	enum gvt_migration_type_t type;
++	u32 size;		/* obj size of bytes to read/write */
++};
++
++struct gvt_migration_obj_t {
++	void *img;
++	void *vgpu;
++	u32 offset;
++	struct gvt_region_t region;
++	/* operation func defines how data save-restore */
++	struct gvt_migration_operation_t *ops;
++	char *name;
++};
++
++struct gvt_migration_operation_t {
++	/* called during pre-copy stage, VM is still alive */
++	int (*pre_copy)(const struct gvt_migration_obj_t *obj);
++	/* called before when VM was paused,
++	 * return bytes transferred
++	 */
++	int (*pre_save)(const struct gvt_migration_obj_t *obj);
++	/* called before load the state of device */
++	int (*pre_load)(const struct gvt_migration_obj_t *obj, u32 size);
++	/* called after load the state of device, VM already alive */
++	int (*post_load)(const struct gvt_migration_obj_t *obj, u32 size);
++};
++
++struct gvt_image_header_t {
++	int version;
++	int data_size;
++	u64 crc_check;
++	u64 global_data[64];
++};
++
++#endif
+diff --git a/include/uapi/linux/vfio.h b/include/uapi/linux/vfio.h
+index 1aa7b82..61a6f60 100644
+--- a/include/uapi/linux/vfio.h
++++ b/include/uapi/linux/vfio.h
+@@ -297,9 +297,12 @@ struct vfio_region_info_cap_type {
+ #define VFIO_REGION_TYPE_PCI_VENDOR_MASK	(0xffff)
+ 
+ /* 8086 Vendor sub-types */
+-#define VFIO_REGION_SUBTYPE_INTEL_IGD_OPREGION	(1)
+-#define VFIO_REGION_SUBTYPE_INTEL_IGD_HOST_CFG	(2)
+-#define VFIO_REGION_SUBTYPE_INTEL_IGD_LPC_CFG	(3)
++#define VFIO_REGION_SUBTYPE_INTEL_IGD_OPREGION		(1)
++#define VFIO_REGION_SUBTYPE_INTEL_IGD_HOST_CFG		(2)
++#define VFIO_REGION_SUBTYPE_INTEL_IGD_LPC_CFG		(3)
++
++/* Mdev sub-type for device state save and restore */
++#define VFIO_REGION_SUBTYPE_DEVICE_STATE	(4)
+ 
+ /*
+  * The MSIX mappable capability informs that MSIX data of a BAR can be mmapped
+-- 
+2.7.4
+

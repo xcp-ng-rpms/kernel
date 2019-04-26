@@ -1,8 +1,12 @@
+---
+ net/sunrpc/xprt.c | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
 diff --git a/net/sunrpc/xprt.c b/net/sunrpc/xprt.c
-index 3b49a20..de94525 100644
+index 8eb0c4f..bdd0162 100644
 --- a/net/sunrpc/xprt.c
 +++ b/net/sunrpc/xprt.c
-@@ -793,6 +793,16 @@ static void xprt_connect_status(struct rpc_task *task)
+@@ -811,6 +811,16 @@ static void xprt_connect_status(struct rpc_task *task)
  	case -ETIMEDOUT:
  		dprintk("RPC: %5u xprt_connect_status: connect attempt timed "
  				"out\n", task->tk_pid);

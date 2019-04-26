@@ -1,0 +1,60 @@
+From 59e1705d9244dcd16569d3d0e930c67fc01ebf0f Mon Sep 17 00:00:00 2001
+From: Yulei Zhang <yulei.zhang@intel.com>
+Date: Sat, 27 May 2017 12:28:57 +0800
+Subject: [PATCH 14/45] drm/i915/gvt: Apply g2h adjustment during fence mmio
+ access
+
+Apply the guest to host gma conversion while guest config the
+fence mmio registers due to the host gma change after the migration.
+
+Signed-off-by: Yulei Zhang <yulei.zhang@intel.com>
+---
+ drivers/gpu/drm/i915/gvt/aperture_gm.c |  6 ++++--
+ drivers/gpu/drm/i915/gvt/gvt.h         | 14 ++++++++++++++
+ 2 files changed, 18 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/gpu/drm/i915/gvt/aperture_gm.c b/drivers/gpu/drm/i915/gvt/aperture_gm.c
+index fe75402..59c2681 100644
+--- a/drivers/gpu/drm/i915/gvt/aperture_gm.c
++++ b/drivers/gpu/drm/i915/gvt/aperture_gm.c
+@@ -144,8 +144,10 @@ void intel_vgpu_write_fence(struct intel_vgpu *vgpu,
+ 	I915_WRITE(fence_reg_lo, 0);
+ 	POSTING_READ(fence_reg_lo);
+ 
+-	I915_WRITE(fence_reg_hi, upper_32_bits(value));
+-	I915_WRITE(fence_reg_lo, lower_32_bits(value));
++	I915_WRITE(fence_reg_hi,
++		intel_gvt_reg_g2h(vgpu, upper_32_bits(value), 0xFFFFF000));
++	I915_WRITE(fence_reg_lo,
++		intel_gvt_reg_g2h(vgpu, lower_32_bits(value), 0xFFFFF000));
+ 	POSTING_READ(fence_reg_lo);
+ }
+ 
+diff --git a/drivers/gpu/drm/i915/gvt/gvt.h b/drivers/gpu/drm/i915/gvt/gvt.h
+index 31f6cdb..c22ac82 100644
+--- a/drivers/gpu/drm/i915/gvt/gvt.h
++++ b/drivers/gpu/drm/i915/gvt/gvt.h
+@@ -526,6 +526,20 @@ int intel_gvt_ggtt_index_g2h(struct intel_vgpu *vgpu, unsigned long g_index,
+ int intel_gvt_ggtt_h2g_index(struct intel_vgpu *vgpu, unsigned long h_index,
+ 			     unsigned long *g_index);
+ 
++/* apply guest to host gma conversion in GM registers setting */
++static inline u64 intel_gvt_reg_g2h(struct intel_vgpu *vgpu,
++		u32 addr, u32 mask)
++{
++	u64 gma;
++
++	if (addr) {
++		intel_gvt_ggtt_gmadr_g2h(vgpu,
++				addr & mask, &gma);
++		addr = gma | (addr & (~mask));
++	}
++	return addr;
++}
++
+ void intel_vgpu_init_cfg_space(struct intel_vgpu *vgpu,
+ 		bool primary);
+ void intel_vgpu_reset_cfg_space(struct intel_vgpu *vgpu);
+-- 
+2.7.4
+

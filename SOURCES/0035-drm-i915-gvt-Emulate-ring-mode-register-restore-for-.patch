@@ -1,0 +1,41 @@
+From e10ff439f603671d98a033c2079e06eb45994b3d Mon Sep 17 00:00:00 2001
+From: Yulei Zhang <yulei.zhang@intel.com>
+Date: Mon, 14 May 2018 14:53:19 +0800
+Subject: [PATCH 35/45] drm/i915/gvt: Emulate ring mode register restore for
+ migration
+
+In vGPU restore phase during live migration, emulate the ring mode
+register write to init the execlist for target vGPU.
+
+Signed-off-by: Yulei Zhang <yulei.zhang@intel.com>
+---
+ drivers/gpu/drm/i915/gvt/migrate.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/drivers/gpu/drm/i915/gvt/migrate.c b/drivers/gpu/drm/i915/gvt/migrate.c
+index cf8e720..621240c 100644
+--- a/drivers/gpu/drm/i915/gvt/migrate.c
++++ b/drivers/gpu/drm/i915/gvt/migrate.c
+@@ -515,6 +515,8 @@ static int vreg_load(const struct gvt_migration_obj_t *obj, u32 size)
+ 	void *dest = vgpu->mmio.vreg;
+ 	int n_transfer = INV;
+ 	struct drm_i915_private *dev_priv = vgpu->gvt->dev_priv;
++	struct intel_engine_cs *engine;
++	enum intel_engine_id id;
+ 	enum pipe pipe;
+ 
+ 	if (unlikely(size != obj->region.size)) {
+@@ -532,6 +534,10 @@ static int vreg_load(const struct gvt_migration_obj_t *obj, u32 size)
+ 	for (pipe = PIPE_A; pipe < I915_MAX_PIPES; ++pipe)
+ 		MIG_VREG_RESTORE(vgpu, i915_mmio_reg_offset(PIPECONF(pipe)));
+ 
++	//restore ring mode register for execlist init
++	for_each_engine(engine, dev_priv, id)
++		MIG_VREG_RESTORE(vgpu, i915_mmio_reg_offset(RING_MODE_GEN7(engine)));
++
+ 	return n_transfer;
+ }
+ 
+-- 
+2.7.4
+

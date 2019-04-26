@@ -1,0 +1,100 @@
+From 1c8b3f90eb035b5e7cb8ba4a72fd6006a197c943 Mon Sep 17 00:00:00 2001
+From: Yulei Zhang <yulei.zhang@intel.com>
+Date: Wed, 30 Aug 2017 13:09:30 +0800
+Subject: [PATCH 22/45] drm/i915/gvt: Add interface to control the vGPU running
+ state in XENGT
+
+Introduce interface to stop the vGPU before migration and resume
+the vGPU after that.
+
+Signed-off-by: Yulei Zhang <yulei.zhang@intel.com>
+---
+ drivers/gpu/drm/i915/gvt/xengt.c | 37 +++++++++++++++++++++++++++++++++++++
+ drivers/gpu/drm/i915/gvt/xengt.h |  5 +++++
+ 2 files changed, 42 insertions(+)
+
+diff --git a/drivers/gpu/drm/i915/gvt/xengt.c b/drivers/gpu/drm/i915/gvt/xengt.c
+index 1c2b130..5db5811 100644
+--- a/drivers/gpu/drm/i915/gvt/xengt.c
++++ b/drivers/gpu/drm/i915/gvt/xengt.c
+@@ -100,6 +100,9 @@ __ATTR(create_vgt_instance, 0220, NULL, xengt_sysfs_instance_manage);
+ static struct kobj_attribute xengt_vm_attr =
+ __ATTR(vgpu_id, 0440, xengt_sysfs_vgpu_id, NULL);
+ 
++static struct kobj_attribute xengt_sch_attr =
++__ATTR(schedule, 0220, NULL, xengt_sysfs_vgpu_schedule);
++
+ static struct attribute *xengt_ctrl_attrs[] = {
+ 	&xengt_instance_attr.attr,
+ 	NULL,   /* need to NULL terminate the list of attributes */
+@@ -107,6 +110,7 @@ static struct attribute *xengt_ctrl_attrs[] = {
+ 
+ static struct attribute *xengt_vm_attrs[] = {
+ 	&xengt_vm_attr.attr,
++	&xengt_sch_attr.attr,
+ 	NULL,   /* need to NULL terminate the list of attributes */
+ };
+ 
+@@ -347,6 +351,39 @@ static ssize_t xengt_sysfs_instance_manage(struct kobject *kobj,
+ 	return rc < 0 ? rc : count;
+ }
+ 
++static ssize_t xengt_sysfs_vgpu_schedule(struct kobject *kobj,
++		struct kobj_attribute *attr, const char *buf, size_t count)
++{
++	struct xengt_hvm_dev *info =
++		container_of((kobj), struct xengt_hvm_dev, kobj);
++	struct intel_vgpu *vgpu = info->vgpu;
++	int running;
++
++	mutex_lock(&gvt_sysfs_lock);
++	if (sscanf(buf, "%d", &running) != 1) {
++		mutex_unlock(&gvt_sysfs_lock);
++		return -EINVAL;
++	}
++
++	if (running) {
++		if (info->iosrv_id == 0) {
++			hvm_claim_ioreq_server_type(info, 1);
++			xen_hvm_toggle_iorequest_server(info, true);
++		}
++		intel_gvt_ops->vgpu_activate(vgpu);
++	} else {
++		intel_gvt_ops->vgpu_deactivate(vgpu);
++		if (info->iosrv_id != 0) {
++			hvm_claim_ioreq_server_type(info, 0);
++			xen_hvm_toggle_iorequest_server(info, false);
++		}
++	}
++
++	mutex_unlock(&gvt_sysfs_lock);
++
++	return count;
++}
++
+ int xengt_sysfs_init(struct intel_gvt *gvt)
+ {
+ 	int ret;
+diff --git a/drivers/gpu/drm/i915/gvt/xengt.h b/drivers/gpu/drm/i915/gvt/xengt.h
+index c9fdb44..18a26d8 100644
+--- a/drivers/gpu/drm/i915/gvt/xengt.h
++++ b/drivers/gpu/drm/i915/gvt/xengt.h
+@@ -75,10 +75,15 @@ static ssize_t xengt_sysfs_instance_manage(struct kobject *kobj,
+ 	struct kobj_attribute *attr, const char *buf, size_t count);
+ static ssize_t xengt_sysfs_vgpu_id(struct kobject *kobj,
+ 	struct kobj_attribute *attr, char *buf);
++static ssize_t xengt_sysfs_vgpu_schedule(struct kobject *kobj,
++	struct kobj_attribute *attr, const char *buf, size_t count);
+ 
+ struct intel_vgpu *xengt_instance_create(domid_t vm_id,
+ 		struct intel_vgpu_type *type);
+ void xengt_instance_destroy(struct intel_vgpu *vgpu);
++static int hvm_claim_ioreq_server_type(struct xengt_hvm_dev *info,
++		uint32_t set);
++static int xen_hvm_toggle_iorequest_server(struct xengt_hvm_dev *info, bool enable);
+ 
+ 
+ #endif
+-- 
+2.7.4
+

@@ -1,0 +1,13 @@
+diff --git a/net/openvswitch/datapath.c b/net/openvswitch/datapath.c
+index 0f5ce77..8e396c7 100644
+--- a/net/openvswitch/datapath.c
++++ b/net/openvswitch/datapath.c
+@@ -2239,7 +2239,7 @@ static int ovs_vport_cmd_dump(struct sk_buff *skb, struct netlink_callback *cb)
+ 	[OVS_VPORT_ATTR_STATS] = { .len = sizeof(struct ovs_vport_stats) },
+ 	[OVS_VPORT_ATTR_PORT_NO] = { .type = NLA_U32 },
+ 	[OVS_VPORT_ATTR_TYPE] = { .type = NLA_U32 },
+-	[OVS_VPORT_ATTR_UPCALL_PID] = { .type = NLA_U32 },
++	[OVS_VPORT_ATTR_UPCALL_PID] = { .type = NLA_UNSPEC },
+ 	[OVS_VPORT_ATTR_OPTIONS] = { .type = NLA_NESTED },
+ 	[OVS_VPORT_ATTR_IFINDEX] = { .type = NLA_U32 },
+ 	[OVS_VPORT_ATTR_NETNSID] = { .type = NLA_S32 },

@@ -5,25 +5,16 @@ some devices to fallback to an alternate reset method.
 
 Signed-off-by: Ross Lagerwall <ross.lagerwall@citrix.com>
 
-diff --git a/drivers/pci/pci.c b/drivers/pci/pci.c
-index 0df64ff..d061659 100644
---- a/drivers/pci/pci.c
-+++ b/drivers/pci/pci.c
-@@ -3418,6 +3418,9 @@ static int pcie_flr(struct pci_dev *dev, int probe)
- {
- 	u32 cap;
- 
-+	if (dev->dev_flags & PCI_DEV_FLAGS_NO_FLR_RESET)
-+		return -ENOTTY;
-+
- 	pcie_capability_read_dword(dev, PCI_EXP_DEVCAP, &cap);
- 	if (!(cap & PCI_EXP_DEVCAP_FLR))
- 		return -ENOTTY;
+---
+ drivers/pci/quirks.c    | 12 ++++++++++++
+ include/linux/pci_ids.h |  2 ++
+ 2 files changed, 14 insertions(+)
+
 diff --git a/drivers/pci/quirks.c b/drivers/pci/quirks.c
-index 7e32730..fe3333a 100644
+index ec2911c..a82ebfd 100644
 --- a/drivers/pci/quirks.c
 +++ b/drivers/pci/quirks.c
-@@ -3144,6 +3144,18 @@ static void quirk_no_pm_reset(struct pci_dev *dev)
+@@ -3387,6 +3387,18 @@ static void quirk_no_pm_reset(struct pci_dev *dev)
  DECLARE_PCI_FIXUP_CLASS_HEADER(PCI_VENDOR_ID_ATI, PCI_ANY_ID,
  			       PCI_CLASS_DISPLAY_VGA, 8, quirk_no_pm_reset);
  
@@ -39,27 +30,14 @@ index 7e32730..fe3333a 100644
 +			       PCI_DEVICE_ID_LSI_MEGARAID_3108,
 +			       PCI_CLASS_STORAGE_SAS, 8, quirk_no_flr_reset);
 +
- #ifdef CONFIG_ACPI
  /*
-  * Apple: Shutdown Cactus Ridge Thunderbolt controller.
-diff --git a/include/linux/pci.h b/include/linux/pci.h
-index 7d9d0b1..a331715 100644
---- a/include/linux/pci.h
-+++ b/include/linux/pci.h
-@@ -182,6 +182,8 @@ enum pci_dev_flags {
- 	PCI_DEV_FLAGS_NO_PM_RESET = (__force pci_dev_flags_t) (1 << 7),
- 	/* Get VPD from function 0 VPD */
- 	PCI_DEV_FLAGS_VPD_REF_F0 = (__force pci_dev_flags_t) (1 << 8),
-+	/* Do not use FLR reset even if device advertises FLReset+ */
-+	PCI_DEV_FLAGS_NO_FLR_RESET = (__force pci_dev_flags_t) (1 << 9),
- };
- 
- enum pci_irq_reroute_variant {
+  * Thunderbolt controllers with broken MSI hotplug signaling:
+  * Entire 1st generation (Light Ridge, Eagle Ridge, Light Peak) and part
 diff --git a/include/linux/pci_ids.h b/include/linux/pci_ids.h
-index d9ba49c..f8a2415 100644
+index ab20dc5..6c552cb 100644
 --- a/include/linux/pci_ids.h
 +++ b/include/linux/pci_ids.h
-@@ -212,6 +212,8 @@
+@@ -216,6 +216,8 @@
  #define PCI_DEVICE_ID_LSI_SAS1066E	0x005A
  #define PCI_DEVICE_ID_LSI_SAS1068E	0x0058
  #define PCI_DEVICE_ID_LSI_SAS1078	0x0060

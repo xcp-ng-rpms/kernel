@@ -11,22 +11,22 @@ Clear ignore_df, only when packet is being injected to another namespace.
 
 Signed-off-by: Anoob Soman <anoob.soman@citrix.com>
 diff --git a/net/core/skbuff.c b/net/core/skbuff.c
-index 4968b5d..4d0ffeb 100644
+index f817f33..9e7c6d8 100644
 --- a/net/core/skbuff.c
 +++ b/net/core/skbuff.c
-@@ -4217,7 +4217,6 @@ void skb_scrub_packet(struct sk_buff *skb, bool xnet)
- 	skb->tstamp.tv64 = 0;
+@@ -4906,7 +4906,6 @@ void skb_scrub_packet(struct sk_buff *skb, bool xnet)
+ {
  	skb->pkt_type = PACKET_HOST;
  	skb->skb_iif = 0;
 -	skb->ignore_df = 0;
  	skb_dst_drop(skb);
- 	skb_sender_cpu_clear(skb);
  	secpath_reset(skb);
-@@ -4229,6 +4228,7 @@ void skb_scrub_packet(struct sk_buff *skb, bool xnet)
- 
- 	skb_orphan(skb);
+ 	nf_reset(skb);
+@@ -4918,6 +4917,7 @@ void skb_scrub_packet(struct sk_buff *skb, bool xnet)
+ 	ipvs_reset(skb);
  	skb->mark = 0;
-+	skb->ignore_df = 0;
+ 	skb->tstamp = 0;
++        skb->ignore_df = 0;
  }
  EXPORT_SYMBOL_GPL(skb_scrub_packet);
  

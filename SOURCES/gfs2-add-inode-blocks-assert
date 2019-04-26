@@ -1,0 +1,29 @@
+Fix an incorrect gfs2_assert()
+
+From: Tim Smith <tim.smith@citrix.com>
+
+When updating the inode information after a change in allocation, convert
+the change into the same units as the inode's i_blocks count before
+comparing it in an assertion.
+
+Also, change the comparison so that it is still possible to set i_blocks
+to zero by adding -i_blocks, something that was previously only possible
+because of the difference in units.
+
+Signed-off-by: Tim Smith <tim.smith@citrix.com>
+
+diff --git a/fs/gfs2/inode.h b/fs/gfs2/inode.h
+index b5b6341a4f5c..6fa2d44798e5 100644
+--- a/fs/gfs2/inode.h
++++ b/fs/gfs2/inode.h
+@@ -61,8 +61,8 @@ static inline u64 gfs2_get_inode_blocks(const struct inode *inode)
+ 
+ static inline void gfs2_add_inode_blocks(struct inode *inode, s64 change)
+ {
+-	gfs2_assert(GFS2_SB(inode), (change >= 0 || inode->i_blocks > -change));
+-	change *= (GFS2_SB(inode)->sd_sb.sb_bsize/GFS2_BASIC_BLOCK);
++	change <<= (GFS2_SB(inode)->sd_sb.sb_bsize_shift - GFS2_BASIC_BLOCK_SHIFT);
++	gfs2_assert(GFS2_SB(inode), (change >= 0 || inode->i_blocks >= -change));
+ 	inode->i_blocks += change;
+ }
+ 

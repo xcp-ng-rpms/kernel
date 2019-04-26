@@ -1,0 +1,22 @@
+Retry wait_event_interruptible in event of ERESTARTSYS
+
+From: Mark Syms <mark.syms@citrix.com>
+
+Signed-off-by: Mark Syms <mark.syms@citrix.com>
+diff --git a/fs/dlm/lockspace.c b/fs/dlm/lockspace.c
+index 6a1529e..50b5aea 100644
+--- a/fs/dlm/lockspace.c
++++ b/fs/dlm/lockspace.c
+@@ -210,8 +210,10 @@ static int do_uevent(struct dlm_ls *ls, int in)
+ 	/* dlm_controld will see the uevent, do the necessary group management
+ 	   and then write to sysfs to wake us */
+ 
+-	error = wait_event_interruptible(ls->ls_uevent_wait,
+-			test_and_clear_bit(LSFL_UEVENT_WAIT, &ls->ls_flags));
++	do {
++		error = wait_event_interruptible(ls->ls_uevent_wait,
++						 test_and_clear_bit(LSFL_UEVENT_WAIT, &ls->ls_flags));
++	} while (error == -ERESTARTSYS);
+ 
+ 	log_rinfo(ls, "group event done %d %d", error, ls->ls_uevent_result);
+ 

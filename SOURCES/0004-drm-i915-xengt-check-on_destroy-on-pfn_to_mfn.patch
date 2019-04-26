@@ -1,0 +1,39 @@
+From 24285cad1aeaadd9b57d919559ac946665f07ef5 Mon Sep 17 00:00:00 2001
+From: Pei Zhang <pei.zhang@intel.com>
+Date: Sat, 15 Apr 2017 07:15:57 +0800
+Subject: [PATCH 04/45] drm/i915/xengt: check on_destroy on pfn_to_mfn
+
+This patch would avoid error log during guest shutdown/reboot.
+
+Signed-off-by: Pei Zhang <pei.zhang@intel.com>
+---
+ drivers/gpu/drm/i915/gvt/xengt.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/drivers/gpu/drm/i915/gvt/xengt.c b/drivers/gpu/drm/i915/gvt/xengt.c
+index 7b1d7ff..c4144e2 100644
+--- a/drivers/gpu/drm/i915/gvt/xengt.c
++++ b/drivers/gpu/drm/i915/gvt/xengt.c
+@@ -660,6 +660,9 @@ static int xengt_map_gfn_to_mfn(unsigned long handle, unsigned long gfn,
+ 	if (!info)
+ 		return -EINVAL;
+ 
++	if (info->on_destroy)
++		return 0;
++
+ 	rc = xen_hvm_memory_mapping(info->vm_id, gfn, mfn, nr,
+ 			map ? DPCI_ADD_MAPPING : DPCI_REMOVE_MAPPING);
+ 	if (rc != 0)
+@@ -686,6 +689,9 @@ static int xengt_page_track_add(unsigned long handle, u64 gfn)
+ 	if (!info)
+ 		return -EINVAL;
+ 
++	if (info->on_destroy)
++		return 0;
++
+ 	r = xen_hvm_wp_page_to_ioreq_server(info, gfn, true);
+ 	if (r) {
+ 		gvt_err("fail to set write protection.\n");
+-- 
+2.7.4
+

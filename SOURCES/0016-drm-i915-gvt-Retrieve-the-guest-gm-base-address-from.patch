@@ -1,0 +1,115 @@
+From 93b73179b018c002402c0391074fd12a72c3181e Mon Sep 17 00:00:00 2001
+From: Yulei Zhang <yulei.zhang@intel.com>
+Date: Thu, 4 Jan 2018 13:53:19 +0800
+Subject: [PATCH 16/45] drm/i915/gvt: Retrieve the guest gm base address from
+ PVINFO
+
+As after migration the host gm base address will be changed due
+to resource re-allocation, in order to make sure the guest gm
+address doesn't change with that to retrieve the guest gm base
+address from PVINFO.
+
+Signed-off-by: Yulei Zhang <yulei.zhang@intel.com>
+Signed-off-by: Zhenyu Wang <zhenyuw@linux.intel.com>
+---
+ drivers/gpu/drm/i915/gvt/cfg_space.c |  3 ++-
+ drivers/gpu/drm/i915/gvt/gtt.c       |  8 ++++----
+ drivers/gpu/drm/i915/gvt/gvt.h       | 22 ++++++++++++++++++----
+ 3 files changed, 24 insertions(+), 9 deletions(-)
+
+diff --git a/drivers/gpu/drm/i915/gvt/cfg_space.c b/drivers/gpu/drm/i915/gvt/cfg_space.c
+index c62346f..b2d35cb 100644
+--- a/drivers/gpu/drm/i915/gvt/cfg_space.c
++++ b/drivers/gpu/drm/i915/gvt/cfg_space.c
+@@ -33,6 +33,7 @@
+ 
+ #include "i915_drv.h"
+ #include "gvt.h"
++#include "i915_pvinfo.h"
+ 
+ enum {
+ 	INTEL_GVT_PCI_BAR_GTTMMIO = 0,
+@@ -125,7 +126,7 @@ static int map_aperture(struct intel_vgpu *vgpu, bool map)
+ 	else
+ 		val = *(u32 *)(vgpu_cfg_space(vgpu) + PCI_BASE_ADDRESS_2);
+ 
+-	first_gfn = (val + vgpu_aperture_offset(vgpu)) >> PAGE_SHIFT;
++	first_gfn = (val + vgpu_guest_aperture_offset(vgpu)) >> PAGE_SHIFT;
+ 
+ 	ret = intel_gvt_hypervisor_map_gfn_to_mfn(vgpu, first_gfn,
+ 						  aperture_pa >> PAGE_SHIFT,
+diff --git a/drivers/gpu/drm/i915/gvt/gtt.c b/drivers/gpu/drm/i915/gvt/gtt.c
+index 6cdc204..324fac6 100644
+--- a/drivers/gpu/drm/i915/gvt/gtt.c
++++ b/drivers/gpu/drm/i915/gvt/gtt.c
+@@ -71,10 +71,10 @@ int intel_gvt_ggtt_gmadr_g2h(struct intel_vgpu *vgpu, u64 g_addr, u64 *h_addr)
+ 
+ 	if (vgpu_gmadr_is_aperture(vgpu, g_addr))
+ 		*h_addr = vgpu_aperture_gmadr_base(vgpu)
+-			  + (g_addr - vgpu_aperture_offset(vgpu));
++			  + (g_addr - vgpu_guest_aperture_gmadr_base(vgpu));
+ 	else
+ 		*h_addr = vgpu_hidden_gmadr_base(vgpu)
+-			  + (g_addr - vgpu_hidden_offset(vgpu));
++			  + (g_addr - vgpu_guest_hidden_gmadr_base(vgpu));
+ 	return 0;
+ }
+ 
+@@ -86,10 +86,10 @@ int intel_gvt_ggtt_gmadr_h2g(struct intel_vgpu *vgpu, u64 h_addr, u64 *g_addr)
+ 		return -EACCES;
+ 
+ 	if (gvt_gmadr_is_aperture(vgpu->gvt, h_addr))
+-		*g_addr = vgpu_aperture_gmadr_base(vgpu)
++		*g_addr = vgpu_guest_aperture_gmadr_base(vgpu)
+ 			+ (h_addr - gvt_aperture_gmadr_base(vgpu->gvt));
+ 	else
+-		*g_addr = vgpu_hidden_gmadr_base(vgpu)
++		*g_addr = vgpu_guest_hidden_gmadr_base(vgpu)
+ 			+ (h_addr - gvt_hidden_gmadr_base(vgpu->gvt));
+ 	return 0;
+ }
+diff --git a/drivers/gpu/drm/i915/gvt/gvt.h b/drivers/gpu/drm/i915/gvt/gvt.h
+index c22ac82..a6014aa 100644
+--- a/drivers/gpu/drm/i915/gvt/gvt.h
++++ b/drivers/gpu/drm/i915/gvt/gvt.h
+@@ -420,6 +420,20 @@ int intel_gvt_load_firmware(struct intel_gvt *gvt);
+ #define vgpu_fence_base(vgpu) (vgpu->fence.base)
+ #define vgpu_fence_sz(vgpu) (vgpu->fence.size)
+ 
++/* Aperture/GM space definitions for vGPU Guest view point */
++#define vgpu_guest_aperture_offset(vgpu) \
++	vgpu_vreg_t(vgpu, vgtif_reg(avail_rs.mappable_gmadr.base))
++#define vgpu_guest_hidden_offset(vgpu)	\
++	vgpu_vreg_t(vgpu, vgtif_reg(avail_rs.nonmappable_gmadr.base))
++
++#define vgpu_guest_aperture_gmadr_base(vgpu) (vgpu_guest_aperture_offset(vgpu))
++#define vgpu_guest_aperture_gmadr_end(vgpu) \
++	(vgpu_guest_aperture_gmadr_base(vgpu) + vgpu_aperture_sz(vgpu) - 1)
++
++#define vgpu_guest_hidden_gmadr_base(vgpu) (vgpu_guest_hidden_offset(vgpu))
++#define vgpu_guest_hidden_gmadr_end(vgpu) \
++	(vgpu_guest_hidden_gmadr_base(vgpu) + vgpu_hidden_sz(vgpu) - 1)
++
+ struct intel_vgpu_creation_params {
+ 	__u64 handle;
+ 	__u64 low_gm_sz;  /* in MB */
+@@ -495,12 +509,12 @@ void intel_gvt_deactivate_vgpu(struct intel_vgpu *vgpu);
+ 
+ /* validating GM functions */
+ #define vgpu_gmadr_is_aperture(vgpu, gmadr) \
+-	((gmadr >= vgpu_aperture_gmadr_base(vgpu)) && \
+-	 (gmadr <= vgpu_aperture_gmadr_end(vgpu)))
++	((gmadr >= vgpu_guest_aperture_gmadr_base(vgpu)) && \
++	 (gmadr <= vgpu_guest_aperture_gmadr_end(vgpu)))
+ 
+ #define vgpu_gmadr_is_hidden(vgpu, gmadr) \
+-	((gmadr >= vgpu_hidden_gmadr_base(vgpu)) && \
+-	 (gmadr <= vgpu_hidden_gmadr_end(vgpu)))
++	((gmadr >= vgpu_guest_hidden_gmadr_base(vgpu)) && \
++	 (gmadr <= vgpu_guest_hidden_gmadr_end(vgpu)))
+ 
+ #define vgpu_gmadr_is_valid(vgpu, gmadr) \
+ 	 ((vgpu_gmadr_is_aperture(vgpu, gmadr) || \
+-- 
+2.7.4
+

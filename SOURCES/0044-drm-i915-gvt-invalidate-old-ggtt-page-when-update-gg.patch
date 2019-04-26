@@ -1,0 +1,46 @@
+From 429a7d79a9de17f95ab80c366dc1b26ae77486ac Mon Sep 17 00:00:00 2001
+From: Hang Yuan <hang.yuan@linux.intel.com>
+Date: Wed, 19 Sep 2018 14:42:09 +0800
+Subject: [PATCH 44/45] drm/i915/gvt: invalidate old ggtt page when update ggtt
+ entry
+
+Previously only cancelled dma map of a ggtt page when the ggtt entry was
+cleared. This patch will cancel dma map of an old ggtt page as well when
+the ggtt entry is updated with new page address.
+
+Fixes: 7598e8700e9a(drm/i915/gvt: Missed to cancel dma map for ggtt entries)
+Signed-off-by: Hang Yuan <hang.yuan@linux.intel.com>
+Signed-off-by: Zhenyu Wang <zhenyuw@linux.intel.com>
+---
+ drivers/gpu/drm/i915/gvt/gtt.c | 8 +++++---
+ 1 file changed, 5 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/gpu/drm/i915/gvt/gtt.c b/drivers/gpu/drm/i915/gvt/gtt.c
+index ccdb7f8..3029bc3 100644
+--- a/drivers/gpu/drm/i915/gvt/gtt.c
++++ b/drivers/gpu/drm/i915/gvt/gtt.c
+@@ -2262,16 +2262,18 @@ static int emulate_ggtt_mmio_write(struct intel_vgpu *vgpu, unsigned int off,
+ 		} else
+ 			ops->set_pfn(&m, dma_addr >> PAGE_SHIFT);
+ 	} else {
+-		ggtt_get_host_entry(ggtt_mm, &m, g_gtt_index);
+-		ggtt_invalidate_pte(vgpu, &m);
+ 		ops->set_pfn(&m, gvt->gtt.scratch_mfn);
+ 		ops->clear_present(&m);
+ 	}
+ 
+ out:
++	ggtt_set_guest_entry(ggtt_mm, &e, g_gtt_index);
++
++	ggtt_get_host_entry(ggtt_mm, &e, h_gtt_index);
++	ggtt_invalidate_pte(vgpu, &e);
++
+ 	ggtt_set_host_entry(ggtt_mm, &m, h_gtt_index);
+ 	ggtt_invalidate(gvt->dev_priv);
+-	ggtt_set_guest_entry(ggtt_mm, &e, g_gtt_index);
+ 	return 0;
+ }
+ 
+-- 
+2.7.4
+

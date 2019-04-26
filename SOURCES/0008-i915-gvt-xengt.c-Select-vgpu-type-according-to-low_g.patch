@@ -1,0 +1,78 @@
+From d0513cd7bd5a70f4b1e4c6c44b8948c191712e40 Mon Sep 17 00:00:00 2001
+From: Xiong Zhang <xiong.y.zhang@intel.com>
+Date: Tue, 9 May 2017 02:54:02 +0800
+Subject: [PATCH 08/45] i915/gvt/xengt.c: Select vgpu type according to
+ low_gm_sz in hvm.cfg
+
+The default vgpu type is type 0 which has 64MB aperture size and
+the resolution is limited to 1024x768. But Linux and win7 guest
+need more aperture size like 128/256/512/1024MB.
+Currently xen could pass low_gm_sz to kernel when create a vgpu.
+But kernel doesn't use low_gm_sz to choose vgpu type and hard
+code type 0 vgpu. This patch use low_gm_sz to choose vgpu type.
+
+The relationship between log_gm_sz and vgpu type are:
+low_gm_sz    type    aperture     high memory
+  64M         0        64M           384M
+ 128M         1        128M          512M
+ 256M         2        256M          1024M
+ 512M         3        512M          2048M
+
+Signed-off-by: Xiong Zhang <xiong.y.zhang@intel.com>
+---
+ drivers/gpu/drm/i915/gvt/xengt.c | 32 +++++++++++++++++++++++++-------
+ 1 file changed, 25 insertions(+), 7 deletions(-)
+
+diff --git a/drivers/gpu/drm/i915/gvt/xengt.c b/drivers/gpu/drm/i915/gvt/xengt.c
+index 2325b69..00ae135 100644
+--- a/drivers/gpu/drm/i915/gvt/xengt.c
++++ b/drivers/gpu/drm/i915/gvt/xengt.c
+@@ -125,20 +125,38 @@ static struct kobj_type xengt_ctrl_ktype = {
+ 	.default_attrs = xengt_ctrl_attrs,
+ };
+ 
++static struct intel_vgpu_type *xengt_choose_vgpu_type(
++		struct xengt_hvm_params *vp)
++{
++	struct intel_vgpu_type *vgpu_type;
++	unsigned int  i;
++
++	for (i = 0;  i < xengt_priv.gvt->num_types; i++) {
++		vgpu_type = &xengt_priv.gvt->types[i];
++		if ((vgpu_type->low_gm_size >> 20) == vp->aperture_sz) {
++			gvt_dbg_core("choose vgpu type:%d\n", i);
++			return vgpu_type;
++		}
++	}
++
++	gvt_err("specify a wrong low_gm_sz in hvm.cfg: %d\n", vp->aperture_sz);
++		return NULL;
++}
++
+ static int xengt_sysfs_add_instance(struct xengt_hvm_params *vp)
+ {
+ 	int ret = 0;
+ 	struct intel_vgpu *vgpu;
+ 	struct xengt_hvm_dev *info;
++	struct intel_vgpu_type *type;
+ 
+-	/*
+-	 * TODO.
+-	 * Temporory, we default use gvt's types[0] to create an vgpu
+-	 * instance. This should be fixed later to select type based
+-	 * on user resource setting.
+-	 */
++	type = xengt_choose_vgpu_type(vp);
++	if (type == NULL) {
++		gvt_err("choose vgpu type failed");
++		return -EINVAL;
++	}
+ 	mutex_lock(&gvt_sysfs_lock);
+-	vgpu = xengt_instance_create(vp->vm_id, &xengt_priv.gvt->types[0]);
++	vgpu = xengt_instance_create(vp->vm_id, type);
+ 	mutex_unlock(&gvt_sysfs_lock);
+ 	if (vgpu == NULL) {
+ 		gvt_err("xengt_sysfs_add_instance failed.\n");
+-- 
+2.7.4
+

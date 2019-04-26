@@ -1,8 +1,8 @@
 diff --git a/arch/x86/include/asm/xen/hypercall.h b/arch/x86/include/asm/xen/hypercall.h
-index 4c20dd3..f184df1 100644
+index ef05bea7010d..402874488e9f 100644
 --- a/arch/x86/include/asm/xen/hypercall.h
 +++ b/arch/x86/include/asm/xen/hypercall.h
-@@ -458,6 +458,13 @@ HYPERVISOR_hvm_op(int op, void *arg)
+@@ -412,6 +412,13 @@ HYPERVISOR_hvm_op(int op, void *arg)
         return _hypercall2(unsigned long, hvm_op, op, arg);
  }
  
@@ -18,7 +18,7 @@ index 4c20dd3..f184df1 100644
  	struct tmem_op *op)
 diff --git a/include/xen/interface/kexec.h b/include/xen/interface/kexec.h
 new file mode 100644
-index 0000000..443df8a
+index 000000000000..443df8adf8df
 --- /dev/null
 +++ b/include/xen/interface/kexec.h
 @@ -0,0 +1,10 @@
@@ -33,12 +33,12 @@ index 0000000..443df8a
 +#endif
 +
 diff --git a/kernel/panic.c b/kernel/panic.c
-index 41e2b54..4cf4a07 100644
+index 8b2e002d52eb..98cba19c8701 100644
 --- a/kernel/panic.c
 +++ b/kernel/panic.c
-@@ -25,6 +25,12 @@
- #include <linux/nmi.h>
- #include <linux/console.h>
+@@ -30,6 +30,12 @@
+ #include <linux/debugfs.h>
+ #include <asm/sections.h>
  
 +#ifdef CONFIG_XEN
 +#include <xen/xen.h>
@@ -49,7 +49,7 @@ index 41e2b54..4cf4a07 100644
  #define PANIC_TIMER_STEP 100
  #define PANIC_BLINK_SPD 18
  
-@@ -112,6 +118,12 @@ void panic(const char *fmt, ...)
+@@ -184,6 +190,12 @@ void panic(const char *fmt, ...)
  		dump_stack();
  #endif
  

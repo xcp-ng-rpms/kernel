@@ -1,0 +1,36 @@
+From 27d420bc475e68c85d567d96caf215999d76fd16 Mon Sep 17 00:00:00 2001
+From: Christoph Hellwig <hch@lst.de>
+Date: Fri, 9 Nov 2018 14:49:02 +0100
+Subject: [PATCH 11/11] mtip32xxx: use for_each_sg
+
+Use the proper helper instead of manually iterating the scatterlist,
+which is broken in the presence of chained S/G lists.
+
+Signed-off-by: Christoph Hellwig <hch@lst.de>
+Signed-off-by: Jens Axboe <axboe@kernel.dk>
+diff --git a/drivers/block/mtip32xx/mtip32xx.c b/drivers/block/mtip32xx/mtip32xx.c
+index d7079cdf69c6..73f89f2a4a5e 100644
+--- a/drivers/block/mtip32xx/mtip32xx.c
++++ b/drivers/block/mtip32xx/mtip32xx.c
+@@ -1549,11 +1549,11 @@ static inline void fill_command_sg(struct driver_data *dd,
+ 	int n;
+ 	unsigned int dma_len;
+ 	struct mtip_cmd_sg *command_sg;
+-	struct scatterlist *sg = command->sg;
++	struct scatterlist *sg;
+ 
+ 	command_sg = command->command + AHCI_CMD_TBL_HDR_SZ;
+ 
+-	for (n = 0; n < nents; n++) {
++	for_each_sg(command->sg, sg, nents, n) {
+ 		dma_len = sg_dma_len(sg);
+ 		if (dma_len > 0x400000)
+ 			dev_err(&dd->pdev->dev,
+@@ -1563,7 +1563,6 @@ static inline void fill_command_sg(struct driver_data *dd,
+ 		command_sg->dba_upper =
+ 			cpu_to_le32((sg_dma_address(sg) >> 16) >> 16);
+ 		command_sg++;
+-		sg++;
+ 	}
+ }
+ 

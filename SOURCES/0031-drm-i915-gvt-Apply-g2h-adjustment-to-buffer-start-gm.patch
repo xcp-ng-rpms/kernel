@@ -1,0 +1,30 @@
+From 1778b80de83330b75419aad2445dd1fc533d9426 Mon Sep 17 00:00:00 2001
+From: Yulei Zhang <yulei.zhang@intel.com>
+Date: Fri, 11 May 2018 16:18:16 +0800
+Subject: [PATCH 31/45] drm/i915/gvt: Apply g2h adjustment to buffer start gma
+ for dmabuf
+
+Adjust the buffer start gma in dmabuf for display in host domain.
+
+Signed-off-by: Yulei Zhang <yulei.zhang@intel.com>
+---
+ drivers/gpu/drm/i915/gvt/dmabuf.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/drivers/gpu/drm/i915/gvt/dmabuf.c b/drivers/gpu/drm/i915/gvt/dmabuf.c
+index 51ed99a..e96c655 100644
+--- a/drivers/gpu/drm/i915/gvt/dmabuf.c
++++ b/drivers/gpu/drm/i915/gvt/dmabuf.c
+@@ -293,6 +293,9 @@ static int vgpu_get_plane_info(struct drm_device *dev,
+ 		return -EFAULT;
+ 	}
+ 
++	/* Apply g2h adjust to buffer start gma for display */
++	intel_gvt_ggtt_gmadr_g2h(vgpu, info->start, &info->start);
++
+ 	return 0;
+ }
+ 
+-- 
+2.7.4
+
