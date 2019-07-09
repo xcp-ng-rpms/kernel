@@ -26,6 +26,7 @@ Release: 4.0.13
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
+BuildRequires: gcc
 BuildRequires: kmod
 BuildRequires: bc
 BuildRequires: hostname
