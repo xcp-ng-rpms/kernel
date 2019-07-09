@@ -22,7 +22,7 @@
 Name: kernel
 License: GPLv2
 Version: 4.4.52
-Release: 4.0.7.1
+Release: 4.0.7.2
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
@@ -429,6 +429,14 @@ Source3: check-kabi
 Source4: Module.kabi
 %endif
 
+# XCP-ng patches
+# Patches backported from 7.6 security kernel update
+Patch1000: 0001-tcp-limit-payload-size-of-sacked-skbs.patch
+Patch1001: 0002-tcp-tcp_fragment-should-apply-sane-memory-limits.patch
+Patch1002: 0004-tcp-enforce-tcp_min_snd_mss-in-tcp_mtu_probing.patch
+Patch1003: 0001-tcp-refine-memory-limit-test-in-tcp_fragment.patch
+
+
 %description
 The kernel package contains the Linux kernel (vmlinuz), the core of any
 Linux operating system.  The kernel handles the basic functions of the
@@ -649,6 +657,9 @@ fi
 %{_rpmconfigdir}/macros.d/macros.kernel
 
 %changelog
+* Tue Jul 09 2019 Samuel Verschelde <stormi-xcp@ylix.fr> - 4.4.52-4.0.7.2
+- Backport security fixes against SACK attacks
+
 * Mon Apr 16 2018 Simon Rowe <simon.rowe@citrix.com> - 4.4.52-4.0.7
 - CA-287508: Fix for skb_warn_bad_offload()
 
