@@ -22,7 +22,7 @@
 Name: kernel
 License: GPLv2
 Version: 4.19.19
-Release: 5.0.9%{?dist}
+Release: 5.0.9.1%{?dist}
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
@@ -195,6 +195,10 @@ Patch138: abi-version.patch
 
 Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XS/repos/linux.pg/archive?format=tar&at=v5.0.9#/kernel.patches.tar) = 8355ed8c17a00f29f9ec1a700de2cab14379ec9c
 Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XSU/repos/linux-stable/archive?at=refs%2Ftags%2Fv4.19.19&format=tar.gz&prefix=kernel-4.19.19#/kernel-4.19.19.tar.gz) = dffbba4348e9686d6bf42d54eb0f2cd1c4fb3520
+
+# XCP-ng patches
+Patch1000: xsa300-linux-5.2.patch
+
 
 %if %{do_kabichk}
 %endif
@@ -497,6 +501,11 @@ fi
 %{python2_sitearch}/*
 
 %changelog
+* Fri Jul 19 2019 Samuel Verschelde <stormi-xcp@ylix.fr> - 4.19.19-5.0.10
+- Fix XSA-300 for dom0 [http://xenbits.xen.org/xsa/advisory-300.html]
+- Add patch xsa300-linux-5.2.patch
+- Refs https://github.com/xcp-ng/xcp/issues/238
+
 * Thu Jun 20 2019 Ross Lagerwall <ross.lagerwall@citrix.com> - 4.19.19-5.0.9
 - CA-322114: Fix TCP SACK/MSS vulnerabilites - CVE-2019-1147[7-9]
 
