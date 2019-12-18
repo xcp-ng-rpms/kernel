@@ -1,0 +1,68 @@
+From dbc582b6fb6ad6461085adfaae0106ae78721107 Mon Sep 17 00:00:00 2001
+From: Christoph Hellwig <hch@lst.de>
+Date: Tue, 30 Apr 2019 08:45:33 -0700
+Subject: [PATCH 1/1] iomap: Clean up __generic_write_end calling
+
+Move the call to __generic_write_end into iomap_write_end instead of
+duplicating it in each of the three branches.  This requires open coding
+the generic_write_end for the buffer_head case.
+
+Signed-off-by: Christoph Hellwig <hch@lst.de>
+Signed-off-by: Andreas Gruenbacher <agruenba@redhat.com>
+Reviewed-by: Jan Kara <jack@suse.cz>
+Reviewed-by: Darrick J. Wong <darrick.wong@oracle.com>
+Signed-off-by: Darrick J. Wong <darrick.wong@oracle.com>
+---
+ fs/iomap.c | 18 ++++++++----------
+ 1 file changed, 8 insertions(+), 10 deletions(-)
+
+diff --git a/fs/iomap.c b/fs/iomap.c
+index bfb1c74b16d3..9f159c39fbdc 100644
+--- a/fs/iomap.c
++++ b/fs/iomap.c
+@@ -730,13 +730,11 @@ __iomap_write_end(struct inode *inode, loff_t pos, unsigned len,
+ 	 * uptodate page as a zero-length write, and force the caller to redo
+ 	 * the whole thing.
+ 	 */
+-	if (unlikely(copied < len && !PageUptodate(page))) {
+-		copied = 0;
+-	} else {
+-		iomap_set_range_uptodate(page, offset_in_page(pos), len);
+-		iomap_set_page_dirty(page);
+-	}
+-	return __generic_write_end(inode, pos, copied, page);
++	if (unlikely(copied < len && !PageUptodate(page)))
++		return 0;
++	iomap_set_range_uptodate(page, offset_in_page(pos), len);
++	iomap_set_page_dirty(page);
++	return copied;
+ }
+ 
+ static int
+@@ -753,7 +751,6 @@ iomap_write_end_inline(struct inode *inode, struct page *page,
+ 	kunmap_atomic(addr);
+ 
+ 	mark_inode_dirty(inode);
+-	__generic_write_end(inode, pos, copied, page);
+ 	return copied;
+ }
+ 
+@@ -766,12 +763,13 @@ iomap_write_end(struct inode *inode, loff_t pos, unsigned len,
+ 	if (iomap->type == IOMAP_INLINE) {
+ 		ret = iomap_write_end_inline(inode, page, iomap, pos, copied);
+ 	} else if (iomap->flags & IOMAP_F_BUFFER_HEAD) {
+-		ret = generic_write_end(NULL, inode->i_mapping, pos, len,
+-				copied, page, NULL);
++		ret = block_write_end(NULL, inode->i_mapping, pos, len, copied,
++				page, NULL);
+ 	} else {
+ 		ret = __iomap_write_end(inode, pos, len, copied, page, iomap);
+ 	}
+ 
++	ret = __generic_write_end(inode, pos, ret, page);
+ 	if (iomap->page_done)
+ 		iomap->page_done(inode, pos, copied, page, iomap);
+ 
+-- 
+2.17.2
+

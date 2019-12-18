@@ -14,10 +14,10 @@ within the last second.
 Signed-off-by: Mark Syms <mark.syms@citrix.com>
 
 diff --git a/fs/gfs2/glock.c b/fs/gfs2/glock.c
-index 59be36b..77f0d6c 100644
+index ccdd8c821abd..ad0278b4ad41 100644
 --- a/fs/gfs2/glock.c
 +++ b/fs/gfs2/glock.c
-@@ -973,7 +973,9 @@ static void handle_callback(struct gfs2_glock *gl, unsigned int state,
+@@ -978,7 +978,9 @@ static void handle_callback(struct gfs2_glock *gl, unsigned int state,
  	}
  	if (gl->gl_ops->go_callback)
  		gl->gl_ops->go_callback(gl, remote);
@@ -28,7 +28,7 @@ index 59be36b..77f0d6c 100644
  }
  
  void gfs2_print_dbg(struct seq_file *seq, const char *fmt, ...)
-@@ -1338,7 +1340,8 @@ void gfs2_glock_cb(struct gfs2_glock *gl, unsigned int state)
+@@ -1343,7 +1345,8 @@ void gfs2_glock_cb(struct gfs2_glock *gl, unsigned int state)
  	gfs2_glock_hold(gl);
  	holdtime = gl->gl_tchange + gl->gl_hold_time;
  	if (test_bit(GLF_QUEUED, &gl->gl_flags) &&
@@ -39,10 +39,10 @@ index 59be36b..77f0d6c 100644
  			delay = holdtime - now;
  		if (test_bit(GLF_REPLY_PENDING, &gl->gl_flags))
 diff --git a/fs/gfs2/incore.h b/fs/gfs2/incore.h
-index e494cac..32ea806 100644
+index 40f3954411d6..b21b09b2a79c 100644
 --- a/fs/gfs2/incore.h
 +++ b/fs/gfs2/incore.h
-@@ -349,6 +349,8 @@ struct gfs2_glock {
+@@ -365,6 +365,8 @@ struct gfs2_glock {
  		     gl_reply:8;	/* Last reply from the dlm */
  
  	unsigned long gl_demote_time; /* time of first demote request */
@@ -52,7 +52,7 @@ index e494cac..32ea806 100644
  	struct list_head gl_holders;
  
 diff --git a/fs/gfs2/main.c b/fs/gfs2/main.c
-index cb4ab02..cc64ef9 100644
+index 2d55e2c3333c..2183c73f6d2f 100644
 --- a/fs/gfs2/main.c
 +++ b/fs/gfs2/main.c
 @@ -58,6 +58,7 @@ static void gfs2_init_glock_once(void *foo)
@@ -64,10 +64,10 @@ index cb4ab02..cc64ef9 100644
  
  static void gfs2_init_gl_aspace_once(void *foo)
 diff --git a/fs/gfs2/rgrp.c b/fs/gfs2/rgrp.c
-index b705eec..b07c43a 100644
+index ae17c0ed5283..32497ad8c208 100644
 --- a/fs/gfs2/rgrp.c
 +++ b/fs/gfs2/rgrp.c
-@@ -1902,6 +1902,12 @@ static bool gfs2_rgrp_used_recently(const struct gfs2_blkreserv *rs,
+@@ -1956,6 +1956,12 @@ static bool gfs2_rgrp_used_recently(const struct gfs2_blkreserv *rs,
  	return tdiff > (msecs * 1000 * 1000);
  }
  
@@ -80,7 +80,7 @@ index b705eec..b07c43a 100644
  static u32 gfs2_orlov_skip(const struct gfs2_inode *ip)
  {
  	const struct gfs2_sbd *sdp = GFS2_SB(&ip->i_inode);
-@@ -2023,6 +2029,10 @@ int gfs2_inplace_reserve(struct gfs2_inode *ip, struct gfs2_alloc_parms *ap)
+@@ -2084,6 +2090,10 @@ int gfs2_inplace_reserve(struct gfs2_inode *ip, struct gfs2_alloc_parms *ap)
  							goto next_rgrp;
  						}
  					}
@@ -92,10 +92,10 @@ index b705eec..b07c43a 100644
  						gfs2_rgrp_congested(rs->rs_rbm.rgd, loops))
  						goto next_rgrp;
 diff --git a/fs/gfs2/trace_gfs2.h b/fs/gfs2/trace_gfs2.h
-index 2f15926..3f490cc 100644
+index e0025258107a..79935dc6b32f 100644
 --- a/fs/gfs2/trace_gfs2.h
 +++ b/fs/gfs2/trace_gfs2.h
-@@ -160,9 +160,9 @@ TRACE_EVENT(gfs2_glock_put,
+@@ -161,9 +161,9 @@ TRACE_EVENT(gfs2_glock_put,
  /* Callback (local or remote) requesting lock demotion */
  TRACE_EVENT(gfs2_demote_rq,
  
@@ -107,7 +107,7 @@ index 2f15926..3f490cc 100644
  
  	TP_STRUCT__entry(
  		__field(        dev_t,  dev                     )
-@@ -172,6 +172,8 @@ TRACE_EVENT(gfs2_demote_rq,
+@@ -173,6 +173,8 @@ TRACE_EVENT(gfs2_demote_rq,
  		__field(	u8,	dmt_state		)
  		__field(	unsigned long,	flags		)
  		__field(	bool,	remote			)
@@ -116,7 +116,7 @@ index 2f15926..3f490cc 100644
  	),
  
  	TP_fast_assign(
-@@ -181,15 +183,19 @@ TRACE_EVENT(gfs2_demote_rq,
+@@ -182,15 +184,19 @@ TRACE_EVENT(gfs2_demote_rq,
  		__entry->cur_state	= glock_trace_state(gl->gl_state);
  		__entry->dmt_state	= glock_trace_state(gl->gl_demote_state);
  		__entry->flags		= gl->gl_flags  | (gl->gl_object ? (1UL<<GLF_OBJECT) : 0);

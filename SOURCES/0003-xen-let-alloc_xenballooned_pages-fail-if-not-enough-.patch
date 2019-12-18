@@ -1,8 +1,10 @@
-From ea49450ded575facc0e64e0d6adcb1ca8aaad0ba Mon Sep 17 00:00:00 2001
+From e73db096691e5f2720049502a3794a2a0c6d1b1f Mon Sep 17 00:00:00 2001
 From: Juergen Gross <jgross@suse.com>
 Date: Wed, 19 Jun 2019 11:00:56 +0200
-Subject: [PATCH] xen: let alloc_xenballooned_pages() fail if not enough memory
- free
+Subject: [PATCH 3/3] xen: let alloc_xenballooned_pages() fail if not enough
+ memory free
+
+commit a1078e821b605813b63bf6bca414a85f804d5c66 upstream.
 
 Instead of trying to allocate pages with GFP_USER in
 add_ballooned_pages() check the available free memory via
@@ -17,17 +19,19 @@ As the normal ballooning suffers from the same problem don't balloon
 down more than si_mem_available() pages in one iteration. At the same
 time limit the default maximum number of retries.
 
-Reported-by: Julien Grall <julien.grall@arm.com>
+This is part of XSA-300.
+
 Signed-off-by: Juergen Gross <jgross@suse.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
 ---
  drivers/xen/balloon.c | 16 +++++++++++++---
  1 file changed, 13 insertions(+), 3 deletions(-)
 
 diff --git a/drivers/xen/balloon.c b/drivers/xen/balloon.c
-index d37dd5bb7a8f..559768dc2567 100644
+index 7ab6caef599c..d4e8b717ce2b 100644
 --- a/drivers/xen/balloon.c
 +++ b/drivers/xen/balloon.c
-@@ -538,8 +538,15 @@ static void balloon_process(struct work_struct *work)
+@@ -527,8 +527,15 @@ static void balloon_process(struct work_struct *work)
  				state = reserve_additional_memory();
  		}
  
@@ -45,7 +49,7 @@ index d37dd5bb7a8f..559768dc2567 100644
  
  		state = update_schedule(state);
  
-@@ -578,6 +585,9 @@ static int add_ballooned_pages(int nr_pages)
+@@ -567,6 +574,9 @@ static int add_ballooned_pages(int nr_pages)
  		}
  	}
  
@@ -55,7 +59,7 @@ index d37dd5bb7a8f..559768dc2567 100644
  	st = decrease_reservation(nr_pages, GFP_USER);
  	if (st != BP_DONE)
  		return -ENOMEM;
-@@ -710,7 +720,7 @@ static int __init balloon_init(void)
+@@ -696,7 +706,7 @@ static int __init balloon_init(void)
  	balloon_stats.schedule_delay = 1;
  	balloon_stats.max_schedule_delay = 32;
  	balloon_stats.retry_count = 1;
@@ -65,5 +69,5 @@ index d37dd5bb7a8f..559768dc2567 100644
  #ifdef CONFIG_XEN_BALLOON_MEMORY_HOTPLUG
  	set_online_page_callback(&xen_online_page);
 -- 
-2.16.4
+2.17.2
 

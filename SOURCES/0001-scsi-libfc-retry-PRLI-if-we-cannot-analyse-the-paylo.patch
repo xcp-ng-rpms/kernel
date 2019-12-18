@@ -1,0 +1,49 @@
+From 0b4aafc332e49e143d3ee1c2460367ba0f07da1a Mon Sep 17 00:00:00 2001
+From: Hannes Reinecke <hare@suse.com>
+Date: Sun, 7 Oct 2018 10:35:37 +0200
+Subject: [PATCH 1/1] scsi: libfc: retry PRLI if we cannot analyse the payload
+
+When we fail to analyse the payload of a PRLI response we should reset
+the state machine to retry the PRLI; eventually we will be getting a
+proper frame.  Not doing so will result in a stuck state machine and the
+port never to be presented to the systsm.
+
+Suggested-by: Chad Dupuis <chad.dupuis@cavium.com>
+Signed-off-by: Hannes Reinecke <hare@suse.com>
+Reviewed-by: Arun Easi <arun.easi@cavium.com>
+Signed-off-by: Martin K. Petersen <martin.petersen@oracle.com>
+---
+ drivers/scsi/libfc/fc_rport.c | 8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/scsi/libfc/fc_rport.c b/drivers/scsi/libfc/fc_rport.c
+index e400783ebb87..1e1c0f1b9e69 100644
+--- a/drivers/scsi/libfc/fc_rport.c
++++ b/drivers/scsi/libfc/fc_rport.c
+@@ -1161,8 +1161,10 @@ static void fc_rport_prli_resp(struct fc_seq *sp, struct fc_frame *fp,
+ 	op = fc_frame_payload_op(fp);
+ 	if (op == ELS_LS_ACC) {
+ 		pp = fc_frame_payload_get(fp, sizeof(*pp));
+-		if (!pp)
++		if (!pp) {
++			fc_rport_error_retry(rdata, -FC_EX_SEQ_ERR);
+ 			goto out;
++		}
+ 
+ 		resp_code = (pp->spp.spp_flags & FC_SPP_RESP_MASK);
+ 		FC_RPORT_DBG(rdata, "PRLI spp_flags = 0x%x spp_type 0x%x\n",
+@@ -1175,8 +1177,10 @@ static void fc_rport_prli_resp(struct fc_seq *sp, struct fc_frame *fp,
+ 				fc_rport_error_retry(rdata, -FC_EX_SEQ_ERR);
+ 			goto out;
+ 		}
+-		if (pp->prli.prli_spp_len < sizeof(pp->spp))
++		if (pp->prli.prli_spp_len < sizeof(pp->spp)) {
++			fc_rport_error_retry(rdata, -FC_EX_SEQ_ERR);
+ 			goto out;
++		}
+ 
+ 		fcp_parm = ntohl(pp->spp.spp_params);
+ 		if (fcp_parm & FCP_SPPF_RETRY)
+-- 
+2.17.2
+
