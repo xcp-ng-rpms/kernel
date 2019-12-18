@@ -1,0 +1,49 @@
+xfs: Avoid deadlock when backed by tapdisk
+
+pvsproxy uses an XFS filesystem on top of a blktap device backed by
+tapdisk on top of LVM/EXT3. This can deadlock in two ways:
+
+* tapdisk calls into the kernel (usually for io_submit()) and memory
+pressure forces it to call try_to_free_pages() which calls the shrinkers
+to release memory. One of these shrinkers is for the XFS filesystem.
+Freeing inodes on XFS can cause synchronous metadata writes to be issued
+(xfs_reclaim_inodes_ag()) but they will never complete because they need
+to be serviced by tapdisk which is blocked waiting for the writes to
+complete.
+
+* Some process (e.g. kswapd) performs reclaim, calls into the XFS
+shrinker and issues a synchronous write. tapdisk meanwhile also calls
+into the XFS shrinker and waits on a lock held by the first process. The
+write can only be serviced by tapdisk which is blocked on the first
+process.
+
+Fix these issues by changing the synchronous writes to be asynchronous
+except when kswapd does background reclaim. This ensures that tapdisk
+cannot be blocked by itself and ensures that it cannot block on the lock
+held by another (it uses try_lock instead). This does change the
+complicated balance between memory and disk writeback though I wasn't
+able to identify any issues from testing.
+
+Signed-off-by: Ross Lagerwall <ross.lagerwall@citrix.com>
+diff --git a/fs/xfs/xfs_icache.c b/fs/xfs/xfs_icache.c
+index 245483cc282b..366f54c93133 100644
+--- a/fs/xfs/xfs_icache.c
++++ b/fs/xfs/xfs_icache.c
+@@ -1373,11 +1373,16 @@ xfs_reclaim_inodes_nr(
+ 	struct xfs_mount	*mp,
+ 	int			nr_to_scan)
+ {
++	int flags = SYNC_TRYLOCK;
++
+ 	/* kick background reclaimer and push the AIL */
+ 	xfs_reclaim_work_queue(mp);
+ 	xfs_ail_push_all(mp->m_ail);
+ 
+-	return xfs_reclaim_inodes_ag(mp, SYNC_TRYLOCK | SYNC_WAIT, &nr_to_scan);
++	if (current_is_kswapd())
++		flags |= SYNC_WAIT;
++
++	return xfs_reclaim_inodes_ag(mp, flags, &nr_to_scan);
+ }
+ 
+ /*

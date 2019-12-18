@@ -1,0 +1,183 @@
+From df0db3ecdb8fc942e9d812558b8e15ecd3e050b1 Mon Sep 17 00:00:00 2001
+From: Andreas Gruenbacher <agruenba@redhat.com>
+Date: Tue, 30 Apr 2019 08:45:34 -0700
+Subject: [PATCH 4/4] iomap: Add a page_prepare callback
+
+Move the page_done callback into a separate iomap_page_ops structure and
+add a page_prepare calback to be called before the next page is written
+to.  In gfs2, we'll want to start a transaction in page_prepare and end
+it in page_done.  Other filesystems that implement data journaling will
+require the same kind of mechanism.
+
+Signed-off-by: Andreas Gruenbacher <agruenba@redhat.com>
+Reviewed-by: Christoph Hellwig <hch@lst.de>
+Reviewed-by: Jan Kara <jack@suse.cz>
+Reviewed-by: Darrick J. Wong <darrick.wong@oracle.com>
+Signed-off-by: Darrick J. Wong <darrick.wong@oracle.com>
+---
+ fs/gfs2/bmap.c        | 15 ++++++++++-----
+ fs/iomap.c            | 36 ++++++++++++++++++++++++++----------
+ include/linux/iomap.h | 22 +++++++++++++++++-----
+ 3 files changed, 53 insertions(+), 20 deletions(-)
+
+diff --git a/fs/gfs2/bmap.c b/fs/gfs2/bmap.c
+index 02b2646d84b3..f6d1a3893f5a 100644
+--- a/fs/gfs2/bmap.c
++++ b/fs/gfs2/bmap.c
+@@ -965,15 +965,20 @@ static void gfs2_write_unlock(struct inode *inode)
+ 	gfs2_glock_dq_uninit(&ip->i_gh);
+ }
+ 
+-static void gfs2_iomap_journaled_page_done(struct inode *inode, loff_t pos,
+-				unsigned copied, struct page *page,
+-				struct iomap *iomap)
++static void gfs2_iomap_page_done(struct inode *inode, loff_t pos,
++				 unsigned copied, struct page *page,
++				 struct iomap *iomap)
+ {
+ 	struct gfs2_inode *ip = GFS2_I(inode);
+ 
+-	gfs2_page_add_databufs(ip, page, offset_in_page(pos), copied);
++	if (page)
++		gfs2_page_add_databufs(ip, page, offset_in_page(pos), copied);
+ }
+ 
++static const struct iomap_page_ops gfs2_iomap_page_ops = {
++	.page_done = gfs2_iomap_page_done,
++};
++
+ static int gfs2_iomap_begin_write(struct inode *inode, loff_t pos,
+ 				  loff_t length, unsigned flags,
+ 				  struct iomap *iomap,
+@@ -1051,7 +1056,7 @@ static int gfs2_iomap_begin_write(struct inode *inode, loff_t pos,
+ 		}
+ 	}
+ 	if (!gfs2_is_stuffed(ip) && gfs2_is_jdata(ip))
+-		iomap->page_done = gfs2_iomap_journaled_page_done;
++		iomap->page_ops = &gfs2_iomap_page_ops;
+ 	return 0;
+ 
+ out_trans_end:
+diff --git a/fs/iomap.c b/fs/iomap.c
+index e6453c1c831e..fbfe20b7f6f0 100644
+--- a/fs/iomap.c
++++ b/fs/iomap.c
+@@ -657,6 +657,7 @@ static int
+ iomap_write_begin(struct inode *inode, loff_t pos, unsigned len, unsigned flags,
+ 		struct page **pagep, struct iomap *iomap)
+ {
++	const struct iomap_page_ops *page_ops = iomap->page_ops;
+ 	pgoff_t index = pos >> PAGE_SHIFT;
+ 	struct page *page;
+ 	int status = 0;
+@@ -666,9 +667,17 @@ iomap_write_begin(struct inode *inode, loff_t pos, unsigned len, unsigned flags,
+ 	if (fatal_signal_pending(current))
+ 		return -EINTR;
+ 
++	if (page_ops && page_ops->page_prepare) {
++		status = page_ops->page_prepare(inode, pos, len, iomap);
++		if (status)
++			return status;
++	}
++
+ 	page = grab_cache_page_write_begin(inode->i_mapping, index, flags);
+-	if (!page)
+-		return -ENOMEM;
++	if (!page) {
++		status = -ENOMEM;
++		goto out_no_page;
++	}
+ 
+ 	if (iomap->type == IOMAP_INLINE)
+ 		iomap_read_inline_data(inode, page, iomap);
+@@ -676,15 +685,21 @@ iomap_write_begin(struct inode *inode, loff_t pos, unsigned len, unsigned flags,
+ 		status = __block_write_begin_int(page, pos, len, NULL, iomap);
+ 	else
+ 		status = __iomap_write_begin(inode, pos, len, page, iomap);
+-	if (unlikely(status)) {
+-		unlock_page(page);
+-		put_page(page);
+-		page = NULL;
+ 
+-		iomap_write_failed(inode, pos, len);
+-	}
++	if (unlikely(status))
++		goto out_unlock;
+ 
+ 	*pagep = page;
++	return 0;
++
++out_unlock:
++	unlock_page(page);
++	put_page(page);
++	iomap_write_failed(inode, pos, len);
++
++out_no_page:
++	if (page_ops && page_ops->page_done)
++		page_ops->page_done(inode, pos, 0, NULL, iomap);
+ 	return status;
+ }
+ 
+@@ -758,6 +773,7 @@ static int
+ iomap_write_end(struct inode *inode, loff_t pos, unsigned len,
+ 		unsigned copied, struct page *page, struct iomap *iomap)
+ {
++	const struct iomap_page_ops *page_ops = iomap->page_ops;
+ 	int ret;
+ 
+ 	if (iomap->type == IOMAP_INLINE) {
+@@ -770,8 +786,8 @@ iomap_write_end(struct inode *inode, loff_t pos, unsigned len,
+ 	}
+ 
+ 	__generic_write_end(inode, pos, ret, page);
+-	if (iomap->page_done)
+-		iomap->page_done(inode, pos, copied, page, iomap);
++	if (page_ops && page_ops->page_done)
++		page_ops->page_done(inode, pos, copied, page, iomap);
+ 	put_page(page);
+ 
+ 	if (ret < len)
+diff --git a/include/linux/iomap.h b/include/linux/iomap.h
+index 0fefb5455bda..2103b94cb1bf 100644
+--- a/include/linux/iomap.h
++++ b/include/linux/iomap.h
+@@ -53,6 +53,8 @@ struct vm_fault;
+  */
+ #define IOMAP_NULL_ADDR -1ULL	/* addr is not valid */
+ 
++struct iomap_page_ops;
++
+ struct iomap {
+ 	u64			addr; /* disk offset of mapping, bytes */
+ 	loff_t			offset;	/* file offset of mapping, bytes */
+@@ -63,12 +65,22 @@ struct iomap {
+ 	struct dax_device	*dax_dev; /* dax_dev for dax operations */
+ 	void			*inline_data;
+ 	void			*private; /* filesystem private */
++	const struct iomap_page_ops *page_ops;
++};
+ 
+-	/*
+-	 * Called when finished processing a page in the mapping returned in
+-	 * this iomap.  At least for now this is only supported in the buffered
+-	 * write path.
+-	 */
++/*
++ * When a filesystem sets page_ops in an iomap mapping it returns, page_prepare
++ * and page_done will be called for each page written to.  This only applies to
++ * buffered writes as unbuffered writes will not typically have pages
++ * associated with them.
++ *
++ * When page_prepare succeeds, page_done will always be called to do any
++ * cleanup work necessary.  In that page_done call, @page will be NULL if the
++ * associated page could not be obtained.
++ */
++struct iomap_page_ops {
++	int (*page_prepare)(struct inode *inode, loff_t pos, unsigned len,
++			struct iomap *iomap);
+ 	void (*page_done)(struct inode *inode, loff_t pos, unsigned copied,
+ 			struct page *page, struct iomap *iomap);
+ };
+-- 
+2.17.2
+

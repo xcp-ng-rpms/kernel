@@ -1,0 +1,58 @@
+From 7a77dad7e3be1280456508841ccdd2a091b1906a Mon Sep 17 00:00:00 2001
+From: Andreas Gruenbacher <agruenba@redhat.com>
+Date: Tue, 30 Apr 2019 08:45:34 -0700
+Subject: [PATCH 3/3] iomap: Fix use-after-free error in page_done callback
+
+In iomap_write_end, we're not holding a page reference anymore when
+calling the page_done callback, but the callback needs that reference to
+access the page.  To fix that, move the put_page call in
+__generic_write_end into the callers of __generic_write_end.  Then, in
+iomap_write_end, put the page after calling the page_done callback.
+
+Reported-by: Jan Kara <jack@suse.cz>
+Fixes: 63899c6f8851 ("iomap: add a page_done callback")
+Signed-off-by: Andreas Gruenbacher <agruenba@redhat.com>
+Reviewed-by: Jan Kara <jack@suse.cz>
+Reviewed-by: Christoph Hellwig <hch@lst.de>
+Reviewed-by: Darrick J. Wong <darrick.wong@oracle.com>
+Signed-off-by: Darrick J. Wong <darrick.wong@oracle.com>
+---
+ fs/buffer.c | 2 +-
+ fs/iomap.c  | 1 +
+ 2 files changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/fs/buffer.c b/fs/buffer.c
+index e0d4c6a5e2d2..0faa41fb4c88 100644
+--- a/fs/buffer.c
++++ b/fs/buffer.c
+@@ -2104,7 +2104,6 @@ void __generic_write_end(struct inode *inode, loff_t pos, unsigned copied,
+ 	}
+ 
+ 	unlock_page(page);
+-	put_page(page);
+ 
+ 	if (old_size < pos)
+ 		pagecache_isize_extended(inode, old_size, pos);
+@@ -2160,6 +2159,7 @@ int generic_write_end(struct file *file, struct address_space *mapping,
+ {
+ 	copied = block_write_end(file, mapping, pos, len, copied, page, fsdata);
+ 	__generic_write_end(mapping->host, pos, copied, page);
++	put_page(page);
+ 	return copied;
+ }
+ EXPORT_SYMBOL(generic_write_end);
+diff --git a/fs/iomap.c b/fs/iomap.c
+index 4380d2c412f4..e6453c1c831e 100644
+--- a/fs/iomap.c
++++ b/fs/iomap.c
+@@ -772,6 +772,7 @@ iomap_write_end(struct inode *inode, loff_t pos, unsigned len,
+ 	__generic_write_end(inode, pos, ret, page);
+ 	if (iomap->page_done)
+ 		iomap->page_done(inode, pos, copied, page, iomap);
++	put_page(page);
+ 
+ 	if (ret < len)
+ 		iomap_write_failed(inode, pos, len);
+-- 
+2.17.2
+

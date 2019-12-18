@@ -1,0 +1,80 @@
+From 26ddb1f4fd884258eeb8a8d7f2d40b163f00fedd Mon Sep 17 00:00:00 2001
+From: Andreas Gruenbacher <agruenba@redhat.com>
+Date: Tue, 30 Apr 2019 08:45:33 -0700
+Subject: [PATCH 2/2] fs: Turn __generic_write_end into a void function
+
+The VFS-internal __generic_write_end helper always returns the value of
+its @copied argument.  This can be confusing, and it isn't very useful
+anyway, so turn __generic_write_end into a function returning void
+instead.
+
+Signed-off-by: Andreas Gruenbacher <agruenba@redhat.com>
+Reviewed-by: Christoph Hellwig <hch@lst.de>
+Reviewed-by: Darrick J. Wong <darrick.wong@oracle.com>
+Signed-off-by: Darrick J. Wong <darrick.wong@oracle.com>
+---
+ fs/buffer.c   | 6 +++---
+ fs/internal.h | 2 +-
+ fs/iomap.c    | 2 +-
+ 3 files changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/fs/buffer.c b/fs/buffer.c
+index ce357602f471..e0d4c6a5e2d2 100644
+--- a/fs/buffer.c
++++ b/fs/buffer.c
+@@ -2085,7 +2085,7 @@ int block_write_begin(struct address_space *mapping, loff_t pos, unsigned len,
+ }
+ EXPORT_SYMBOL(block_write_begin);
+ 
+-int __generic_write_end(struct inode *inode, loff_t pos, unsigned copied,
++void __generic_write_end(struct inode *inode, loff_t pos, unsigned copied,
+ 		struct page *page)
+ {
+ 	loff_t old_size = inode->i_size;
+@@ -2116,7 +2116,6 @@ int __generic_write_end(struct inode *inode, loff_t pos, unsigned copied,
+ 	 */
+ 	if (i_size_changed)
+ 		mark_inode_dirty(inode);
+-	return copied;
+ }
+ 
+ int block_write_end(struct file *file, struct address_space *mapping,
+@@ -2160,7 +2159,8 @@ int generic_write_end(struct file *file, struct address_space *mapping,
+ 			struct page *page, void *fsdata)
+ {
+ 	copied = block_write_end(file, mapping, pos, len, copied, page, fsdata);
+-	return __generic_write_end(mapping->host, pos, copied, page);
++	__generic_write_end(mapping->host, pos, copied, page);
++	return copied;
+ }
+ EXPORT_SYMBOL(generic_write_end);
+ 
+diff --git a/fs/internal.h b/fs/internal.h
+index 6a8b71643af4..530587fdf5d8 100644
+--- a/fs/internal.h
++++ b/fs/internal.h
+@@ -44,7 +44,7 @@ static inline int __sync_blockdev(struct block_device *bdev, int wait)
+ extern void guard_bio_eod(int rw, struct bio *bio);
+ extern int __block_write_begin_int(struct page *page, loff_t pos, unsigned len,
+ 		get_block_t *get_block, struct iomap *iomap);
+-int __generic_write_end(struct inode *inode, loff_t pos, unsigned copied,
++void __generic_write_end(struct inode *inode, loff_t pos, unsigned copied,
+ 		struct page *page);
+ 
+ /*
+diff --git a/fs/iomap.c b/fs/iomap.c
+index 9f159c39fbdc..4380d2c412f4 100644
+--- a/fs/iomap.c
++++ b/fs/iomap.c
+@@ -769,7 +769,7 @@ iomap_write_end(struct inode *inode, loff_t pos, unsigned len,
+ 		ret = __iomap_write_end(inode, pos, len, copied, page, iomap);
+ 	}
+ 
+-	ret = __generic_write_end(inode, pos, ret, page);
++	__generic_write_end(inode, pos, ret, page);
+ 	if (iomap->page_done)
+ 		iomap->page_done(inode, pos, copied, page, iomap);
+ 
+-- 
+2.17.2
+

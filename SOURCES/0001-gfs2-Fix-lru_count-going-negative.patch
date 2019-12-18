@@ -1,9 +1,13 @@
-gfs2: Fix lru_count going negative
+From 7881ef3f33bb80f459ea6020d1e021fc524a6348 Mon Sep 17 00:00:00 2001
+From: Ross Lagerwall <ross.lagerwall@citrix.com>
+Date: Wed, 27 Mar 2019 17:09:17 +0000
+Subject: [PATCH 1/1] gfs2: Fix lru_count going negative
 
 Under certain conditions, lru_count may drop below zero resulting in
 a large amount of log spam like this:
 
-vmscan: shrink_slab: gfs2_dump_glock+0x3b0/0x630 [gfs2] negative objects to delete nr=-1
+vmscan: shrink_slab: gfs2_dump_glock+0x3b0/0x630 [gfs2] \
+    negative objects to delete nr=-1
 
 This happens as follows:
 1) A glock is moved from lru_list to the dispose list and lru_count is
@@ -22,12 +26,22 @@ if the glock is on some list and rearrange the code so that the LRU flag
 is added/removed precisely when the glock is added/removed from lru_list.
 
 Signed-off-by: Ross Lagerwall <ross.lagerwall@citrix.com>
+Signed-off-by: Andreas Gruenbacher <agruenba@redhat.com>
+---
+ fs/gfs2/glock.c | 22 +++++++++++++---------
+ 1 file changed, 13 insertions(+), 9 deletions(-)
+
 diff --git a/fs/gfs2/glock.c b/fs/gfs2/glock.c
-index 39a166600fd6..0a75388a418f 100644
+index d32964cd1117..e4f6d39500bc 100644
 --- a/fs/gfs2/glock.c
 +++ b/fs/gfs2/glock.c
-@@ -185,13 +185,14 @@ void gfs2_glock_add_to_lru(struct gfs2_glock *gl)
+@@ -183,15 +183,19 @@ static int demote_ok(const struct gfs2_glock *gl)
+ 
+ void gfs2_glock_add_to_lru(struct gfs2_glock *gl)
  {
++	if (!(gl->gl_ops->go_flags & GLOF_LRU))
++		return;
++
  	spin_lock(&lru_lock);
  
 -	if (!list_empty(&gl->gl_lru))
@@ -46,7 +60,7 @@ index 39a166600fd6..0a75388a418f 100644
  	spin_unlock(&lru_lock);
  }
  
-@@ -201,7 +202,7 @@ static void gfs2_glock_remove_from_lru(struct gfs2_glock *gl)
+@@ -201,7 +205,7 @@ static void gfs2_glock_remove_from_lru(struct gfs2_glock *gl)
  		return;
  
  	spin_lock(&lru_lock);
@@ -55,7 +69,17 @@ index 39a166600fd6..0a75388a418f 100644
  		list_del_init(&gl->gl_lru);
  		atomic_dec(&lru_count);
  		clear_bit(GLF_LRU, &gl->gl_flags);
-@@ -1459,6 +1460,7 @@ __acquires(&lru_lock)
+@@ -1159,8 +1163,7 @@ void gfs2_glock_dq(struct gfs2_holder *gh)
+ 		    !test_bit(GLF_DEMOTE, &gl->gl_flags))
+ 			fast_path = 1;
+ 	}
+-	if (!test_bit(GLF_LFLUSH, &gl->gl_flags) && demote_ok(gl) &&
+-	    (glops->go_flags & GLOF_LRU))
++	if (!test_bit(GLF_LFLUSH, &gl->gl_flags) && demote_ok(gl))
+ 		gfs2_glock_add_to_lru(gl);
+ 
+ 	trace_gfs2_glock_queue(gh, 0);
+@@ -1456,6 +1459,7 @@ __acquires(&lru_lock)
  		if (!spin_trylock(&gl->gl_lockref.lock)) {
  add_back_to_lru:
  			list_add(&gl->gl_lru, &lru_list);
@@ -63,7 +87,7 @@ index 39a166600fd6..0a75388a418f 100644
  			atomic_inc(&lru_count);
  			continue;
  		}
-@@ -1466,7 +1468,6 @@ __acquires(&lru_lock)
+@@ -1463,7 +1467,6 @@ __acquires(&lru_lock)
  			spin_unlock(&gl->gl_lockref.lock);
  			goto add_back_to_lru;
  		}
@@ -71,7 +95,7 @@ index 39a166600fd6..0a75388a418f 100644
  		gl->gl_lockref.count++;
  		if (demote_ok(gl))
  			handle_callback(gl, LM_ST_UNLOCKED, 0, false);
-@@ -1501,6 +1502,7 @@ static long gfs2_scan_glock_lru(int nr)
+@@ -1498,6 +1501,7 @@ static long gfs2_scan_glock_lru(int nr)
  		if (!test_bit(GLF_LOCK, &gl->gl_flags)) {
  			list_move(&gl->gl_lru, &dispose);
  			atomic_dec(&lru_count);
@@ -79,3 +103,6 @@ index 39a166600fd6..0a75388a418f 100644
  			freed++;
  			continue;
  		}
+-- 
+2.17.2
+

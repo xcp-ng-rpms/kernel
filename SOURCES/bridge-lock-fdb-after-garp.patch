@@ -189,7 +189,7 @@ index 8034ce9..ffda192 100644
  			err = -ENOMEM;
  			goto err_unlock;
 diff --git a/net/bridge/br_input.c b/net/bridge/br_input.c
-index 7207427..4ec085f 100644
+index 7207427..2b24c5e 100644
 --- a/net/bridge/br_input.c
 +++ b/net/bridge/br_input.c
 @@ -94,7 +94,8 @@ int br_handle_frame_finish(struct net *net, struct sock *sk, struct sk_buff *skb
@@ -216,10 +216,8 @@ index 7207427..4ec085f 100644
 -	if (p->flags & BR_LEARNING && br_should_learn(p, skb, &vid))
 -		br_fdb_update(p->br, p, eth_hdr(skb)->h_source, vid, false);
 +	if (p->flags & BR_LEARNING && br_should_learn(p, skb, &vid)) {
-+		if (!br_fdb_update(p->br, p, skb, vid, false)) {
-+			kfree_skb(skb);
++		if (!br_fdb_update(p->br, p, skb, vid, false))
 +			return 1;
-+		}
 +	}
 +	return 0;
  }
@@ -232,8 +230,10 @@ index 7207427..4ec085f 100644
  
 -	__br_handle_local_finish(skb);
 +	rc = __br_handle_local_finish(skb);
-+	if (rc)
++	if (rc) {
++		kfree_skb(skb);
 +		return rc;
++	}
  
  	BR_INPUT_SKB_CB(skb)->brdev = p->br->dev;
  	br_pass_frame_up(skb);

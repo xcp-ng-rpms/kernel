@@ -107,10 +107,10 @@ index 47cc932..833bfad6 100644
  		GEM_BUG_ON(i915_gem_object_has_pages(obj));
 diff --git a/drivers/gpu/drm/i915/i915_gem_vgtbuffer.c b/drivers/gpu/drm/i915/i915_gem_vgtbuffer.c
 new file mode 100644
-index 0000000..4c63969
+index 00000000..b5017c6
 --- /dev/null
 +++ b/drivers/gpu/drm/i915/i915_gem_vgtbuffer.c
-@@ -0,0 +1,325 @@
+@@ -0,0 +1,326 @@
 +/*
 + * Copyright © 2012 - 2015 Intel Corporation
 + *
@@ -185,7 +185,7 @@ index 0000000..4c63969
 +		return NULL;
 +	}
 +
-+	if (INTEL_INFO(dev_priv)->gen >= 8) {
++	if (INTEL_GEN(dev_priv) >= 8) {
 +		gen8_pte_t __iomem *gtt_entries =
 +			(gen8_pte_t __iomem *)dev_priv->ggtt.gsm +
 +			(start >> PAGE_SHIFT);
@@ -253,7 +253,7 @@ index 0000000..4c63969
 +
 +	if (IS_HASWELL(dev_priv) || IS_BROADWELL(dev_priv))
 +		tiling_mode = (tiling ? I915_TILING_X : I915_TILING_NONE);
-+	else if (IS_SKYLAKE(dev_priv)) {
++	else if (INTEL_GEN(dev_priv) >= 9) {
 +		switch (tiling) {
 +		case PLANE_CTL_TILED_LINEAR:
 +			tiling_mode = I915_TILING_NONE;
@@ -349,7 +349,7 @@ index 0000000..4c63969
 +	DRM_DEBUG_DRIVER("VGT_GEM: gtt start addr %p\n", gtt_base);
 +	DRM_DEBUG_DRIVER("VGT_GEM: fb start %x\n", gtt_fbstart);
 +
-+	if (INTEL_INFO(dev_priv)->gen >= 8)
++	if (INTEL_GEN(dev_priv) >= 8)
 +		gtt_base = (gen8_pte_t __iomem *)gtt_base + gtt_fbstart;
 +	else
 +		gtt_base = (gen6_pte_t __iomem *)gtt_base + gtt_fbstart;
@@ -359,7 +359,7 @@ index 0000000..4c63969
 +	for (i = 0; i < args->size; i++) {
 +		u64 gtt_pte, overflow;
 +
-+		if (INTEL_INFO(dev_priv)->gen >= 8)
++		if (INTEL_GEN(dev_priv) >= 8)
 +			gtt_pte = readq((gen8_pte_t __iomem *)gtt_base + i);
 +		else
 +			gtt_pte = readl((gen8_pte_t __iomem *)gtt_base + i);
@@ -385,17 +385,18 @@ index 0000000..4c63969
 +			     struct drm_file *file)
 +{
 +	struct drm_i915_gem_vgtbuffer *args = data;
++	struct drm_i915_private *dev_priv = dev->dev_private;
 +	struct intel_vgpu *vgpu;
 +	struct drm_i915_gem_object *obj;
 +	u32 handle;
 +	int ret;
 +
-+	if (INTEL_INFO(dev->dev_private)->gen < 7) {
++	if (INTEL_GEN(dev_priv) < 7) {
 +		DRM_DEBUG_DRIVER("VGT_GEM: Unsupported architecture\n");
 +		return -EPERM;
 +	}
 +
-+	if (!intel_gvt_active(dev->dev_private)) {
++	if (!intel_gvt_active(dev_priv)) {
 +		DRM_DEBUG_DRIVER("VGT_GEM: GVT-g is not active\n");
 +		return -EPERM;
 +	}
