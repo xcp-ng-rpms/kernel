@@ -22,7 +22,7 @@
 Name: kernel
 License: GPLv2
 Version: 4.19.19
-Release: 6.0.9%{?dist}
+Release: 6.0.9.1%{?dist}
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
@@ -524,6 +524,9 @@ fi
 %{python2_sitearch}/*
 
 %changelog
+* Wed Jan 08 2020 Samuel Verschelde <stormi-xcp@ylix.fr> - 4.19.19-6.0.9.1
+- Rebuild for rebuilt libdrm (bootstrap)
+
 * Thu Nov 28 2019 Ross Lagerwall <ross.lagerwall@citrix.com> - 4.19.19-6.0.9
 - CA-330853: Fix memory corruption on BPDU processing
 
