@@ -22,7 +22,7 @@
 Name: kernel
 License: Portions GPL, Portions Non-Redistributable (See description)
 Version: 4.19.19
-Release: 6.0.9
+Release: 6.0.10
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
@@ -114,115 +114,117 @@ Patch57: 0001-tcp-refine-memory-limit-test-in-tcp_fragment.patch
 Patch58: 0002-xen-events-fix-binding-user-event-channels-to-cpus.patch
 Patch59: 0003-xen-let-alloc_xenballooned_pages-fail-if-not-enough-.patch
 Patch60: 0001-tcp-be-more-careful-in-tcp_fragment.patch
-Patch61: kbuild-AFTER_LINK.patch
-Patch62: commit-info.patch
-Patch63: expose-xsversion.patch
-Patch64: blktap2.patch
-Patch65: blkback-kthread-pid.patch
-Patch66: tg3-alloc-repeat.patch
-Patch67: dlm__increase_socket_backlog_to_avoid_hangs_with_16_nodes.patch
-Patch68: map-1MiB-1-1.patch
-Patch69: disable-EFI-Properties-table-for-Xen.patch
-Patch70: hide-nr_cpus-warning.patch
-Patch71: disable-pm-timer.patch
-Patch72: net-Do-not-scrub-ignore_df-within-the-same-name-spac.patch
-Patch73: enable-fragmention-gre-packets.patch
-Patch74: 0001-libiscsi-Fix-race-between-iscsi_xmit_task-and-iscsi_.patch
-Patch75: CA-285778-emulex-nic-ip-hdr-len.patch
-Patch76: cifs-Change-the-default-value-SecFlags-to-0x83.patch
-Patch77: call-kexec-before-offlining-noncrashing-cpus.patch
-Patch78: 0001-Revert-rtc-cmos-Do-not-assume-irq-8-for-rtc-when-the.patch
-Patch79: mm-zero-last-section-tail.patch
-Patch80: hide-hung-task-for-idle-class.patch
-Patch81: xfs-async-wait.patch
-Patch82: 0001-xen-netback-Reset-nr_frags-before-freeing-skb.patch
-Patch83: 0001-x86-efi-Don-t-require-non-blocking-EFI-callbacks.patch
-Patch84: 0001-dma-add-dma_get_required_mask_from_max_pfn.patch
-Patch85: 0002-x86-xen-correct-dma_get_required_mask-for-Xen-PV-gue.patch
-Patch86: xen-balloon-hotplug-select-HOLES_IN_ZONE.patch
-Patch87: 0001-pci-export-pci_probe_reset_function.patch
-Patch88: 0002-xen-pciback-provide-a-reset-sysfs-file-to-try-harder.patch
-Patch89: pciback-disable-root-port-aer.patch
-Patch90: pciback-mask-root-port-comp-timeout.patch
-Patch91: no-flr-quirk.patch
-Patch92: revert-PCI-Probe-for-device-reset-support-during-enumeration.patch
-Patch93: CA-135938-nfs-disconnect-on-rpc-retry.patch
-Patch94: sunrpc-force-disconnect-on-connection-timeout.patch
-Patch95: bonding-balance-slb.patch
-Patch96: bridge-lock-fdb-after-garp.patch
-Patch97: CP-13181-net-openvswitch-add-dropping-of-fip-and-lldp.patch
-Patch98: CP-30097-prevent-ovs-vswitchd-kernel-warning.patch
-Patch99: xen-ioemu-inject-msi.patch
-Patch100: pv-iommu-support.patch
-Patch101: kexec-reserve-crashkernel-region.patch
-Patch102: 0001-xen-swiotlb-rework-early-repeat-code.patch
-Patch103: 0001-arch-x86-xen-add-infrastruction-in-xen-to-support-gv.patch
-Patch104: 0002-drm-i915-gvt-write-guest-ppgtt-entry-for-xengt-suppo.patch
-Patch105: 0003-drm-i915-xengt-xengt-moudule-initial-files.patch
-Patch106: 0004-drm-i915-xengt-check-on_destroy-on-pfn_to_mfn.patch
-Patch107: 0005-arch-x86-xen-Import-x4.9-interface-for-ioreq.patch
-Patch108: 0006-i915-gvt-xengt.c-Use-new-dm_op-instead-of-hvm_op.patch
-Patch109: 0007-i915-gvt-xengt.c-New-interface-to-write-protect-PPGT.patch
-Patch110: 0008-i915-gvt-xengt.c-Select-vgpu-type-according-to-low_g.patch
-Patch111: 0009-drm-i915-gvt-Don-t-output-error-message-when-DomU-ma.patch
-Patch112: 0010-drm-i915-gvt-xengt-Correctly-get-low-mem-max-gfn.patch
-Patch113: 0011-drm-i915-gvt-Fix-dom0-call-trace-at-shutdown-or-rebo.patch
-Patch114: 0012-hvm-dm_op.h-Sync-dm_op-interface-to-xen-4.9-release.patch
-Patch115: 0013-drm-i915-gvt-Apply-g2h-adjust-for-GTT-mmio-access.patch
-Patch116: 0014-drm-i915-gvt-Apply-g2h-adjustment-during-fence-mmio-.patch
-Patch117: 0015-drm-i915-gvt-Patch-the-gma-in-gpu-commands-during-co.patch
-Patch118: 0016-drm-i915-gvt-Retrieve-the-guest-gm-base-address-from.patch
-Patch119: 0017-drm-i915-gvt-Align-the-guest-gm-aperture-start-offse.patch
-Patch120: 0018-drm-i915-gvt-Add-support-to-new-VFIO-subregion-VFIO_.patch
-Patch121: 0019-drm-i915-gvt-Implement-vGPU-status-save-and-restore-.patch
-Patch122: 0020-vfio-Implement-new-Ioctl-VFIO_IOMMU_GET_DIRTY_BITMAP.patch
-Patch123: 0021-drm-i915-gvt-Add-dev-node-for-vGPU-state-save-restor.patch
-Patch124: 0022-drm-i915-gvt-Add-interface-to-control-the-vGPU-runni.patch
-Patch125: 0023-drm-i915-gvt-Modify-the-vGPU-save-restore-logic-for-.patch
-Patch126: 0024-drm-i915-gvt-Add-log-dirty-support-for-XENGT-migrati.patch
-Patch127: 0025-drm-i915-gvt-xengt-Add-iosrv_enabled-to-track-iosrv-.patch
-Patch128: 0026-drm-i915-gvt-Add-xengt-ppgtt-write-handler.patch
-Patch129: 0027-drm-i915-gvt-xengt-Impliment-mpt-dma_map-unmap_guest.patch
-Patch130: 0028-drm-i915-gvt-introduce-a-new-VFIO-region-for-vfio-de.patch
-Patch131: 0029-drm-i915-gvt-change-the-return-value-of-opregion-acc.patch
-Patch132: 0030-drm-i915-gvt-Rebase-the-code-to-gvt-staging-for-live.patch
-Patch133: 0031-drm-i915-gvt-Apply-g2h-adjustment-to-buffer-start-gm.patch
-Patch134: 0032-drm-i915-gvt-Fix-xengt-opregion-handling-in-migratio.patch
-Patch135: 0033-drm-i915-gvt-XenGT-migration-optimize.patch
-Patch136: 0034-drm-i915-gvt-Add-vgpu-execlist-info-into-migration-d.patch
-Patch137: 0035-drm-i915-gvt-Emulate-ring-mode-register-restore-for-.patch
-Patch138: 0036-drm-i915-gvt-Use-copy_to_user-to-return-opregion.patch
-Patch139: 0037-drm-i915-gvt-Expose-opregion-in-vgpu-open.patch
-Patch140: 0038-drm-i915-gvt-xengt-Don-t-shutdown-vm-at-ioreq-failur.patch
-Patch141: 0039-drm-i915-gvt-Emulate-hw-status-page-address-register.patch
-Patch142: 0040-drm-i915-gvt-migration-copy-vregs-on-vreg-load.patch
-Patch143: 0041-drm-i915-gvt-Fix-a-command-corruption-caused-by-live.patch
-Patch144: 0042-drm-i915-gvt-update-force-to-nonpriv-register-whitel.patch
-Patch145: 0043-drm-i915-gvt-xengt-Fix-xengt-instance-destroy-error.patch
-Patch146: 0044-drm-i915-gvt-invalidate-old-ggtt-page-when-update-gg.patch
-Patch147: 0045-drm-i915-gvt-support-inconsecutive-partial-gtt-entry.patch
-Patch148: set-XENMEM_get_mfn_from_pfn-hypercall-number.patch
-Patch149: gvt-enforce-primary-class-id.patch
-Patch150: gvt-use-xs-vgpu-type.patch
-Patch151: xengt-pviommu-basic.patch
-Patch152: xengt-pviommu-unmap.patch
-Patch153: get_domctl_interface_version.patch
-Patch154: xengt-fix-shutdown-failures.patch
-Patch155: xengt-i915-gem-vgtbuffer.patch
-Patch156: gvt-introduce-gtt-lock.patch
-Patch157: xengt-gtt-2m-alignment.patch
-Patch158: net-core__order-3_frag_allocator_causes_swiotlb_bouncing_under_xen.patch
-Patch159: idle_cpu-return-0-during-softirq.patch
-Patch160: default-xen-swiotlb-size-128MiB.patch
-Patch161: dlm_handle_uevent_erestartsys.patch
-Patch162: gfs2-add-skippiness.patch
-Patch163: GFS2__Avoid_recently_demoted_rgrps
-Patch164: gfs2-debug-rgrp-sweep
-Patch165: gfs2-restore-kabi.patch
-Patch166: abi-version.patch
+Patch61: 0001-block-cleanup-__blkdev_issue_discard.patch
+Patch62: 0001-block-fix-32-bit-overflow-in-__blkdev_issue_discard.patch
+Patch63: kbuild-AFTER_LINK.patch
+Patch64: commit-info.patch
+Patch65: expose-xsversion.patch
+Patch66: blktap2.patch
+Patch67: blkback-kthread-pid.patch
+Patch68: tg3-alloc-repeat.patch
+Patch69: dlm__increase_socket_backlog_to_avoid_hangs_with_16_nodes.patch
+Patch70: map-1MiB-1-1.patch
+Patch71: disable-EFI-Properties-table-for-Xen.patch
+Patch72: hide-nr_cpus-warning.patch
+Patch73: disable-pm-timer.patch
+Patch74: net-Do-not-scrub-ignore_df-within-the-same-name-spac.patch
+Patch75: enable-fragmention-gre-packets.patch
+Patch76: 0001-libiscsi-Fix-race-between-iscsi_xmit_task-and-iscsi_.patch
+Patch77: CA-285778-emulex-nic-ip-hdr-len.patch
+Patch78: cifs-Change-the-default-value-SecFlags-to-0x83.patch
+Patch79: call-kexec-before-offlining-noncrashing-cpus.patch
+Patch80: 0001-Revert-rtc-cmos-Do-not-assume-irq-8-for-rtc-when-the.patch
+Patch81: mm-zero-last-section-tail.patch
+Patch82: hide-hung-task-for-idle-class.patch
+Patch83: xfs-async-wait.patch
+Patch84: 0001-xen-netback-Reset-nr_frags-before-freeing-skb.patch
+Patch85: 0001-x86-efi-Don-t-require-non-blocking-EFI-callbacks.patch
+Patch86: 0001-dma-add-dma_get_required_mask_from_max_pfn.patch
+Patch87: 0002-x86-xen-correct-dma_get_required_mask-for-Xen-PV-gue.patch
+Patch88: xen-balloon-hotplug-select-HOLES_IN_ZONE.patch
+Patch89: 0001-pci-export-pci_probe_reset_function.patch
+Patch90: 0002-xen-pciback-provide-a-reset-sysfs-file-to-try-harder.patch
+Patch91: pciback-disable-root-port-aer.patch
+Patch92: pciback-mask-root-port-comp-timeout.patch
+Patch93: no-flr-quirk.patch
+Patch94: revert-PCI-Probe-for-device-reset-support-during-enumeration.patch
+Patch95: CA-135938-nfs-disconnect-on-rpc-retry.patch
+Patch96: sunrpc-force-disconnect-on-connection-timeout.patch
+Patch97: bonding-balance-slb.patch
+Patch98: bridge-lock-fdb-after-garp.patch
+Patch99: CP-13181-net-openvswitch-add-dropping-of-fip-and-lldp.patch
+Patch100: CP-30097-prevent-ovs-vswitchd-kernel-warning.patch
+Patch101: xen-ioemu-inject-msi.patch
+Patch102: pv-iommu-support.patch
+Patch103: kexec-reserve-crashkernel-region.patch
+Patch104: 0001-xen-swiotlb-rework-early-repeat-code.patch
+Patch105: 0001-arch-x86-xen-add-infrastruction-in-xen-to-support-gv.patch
+Patch106: 0002-drm-i915-gvt-write-guest-ppgtt-entry-for-xengt-suppo.patch
+Patch107: 0003-drm-i915-xengt-xengt-moudule-initial-files.patch
+Patch108: 0004-drm-i915-xengt-check-on_destroy-on-pfn_to_mfn.patch
+Patch109: 0005-arch-x86-xen-Import-x4.9-interface-for-ioreq.patch
+Patch110: 0006-i915-gvt-xengt.c-Use-new-dm_op-instead-of-hvm_op.patch
+Patch111: 0007-i915-gvt-xengt.c-New-interface-to-write-protect-PPGT.patch
+Patch112: 0008-i915-gvt-xengt.c-Select-vgpu-type-according-to-low_g.patch
+Patch113: 0009-drm-i915-gvt-Don-t-output-error-message-when-DomU-ma.patch
+Patch114: 0010-drm-i915-gvt-xengt-Correctly-get-low-mem-max-gfn.patch
+Patch115: 0011-drm-i915-gvt-Fix-dom0-call-trace-at-shutdown-or-rebo.patch
+Patch116: 0012-hvm-dm_op.h-Sync-dm_op-interface-to-xen-4.9-release.patch
+Patch117: 0013-drm-i915-gvt-Apply-g2h-adjust-for-GTT-mmio-access.patch
+Patch118: 0014-drm-i915-gvt-Apply-g2h-adjustment-during-fence-mmio-.patch
+Patch119: 0015-drm-i915-gvt-Patch-the-gma-in-gpu-commands-during-co.patch
+Patch120: 0016-drm-i915-gvt-Retrieve-the-guest-gm-base-address-from.patch
+Patch121: 0017-drm-i915-gvt-Align-the-guest-gm-aperture-start-offse.patch
+Patch122: 0018-drm-i915-gvt-Add-support-to-new-VFIO-subregion-VFIO_.patch
+Patch123: 0019-drm-i915-gvt-Implement-vGPU-status-save-and-restore-.patch
+Patch124: 0020-vfio-Implement-new-Ioctl-VFIO_IOMMU_GET_DIRTY_BITMAP.patch
+Patch125: 0021-drm-i915-gvt-Add-dev-node-for-vGPU-state-save-restor.patch
+Patch126: 0022-drm-i915-gvt-Add-interface-to-control-the-vGPU-runni.patch
+Patch127: 0023-drm-i915-gvt-Modify-the-vGPU-save-restore-logic-for-.patch
+Patch128: 0024-drm-i915-gvt-Add-log-dirty-support-for-XENGT-migrati.patch
+Patch129: 0025-drm-i915-gvt-xengt-Add-iosrv_enabled-to-track-iosrv-.patch
+Patch130: 0026-drm-i915-gvt-Add-xengt-ppgtt-write-handler.patch
+Patch131: 0027-drm-i915-gvt-xengt-Impliment-mpt-dma_map-unmap_guest.patch
+Patch132: 0028-drm-i915-gvt-introduce-a-new-VFIO-region-for-vfio-de.patch
+Patch133: 0029-drm-i915-gvt-change-the-return-value-of-opregion-acc.patch
+Patch134: 0030-drm-i915-gvt-Rebase-the-code-to-gvt-staging-for-live.patch
+Patch135: 0031-drm-i915-gvt-Apply-g2h-adjustment-to-buffer-start-gm.patch
+Patch136: 0032-drm-i915-gvt-Fix-xengt-opregion-handling-in-migratio.patch
+Patch137: 0033-drm-i915-gvt-XenGT-migration-optimize.patch
+Patch138: 0034-drm-i915-gvt-Add-vgpu-execlist-info-into-migration-d.patch
+Patch139: 0035-drm-i915-gvt-Emulate-ring-mode-register-restore-for-.patch
+Patch140: 0036-drm-i915-gvt-Use-copy_to_user-to-return-opregion.patch
+Patch141: 0037-drm-i915-gvt-Expose-opregion-in-vgpu-open.patch
+Patch142: 0038-drm-i915-gvt-xengt-Don-t-shutdown-vm-at-ioreq-failur.patch
+Patch143: 0039-drm-i915-gvt-Emulate-hw-status-page-address-register.patch
+Patch144: 0040-drm-i915-gvt-migration-copy-vregs-on-vreg-load.patch
+Patch145: 0041-drm-i915-gvt-Fix-a-command-corruption-caused-by-live.patch
+Patch146: 0042-drm-i915-gvt-update-force-to-nonpriv-register-whitel.patch
+Patch147: 0043-drm-i915-gvt-xengt-Fix-xengt-instance-destroy-error.patch
+Patch148: 0044-drm-i915-gvt-invalidate-old-ggtt-page-when-update-gg.patch
+Patch149: 0045-drm-i915-gvt-support-inconsecutive-partial-gtt-entry.patch
+Patch150: set-XENMEM_get_mfn_from_pfn-hypercall-number.patch
+Patch151: gvt-enforce-primary-class-id.patch
+Patch152: gvt-use-xs-vgpu-type.patch
+Patch153: xengt-pviommu-basic.patch
+Patch154: xengt-pviommu-unmap.patch
+Patch155: get_domctl_interface_version.patch
+Patch156: xengt-fix-shutdown-failures.patch
+Patch157: xengt-i915-gem-vgtbuffer.patch
+Patch158: gvt-introduce-gtt-lock.patch
+Patch159: xengt-gtt-2m-alignment.patch
+Patch160: net-core__order-3_frag_allocator_causes_swiotlb_bouncing_under_xen.patch
+Patch161: idle_cpu-return-0-during-softirq.patch
+Patch162: default-xen-swiotlb-size-128MiB.patch
+Patch163: dlm_handle_uevent_erestartsys.patch
+Patch164: gfs2-add-skippiness.patch
+Patch165: GFS2__Avoid_recently_demoted_rgrps
+Patch166: gfs2-debug-rgrp-sweep
+Patch167: gfs2-restore-kabi.patch
+Patch168: abi-version.patch
 
-Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XS/repos/linux.pg/archive?format=tar&at=v6.0.9#/kernel.patches.tar) = 0ca2a289c5acc3e82b1948d53a0fab4e9fe8d9cf
 Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XSU/repos/linux-stable/archive?at=refs%2Ftags%2Fv4.19.19&format=tar.gz&prefix=kernel-4.19.19#/kernel-4.19.19.tar.gz) = dffbba4348e9686d6bf42d54eb0f2cd1c4fb3520
+Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XS/repos/linux.pg/archive?format=tar&at=v6.0.10#/kernel.patches.tar) = 7f51da7e8ceba1a419e829778de10d29ee36b0ce
 
 %if %{do_kabichk}
 %endif
@@ -247,8 +249,8 @@ copyright and licensing information see the relevant source RPM.
 
 
 %package headers
-Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XS/repos/linux.pg/archive?format=tar&at=v6.0.9#/kernel.patches.tar) = 0ca2a289c5acc3e82b1948d53a0fab4e9fe8d9cf
 Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XSU/repos/linux-stable/archive?at=refs%2Ftags%2Fv4.19.19&format=tar.gz&prefix=kernel-4.19.19#/kernel-4.19.19.tar.gz) = dffbba4348e9686d6bf42d54eb0f2cd1c4fb3520
+Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XS/repos/linux.pg/archive?format=tar&at=v6.0.10#/kernel.patches.tar) = 7f51da7e8ceba1a419e829778de10d29ee36b0ce
 License: GPLv2
 Summary: Header files for the Linux kernel for use by glibc
 Group: Development/System
@@ -265,8 +267,8 @@ building most standard programs and are also needed for rebuilding the
 glibc package.
 
 %package devel
-Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XS/repos/linux.pg/archive?format=tar&at=v6.0.9#/kernel.patches.tar) = 0ca2a289c5acc3e82b1948d53a0fab4e9fe8d9cf
 Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XSU/repos/linux-stable/archive?at=refs%2Ftags%2Fv4.19.19&format=tar.gz&prefix=kernel-4.19.19#/kernel-4.19.19.tar.gz) = dffbba4348e9686d6bf42d54eb0f2cd1c4fb3520
+Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XS/repos/linux.pg/archive?format=tar&at=v6.0.10#/kernel.patches.tar) = 7f51da7e8ceba1a419e829778de10d29ee36b0ce
 License: GPLv2
 Summary: Development package for building kernel modules to match the %{uname} kernel
 Group: System Environment/Kernel
@@ -280,8 +282,8 @@ This package provides kernel headers and makefiles sufficient to build modules
 against the %{uname} kernel.
 
 %package -n perf
-Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XS/repos/linux.pg/archive?format=tar&at=v6.0.9#/kernel.patches.tar) = 0ca2a289c5acc3e82b1948d53a0fab4e9fe8d9cf
 Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XSU/repos/linux-stable/archive?at=refs%2Ftags%2Fv4.19.19&format=tar.gz&prefix=kernel-4.19.19#/kernel-4.19.19.tar.gz) = dffbba4348e9686d6bf42d54eb0f2cd1c4fb3520
+Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XS/repos/linux.pg/archive?format=tar&at=v6.0.10#/kernel.patches.tar) = 7f51da7e8ceba1a419e829778de10d29ee36b0ce
 Summary: Performance monitoring for the Linux kernel
 License: GPLv2
 %description -n perf
@@ -294,8 +296,8 @@ written in the Python programming language to use the interface \
 to manipulate perf events.
 
 %package -n python2-perf
-Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XS/repos/linux.pg/archive?format=tar&at=v6.0.9#/kernel.patches.tar) = 0ca2a289c5acc3e82b1948d53a0fab4e9fe8d9cf
 Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XSU/repos/linux-stable/archive?at=refs%2Ftags%2Fv4.19.19&format=tar.gz&prefix=kernel-4.19.19#/kernel-4.19.19.tar.gz) = dffbba4348e9686d6bf42d54eb0f2cd1c4fb3520
+Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XS/repos/linux.pg/archive?format=tar&at=v6.0.10#/kernel.patches.tar) = 7f51da7e8ceba1a419e829778de10d29ee36b0ce
 Summary: %{pythonperfsum}
 Provides: python2-perf
 %description -n python2-perf
@@ -538,6 +540,9 @@ fi
 %{python2_sitearch}/*
 
 %changelog
+* Mon Jan 27 2020 Jennifer Herbert <jennifer.herbert@citrix.com> - 4.19.19-6.0.10
+- CA-332782: backport fixes for blkdiscard bugs
+
 * Thu Nov 28 2019 Ross Lagerwall <ross.lagerwall@citrix.com> - 4.19.19-6.0.9
 - CA-330853: Fix memory corruption on BPDU processing
 
