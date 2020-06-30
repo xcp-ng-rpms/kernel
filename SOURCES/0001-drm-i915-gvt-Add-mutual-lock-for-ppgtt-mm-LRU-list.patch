@@ -1,0 +1,131 @@
+From 72aabfb862e40ee83c136c4f87877c207e6859b7 Mon Sep 17 00:00:00 2001
+From: Zhenyu Wang <zhenyuw@linux.intel.com>
+Date: Fri, 1 Mar 2019 15:04:13 +0800
+Subject: [PATCH 1/1] drm/i915/gvt: Add mutual lock for ppgtt mm LRU list
+
+This adds mutex to guard against update of global ppgtt mm LRU list.
+To resolve error found as below warning.
+
+[73130.012162] ------------[ cut here ]------------
+[73130.012168] list_add corruption. prev->next should be next (ffff995f970cca50), but was 0000000000000000. (prev=ffff995f0dc5bdf8).
+[73130.012181] WARNING: CPU: 3 PID: 82 at lib/list_debug.c:28 __list_add_valid+0x4d/0x70
+[73130.012183] Modules linked in: btrfs(E) xor(E) zstd_decompress(E) zstd_compress(E) raid6_pq(E) dm_mod(E) kvmgt(E) fuse(E) xt_addrtype(E) nft_compat(E) xt_conntrack(E) nf_nat(E) nf_conntrack(E) nf_defrag_ipv6(E) nf_defrag_ipv4(E) libcrc32c(E) br_netfilter(E) bridge(E) stp(E) llc(E) overlay(E) devlink(E) nf_tables(E) nfnetlink(E) loop(E) x86_pkg_temp_thermal(E) intel_powerclamp(E) coretemp(E) crct10dif_pclmul(E) crc32_pclmul(E) ghash_clmulni_intel(E) mei_me(E) aesni_intel(E) aes_x86_64(E) crypto_simd(E) cryptd(E) glue_helper(E) intel_cstate(E) intel_uncore(E) mei(E) intel_pch_thermal(E) intel_rapl_perf(E) pcspkr(E) iTCO_wdt(E) iTCO_vendor_support(E) idma64(E) sg(E) virt_dma(E) acpi_pad(E) evdev(E) binfmt_misc(E) ip_tables(E) x_tables(E) ipv6(E) autofs4(E) hid_generic(E) usbhid(E) hid(E) ext4(E) crc32c_generic(E) crc16(E) mbcache(E) jbd2(E) fscrypto(E) xhci_pci(E) sdhci_pci(E) cqhci(E) intel_lpss_pci(E) intel_lpss(E) crc32c_intel(E) xhci_hcd(E) sdhci(E) i2c_i801(E) e1000e(E) mmc_core(E)
+[73130.012218]  ptp(E) pps_core(E) usbcore(E) mfd_core(E) sd_mod(E) fan(E) thermal(E)
+[73130.012227] CPU: 3 PID: 82 Comm: gvt workload 0 Tainted: G        W   E     5.0.0-rc7-staging-190226+ #282
+[73130.012228] Hardware name:  /NUC6i5SYB, BIOS SYSKLi35.86A.0039.2016.0316.1747 03/16/2016
+[73130.012232] RIP: 0010:__list_add_valid+0x4d/0x70
+[73130.012234] Code: c3 48 89 d1 48 c7 c7 e0 82 91 bb 48 89 c2 e8 44 8a cc ff 0f 0b 31 c0 c3 48 89 c1 4c 89 c6 48 c7 c7 30 83 91 bb e8 2d 8a cc ff <0f> 0b 31 c0 c3 48 89 f2 4c 89 c1 48 89 fe 48 c7 c7 80 83 91 bb e8
+[73130.012236] RSP: 0018:ffffa4924107fdd0 EFLAGS: 00010286
+[73130.012238] RAX: 0000000000000000 RBX: ffff995d8a5ccf00 RCX: 0000000000000006
+[73130.012240] RDX: 0000000000000007 RSI: 0000000000000086 RDI: ffff995faad96680
+[73130.012241] RBP: 0000000000000000 R08: 0000000000213a28 R09: 0000000000000084
+[73130.012243] R10: 0000000000000000 R11: ffffa4924107fc70 R12: ffff995d8a5ccf78
+[73130.012245] R13: ffff995f970c8000 R14: ffff995f0dc5bdf8 R15: ffff995f970cca50
+[73130.012247] FS:  0000000000000000(0000) GS:ffff995faad80000(0000) knlGS:0000000000000000
+[73130.012249] CS:  0010 DS: 0000 ES: 0000 CR0: 0000000080050033
+[73130.012250] CR2: 00000222e1891000 CR3: 0000000116848002 CR4: 00000000003626e0
+[73130.012252] Call Trace:
+[73130.012258]  intel_vgpu_pin_mm+0x7a/0xa0
+[73130.012262]  workload_thread+0x683/0x12a0
+[73130.012266]  ? do_wait_intr_irq+0xb0/0xb0
+[73130.012269]  ? finish_wait+0x80/0x80
+[73130.012271]  ? intel_vgpu_clean_workloads+0x110/0x110
+[73130.012274]  kthread+0x116/0x130
+[73130.012276]  ? kthread_bind+0x30/0x30
+[73130.012280]  ret_from_fork+0x35/0x40
+[73130.012285] WARNING: CPU: 3 PID: 82 at lib/list_debug.c:28 __list_add_valid+0x4d/0x70
+[73130.012286] ---[ end trace 458a2e792eec21c0 ]---
+
+v2:
+- simplify lock handling
+
+Reviewed-by: Xiong Zhang <xiong.y.zhang@intel.com>
+Cc: Xiong Zhang <xiong.y.zhang@intel.com>
+Signed-off-by: Zhenyu Wang <zhenyuw@linux.intel.com>
+---
+ drivers/gpu/drm/i915/gvt/gtt.c | 14 +++++++++++++-
+ drivers/gpu/drm/i915/gvt/gtt.h |  1 +
+ 2 files changed, 14 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/gpu/drm/i915/gvt/gtt.c b/drivers/gpu/drm/i915/gvt/gtt.c
+index c7103dd..d7052ab 100644
+--- a/drivers/gpu/drm/i915/gvt/gtt.c
++++ b/drivers/gpu/drm/i915/gvt/gtt.c
+@@ -1882,7 +1882,11 @@ struct intel_vgpu_mm *intel_vgpu_create_ppgtt_mm(struct intel_vgpu *vgpu,
+ 	}
+ 
+ 	list_add_tail(&mm->ppgtt_mm.list, &vgpu->gtt.ppgtt_mm_list_head);
++
++	mutex_lock(&gvt->gtt.ppgtt_mm_lock);
+ 	list_add_tail(&mm->ppgtt_mm.lru_list, &gvt->gtt.ppgtt_mm_lru_list_head);
++	mutex_unlock(&gvt->gtt.ppgtt_mm_lock);
++
+ 	return mm;
+ }
+ 
+@@ -1967,9 +1971,10 @@ int intel_vgpu_pin_mm(struct intel_vgpu_mm *mm)
+ 		if (ret)
+ 			return ret;
+ 
++		mutex_lock(&mm->vgpu->gvt->gtt.ppgtt_mm_lock);
+ 		list_move_tail(&mm->ppgtt_mm.lru_list,
+ 			       &mm->vgpu->gvt->gtt.ppgtt_mm_lru_list_head);
+-
++		mutex_unlock(&mm->vgpu->gvt->gtt.ppgtt_mm_lock);
+ 	}
+ 
+ 	return 0;
+@@ -1980,6 +1985,8 @@ static int reclaim_one_ppgtt_mm(struct intel_gvt *gvt)
+ 	struct intel_vgpu_mm *mm;
+ 	struct list_head *pos, *n;
+ 
++	mutex_lock(&gvt->gtt.ppgtt_mm_lock);
++
+ 	list_for_each_safe(pos, n, &gvt->gtt.ppgtt_mm_lru_list_head) {
+ 		mm = container_of(pos, struct intel_vgpu_mm, ppgtt_mm.lru_list);
+ 
+@@ -1987,9 +1994,11 @@ static int reclaim_one_ppgtt_mm(struct intel_gvt *gvt)
+ 			continue;
+ 
+ 		list_del_init(&mm->ppgtt_mm.lru_list);
++		mutex_unlock(&gvt->gtt.ppgtt_mm_lock);
+ 		invalidate_ppgtt_mm(mm);
+ 		return 1;
+ 	}
++	mutex_unlock(&gvt->gtt.ppgtt_mm_lock);
+ 	return 0;
+ }
+ 
+@@ -2659,6 +2668,7 @@ int intel_gvt_init_gtt(struct intel_gvt *gvt)
+ 		}
+ 	}
+ 	INIT_LIST_HEAD(&gvt->gtt.ppgtt_mm_lru_list_head);
++	mutex_init(&gvt->gtt.ppgtt_mm_lock);
+ 	return 0;
+ }
+ 
+@@ -2699,7 +2709,9 @@ void intel_vgpu_invalidate_ppgtt(struct intel_vgpu *vgpu)
+ 	list_for_each_safe(pos, n, &vgpu->gtt.ppgtt_mm_list_head) {
+ 		mm = container_of(pos, struct intel_vgpu_mm, ppgtt_mm.list);
+ 		if (mm->type == INTEL_GVT_MM_PPGTT) {
++			mutex_lock(&vgpu->gvt->gtt.ppgtt_mm_lock);
+ 			list_del_init(&mm->ppgtt_mm.lru_list);
++			mutex_unlock(&vgpu->gvt->gtt.ppgtt_mm_lock);
+ 			if (mm->ppgtt_mm.shadowed)
+ 				invalidate_ppgtt_mm(mm);
+ 		}
+diff --git a/drivers/gpu/drm/i915/gvt/gtt.h b/drivers/gpu/drm/i915/gvt/gtt.h
+index d8cb04c..edb610d 100644
+--- a/drivers/gpu/drm/i915/gvt/gtt.h
++++ b/drivers/gpu/drm/i915/gvt/gtt.h
+@@ -88,6 +88,7 @@ struct intel_gvt_gtt {
+ 	void (*mm_free_page_table)(struct intel_vgpu_mm *mm);
+ 	struct list_head oos_page_use_list_head;
+ 	struct list_head oos_page_free_list_head;
++	struct mutex ppgtt_mm_lock;
+ 	struct list_head ppgtt_mm_lru_list_head;
+ 
+ 	struct page *scratch_page;
+-- 
+2.7.4
+

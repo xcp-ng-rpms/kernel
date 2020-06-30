@@ -1,5 +1,5 @@
 diff --git a/arch/x86/include/asm/xen/hypercall.h b/arch/x86/include/asm/xen/hypercall.h
-index 4028744..9ba479e 100644
+index d66ba01..1cef4d4 100644
 --- a/arch/x86/include/asm/xen/hypercall.h
 +++ b/arch/x86/include/asm/xen/hypercall.h
 @@ -49,6 +49,7 @@
@@ -10,7 +10,7 @@ index 4028744..9ba479e 100644
  #include <xen/interface/platform.h>
  #include <xen/interface/xen-mca.h>
  
-@@ -322,6 +323,12 @@
+@@ -325,6 +326,12 @@ HYPERVISOR_multicall(void *call_list, uint32_t nr_calls)
  }
  
  static inline int
@@ -24,10 +24,10 @@ index 4028744..9ba479e 100644
  			     unsigned long flags)
  {
 diff --git a/arch/x86/xen/pci-swiotlb-xen.c b/arch/x86/xen/pci-swiotlb-xen.c
-index 37c6056..125cc0f7 100644
+index 37c6056..447d7bb 100644
 --- a/arch/x86/xen/pci-swiotlb-xen.c
 +++ b/arch/x86/xen/pci-swiotlb-xen.c
-@@ -2,21 +2,232 @@
+@@ -2,21 +2,134 @@
  
  #include <linux/dma-mapping.h>
  #include <linux/pci.h>
@@ -37,9 +37,10 @@ index 37c6056..125cc0f7 100644
  #include <asm/xen/hypervisor.h>
  #include <xen/xen.h>
  #include <asm/iommu_table.h>
+-
 +#include <asm/xen/hypercall.h>
 +#include <xen/interface/memory.h>
- 
++#include <xen/hvc-console.h>
  
  #include <asm/xen/swiotlb-xen.h>
 +#include <asm/xen/page.h>
@@ -55,35 +56,11 @@ index 37c6056..125cc0f7 100644
 +dma_addr_t pv_iommu_1_to_1_offset;
 +EXPORT_SYMBOL(pv_iommu_1_to_1_offset);
 +
-+
-+/* The bfn_foreign_offset is where the 1:1 BFN:MFN region starts.
-+ * This value must be after the Dom0 1:1 PFN:MFN range.
-+ * The default for bfn_foreign_offset is calculated as follows:
-+ * 1 TB (40 address bits on some GPUs) - 768 G (max host memory that we
-+ * want to support and have everything fit under 1 T) - 4 G (MMIO hole)
-+ * - 4 G ("wiggle room").
-+ */
-+
-+static __initdata int bfn_foreign_offset = 248;
-+
-+static int __init
-+xen_pviommu_foreign_offset_setup (char *str)
-+{
-+	if (!str)
-+		return 0;
-+	bfn_foreign_offset = simple_strtoul(str, NULL, 0);
-+	return 1;
-+}
-+
-+__setup("xen_pviommu_foreign_offset=",  xen_pviommu_foreign_offset_setup);
-+
-+
 +bool pv_iommu_1_to_1_setup_complete;
 +EXPORT_SYMBOL(pv_iommu_1_to_1_setup_complete);
 +
  int xen_swiotlb __read_mostly;
 +static struct pv_iommu_op iommu_ops[IOMMU_BATCH_SIZE];
-+static struct task_struct *xen_pv_iommu_setup_task;
 +
 +int xen_pv_iommu_map_sg_attrs(struct device *hwdev, struct scatterlist *sgl,
 +			 int nelems, enum dma_data_direction dir,
@@ -183,84 +160,10 @@ index 37c6056..125cc0f7 100644
 +	}
 +	return res;
 +}
-+
-+static int pv_iommu_setup(void *data)
-+{
-+	int pfn, count = 0;
-+	u64 max_host_mfn = 0;
-+	u64 iommu_fn_offset = pv_iommu_1_to_1_offset >> PAGE_SHIFT;
-+
-+	if (pv_iommu_1_to_1_setup_complete)
-+		return 0;
-+
-+	max_host_mfn = HYPERVISOR_memory_op(XENMEM_maximum_ram_page, NULL);
-+
-+	/* Remove Xen setup 1-1 mapping */
-+	for (pfn=0; pfn < max_host_mfn; pfn++)
-+	{
-+		if (get_phys_to_machine(pfn) == INVALID_P2M_ENTRY ||
-+		    (pfn >= iommu_fn_offset))
-+		{
-+			iommu_ops[count].u.unmap_page.bfn = pfn;
-+			iommu_ops[count].flags = IOMMU_MAP_OP_no_ref_cnt;
-+			iommu_ops[count].subop_id = IOMMUOP_unmap_page;
-+			count++;
-+		}
-+		if (count == IOMMU_BATCH_SIZE)
-+		{
-+			count = 0;
-+			if (xen_iommu_batch(iommu_ops,
-+						IOMMU_BATCH_SIZE))
-+				panic("Xen PV-IOMMU: failed to remove legacy"
-+						" mappings\n");
-+			cond_resched();
-+		}
-+	}
-+	if (count && xen_iommu_batch(iommu_ops, count))
-+		panic("Xen PV-IOMMU: failed to remove legacy mappings\n");
-+
-+	count = 0;
-+	/* Create offset IOMMU mapping of all of host RAM, start from
-+	 * iommu_fn_offset (derived from pv_iommu_1_to_1_offset) 
-+	 */
-+	for (pfn=0; pfn < max_host_mfn; pfn++)
-+	{
-+		iommu_ops[count].u.map_page.bfn = iommu_fn_offset + pfn;
-+		iommu_ops[count].u.map_page.gfn = pfn;
-+		iommu_ops[count].flags = IOMMU_OP_readable | IOMMU_OP_writeable |
-+					IOMMU_MAP_OP_no_ref_cnt |
-+					IOMMU_MAP_OP_add_m2b;
-+		iommu_ops[count].subop_id = IOMMUOP_map_page;
-+		count++;
-+		if (count == IOMMU_BATCH_SIZE)
-+		{
-+			count = 0;
-+			if (xen_iommu_batch(iommu_ops,
-+						IOMMU_BATCH_SIZE))
-+				panic("Xen PV-IOMMU: failed to setup"
-+					" 1-1 mapping\n");
-+			if (check_batch(IOMMU_BATCH_SIZE))
-+				printk(KERN_ERR "Failed to fully create offset IOMMU mapping.");
-+
-+			cond_resched();
-+		}
-+	}
-+	if (count)
-+	{
-+		if (xen_iommu_batch(iommu_ops, count))
-+			panic("Xen PV-IOMMU: failed to setup 1-1 mappings");
-+		if (check_batch(count))
-+			printk(KERN_ERR "Failed to fully create offset IOMMU mapping.");
-+	}
-+
-+	printk(KERN_INFO "XEN-PV-IOMMU - completed setting up 1-1 mapping\n");
-+	pv_iommu_1_to_1_setup_complete = true;
-+	return 0;
-+}
  
  /*
   * pci_xen_swiotlb_detect - set xen_swiotlb to 1 if necessary
-@@ -26,10 +237,96 @@
+@@ -26,10 +139,101 @@ int xen_swiotlb __read_mostly;
   */
  int __init pci_xen_swiotlb_detect(void)
  {
@@ -271,9 +174,10 @@ index 37c6056..125cc0f7 100644
 +	if (xen_initial_domain()){
 +		int count = 0;
 +		u64 pfn, pfn_limit, max_host_mfn = 0;
-+		struct pv_iommu_op iommu_op;
++		struct pv_iommu_op_ext iommu_op;
 +		int rc;
 +
++		iommu_op.u.query_caps.offset = 0;
 +		iommu_op.flags = 0;
 +		iommu_op.status = 0;
 +		iommu_op.subop_id = IOMMUOP_query_caps;
@@ -287,15 +191,19 @@ index 37c6056..125cc0f7 100644
 +		printk("max_pfn is 0x%lx\n",max_pfn);
 +
 +		/* Check and Setup 1-1 host RAM offset location */
-+		pv_iommu_1_to_1_offset = (dma_addr_t) bfn_foreign_offset << 30;
++		if (iommu_op.flags & IOMMU_QUERY_map_all_mfns)
++			pv_iommu_1_to_1_offset = (dma_addr_t) iommu_op.u.query_caps.offset << PAGE_SHIFT;
++		/* If offset is 0 or not set - disable PV IOMMU */
++		if (!pv_iommu_1_to_1_offset)
++			goto no_pv_iommu;
++
 +		pfn_limit = pv_iommu_1_to_1_offset >> PAGE_SHIFT;
 +		if (max_pfn >= pfn_limit)
 +		{
-+			printk(KERN_INFO "XEN-PV-IOMMU: bfn_foreign_offset"
-+					 " at %d, is too small for Dom0."
-+					 "  Needs %lu", bfn_foreign_offset,
-+					 (max_pfn >> (30 - PAGE_SHIFT))+1);
-+			goto no_pv_iommu;
++			xen_raw_printk( "XEN-PV-IOMMU: bfn_foreign_offset"
++					" at %llu, is too small for Dom0."
++					"  Needs %lu\n", pfn_limit, max_pfn + 1);
++			goto remove_iommu_mappings;
 +		}
 +
 +		pfn_limit = min(max_host_mfn, pfn_limit);
@@ -327,7 +235,7 @@ index 37c6056..125cc0f7 100644
 +
 +				if (check_batch(IOMMU_BATCH_SIZE))
 +				{
-+					printk(KERN_ERR "Failed to fully Setup 1-1 mapping of GPFN to MFN.");
++					xen_raw_printk("Failed to fully Setup 1-1 mapping of GPFN to MFN.\n");
 +					goto remove_iommu_mappings;
 +				}
 +			}
@@ -338,7 +246,7 @@ index 37c6056..125cc0f7 100644
 +				goto remove_iommu_mappings;
 +			if (check_batch(count))
 +			{
-+				printk(KERN_ERR "Failed to fully Setup 1-1 mapping of GPFN to MFN.");
++				xen_raw_printk("Failed to fully Setup 1-1 mapping of GPFN to MFN.\n");
 +				goto remove_iommu_mappings;
 +			}
 +		}
@@ -358,23 +266,23 @@ index 37c6056..125cc0f7 100644
  	/* If running as PV guest, either iommu=soft, or swiotlb=force will
  	 * activate this IOMMU. If running as PV privileged, activate it
  	 * irregardless.
-@@ -54,6 +351,15 @@ int __init pci_xen_swiotlb_detect(void)
+@@ -54,6 +258,15 @@ int __init pci_xen_swiotlb_detect(void)
  	return xen_swiotlb;
  }
  
 +void __init pci_xen_pv_iommu_late_init(void)
 +{
 +	if (pv_iommu_1_to_1_offset){
-+		xen_pv_iommu_setup_task = kthread_create(pv_iommu_setup,
-+				NULL,"xen-pv-iommu-setup");
-+		wake_up_process(xen_pv_iommu_setup_task);
++		/* Xen has already set up 1-1 mapping for us */
++		pv_iommu_1_to_1_setup_complete = true;
++		printk(KERN_INFO "XEN-PV-IOMMU - completed setting up 1-1 mapping\n");
 +	}
 +}
 +
  void __init pci_xen_swiotlb_init(void)
  {
  	if (xen_swiotlb) {
-@@ -65,6 +371,16 @@ void __init pci_xen_swiotlb_init(void)
+@@ -65,6 +278,16 @@ void __init pci_xen_swiotlb_init(void)
  		pci_request_acs();
  #endif
  	}
@@ -391,7 +299,7 @@ index 37c6056..125cc0f7 100644
  }
  
  int pci_xen_swiotlb_init_late(void)
-@@ -91,4 +407,4 @@ int pci_xen_swiotlb_init_late(void)
+@@ -91,4 +314,4 @@ EXPORT_SYMBOL_GPL(pci_xen_swiotlb_init_late);
  IOMMU_INIT_FINISH(pci_xen_swiotlb_detect,
  		  NULL,
  		  pci_xen_swiotlb_init,
@@ -410,10 +318,10 @@ index 5d58370..6db17a6 100644
  obj-$(CONFIG_XEN_PCIDEV_BACKEND)	+= xen-pciback/
  obj-$(CONFIG_XEN_PRIVCMD)		+= xen-privcmd.o
 diff --git a/drivers/xen/balloon.c b/drivers/xen/balloon.c
-index 7ab6cae..81218fb 100644
+index d4e8b71..5879f79 100644
 --- a/drivers/xen/balloon.c
 +++ b/drivers/xen/balloon.c
-@@ -113,6 +113,9 @@
+@@ -113,6 +113,9 @@ static struct ctl_table xen_root[] = {
  
  #endif
  
@@ -584,7 +492,7 @@ index 3782cf0..1df1ede 100644
  EXPORT_SYMBOL_GPL(__xenmem_reservation_va_mapping_reset);
 diff --git a/drivers/xen/pv-iommu-xen.c b/drivers/xen/pv-iommu-xen.c
 new file mode 100644
-index 0000000..23f84ba
+index 00000000..23f84ba
 --- /dev/null
 +++ b/drivers/xen/pv-iommu-xen.c
 @@ -0,0 +1,134 @@
@@ -722,56 +630,12 @@ index 0000000..23f84ba
 +
 +}
 +EXPORT_SYMBOL_GPL(xen_pv_iommu_map_sg_attrs);
-diff --git a/include/xen/interface/iommu.h b/include/xen/interface/iommu.h
-new file mode 100644
-index 0000000..ffe527c
---- /dev/null
-+++ b/include/xen/interface/iommu.h
-@@ -0,0 +1,38 @@
-+/*
-+ * Permission is hereby granted, free of charge, to any person obtaining a copy
-+ * of this software and associated documentation files (the "Software"), to
-+ * deal in the Software without restriction, including without limitation the
-+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
-+ * sell copies of the Software, and to permit persons to whom the Software is
-+ * furnished to do so, subject to the following conditions:
-+ *
-+ * The above copyright notice and this permission notice shall be included in
-+ * all copies or substantial portions of the Software.
-+ *
-+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-+ * DEALINGS IN THE SOFTWARE.
-+ */
-+
-+#ifndef __XEN_PUBLIC_IOMMU_H__
-+#define __XEN_PUBLIC_IOMMU_H__
-+
-+#define IOMMUOP_map_page          1
-+#define IOMMUOP_unmap_page        2
-+
-+
-+struct iommu_map_op {
-+    /* IN */
-+    uint64_t gmfn;
-+    uint64_t mfn;
-+    uint32_t flags;
-+    /* OUT */
-+    int16_t status;
-+};
-+typedef struct iommu_map_op iommu_map_op_t;
-+
-+#endif
 diff --git a/include/xen/interface/pv-iommu.h b/include/xen/interface/pv-iommu.h
 new file mode 100644
-index 0000000..0cc4ecc
+index 00000000..8b76544
 --- /dev/null
 +++ b/include/xen/interface/pv-iommu.h
-@@ -0,0 +1,90 @@
+@@ -0,0 +1,100 @@
 +/*
 + * Permission is hereby granted, free of charge, to any person obtaining a copy
 + * of this software and associated documentation files (the "Software"), to
@@ -812,8 +676,6 @@ index 0000000..0cc4ecc
 +#define IOMMU_OP_readable (1 << 0)
 +#define IOMMU_OP_writeable (1 << 1)
 +#define IOMMU_MAP_OP_no_ref_cnt (1 << 2)
-+#define IOMMU_MAP_OP_add_m2b (1 << 3)
-+#define IOMMU_UNMAP_OP_remove_m2b (1 << 0)
 +    uint16_t flags;
 +    int32_t status;
 +
@@ -848,6 +710,18 @@ index 0000000..0cc4ecc
 +    } u;
 +};
 +
++struct pv_iommu_op_ext
++{
++    uint16_t subop_id;
++    uint16_t flags;
++    int32_t status;
++
++    union {
++        struct {
++            uint64_t offset;
++        } query_caps;
++    } u;
++};
 +
 +typedef struct pv_iommu_op pv_iommu_op_t;
 +
@@ -893,7 +767,7 @@ diff --git a/include/xen/swiotlb-xen.h b/include/xen/swiotlb-xen.h
 index ff66b40..5d39bf4 100644
 --- a/include/xen/swiotlb-xen.h
 +++ b/include/xen/swiotlb-xen.h
-@@ -10,4 +10,6 @@
+@@ -10,4 +10,6 @@ extern const struct dma_map_ops xen_swiotlb_dma_ops;
  extern u64
  xen_swiotlb_get_required_mask(struct device *dev);
  
@@ -904,7 +778,7 @@ diff --git a/kernel/dma/swiotlb.c b/kernel/dma/swiotlb.c
 index 4f8a6db..530b0c3 100644
 --- a/kernel/dma/swiotlb.c
 +++ b/kernel/dma/swiotlb.c
-@@ -64,7 +64,10 @@
+@@ -64,7 +64,10 @@ enum swiotlb_force swiotlb_force;
   * swiotlb_tbl_sync_single_*, to see if the memory was in fact allocated by this
   * API.
   */
@@ -938,7 +812,7 @@ index 46ba853..c0b63ab 100644
  /*
   * Make /sys/kernel/notes give the raw contents of our kernel .notes section.
   */
-@@ -231,6 +242,7 @@ static ssize_t notes_read(struct file *filp, struct kobject *kobj,
+@@ -231,6 +242,7 @@ static struct attribute * kernel_attrs[] = {
  	&rcu_expedited_attr.attr,
  	&rcu_normal_attr.attr,
  #endif

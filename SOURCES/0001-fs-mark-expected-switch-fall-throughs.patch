@@ -1,0 +1,70 @@
+From 0a4c92657f2543bb8fd480c5af90c6bb87f18e00 Mon Sep 17 00:00:00 2001
+From: "Gustavo A. R. Silva" <gustavo@embeddedor.com>
+Date: Wed, 23 Jan 2019 02:48:28 -0600
+Subject: [PATCH] fs: mark expected switch fall-throughs
+
+In preparation to enabling -Wimplicit-fallthrough, mark switch cases
+where we are expecting to fall through.
+
+This patch fixes the following warnings:
+
+fs/affs/affs.h:124:38: warning: this statement may fall through [-Wimplicit-fallthrough=]
+fs/configfs/dir.c:1692:11: warning: this statement may fall through [-Wimplicit-fallthrough=]
+fs/configfs/dir.c:1694:7: warning: this statement may fall through [-Wimplicit-fallthrough=]
+fs/ceph/file.c:249:3: warning: this statement may fall through [-Wimplicit-fallthrough=]
+fs/ext4/hash.c:233:15: warning: this statement may fall through [-Wimplicit-fallthrough=]
+fs/ext4/hash.c:246:15: warning: this statement may fall through [-Wimplicit-fallthrough=]
+fs/ext2/inode.c:1237:7: warning: this statement may fall through [-Wimplicit-fallthrough=]
+fs/ext2/inode.c:1244:7: warning: this statement may fall through [-Wimplicit-fallthrough=]
+fs/ext4/indirect.c:1182:6: warning: this statement may fall through [-Wimplicit-fallthrough=]
+fs/ext4/indirect.c:1188:6: warning: this statement may fall through [-Wimplicit-fallthrough=]
+fs/ext4/indirect.c:1432:6: warning: this statement may fall through [-Wimplicit-fallthrough=]
+fs/ext4/indirect.c:1440:6: warning: this statement may fall through [-Wimplicit-fallthrough=]
+fs/f2fs/node.c:618:8: warning: this statement may fall through [-Wimplicit-fallthrough=]
+fs/f2fs/node.c:620:8: warning: this statement may fall through [-Wimplicit-fallthrough=]
+fs/btrfs/ref-verify.c:522:15: warning: this statement may fall through [-Wimplicit-fallthrough=]
+fs/gfs2/bmap.c:711:7: warning: this statement may fall through [-Wimplicit-fallthrough=]
+fs/gfs2/bmap.c:722:7: warning: this statement may fall through [-Wimplicit-fallthrough=]
+fs/jffs2/fs.c:339:6: warning: this statement may fall through [-Wimplicit-fallthrough=]
+fs/nfsd/nfs4proc.c:429:12: warning: this statement may fall through [-Wimplicit-fallthrough=]
+fs/ufs/util.h:62:6: warning: this statement may fall through [-Wimplicit-fallthrough=]
+fs/ufs/util.h:43:6: warning: this statement may fall through [-Wimplicit-fallthrough=]
+fs/fcntl.c:770:7: warning: this statement may fall through [-Wimplicit-fallthrough=]
+fs/seq_file.c:319:10: warning: this statement may fall through [-Wimplicit-fallthrough=]
+fs/libfs.c:148:11: warning: this statement may fall through [-Wimplicit-fallthrough=]
+fs/libfs.c:150:7: warning: this statement may fall through [-Wimplicit-fallthrough=]
+fs/signalfd.c:178:7: warning: this statement may fall through [-Wimplicit-fallthrough=]
+fs/locks.c:1473:16: warning: this statement may fall through [-Wimplicit-fallthrough=]
+
+Warning level 3 was used: -Wimplicit-fallthrough=3
+
+This patch is part of the ongoing efforts to enabling
+-Wimplicit-fallthrough.
+
+Reviewed-by: Kees Cook <keescook@chromium.org>
+Signed-off-by: Gustavo A. R. Silva <gustavo@embeddedor.com>
+---
+ fs/gfs2/bmap.c            | 4 ++--
+
+diff --git a/fs/gfs2/bmap.c b/fs/gfs2/bmap.c
+index 02b2646d84b3..fc95fe528c47 100644
+--- a/fs/gfs2/bmap.c
++++ b/fs/gfs2/bmap.c
+@@ -710,7 +710,7 @@ static int gfs2_iomap_alloc(struct inode *inode, struct iomap *iomap,
+ 			}
+ 			if (n == 0)
+ 				break;
+-		/* Branching from existing tree */
++		/* fall through - To branching from existing tree */
+ 		case ALLOC_GROW_DEPTH:
+ 			if (i > 1 && i < mp->mp_fheight)
+ 				gfs2_trans_add_meta(ip->i_gl, mp->mp_bh[i-1]);
+@@ -721,7 +721,7 @@ static int gfs2_iomap_alloc(struct inode *inode, struct iomap *iomap,
+ 				state = ALLOC_DATA;
+ 			if (n == 0)
+ 				break;
+-		/* Tree complete, adding data blocks */
++		/* fall through - To tree complete, adding data blocks */
+ 		case ALLOC_DATA:
+ 			BUG_ON(n > dblks);
+ 			BUG_ON(mp->mp_bh[end_of_metadata] == NULL);

@@ -1,7 +1,7 @@
 From 8d3e72a180b42c01ec00045e1bb8eb91175adafe Mon Sep 17 00:00:00 2001
 From: Andreas Gruenbacher <agruenba@redhat.com>
 Date: Thu, 27 Jun 2019 17:28:40 -0700
-Subject: [PATCH 1/1] iomap: don't mark the inode dirty in iomap_write_end
+Subject: [PATCH] iomap: don't mark the inode dirty in iomap_write_end
 
 Marking the inode dirty for each page copied into the page cache can be
 very inefficient for file systems that use the VFS dirty inode tracking,
@@ -80,5 +80,5 @@ index 2103b94cb1bf..1df9ea187a9a 100644
  /*
   * Flags that only need to be reported for IOMAP_REPORT requests:
 -- 
-2.17.2
+2.21.1
 

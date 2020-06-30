@@ -1,7 +1,7 @@
-From f968963f6a1714066d7051196bf1904c43493e67 Mon Sep 17 00:00:00 2001
+From 79edd00dc6a96644d76b4a1cb97d94d49e026768 Mon Sep 17 00:00:00 2001
 From: Anoob Soman <anoob.soman@citrix.com>
-Date: Mon, 2 Jul 2018 14:44:50 +0100
-Subject: [PATCH] libiscsi: Fix race between iscsi_xmit_task and
+Date: Wed, 13 Feb 2019 13:21:39 +0800
+Subject: [PATCH 1/1] scsi: libiscsi: Fix race between iscsi_xmit_task and
  iscsi_complete_task
 
 When a target sends Check Condition, whilst initiator is busy xmiting
@@ -47,9 +47,9 @@ backtrace.
 [3326150.988144] WARN: CR2: 0000000000000078
 [3326151.020366] WARN: ---[ end trace 1c60974d4678d81b ]---
 
-Commit 6f8830f5bbab (scsi: libiscsi: add lock around task lists to fix list
-corruption regression) introduced "taskqueuelock" to fix list corruption during
-the race, but this wasn't enough.
+Commit 6f8830f5bbab ("scsi: libiscsi: add lock around task lists to fix
+list corruption regression") introduced "taskqueuelock" to fix list
+corruption during the race, but this wasn't enough.
 
 Re-setting of conn->task to NULL, could race with iscsi_xmit_task().
 iscsi_complete_task()
@@ -60,7 +60,8 @@ iscsi_complete_task()
 }
 
 conn->task in iscsi_xmit_task() could be NULL and so will be task.
-__iscsi_get_task(task) will crash (NullPtr de-ref), trying to access refcount.
+__iscsi_get_task(task) will crash (NullPtr de-ref), trying to access
+refcount.
 
 iscsi_xmit_task()
 {
@@ -71,16 +72,23 @@ iscsi_xmit_task()
 
 This commit will take extra conn->session->back_lock in iscsi_xmit_task()
 to ensure iscsi_xmit_task() waits for iscsi_complete_task(), if
-iscsi_complete_task() wins the race.
-If iscsi_xmit_task() wins the race, iscsi_xmit_task() increments task->refcount
+iscsi_complete_task() wins the race.  If iscsi_xmit_task() wins the race,
+iscsi_xmit_task() increments task->refcount
 (__iscsi_get_task) ensuring iscsi_complete_task() will not iscsi_free_task().
 
 Signed-off-by: Anoob Soman <anoob.soman@citrix.com>
+Signed-off-by: Bob Liu <bob.liu@oracle.com>
+Acked-by: Lee Duncan <lduncan@suse.com>
+Signed-off-by: Martin K. Petersen <martin.petersen@oracle.com>
+---
+ drivers/scsi/libiscsi.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
 diff --git a/drivers/scsi/libiscsi.c b/drivers/scsi/libiscsi.c
-index 3f3dcd8..68069f7 100644
+index b8d325c..120fc52 100644
 --- a/drivers/scsi/libiscsi.c
 +++ b/drivers/scsi/libiscsi.c
-@@ -1453,7 +1453,13 @@ static int iscsi_xmit_task(struct iscsi_conn *conn)
+@@ -1459,7 +1459,13 @@ static int iscsi_xmit_task(struct iscsi_conn *conn)
  	if (test_bit(ISCSI_SUSPEND_BIT, &conn->suspend_tx))
  		return -ENODATA;
  
@@ -94,3 +102,6 @@ index 3f3dcd8..68069f7 100644
  	spin_unlock_bh(&conn->session->frwd_lock);
  	rc = conn->session->tt->xmit_task(task);
  	spin_lock_bh(&conn->session->frwd_lock);
+-- 
+2.7.4
+

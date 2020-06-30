@@ -1,0 +1,29 @@
+From 3f0806d2596de0a9ec381f37f97f6f5dbf1c6366 Mon Sep 17 00:00:00 2001
+From: Tycho Andersen <tycho@tycho.ws>
+Date: Fri, 2 Nov 2018 14:18:21 -0600
+Subject: [PATCH] dlm: don't allow zero length names
+
+kobject doesn't like zero length object names, so let's test for that.
+
+Signed-off-by: Tycho Andersen <tycho@tycho.ws>
+Signed-off-by: David Teigland <teigland@redhat.com>
+---
+ fs/dlm/lockspace.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/fs/dlm/lockspace.c b/fs/dlm/lockspace.c
+index 5ba94be006ee..7b9d47fe7a34 100644
+--- a/fs/dlm/lockspace.c
++++ b/fs/dlm/lockspace.c
+@@ -431,7 +431,7 @@ static int new_lockspace(const char *name, const char *cluster,
+ 	int do_unreg = 0;
+ 	int namelen = strlen(name);
+ 
+-	if (namelen > DLM_LOCKSPACE_LEN)
++	if (namelen > DLM_LOCKSPACE_LEN || namelen == 0)
+ 		return -EINVAL;
+ 
+ 	if (!lvblen || (lvblen % 8))
+-- 
+2.21.1
+

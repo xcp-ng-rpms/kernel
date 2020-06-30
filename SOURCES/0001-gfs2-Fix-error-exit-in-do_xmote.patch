@@ -1,0 +1,38 @@
+From a8b7528b69d4dc7e94d0338851ff8c929231fc4b Mon Sep 17 00:00:00 2001
+From: Bob Peterson <rpeterso@redhat.com>
+Date: Thu, 23 Apr 2020 14:30:57 -0500
+Subject: [PATCH 1/1] gfs2: Fix error exit in do_xmote
+
+Before this patch, if an error was detected from glock function go_sync
+by function do_xmote, it would return.  But the function had temporarily
+unlocked the gl_lockref spin_lock, and it never re-locked it.  When the
+caller of do_xmote tried to unlock it again, it was already unlocked,
+which resulted in a corrupted spin_lock value.
+
+This patch makes sure the gl_lockref spin_lock is re-locked after it is
+unlocked.
+
+Thanks to Wu Bo <wubo40@huawei.com> for reporting this problem.
+
+Signed-off-by: Bob Peterson <rpeterso@redhat.com>
+Signed-off-by: Andreas Gruenbacher <agruenba@redhat.com>
+---
+ fs/gfs2/glock.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/fs/gfs2/glock.c b/fs/gfs2/glock.c
+index 29f9b6684b74..a1c5f245553f 100644
+--- a/fs/gfs2/glock.c
++++ b/fs/gfs2/glock.c
+@@ -613,7 +613,7 @@ __acquires(&gl->gl_lockref.lock)
+ 				fs_err(sdp, "Error %d syncing glock \n", ret);
+ 				gfs2_dump_glock(NULL, gl, true);
+ 			}
+-			return;
++			goto out;
+ 		}
+ 	}
+ 	if (test_bit(GLF_INVALIDATE_IN_PROGRESS, &gl->gl_flags)) {
+-- 
+2.21.1
+
