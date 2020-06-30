@@ -8,10 +8,10 @@ After fixing the assert, add some tracking intended to detect if
 something else is messing with the inode at the same time, or if
 we're somehow trying to remove more blocks than are allocated.
 diff --git a/fs/gfs2/bmap.c b/fs/gfs2/bmap.c
-index 7f8bb0868c0f..42ec53ad58ee 100644
+index ff034dcad95b..78eebf7ab7a3 100644
 --- a/fs/gfs2/bmap.c
 +++ b/fs/gfs2/bmap.c
-@@ -1462,7 +1462,10 @@ static int sweep_bh_for_rgrps(struct gfs2_inode *ip, struct gfs2_holder *rd_gh,
+@@ -1505,7 +1505,10 @@ static int sweep_bh_for_rgrps(struct gfs2_inode *ip, struct gfs2_holder *rd_gh,
  	s64 blen; /* needs to be s64 or gfs2_add_inode_blocks breaks */
  	int ret = 0;
  	bool buf_in_tr = false; /* buffer was added to transaction */
@@ -22,7 +22,7 @@ index 7f8bb0868c0f..42ec53ad58ee 100644
  more_rgrps:
  	rgd = NULL;
  	if (gfs2_holder_initialized(rd_gh)) {
-@@ -1512,6 +1515,12 @@ static int sweep_bh_for_rgrps(struct gfs2_inode *ip, struct gfs2_holder *rd_gh,
+@@ -1555,6 +1558,12 @@ static int sweep_bh_for_rgrps(struct gfs2_inode *ip, struct gfs2_holder *rd_gh,
  			jblocks_rqsted = rgd->rd_length + RES_DINODE +
  				RES_INDIRECT;
  			isize_blks = gfs2_get_inode_blocks(&ip->i_inode);
@@ -35,7 +35,7 @@ index 7f8bb0868c0f..42ec53ad58ee 100644
  			if (isize_blks > atomic_read(&sdp->sd_log_thresh2))
  				jblocks_rqsted +=
  					atomic_read(&sdp->sd_log_thresh2);
-@@ -1560,17 +1569,37 @@ static int sweep_bh_for_rgrps(struct gfs2_inode *ip, struct gfs2_holder *rd_gh,
+@@ -1603,17 +1612,37 @@ static int sweep_bh_for_rgrps(struct gfs2_inode *ip, struct gfs2_holder *rd_gh,
  			continue;
  		}
  		if (bstart) {
@@ -48,7 +48,7 @@ index 7f8bb0868c0f..42ec53ad58ee 100644
 +				fs_warn(GFS2_SB(&ip->i_inode), "block mismatch 2: %llu > %llu\n",
 +					blen, isize_blks);
 +
- 			__gfs2_free_blocks(ip, bstart, (u32)blen, meta);
+ 			__gfs2_free_blocks(ip, rgd, bstart, (u32)blen, meta);
  			(*btotal) += blen;
  			gfs2_add_inode_blocks(&ip->i_inode, -blen);
 +			isize_blks_track -= blen;
@@ -66,7 +66,7 @@ index 7f8bb0868c0f..42ec53ad58ee 100644
 +			fs_warn(GFS2_SB(&ip->i_inode), "block mismatch 3: %llu > %llu\n",
 +				blen, isize_blks);
 +
- 		__gfs2_free_blocks(ip, bstart, (u32)blen, meta);
+ 		__gfs2_free_blocks(ip, rgd, bstart, (u32)blen, meta);
  		(*btotal) += blen;
  		gfs2_add_inode_blocks(&ip->i_inode, -blen);
 +		isize_blks_track -= blen;

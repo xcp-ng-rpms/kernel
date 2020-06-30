@@ -1,0 +1,31 @@
+From ba0a64bcf8fc491f73e4646069d97abb4374beb3 Mon Sep 17 00:00:00 2001
+From: Colin Xu <colin.xu@intel.com>
+Date: Fri, 11 Jan 2019 14:25:54 +0800
+Subject: [PATCH 1/1] drm/i915/gvt: Allow F_CMD_ACCESS on mmio 0x21f0
+
+The newly updated guest driver could program 0x21f0 via lri and srm,
+without F_CMD_ACCESS flag cmd parser will stop parser reset cmd.
+0x21f0 applies to BDW, SKL, KBL, BXT and CFL.
+
+Reviewed-by: Yan Zhao <yan.y.zhao@intel.com>
+Signed-off-by: Colin Xu <colin.xu@intel.com>
+Signed-off-by: Zhenyu Wang <zhenyuw@linux.intel.com>
+---
+ drivers/gpu/drm/i915/gvt/handlers.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/gpu/drm/i915/gvt/handlers.c b/drivers/gpu/drm/i915/gvt/handlers.c
+index b5475c9..e9f343b 100644
+--- a/drivers/gpu/drm/i915/gvt/handlers.c
++++ b/drivers/gpu/drm/i915/gvt/handlers.c
+@@ -2799,6 +2799,7 @@ static int init_broadwell_mmio_info(struct intel_gvt *gvt)
+ 	MMIO_DFH(_MMIO(0xe2a0), D_BDW_PLUS, F_CMD_ACCESS, NULL, NULL);
+ 	MMIO_DFH(_MMIO(0xe2b0), D_BDW_PLUS, F_CMD_ACCESS, NULL, NULL);
+ 	MMIO_DFH(_MMIO(0xe2c0), D_BDW_PLUS, F_CMD_ACCESS, NULL, NULL);
++	MMIO_DFH(_MMIO(0x21f0), D_BDW_PLUS, F_CMD_ACCESS, NULL, NULL);
+ 	return 0;
+ }
+ 
+-- 
+2.7.4
+
