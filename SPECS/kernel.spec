@@ -22,7 +22,7 @@
 Name: kernel
 License: Portions GPL, Portions Non-Redistributable (See description)
 Version: 4.19.19
-Release: 7.0.7
+Release: 7.0.8
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
@@ -220,172 +220,186 @@ Patch162: 0001-gfs2-Close-timing-window-with-GLF_INVALIDATE_IN_PROG.patch
 Patch163: 0001-gfs2-clean-up-iopen-glock-mess-in-gfs2_create_inode.patch
 Patch164: 0001-gfs2-Remove-duplicate-call-from-gfs2_create_inode.patch
 Patch165: 0001-gfs2-Don-t-write-log-headers-after-file-system-withd.patch
-Patch166: 0001-gfs2-Another-gfs2_find_jhead-fix.patch
-Patch167: 0001-gfs2-eliminate-ssize-parameter-from-gfs2_struct2blk.patch
-Patch168: 0001-gfs2-minor-cleanup-remove-unneeded-variable-ret-in-g.patch
-Patch169: 0001-gfs2-Avoid-access-time-thrashing-in-gfs2_inode_looku.patch
-Patch170: 0001-gfs2-Fix-incorrect-variable-name.patch
-Patch171: 0001-gfs2-Remove-GFS2_MIN_LVB_SIZE-define.patch
-Patch172: 0001-fs-gfs2-remove-unused-IS_DINODE-and-IS_LEAF-macros.patch
-Patch173: 0001-gfs2-remove-unused-LBIT-macros.patch
-Patch174: 0001-Revert-gfs2-eliminate-tr_num_revoke_rm.patch
-Patch175: 0001-gfs2-fix-gfs2_find_jhead-that-returns-uninitialized-.patch
-Patch176: 0001-gfs2-move-setting-current-backing_dev_info.patch
-Patch177: 0001-gfs2-fix-O_SYNC-write-handling.patch
-Patch178: 0001-drm-i915-gvt-fix-high-order-allocation-failure-on-la.patch
-Patch179: 0001-drm-i915-gvt-Add-mutual-lock-for-ppgtt-mm-LRU-list.patch
-Patch180: 0002-drm-i915-gvt-more-locking-for-ppgtt-mm-LRU-list.patch
-Patch181: 0001-gfs2_atomic_open-fix-O_EXCL-O_CREAT-handling-on-cold.patch
-Patch182: 0001-gfs2-Split-gfs2_lm_withdraw-into-two-functions.patch
-Patch183: 0001-gfs2-Report-errors-before-withdraw.patch
-Patch184: 0001-gfs2-Remove-usused-cluster_wide-arguments-of-gfs2_co.patch
-Patch185: 0001-gfs2-Turn-gfs2_consist-into-void-functions.patch
-Patch186: 0001-gfs2-Return-bool-from-gfs2_assert-functions.patch
-Patch187: 0001-gfs2-Introduce-concept-of-a-pending-withdraw.patch
-Patch188: 0001-gfs2-clear-ail1-list-when-gfs2-withdraws.patch
-Patch189: 0001-gfs2-Rework-how-rgrp-buffer_heads-are-managed.patch
-Patch190: 0001-gfs2-log-error-reform.patch
-Patch191: 0001-gfs2-Only-complain-the-first-time-an-io-error-occurs.patch
-Patch192: 0001-gfs2-Ignore-dlm-recovery-requests-if-gfs2-is-withdra.patch
-Patch193: 0001-gfs2-move-check_journal_clean-to-util.c-for-future-u.patch
-Patch194: 0001-gfs2-Allow-some-glocks-to-be-used-during-withdraw.patch
-Patch195: 0001-gfs2-Force-withdraw-to-replay-journals-and-wait-for-.patch
-Patch196: 0001-gfs2-fix-infinite-loop-when-checking-ail-item-count-.patch
-Patch197: 0001-gfs2-Add-verbose-option-to-check_journal_clean.patch
-Patch198: 0001-gfs2-Issue-revokes-more-intelligently.patch
-Patch199: 0001-gfs2-Prepare-to-withdraw-as-soon-as-an-IO-error-occu.patch
-Patch200: 0001-gfs2-Check-for-log-write-errors-before-telling-dlm-t.patch
-Patch201: 0001-gfs2-Do-log_flush-in-gfs2_ail_empty_gl-even-if-ail-l.patch
-Patch202: 0001-gfs2-Withdraw-in-gfs2_ail1_flush-if-write_cache_page.patch
-Patch203: 0001-gfs2-drain-the-ail2-list-after-io-errors.patch
-Patch204: 0001-gfs2-Don-t-demote-a-glock-until-its-revokes-are-writ.patch
-Patch205: 0001-gfs2-Do-proper-error-checking-for-go_sync-family-of-.patch
-Patch206: 0001-gfs2-flesh-out-delayed-withdraw-for-gfs2_log_flush.patch
-Patch207: 0001-gfs2-don-t-allow-releasepage-to-free-bd-still-used-f.patch
-Patch208: 0001-gfs2-allow-journal-replay-to-hold-sd_log_flush_lock.patch
-Patch209: 0001-gfs2-leaf_dealloc-needs-to-allocate-one-more-revoke.patch
-Patch210: 0001-gfs2-Additional-information-when-gfs2_ail1_flush-wit.patch
-Patch211: 0001-gfs2-Clean-up-inode-initialization-and-teardown.patch
-Patch212: 0001-gfs2-Switch-to-list_-first-last-_entry.patch
-Patch213: 0001-gfs2-eliminate-gfs2_rsqa_alloc-in-favor-of-gfs2_qa_a.patch
-Patch214: 0001-gfs2-Change-inode-qa_data-to-allow-multiple-users.patch
-Patch215: 0001-gfs2-Split-gfs2_rsqa_delete-into-gfs2_rs_delete-and-.patch
-Patch216: 0001-gfs2-Remove-unnecessary-gfs2_qa_-get-put-pairs.patch
-Patch217: 0001-gfs2-don-t-lock-sd_log_flush_lock-in-try_rgrp_unlink.patch
-Patch218: 0001-gfs2-instrumentation-wrt-ail1-stuck.patch
-Patch219: 0001-gfs2-change-from-write-to-read-lock-for-sd_log_flush.patch
-Patch220: 0001-gfs2-Fix-oversight-in-gfs2_ail1_flush.patch
-Patch221: 0001-gfs2-fix-withdraw-sequence-deadlock.patch
-Patch222: 0001-gfs2-Fix-error-exit-in-do_xmote.patch
-Patch223: 0001-gfs2-Fix-BUG-during-unmount-after-file-system-withdr.patch
-Patch224: 0001-gfs2-Fix-use-after-free-in-gfs2_logd-after-withdraw.patch
-Patch225: 0001-block-call-rq_qos_exit-after-queue-is-frozen.patch
-Patch226: 0001-scsi-libfc-free-response-frame-from-GPN_ID.patch
-Patch227: 0001-xen-xenbus-ensure-xenbus_map_ring_valloc-returns-pro.patch
-Patch228: kbuild-AFTER_LINK.patch
-Patch229: commit-info.patch
-Patch230: expose-xsversion.patch
-Patch231: blktap2.patch
-Patch232: blkback-kthread-pid.patch
-Patch233: tg3-alloc-repeat.patch
-Patch234: map-1MiB-1-1.patch
-Patch235: disable-EFI-Properties-table-for-Xen.patch
-Patch236: hide-nr_cpus-warning.patch
-Patch237: disable-pm-timer.patch
-Patch238: net-Do-not-scrub-ignore_df-within-the-same-name-spac.patch
-Patch239: enable-fragmention-gre-packets.patch
-Patch240: CA-285778-emulex-nic-ip-hdr-len.patch
-Patch241: cifs-Change-the-default-value-SecFlags-to-0x83.patch
-Patch242: call-kexec-before-offlining-noncrashing-cpus.patch
-Patch243: hide-hung-task-for-idle-class.patch
-Patch244: xfs-async-wait.patch
-Patch245: 0002-scsi-libfc-drop-extra-rport-reference-in-fc_rport_cr.patch
-Patch246: 0001-dma-add-dma_get_required_mask_from_max_pfn.patch
-Patch247: 0002-x86-xen-correct-dma_get_required_mask-for-Xen-PV-gue.patch
-Patch248: xen-balloon-hotplug-select-HOLES_IN_ZONE.patch
-Patch249: mm-zero-last-section-tail.patch
-Patch250: 0001-pci-export-pci_probe_reset_function.patch
-Patch251: 0002-xen-pciback-provide-a-reset-sysfs-file-to-try-harder.patch
-Patch252: pciback-disable-root-port-aer.patch
-Patch253: pciback-mask-root-port-comp-timeout.patch
-Patch254: no-flr-quirk.patch
-Patch255: revert-PCI-Probe-for-device-reset-support-during-enumeration.patch
-Patch256: CA-135938-nfs-disconnect-on-rpc-retry.patch
-Patch257: sunrpc-force-disconnect-on-connection-timeout.patch
-Patch258: bonding-balance-slb.patch
-Patch259: bridge-lock-fdb-after-garp.patch
-Patch260: CP-13181-net-openvswitch-add-dropping-of-fip-and-lldp.patch
-Patch261: xen-ioemu-inject-msi.patch
-Patch262: pv-iommu-support.patch
-Patch263: kexec-reserve-crashkernel-region.patch
-Patch264: 0001-xen-swiotlb-rework-early-repeat-code.patch
-Patch265: 0001-arch-x86-xen-add-infrastruction-in-xen-to-support-gv.patch
-Patch266: 0002-drm-i915-gvt-write-guest-ppgtt-entry-for-xengt-suppo.patch
-Patch267: 0003-drm-i915-xengt-xengt-moudule-initial-files.patch
-Patch268: 0004-drm-i915-xengt-check-on_destroy-on-pfn_to_mfn.patch
-Patch269: 0005-arch-x86-xen-Import-x4.9-interface-for-ioreq.patch
-Patch270: 0006-i915-gvt-xengt.c-Use-new-dm_op-instead-of-hvm_op.patch
-Patch271: 0007-i915-gvt-xengt.c-New-interface-to-write-protect-PPGT.patch
-Patch272: 0008-i915-gvt-xengt.c-Select-vgpu-type-according-to-low_g.patch
-Patch273: 0009-drm-i915-gvt-Don-t-output-error-message-when-DomU-ma.patch
-Patch274: 0010-drm-i915-gvt-xengt-Correctly-get-low-mem-max-gfn.patch
-Patch275: 0011-drm-i915-gvt-Fix-dom0-call-trace-at-shutdown-or-rebo.patch
-Patch276: 0012-hvm-dm_op.h-Sync-dm_op-interface-to-xen-4.9-release.patch
-Patch277: 0013-drm-i915-gvt-Apply-g2h-adjust-for-GTT-mmio-access.patch
-Patch278: 0014-drm-i915-gvt-Apply-g2h-adjustment-during-fence-mmio-.patch
-Patch279: 0015-drm-i915-gvt-Patch-the-gma-in-gpu-commands-during-co.patch
-Patch280: 0016-drm-i915-gvt-Retrieve-the-guest-gm-base-address-from.patch
-Patch281: 0017-drm-i915-gvt-Align-the-guest-gm-aperture-start-offse.patch
-Patch282: 0018-drm-i915-gvt-Add-support-to-new-VFIO-subregion-VFIO_.patch
-Patch283: 0019-drm-i915-gvt-Implement-vGPU-status-save-and-restore-.patch
-Patch284: 0020-vfio-Implement-new-Ioctl-VFIO_IOMMU_GET_DIRTY_BITMAP.patch
-Patch285: 0021-drm-i915-gvt-Add-dev-node-for-vGPU-state-save-restor.patch
-Patch286: 0022-drm-i915-gvt-Add-interface-to-control-the-vGPU-runni.patch
-Patch287: 0023-drm-i915-gvt-Modify-the-vGPU-save-restore-logic-for-.patch
-Patch288: 0024-drm-i915-gvt-Add-log-dirty-support-for-XENGT-migrati.patch
-Patch289: 0025-drm-i915-gvt-xengt-Add-iosrv_enabled-to-track-iosrv-.patch
-Patch290: 0026-drm-i915-gvt-Add-xengt-ppgtt-write-handler.patch
-Patch291: 0027-drm-i915-gvt-xengt-Impliment-mpt-dma_map-unmap_guest.patch
-Patch292: 0028-drm-i915-gvt-introduce-a-new-VFIO-region-for-vfio-de.patch
-Patch293: 0029-drm-i915-gvt-change-the-return-value-of-opregion-acc.patch
-Patch294: 0030-drm-i915-gvt-Rebase-the-code-to-gvt-staging-for-live.patch
-Patch295: 0031-drm-i915-gvt-Apply-g2h-adjustment-to-buffer-start-gm.patch
-Patch296: 0032-drm-i915-gvt-Fix-xengt-opregion-handling-in-migratio.patch
-Patch297: 0033-drm-i915-gvt-XenGT-migration-optimize.patch
-Patch298: 0034-drm-i915-gvt-Add-vgpu-execlist-info-into-migration-d.patch
-Patch299: 0035-drm-i915-gvt-Emulate-ring-mode-register-restore-for-.patch
-Patch300: 0036-drm-i915-gvt-Use-copy_to_user-to-return-opregion.patch
-Patch301: 0037-drm-i915-gvt-Expose-opregion-in-vgpu-open.patch
-Patch302: 0038-drm-i915-gvt-xengt-Don-t-shutdown-vm-at-ioreq-failur.patch
-Patch303: 0039-drm-i915-gvt-Emulate-hw-status-page-address-register.patch
-Patch304: 0040-drm-i915-gvt-migration-copy-vregs-on-vreg-load.patch
-Patch305: 0041-drm-i915-gvt-Fix-a-command-corruption-caused-by-live.patch
-Patch306: 0042-drm-i915-gvt-update-force-to-nonpriv-register-whitel.patch
-Patch307: 0043-drm-i915-gvt-xengt-Fix-xengt-instance-destroy-error.patch
-Patch308: 0044-drm-i915-gvt-invalidate-old-ggtt-page-when-update-gg.patch
-Patch309: 0045-drm-i915-gvt-support-inconsecutive-partial-gtt-entry.patch
-Patch310: set-XENMEM_get_mfn_from_pfn-hypercall-number.patch
-Patch311: gvt-enforce-primary-class-id.patch
-Patch312: gvt-use-xs-vgpu-type.patch
-Patch313: xengt-pviommu-basic.patch
-Patch314: xengt-pviommu-unmap.patch
-Patch315: get_domctl_interface_version.patch
-Patch316: xengt-fix-shutdown-failures.patch
-Patch317: xengt-i915-gem-vgtbuffer.patch
-Patch318: xengt-gtt-2m-alignment.patch
-Patch319: net-core__order-3_frag_allocator_causes_swiotlb_bouncing_under_xen.patch
-Patch320: idle_cpu-return-0-during-softirq.patch
-Patch321: default-xen-swiotlb-size-128MiB.patch
-Patch322: dlm__increase_socket_backlog_to_avoid_hangs_with_16_nodes.patch
-Patch323: dlm_handle_uevent_erestartsys.patch
-Patch324: gfs2-add-skippiness.patch
-Patch325: GFS2__Avoid_recently_demoted_rgrps
-Patch326: gfs2-debug-rgrp-sweep
-Patch327: gfs2-restore-kabi.patch
-Patch328: abi-version.patch
+Patch166: 0001-xen-events-remove-event-handling-recursion-detection.patch
+Patch167: 0001-gfs2-Another-gfs2_find_jhead-fix.patch
+Patch168: 0001-gfs2-eliminate-ssize-parameter-from-gfs2_struct2blk.patch
+Patch169: 0001-gfs2-minor-cleanup-remove-unneeded-variable-ret-in-g.patch
+Patch170: 0001-gfs2-Avoid-access-time-thrashing-in-gfs2_inode_looku.patch
+Patch171: 0001-gfs2-Fix-incorrect-variable-name.patch
+Patch172: 0001-gfs2-Remove-GFS2_MIN_LVB_SIZE-define.patch
+Patch173: 0001-fs-gfs2-remove-unused-IS_DINODE-and-IS_LEAF-macros.patch
+Patch174: 0001-gfs2-remove-unused-LBIT-macros.patch
+Patch175: 0001-Revert-gfs2-eliminate-tr_num_revoke_rm.patch
+Patch176: 0001-gfs2-fix-gfs2_find_jhead-that-returns-uninitialized-.patch
+Patch177: 0001-gfs2-move-setting-current-backing_dev_info.patch
+Patch178: 0001-gfs2-fix-O_SYNC-write-handling.patch
+Patch179: 0001-drm-i915-gvt-fix-high-order-allocation-failure-on-la.patch
+Patch180: 0001-drm-i915-gvt-Add-mutual-lock-for-ppgtt-mm-LRU-list.patch
+Patch181: 0002-drm-i915-gvt-more-locking-for-ppgtt-mm-LRU-list.patch
+Patch182: 0001-gfs2_atomic_open-fix-O_EXCL-O_CREAT-handling-on-cold.patch
+Patch183: 0001-gfs2-Split-gfs2_lm_withdraw-into-two-functions.patch
+Patch184: 0001-gfs2-Report-errors-before-withdraw.patch
+Patch185: 0001-gfs2-Remove-usused-cluster_wide-arguments-of-gfs2_co.patch
+Patch186: 0001-gfs2-Turn-gfs2_consist-into-void-functions.patch
+Patch187: 0001-gfs2-Return-bool-from-gfs2_assert-functions.patch
+Patch188: 0001-gfs2-Introduce-concept-of-a-pending-withdraw.patch
+Patch189: 0001-gfs2-clear-ail1-list-when-gfs2-withdraws.patch
+Patch190: 0001-gfs2-Rework-how-rgrp-buffer_heads-are-managed.patch
+Patch191: 0001-gfs2-log-error-reform.patch
+Patch192: 0001-gfs2-Only-complain-the-first-time-an-io-error-occurs.patch
+Patch193: 0001-gfs2-Ignore-dlm-recovery-requests-if-gfs2-is-withdra.patch
+Patch194: 0001-gfs2-move-check_journal_clean-to-util.c-for-future-u.patch
+Patch195: 0001-gfs2-Allow-some-glocks-to-be-used-during-withdraw.patch
+Patch196: 0001-gfs2-Force-withdraw-to-replay-journals-and-wait-for-.patch
+Patch197: 0001-gfs2-fix-infinite-loop-when-checking-ail-item-count-.patch
+Patch198: 0001-gfs2-Add-verbose-option-to-check_journal_clean.patch
+Patch199: 0001-gfs2-Issue-revokes-more-intelligently.patch
+Patch200: 0001-gfs2-Prepare-to-withdraw-as-soon-as-an-IO-error-occu.patch
+Patch201: 0001-gfs2-Check-for-log-write-errors-before-telling-dlm-t.patch
+Patch202: 0001-gfs2-Do-log_flush-in-gfs2_ail_empty_gl-even-if-ail-l.patch
+Patch203: 0001-gfs2-Withdraw-in-gfs2_ail1_flush-if-write_cache_page.patch
+Patch204: 0001-gfs2-drain-the-ail2-list-after-io-errors.patch
+Patch205: 0001-gfs2-Don-t-demote-a-glock-until-its-revokes-are-writ.patch
+Patch206: 0001-gfs2-Do-proper-error-checking-for-go_sync-family-of-.patch
+Patch207: 0001-gfs2-flesh-out-delayed-withdraw-for-gfs2_log_flush.patch
+Patch208: 0001-gfs2-don-t-allow-releasepage-to-free-bd-still-used-f.patch
+Patch209: 0001-gfs2-allow-journal-replay-to-hold-sd_log_flush_lock.patch
+Patch210: 0001-gfs2-leaf_dealloc-needs-to-allocate-one-more-revoke.patch
+Patch211: 0001-gfs2-Additional-information-when-gfs2_ail1_flush-wit.patch
+Patch212: 0001-gfs2-Clean-up-inode-initialization-and-teardown.patch
+Patch213: 0001-gfs2-Switch-to-list_-first-last-_entry.patch
+Patch214: 0001-gfs2-eliminate-gfs2_rsqa_alloc-in-favor-of-gfs2_qa_a.patch
+Patch215: 0001-gfs2-Change-inode-qa_data-to-allow-multiple-users.patch
+Patch216: 0001-gfs2-Split-gfs2_rsqa_delete-into-gfs2_rs_delete-and-.patch
+Patch217: 0001-gfs2-Remove-unnecessary-gfs2_qa_-get-put-pairs.patch
+Patch218: 0001-gfs2-don-t-lock-sd_log_flush_lock-in-try_rgrp_unlink.patch
+Patch219: 0001-gfs2-instrumentation-wrt-ail1-stuck.patch
+Patch220: 0001-gfs2-change-from-write-to-read-lock-for-sd_log_flush.patch
+Patch221: 0001-gfs2-Fix-oversight-in-gfs2_ail1_flush.patch
+Patch222: 0001-gfs2-fix-withdraw-sequence-deadlock.patch
+Patch223: 0001-gfs2-Fix-error-exit-in-do_xmote.patch
+Patch224: 0001-gfs2-Fix-BUG-during-unmount-after-file-system-withdr.patch
+Patch225: 0001-gfs2-Fix-use-after-free-in-gfs2_logd-after-withdraw.patch
+Patch226: 0001-block-call-rq_qos_exit-after-queue-is-frozen.patch
+Patch227: 0001-scsi-libfc-free-response-frame-from-GPN_ID.patch
+Patch228: 0001-xen-xenbus-ensure-xenbus_map_ring_valloc-returns-pro.patch
+Patch229: kbuild-AFTER_LINK.patch
+Patch230: commit-info.patch
+Patch231: expose-xsversion.patch
+Patch232: blktap2.patch
+Patch233: blkback-kthread-pid.patch
+Patch234: tg3-alloc-repeat.patch
+Patch235: map-1MiB-1-1.patch
+Patch236: disable-EFI-Properties-table-for-Xen.patch
+Patch237: hide-nr_cpus-warning.patch
+Patch238: disable-pm-timer.patch
+Patch239: net-Do-not-scrub-ignore_df-within-the-same-name-spac.patch
+Patch240: enable-fragmention-gre-packets.patch
+Patch241: CA-285778-emulex-nic-ip-hdr-len.patch
+Patch242: cifs-Change-the-default-value-SecFlags-to-0x83.patch
+Patch243: call-kexec-before-offlining-noncrashing-cpus.patch
+Patch244: hide-hung-task-for-idle-class.patch
+Patch245: xfs-async-wait.patch
+Patch246: 0002-scsi-libfc-drop-extra-rport-reference-in-fc_rport_cr.patch
+Patch247: 0001-dma-add-dma_get_required_mask_from_max_pfn.patch
+Patch248: 0002-x86-xen-correct-dma_get_required_mask-for-Xen-PV-gue.patch
+Patch249: xen-balloon-hotplug-select-HOLES_IN_ZONE.patch
+Patch250: mm-zero-last-section-tail.patch
+Patch251: 0001-pci-export-pci_probe_reset_function.patch
+Patch252: 0002-xen-pciback-provide-a-reset-sysfs-file-to-try-harder.patch
+Patch253: pciback-disable-root-port-aer.patch
+Patch254: pciback-mask-root-port-comp-timeout.patch
+Patch255: no-flr-quirk.patch
+Patch256: revert-PCI-Probe-for-device-reset-support-during-enumeration.patch
+Patch257: CA-135938-nfs-disconnect-on-rpc-retry.patch
+Patch258: sunrpc-force-disconnect-on-connection-timeout.patch
+Patch259: bonding-balance-slb.patch
+Patch260: bridge-lock-fdb-after-garp.patch
+Patch261: CP-13181-net-openvswitch-add-dropping-of-fip-and-lldp.patch
+Patch262: xen-ioemu-inject-msi.patch
+Patch263: pv-iommu-support.patch
+Patch264: kexec-reserve-crashkernel-region.patch
+Patch265: 0001-xen-swiotlb-rework-early-repeat-code.patch
+Patch266: 0001-arch-x86-xen-add-infrastruction-in-xen-to-support-gv.patch
+Patch267: 0002-drm-i915-gvt-write-guest-ppgtt-entry-for-xengt-suppo.patch
+Patch268: 0003-drm-i915-xengt-xengt-moudule-initial-files.patch
+Patch269: 0004-drm-i915-xengt-check-on_destroy-on-pfn_to_mfn.patch
+Patch270: 0005-arch-x86-xen-Import-x4.9-interface-for-ioreq.patch
+Patch271: 0006-i915-gvt-xengt.c-Use-new-dm_op-instead-of-hvm_op.patch
+Patch272: 0007-i915-gvt-xengt.c-New-interface-to-write-protect-PPGT.patch
+Patch273: 0008-i915-gvt-xengt.c-Select-vgpu-type-according-to-low_g.patch
+Patch274: 0009-drm-i915-gvt-Don-t-output-error-message-when-DomU-ma.patch
+Patch275: 0010-drm-i915-gvt-xengt-Correctly-get-low-mem-max-gfn.patch
+Patch276: 0011-drm-i915-gvt-Fix-dom0-call-trace-at-shutdown-or-rebo.patch
+Patch277: 0012-hvm-dm_op.h-Sync-dm_op-interface-to-xen-4.9-release.patch
+Patch278: 0013-drm-i915-gvt-Apply-g2h-adjust-for-GTT-mmio-access.patch
+Patch279: 0014-drm-i915-gvt-Apply-g2h-adjustment-during-fence-mmio-.patch
+Patch280: 0015-drm-i915-gvt-Patch-the-gma-in-gpu-commands-during-co.patch
+Patch281: 0016-drm-i915-gvt-Retrieve-the-guest-gm-base-address-from.patch
+Patch282: 0017-drm-i915-gvt-Align-the-guest-gm-aperture-start-offse.patch
+Patch283: 0018-drm-i915-gvt-Add-support-to-new-VFIO-subregion-VFIO_.patch
+Patch284: 0019-drm-i915-gvt-Implement-vGPU-status-save-and-restore-.patch
+Patch285: 0020-vfio-Implement-new-Ioctl-VFIO_IOMMU_GET_DIRTY_BITMAP.patch
+Patch286: 0021-drm-i915-gvt-Add-dev-node-for-vGPU-state-save-restor.patch
+Patch287: 0022-drm-i915-gvt-Add-interface-to-control-the-vGPU-runni.patch
+Patch288: 0023-drm-i915-gvt-Modify-the-vGPU-save-restore-logic-for-.patch
+Patch289: 0024-drm-i915-gvt-Add-log-dirty-support-for-XENGT-migrati.patch
+Patch290: 0025-drm-i915-gvt-xengt-Add-iosrv_enabled-to-track-iosrv-.patch
+Patch291: 0026-drm-i915-gvt-Add-xengt-ppgtt-write-handler.patch
+Patch292: 0027-drm-i915-gvt-xengt-Impliment-mpt-dma_map-unmap_guest.patch
+Patch293: 0028-drm-i915-gvt-introduce-a-new-VFIO-region-for-vfio-de.patch
+Patch294: 0029-drm-i915-gvt-change-the-return-value-of-opregion-acc.patch
+Patch295: 0030-drm-i915-gvt-Rebase-the-code-to-gvt-staging-for-live.patch
+Patch296: 0031-drm-i915-gvt-Apply-g2h-adjustment-to-buffer-start-gm.patch
+Patch297: 0032-drm-i915-gvt-Fix-xengt-opregion-handling-in-migratio.patch
+Patch298: 0033-drm-i915-gvt-XenGT-migration-optimize.patch
+Patch299: 0034-drm-i915-gvt-Add-vgpu-execlist-info-into-migration-d.patch
+Patch300: 0035-drm-i915-gvt-Emulate-ring-mode-register-restore-for-.patch
+Patch301: 0036-drm-i915-gvt-Use-copy_to_user-to-return-opregion.patch
+Patch302: 0037-drm-i915-gvt-Expose-opregion-in-vgpu-open.patch
+Patch303: 0038-drm-i915-gvt-xengt-Don-t-shutdown-vm-at-ioreq-failur.patch
+Patch304: 0039-drm-i915-gvt-Emulate-hw-status-page-address-register.patch
+Patch305: 0040-drm-i915-gvt-migration-copy-vregs-on-vreg-load.patch
+Patch306: 0041-drm-i915-gvt-Fix-a-command-corruption-caused-by-live.patch
+Patch307: 0042-drm-i915-gvt-update-force-to-nonpriv-register-whitel.patch
+Patch308: 0043-drm-i915-gvt-xengt-Fix-xengt-instance-destroy-error.patch
+Patch309: 0044-drm-i915-gvt-invalidate-old-ggtt-page-when-update-gg.patch
+Patch310: 0045-drm-i915-gvt-support-inconsecutive-partial-gtt-entry.patch
+Patch311: set-XENMEM_get_mfn_from_pfn-hypercall-number.patch
+Patch312: gvt-enforce-primary-class-id.patch
+Patch313: gvt-use-xs-vgpu-type.patch
+Patch314: xengt-pviommu-basic.patch
+Patch315: xengt-pviommu-unmap.patch
+Patch316: get_domctl_interface_version.patch
+Patch317: xengt-fix-shutdown-failures.patch
+Patch318: xengt-i915-gem-vgtbuffer.patch
+Patch319: xengt-gtt-2m-alignment.patch
+Patch320: net-core__order-3_frag_allocator_causes_swiotlb_bouncing_under_xen.patch
+Patch321: idle_cpu-return-0-during-softirq.patch
+Patch322: default-xen-swiotlb-size-128MiB.patch
+Patch323: dlm__increase_socket_backlog_to_avoid_hangs_with_16_nodes.patch
+Patch324: dlm_handle_uevent_erestartsys.patch
+Patch325: gfs2-add-skippiness.patch
+Patch326: GFS2__Avoid_recently_demoted_rgrps
+Patch327: gfs2-debug-rgrp-sweep
+Patch328: gfs2-restore-kabi.patch
+Patch329: xsa331-linux.patch
+Patch330: xsa332-linux-01.patch
+Patch331: v11-0003-xen-events-fix-race-in-evtchn_fifo_unmask.patch
+Patch332: xsa332-linux-02.patch
+Patch333: xsa332-linux-03.patch
+Patch334: xsa332-linux-04.patch
+Patch335: xsa332-linux-05.patch
+Patch336: xsa332-linux-06.patch
+Patch337: xsa332-linux-07.patch
+Patch338: xsa332-linux-08.patch
+Patch339: xsa332-linux-09.patch
+Patch340: xsa332-linux-10.patch
+Patch341: xsa332-linux-11.patch
+Patch342: abi-version.patch
 
 Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XSU/repos/linux-stable/archive?at=refs%2Ftags%2Fv4.19.19&format=tar.gz&prefix=kernel-4.19.19#/kernel-4.19.19.tar.gz) = dffbba4348e9686d6bf42d54eb0f2cd1c4fb3520
-Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XS/repos/linux.pg/archive?format=tar&at=v7.0.7#/kernel.patches.tar) = ac66560b53ff0ea51d76214f182f275c76a9b285
+Provides: gitsha(ssh://git@code.citrite.net/xs/linux.pg.git) = 3d7cfe052d7cbcc31c47eda3d26ee556773b3260
 
 %if %{do_kabichk}
 %endif
@@ -411,7 +425,7 @@ copyright and licensing information see the relevant source RPM.
 
 %package headers
 Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XSU/repos/linux-stable/archive?at=refs%2Ftags%2Fv4.19.19&format=tar.gz&prefix=kernel-4.19.19#/kernel-4.19.19.tar.gz) = dffbba4348e9686d6bf42d54eb0f2cd1c4fb3520
-Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XS/repos/linux.pg/archive?format=tar&at=v7.0.7#/kernel.patches.tar) = ac66560b53ff0ea51d76214f182f275c76a9b285
+Provides: gitsha(ssh://git@code.citrite.net/xs/linux.pg.git) = 3d7cfe052d7cbcc31c47eda3d26ee556773b3260
 License: GPLv2
 Summary: Header files for the Linux kernel for use by glibc
 Group: Development/System
@@ -429,7 +443,7 @@ glibc package.
 
 %package devel
 Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XSU/repos/linux-stable/archive?at=refs%2Ftags%2Fv4.19.19&format=tar.gz&prefix=kernel-4.19.19#/kernel-4.19.19.tar.gz) = dffbba4348e9686d6bf42d54eb0f2cd1c4fb3520
-Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XS/repos/linux.pg/archive?format=tar&at=v7.0.7#/kernel.patches.tar) = ac66560b53ff0ea51d76214f182f275c76a9b285
+Provides: gitsha(ssh://git@code.citrite.net/xs/linux.pg.git) = 3d7cfe052d7cbcc31c47eda3d26ee556773b3260
 License: GPLv2
 Summary: Development package for building kernel modules to match the %{uname} kernel
 Group: System Environment/Kernel
@@ -444,7 +458,7 @@ against the %{uname} kernel.
 
 %package -n perf
 Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XSU/repos/linux-stable/archive?at=refs%2Ftags%2Fv4.19.19&format=tar.gz&prefix=kernel-4.19.19#/kernel-4.19.19.tar.gz) = dffbba4348e9686d6bf42d54eb0f2cd1c4fb3520
-Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XS/repos/linux.pg/archive?format=tar&at=v7.0.7#/kernel.patches.tar) = ac66560b53ff0ea51d76214f182f275c76a9b285
+Provides: gitsha(ssh://git@code.citrite.net/xs/linux.pg.git) = 3d7cfe052d7cbcc31c47eda3d26ee556773b3260
 Summary: Performance monitoring for the Linux kernel
 License: GPLv2
 %description -n perf
@@ -458,7 +472,7 @@ to manipulate perf events.
 
 %package -n python2-perf
 Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XSU/repos/linux-stable/archive?at=refs%2Ftags%2Fv4.19.19&format=tar.gz&prefix=kernel-4.19.19#/kernel-4.19.19.tar.gz) = dffbba4348e9686d6bf42d54eb0f2cd1c4fb3520
-Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XS/repos/linux.pg/archive?format=tar&at=v7.0.7#/kernel.patches.tar) = ac66560b53ff0ea51d76214f182f275c76a9b285
+Provides: gitsha(ssh://git@code.citrite.net/xs/linux.pg.git) = 3d7cfe052d7cbcc31c47eda3d26ee556773b3260
 Summary: %{pythonperfsum}
 Provides: python2-perf
 %description -n python2-perf
@@ -705,6 +719,10 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Wed Oct 07 2020 Ross Lagerwall <ross.lagerwall@citrix.com> - 4.19.19-7.0.8
+- CA-346372: Add fix for XSA-331
+- CA-346374: Add fix for XSA-332
+
 * Tue May 12 2020 Ross Lagerwall <ross.lagerwall@citrix.com> - 4.19.19-7.0.7
 - CA-339209: Stop building Intel ME drivers and remove MEI from kABI
 - CP-31860: Backport GFS2 & DLM modules from v5.7-rc2
