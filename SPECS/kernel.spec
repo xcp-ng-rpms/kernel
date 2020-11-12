@@ -22,7 +22,7 @@
 Name: kernel
 License: GPLv2
 Version: 4.19.19
-Release: 6.0.12.1.kmemleak.1%{?dist}
+Release: 6.0.12.1.1.kmemleak%{?dist}
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
@@ -542,7 +542,7 @@ fi
 %{python2_sitearch}/*
 
 %changelog
-* Tue Nov 10 2020 Rushikesh Jadhav <rushikesh7@gmail.com> - 4.19.19-6.0.12.1.kmemleak.1
+* Thu Nov 12 2020 Rushikesh Jadhav <rushikesh7@gmail.com> - 4.19.19-6.0.12.1.1.kmemleak
 - Enable kmemleak debug option and kmemleak-test module
 
 * Tue Oct 27 2020 Samuel Verschelde <stormi-xcp@ylix.fr> - 4.19.19-6.0.12.1
