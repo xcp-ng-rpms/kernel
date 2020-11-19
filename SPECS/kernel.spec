@@ -22,7 +22,7 @@
 Name: kernel
 License: GPLv2
 Version: 4.19.19
-Release: 6.0.12.1.1.kmemleak%{?dist}
+Release: 6.0.12.1.2.kmemleak%{?dist}
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
@@ -542,6 +542,9 @@ fi
 %{python2_sitearch}/*
 
 %changelog
+* Thu Nov 19 2020 Rushikesh Jadhav <rushikesh7@gmail.com> - 4.19.19-6.0.12.1.2.kmemleak
+- Increase CONFIG_DEBUG_KMEMLEAK_EARLY_LOG_SIZE to 16000
+
 * Thu Nov 12 2020 Rushikesh Jadhav <rushikesh7@gmail.com> - 4.19.19-6.0.12.1.1.kmemleak
 - Enable kmemleak debug option and kmemleak-test module
 
