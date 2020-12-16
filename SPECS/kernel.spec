@@ -712,7 +712,7 @@ fi
 %{?_cov_results_package}
 
 %changelog
-* Tue Oct 27 2020 Samuel Verschelde <stormi-xcp@ylix.fr> - 4.19.19-7.0.8.1
+* Wed Dec 16 2020 Samuel Verschelde <stormi-xcp@ylix.fr> - 4.19.19-7.0.9.1
 - Security update (XSAs 349 and 350)
 - Sync to 4.19.19-7.0.9
 
