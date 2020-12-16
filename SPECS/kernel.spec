@@ -22,7 +22,7 @@
 Name: kernel
 License: Portions GPL, Portions Non-Redistributable (See description)
 Version: 4.19.19
-Release: 7.0.8
+Release: 7.0.9
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
@@ -396,10 +396,17 @@ Patch338: xsa332-linux-08.patch
 Patch339: xsa332-linux-09.patch
 Patch340: xsa332-linux-10.patch
 Patch341: xsa332-linux-11.patch
-Patch342: abi-version.patch
+Patch342: 0001-Add-shadow-variables-support-from-kpatch.patch
+Patch343: 0002-xen-xenbus-Allow-watches-discard-events-before-queue.patch
+Patch344: 0003-xen-xenbus-Add-will_handle-callback-support-in-xenbu.patch
+Patch345: 0004-xen-xenbus-xen_bus_type-Support-will_handle-watch-ca.patch
+Patch346: 0005-xen-xenbus-Count-pending-messages-for-each-watch.patch
+Patch347: 0006-xenbus-xenbus_backend-Disallow-pending-watch-message.patch
+Patch348: xsa350-linux.patch
+Patch349: abi-version.patch
 
 Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XSU/repos/linux-stable/archive?at=refs%2Ftags%2Fv4.19.19&format=tar.gz&prefix=kernel-4.19.19#/kernel-4.19.19.tar.gz) = dffbba4348e9686d6bf42d54eb0f2cd1c4fb3520
-Provides: gitsha(ssh://git@code.citrite.net/xs/linux.pg.git) = 3d7cfe052d7cbcc31c47eda3d26ee556773b3260
+Provides: gitsha(ssh://git@code.citrite.net/xs/linux.pg.git) = 1955079215ac3bd9d923958731d3f561500a8966
 
 %if %{do_kabichk}
 %endif
@@ -425,7 +432,7 @@ copyright and licensing information see the relevant source RPM.
 
 %package headers
 Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XSU/repos/linux-stable/archive?at=refs%2Ftags%2Fv4.19.19&format=tar.gz&prefix=kernel-4.19.19#/kernel-4.19.19.tar.gz) = dffbba4348e9686d6bf42d54eb0f2cd1c4fb3520
-Provides: gitsha(ssh://git@code.citrite.net/xs/linux.pg.git) = 3d7cfe052d7cbcc31c47eda3d26ee556773b3260
+Provides: gitsha(ssh://git@code.citrite.net/xs/linux.pg.git) = 1955079215ac3bd9d923958731d3f561500a8966
 License: GPLv2
 Summary: Header files for the Linux kernel for use by glibc
 Group: Development/System
@@ -443,7 +450,7 @@ glibc package.
 
 %package devel
 Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XSU/repos/linux-stable/archive?at=refs%2Ftags%2Fv4.19.19&format=tar.gz&prefix=kernel-4.19.19#/kernel-4.19.19.tar.gz) = dffbba4348e9686d6bf42d54eb0f2cd1c4fb3520
-Provides: gitsha(ssh://git@code.citrite.net/xs/linux.pg.git) = 3d7cfe052d7cbcc31c47eda3d26ee556773b3260
+Provides: gitsha(ssh://git@code.citrite.net/xs/linux.pg.git) = 1955079215ac3bd9d923958731d3f561500a8966
 License: GPLv2
 Summary: Development package for building kernel modules to match the %{uname} kernel
 Group: System Environment/Kernel
@@ -458,7 +465,7 @@ against the %{uname} kernel.
 
 %package -n perf
 Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XSU/repos/linux-stable/archive?at=refs%2Ftags%2Fv4.19.19&format=tar.gz&prefix=kernel-4.19.19#/kernel-4.19.19.tar.gz) = dffbba4348e9686d6bf42d54eb0f2cd1c4fb3520
-Provides: gitsha(ssh://git@code.citrite.net/xs/linux.pg.git) = 3d7cfe052d7cbcc31c47eda3d26ee556773b3260
+Provides: gitsha(ssh://git@code.citrite.net/xs/linux.pg.git) = 1955079215ac3bd9d923958731d3f561500a8966
 Summary: Performance monitoring for the Linux kernel
 License: GPLv2
 %description -n perf
@@ -472,7 +479,7 @@ to manipulate perf events.
 
 %package -n python2-perf
 Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XSU/repos/linux-stable/archive?at=refs%2Ftags%2Fv4.19.19&format=tar.gz&prefix=kernel-4.19.19#/kernel-4.19.19.tar.gz) = dffbba4348e9686d6bf42d54eb0f2cd1c4fb3520
-Provides: gitsha(ssh://git@code.citrite.net/xs/linux.pg.git) = 3d7cfe052d7cbcc31c47eda3d26ee556773b3260
+Provides: gitsha(ssh://git@code.citrite.net/xs/linux.pg.git) = 1955079215ac3bd9d923958731d3f561500a8966
 Summary: %{pythonperfsum}
 Provides: python2-perf
 %description -n python2-perf
@@ -719,6 +726,10 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Thu Dec 03 2020 Sergey Dyasli <sergey.dyasli@citrix.com> - 4.19.19-7.0.9
+- CA-349623: XSA-349 - Frontends can trigger OOM in Backends by update a watched path
+- CA-349624: XSA-350 - Use after free triggered by block frontend in Linux blkback
+
 * Wed Oct 07 2020 Ross Lagerwall <ross.lagerwall@citrix.com> - 4.19.19-7.0.8
 - CA-346372: Add fix for XSA-331
 - CA-346374: Add fix for XSA-332
