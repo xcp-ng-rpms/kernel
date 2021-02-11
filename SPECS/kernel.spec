@@ -22,7 +22,7 @@
 Name: kernel
 License: GPLv2
 Version: 4.19.19
-Release: 6.0.13.1%{?dist}
+Release: 6.0.13.2%{?dist}
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
@@ -245,6 +245,9 @@ Patch188: 0005-xen-xenbus-Count-pending-messages-for-each-watch.patch
 Patch189: 0006-xenbus-xenbus_backend-Disallow-pending-watch-message.patch
 Patch190: xsa350-linux.patch
 Patch191: abi-version.patch
+
+# XCP-ng patches
+Patch1000: xsa332-linux-fix-perfs.patch
 
 Provides: gitsha(ssh://git@code.citrite.net/xs/linux.pg.git) = 24ec6a2aefc49b1e6b22a8fca75e667752b2954e
 Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XSU/repos/linux-stable/archive?at=refs%2Ftags%2Fv4.19.19&format=tar.gz&prefix=kernel-4.19.19#/kernel-4.19.19.tar.gz) = dffbba4348e9686d6bf42d54eb0f2cd1c4fb3520
@@ -549,6 +552,10 @@ fi
 %{python2_sitearch}/*
 
 %changelog
+* Thu Feb 11 2021 Samuel Verschelde <stormi-xcp@ylix.fr> - 4.19.19-6.0.13.2
+- Fix network perf issue caused by XSA 332 patches
+- Related to https://github.com/xcp-ng/xcp/issues/453
+
 * Wed Dec 16 2020 Samuel Verschelde <stormi-xcp@ylix.fr> - 4.19.19-6.0.13.1
 - Security update (XSAs 349 and 350)
 - Sync to 4.19.19-6.0.13
