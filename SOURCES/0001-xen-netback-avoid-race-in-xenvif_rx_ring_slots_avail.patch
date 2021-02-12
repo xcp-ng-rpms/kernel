@@ -1,0 +1,51 @@
+From 4f809248860ae96b66921e1c9c528eb182fb35b9 Mon Sep 17 00:00:00 2001
+From: Juergen Gross <jgross@suse.com>
+Date: Tue, 2 Feb 2021 08:09:38 +0100
+Subject: [PATCH] xen/netback: avoid race in xenvif_rx_ring_slots_available()
+
+Since commit 23025393dbeb3b8b3 ("xen/netback: use lateeoi irq binding")
+xenvif_rx_ring_slots_available() is no longer called only from the rx
+queue kernel thread, so it needs to access the rx queue with the
+associated queue held.
+
+Reported-by: Igor Druzhinin <igor.druzhinin@citrix.com>
+Fixes: 23025393dbeb3b8b3 ("xen/netback: use lateeoi irq binding")
+Cc: stable@vger.kernel.org
+Signed-off-by: Juergen Gross <jgross@suse.com>
+---
+ drivers/net/xen-netback/rx.c | 9 ++++++++-
+ 1 file changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/net/xen-netback/rx.c b/drivers/net/xen-netback/rx.c
+index 9b62f65..48e2006 100644
+--- a/drivers/net/xen-netback/rx.c
++++ b/drivers/net/xen-netback/rx.c
+@@ -38,10 +38,15 @@ static bool xenvif_rx_ring_slots_available(struct xenvif_queue *queue)
+ 	RING_IDX prod, cons;
+ 	struct sk_buff *skb;
+ 	int needed;
++	unsigned long flags;
++
++	spin_lock_irqsave(&queue->rx_queue.lock, flags);
+ 
+ 	skb = skb_peek(&queue->rx_queue);
+-	if (!skb)
++	if (!skb) {
++		spin_unlock_irqrestore(&queue->rx_queue.lock, flags);
+ 		return false;
++	}
+ 
+ 	needed = DIV_ROUND_UP(skb->len, XEN_PAGE_SIZE);
+ 	if (skb_is_gso(skb))
+@@ -49,6 +54,8 @@ static bool xenvif_rx_ring_slots_available(struct xenvif_queue *queue)
+ 	if (skb->sw_hash)
+ 		needed++;
+ 
++	spin_unlock_irqrestore(&queue->rx_queue.lock, flags);
++
+ 	do {
+ 		prod = queue->rx.sring->req_prod;
+ 		cons = queue->rx.req_cons;
+-- 
+2.7.4
+

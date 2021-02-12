@@ -22,7 +22,7 @@
 Name: kernel
 License: GPLv2
 Version: 4.19.19
-Release: 6.0.13.2%{?dist}
+Release: 6.0.13.3%{?dist}
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
@@ -248,6 +248,17 @@ Patch191: abi-version.patch
 
 # XCP-ng patches
 Patch1000: xsa332-linux-fix-perfs.patch
+Patch1001: xsa361-linux-1.patch
+Patch1002: xsa361-linux-2.patch
+Patch1003: xsa361-linux-3.patch
+Patch1004: xsa361-linux-4.patch
+Patch1006: xsa362-linux-1.patch
+Patch1007: xsa362-linux-2.patch
+Patch1008: xsa362-linux-3.patch
+Patch1009: 0001-xen-netback-avoid-race-in-xenvif_rx_ring_slots_avail.patch
+# apply backport before applying xsa365 patch
+Patch1010: f9bd84a8a845d82f9b5a081a7ae68c98a11d2e84.patch
+Patch1011: xsa365-linux.patch
 
 Provides: gitsha(ssh://git@code.citrite.net/xs/linux.pg.git) = 24ec6a2aefc49b1e6b22a8fca75e667752b2954e
 Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XSU/repos/linux-stable/archive?at=refs%2Ftags%2Fv4.19.19&format=tar.gz&prefix=kernel-4.19.19#/kernel-4.19.19.tar.gz) = dffbba4348e9686d6bf42d54eb0f2cd1c4fb3520
@@ -552,6 +563,12 @@ fi
 %{python2_sitearch}/*
 
 %changelog
+* Wed Feb 24 2021 Samuel Verschelde <stormi-xcp@ylix.fr> - 4.19.19-6.0.13.3
+- Security update
+- Fix XSA-361 XSA-362 XSA-365
+- Fix use-after-free in xen-netback caused by XSA-332
+- See https://xenbits.xen.org/xsa/
+
 * Thu Feb 11 2021 Samuel Verschelde <stormi-xcp@ylix.fr> - 4.19.19-6.0.13.2
 - Fix network perf issue caused by XSA 332 patches
 - Related to https://github.com/xcp-ng/xcp/issues/453
