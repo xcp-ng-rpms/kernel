@@ -22,7 +22,7 @@
 Name: kernel
 License: GPLv2
 Version: 4.19.19
-Release: 7.0.9.2%{?dist}
+Release: 7.0.10.1%{?dist}
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
@@ -403,13 +403,22 @@ Patch345: 0004-xen-xenbus-xen_bus_type-Support-will_handle-watch-ca.patch
 Patch346: 0005-xen-xenbus-Count-pending-messages-for-each-watch.patch
 Patch347: 0006-xenbus-xenbus_backend-Disallow-pending-watch-message.patch
 Patch348: xsa350-linux.patch
-Patch349: abi-version.patch
+Patch349: xsa361-linux-1.patch
+Patch350: xsa361-linux-2.patch
+Patch351: xsa361-linux-3.patch
+Patch352: xsa361-linux-4.patch
+Patch353: xsa362-linux-1.patch
+Patch354: xsa362-linux-2.patch
+Patch355: xsa362-linux-3.patch
+Patch356: 0001-xen-netback-avoid-race-in-xenvif_rx_ring_slots_avail.patch
+Patch357: xsa365-linux.patch
+Patch358: abi-version.patch
 
 # XCP-ng patches
 Patch1000: xsa332-linux-fix-perfs.patch
 
 Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XSU/repos/linux-stable/archive?at=refs%2Ftags%2Fv4.19.19&format=tar.gz&prefix=kernel-4.19.19#/kernel-4.19.19.tar.gz) = dffbba4348e9686d6bf42d54eb0f2cd1c4fb3520
-Provides: gitsha(ssh://git@code.citrite.net/xs/linux.pg.git) = 1955079215ac3bd9d923958731d3f561500a8966
+Provides: gitsha(ssh://git@code.citrite.net/xs/linux.pg.git) = b2399b119d7671e1bf78c9e5fbf427612b8e3fcc
 
 %if %{do_kabichk}
 %endif
@@ -423,7 +432,7 @@ and output, etc.
 
 %package headers
 Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XSU/repos/linux-stable/archive?at=refs%2Ftags%2Fv4.19.19&format=tar.gz&prefix=kernel-4.19.19#/kernel-4.19.19.tar.gz) = dffbba4348e9686d6bf42d54eb0f2cd1c4fb3520
-Provides: gitsha(ssh://git@code.citrite.net/xs/linux.pg.git) = 1955079215ac3bd9d923958731d3f561500a8966
+Provides: gitsha(ssh://git@code.citrite.net/xs/linux.pg.git) = b2399b119d7671e1bf78c9e5fbf427612b8e3fcc
 License: GPLv2
 Summary: Header files for the Linux kernel for use by glibc
 Group: Development/System
@@ -441,7 +450,7 @@ glibc package.
 
 %package devel
 Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XSU/repos/linux-stable/archive?at=refs%2Ftags%2Fv4.19.19&format=tar.gz&prefix=kernel-4.19.19#/kernel-4.19.19.tar.gz) = dffbba4348e9686d6bf42d54eb0f2cd1c4fb3520
-Provides: gitsha(ssh://git@code.citrite.net/xs/linux.pg.git) = 1955079215ac3bd9d923958731d3f561500a8966
+Provides: gitsha(ssh://git@code.citrite.net/xs/linux.pg.git) = b2399b119d7671e1bf78c9e5fbf427612b8e3fcc
 License: GPLv2
 Summary: Development package for building kernel modules to match the %{uname} kernel
 Group: System Environment/Kernel
@@ -456,7 +465,7 @@ against the %{uname} kernel.
 
 %package -n perf
 Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XSU/repos/linux-stable/archive?at=refs%2Ftags%2Fv4.19.19&format=tar.gz&prefix=kernel-4.19.19#/kernel-4.19.19.tar.gz) = dffbba4348e9686d6bf42d54eb0f2cd1c4fb3520
-Provides: gitsha(ssh://git@code.citrite.net/xs/linux.pg.git) = 1955079215ac3bd9d923958731d3f561500a8966
+Provides: gitsha(ssh://git@code.citrite.net/xs/linux.pg.git) = b2399b119d7671e1bf78c9e5fbf427612b8e3fcc
 Summary: Performance monitoring for the Linux kernel
 License: GPLv2
 %description -n perf
@@ -470,7 +479,7 @@ to manipulate perf events.
 
 %package -n python2-perf
 Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XSU/repos/linux-stable/archive?at=refs%2Ftags%2Fv4.19.19&format=tar.gz&prefix=kernel-4.19.19#/kernel-4.19.19.tar.gz) = dffbba4348e9686d6bf42d54eb0f2cd1c4fb3520
-Provides: gitsha(ssh://git@code.citrite.net/xs/linux.pg.git) = 1955079215ac3bd9d923958731d3f561500a8966
+Provides: gitsha(ssh://git@code.citrite.net/xs/linux.pg.git) = b2399b119d7671e1bf78c9e5fbf427612b8e3fcc
 Summary: %{pythonperfsum}
 Provides: python2-perf
 %description -n python2-perf
@@ -715,6 +724,12 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Wed Feb 24 2021 Samuel Verschelde <stormi-xcp@ylix.fr> - 4.19.19-7.0.10.1
+- Security update
+- Fix XSAs 361 362 365
+- Fix use-after-free in xen-netback caused by XSA-332
+- See https://xenbits.xen.org/xsa/
+
 * Thu Feb 11 2021 Samuel Verschelde <stormi-xcp@ylix.fr> - 4.19.19-7.0.9.2
 - Fix network perf issue caused by XSA 332 patches
 - Related to https://github.com/xcp-ng/xcp/issues/453
