@@ -22,7 +22,7 @@
 Name: kernel
 License: GPLv2
 Version: 4.19.19
-Release: 7.0.10.1%{?dist}
+Release: 7.0.11.1%{?dist}
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
@@ -48,7 +48,7 @@ Requires(post): coreutils kmod
 Requires(posttrans): coreutils dracut kmod
 
 
-Source0: https://code.citrite.net/rest/archive/latest/projects/XSU/repos/linux-stable/archive?at=refs%2Ftags%2Fv4.19.19&format=tar.gz&prefix=kernel-4.19.19#/kernel-4.19.19.tar.gz
+Source0: kernel-4.19.19.tar.gz
 Source1: SOURCES/kernel/kernel-x86_64.config
 Source2: SOURCES/kernel/macros.kernel
 Source3: SOURCES/kernel/check-kabi
@@ -412,13 +412,18 @@ Patch354: xsa362-linux-2.patch
 Patch355: xsa362-linux-3.patch
 Patch356: 0001-xen-netback-avoid-race-in-xenvif_rx_ring_slots_avail.patch
 Patch357: xsa365-linux.patch
-Patch358: abi-version.patch
+Patch358: xsa371-linux.patch
+Patch359: xsa367-linux.patch
+Patch360: 0001-xen-netback-fix-spurious-event-detection-for-common-.patch
+Patch361: 0007-xen-evtchn-use-smp-barriers-for-user-event-ring.patch
+Patch362: 0008-xen-evtchn-use-READ-WRITE_ONCE-for-accessing-ring-in.patch
+Patch363: xen-events-reset-affinity-of-2-level-event-when-tearing-it-down.patch
+Patch364: xen-events-don-t-unmask-an-event-channel-when-an-eoi-is-pending.patch
+Patch365: xen-events-avoid-handling-the-same-event-on-two-cpus-at-the-same-time.patch
+Patch366: abi-version.patch
 
-# XCP-ng patches
-Patch1000: xsa332-linux-fix-perfs.patch
-
-Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XSU/repos/linux-stable/archive?at=refs%2Ftags%2Fv4.19.19&format=tar.gz&prefix=kernel-4.19.19#/kernel-4.19.19.tar.gz) = dffbba4348e9686d6bf42d54eb0f2cd1c4fb3520
-Provides: gitsha(ssh://git@code.citrite.net/xs/linux.pg.git) = b2399b119d7671e1bf78c9e5fbf427612b8e3fcc
+Provides: gitsha(ssh://git@code.citrite.net/XSU/linux-stable.git) = dffbba4348e9686d6bf42d54eb0f2cd1c4fb3520
+Provides: gitsha(ssh://git@code.citrite.net/XS/linux.pg.git) = cb3c28f7e8213ef44e5c06369b577a18b86af291
 
 %if %{do_kabichk}
 %endif
@@ -431,8 +436,8 @@ and output, etc.
 
 
 %package headers
-Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XSU/repos/linux-stable/archive?at=refs%2Ftags%2Fv4.19.19&format=tar.gz&prefix=kernel-4.19.19#/kernel-4.19.19.tar.gz) = dffbba4348e9686d6bf42d54eb0f2cd1c4fb3520
-Provides: gitsha(ssh://git@code.citrite.net/xs/linux.pg.git) = b2399b119d7671e1bf78c9e5fbf427612b8e3fcc
+Provides: gitsha(ssh://git@code.citrite.net/XSU/linux-stable.git) = dffbba4348e9686d6bf42d54eb0f2cd1c4fb3520
+Provides: gitsha(ssh://git@code.citrite.net/XS/linux.pg.git) = cb3c28f7e8213ef44e5c06369b577a18b86af291
 License: GPLv2
 Summary: Header files for the Linux kernel for use by glibc
 Group: Development/System
@@ -449,8 +454,8 @@ building most standard programs and are also needed for rebuilding the
 glibc package.
 
 %package devel
-Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XSU/repos/linux-stable/archive?at=refs%2Ftags%2Fv4.19.19&format=tar.gz&prefix=kernel-4.19.19#/kernel-4.19.19.tar.gz) = dffbba4348e9686d6bf42d54eb0f2cd1c4fb3520
-Provides: gitsha(ssh://git@code.citrite.net/xs/linux.pg.git) = b2399b119d7671e1bf78c9e5fbf427612b8e3fcc
+Provides: gitsha(ssh://git@code.citrite.net/XSU/linux-stable.git) = dffbba4348e9686d6bf42d54eb0f2cd1c4fb3520
+Provides: gitsha(ssh://git@code.citrite.net/XS/linux.pg.git) = cb3c28f7e8213ef44e5c06369b577a18b86af291
 License: GPLv2
 Summary: Development package for building kernel modules to match the %{uname} kernel
 Group: System Environment/Kernel
@@ -464,8 +469,8 @@ This package provides kernel headers and makefiles sufficient to build modules
 against the %{uname} kernel.
 
 %package -n perf
-Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XSU/repos/linux-stable/archive?at=refs%2Ftags%2Fv4.19.19&format=tar.gz&prefix=kernel-4.19.19#/kernel-4.19.19.tar.gz) = dffbba4348e9686d6bf42d54eb0f2cd1c4fb3520
-Provides: gitsha(ssh://git@code.citrite.net/xs/linux.pg.git) = b2399b119d7671e1bf78c9e5fbf427612b8e3fcc
+Provides: gitsha(ssh://git@code.citrite.net/XSU/linux-stable.git) = dffbba4348e9686d6bf42d54eb0f2cd1c4fb3520
+Provides: gitsha(ssh://git@code.citrite.net/XS/linux.pg.git) = cb3c28f7e8213ef44e5c06369b577a18b86af291
 Summary: Performance monitoring for the Linux kernel
 License: GPLv2
 %description -n perf
@@ -478,8 +483,8 @@ written in the Python programming language to use the interface \
 to manipulate perf events.
 
 %package -n python2-perf
-Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XSU/repos/linux-stable/archive?at=refs%2Ftags%2Fv4.19.19&format=tar.gz&prefix=kernel-4.19.19#/kernel-4.19.19.tar.gz) = dffbba4348e9686d6bf42d54eb0f2cd1c4fb3520
-Provides: gitsha(ssh://git@code.citrite.net/xs/linux.pg.git) = b2399b119d7671e1bf78c9e5fbf427612b8e3fcc
+Provides: gitsha(ssh://git@code.citrite.net/XSU/linux-stable.git) = dffbba4348e9686d6bf42d54eb0f2cd1c4fb3520
+Provides: gitsha(ssh://git@code.citrite.net/XS/linux.pg.git) = cb3c28f7e8213ef44e5c06369b577a18b86af291
 Summary: %{pythonperfsum}
 Provides: python2-perf
 %description -n python2-perf
@@ -724,6 +729,13 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Tue Mar 30 2021 Samuel Verschelde <stormi-xcp@ylix.fr> - 4.19.19-7.0.11.1
+- Security (XSAs 367 and 371) and bugfix update
+- XSA-367: Linux: netback fails to honor grant mapping errors
+- XSA-371: Linux: blkback driver may leak persistent grants
+- Patches backported from linus kernel to fix event-related issues caused by XSA-332
+- Remove xsa332-linux-fix-perfs.patch, not needed anymore
+
 * Wed Feb 24 2021 Samuel Verschelde <stormi-xcp@ylix.fr> - 4.19.19-7.0.10.1
 - Security update
 - Fix XSAs 361 362 365
