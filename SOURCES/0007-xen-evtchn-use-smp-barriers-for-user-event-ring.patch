@@ -1,0 +1,42 @@
+From d56699594046d54f32936a1eec337a62c15f931a Mon Sep 17 00:00:00 2001
+From: Juergen Gross <jgross@suse.com>
+Date: Fri, 19 Feb 2021 16:40:29 +0100
+Subject: [PATCH 7/7] xen/evtchn: use smp barriers for user event ring
+
+The ring buffer for user events is local to the given kernel instance,
+so smp barriers are fine for ensuring consistency.
+
+Reported-by: Andrew Cooper <andrew.cooper3@citrix.com>
+Signed-off-by: Juergen Gross <jgross@suse.com>
+Reviewed-by: Jan Beulich <jbeulich@suse.com>
+Link: https://lore.kernel.org/r/20210219154030.10892-8-jgross@suse.com
+Signed-off-by: Boris Ostrovsky <boris.ostrovsky@oracle.com>
+---
+ drivers/xen/evtchn.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/xen/evtchn.c b/drivers/xen/evtchn.c
+index a7a85719a8c8..421382c73d88 100644
+--- a/drivers/xen/evtchn.c
++++ b/drivers/xen/evtchn.c
+@@ -173,7 +173,7 @@ static irqreturn_t evtchn_interrupt(int irq, void *data)
+ 
+ 	if ((u->ring_prod - u->ring_cons) < u->ring_size) {
+ 		*evtchn_ring_entry(u, u->ring_prod) = evtchn->port;
+-		wmb(); /* Ensure ring contents visible */
++		smp_wmb(); /* Ensure ring contents visible */
+ 		if (u->ring_cons == u->ring_prod++) {
+ 			wake_up_interruptible(&u->evtchn_wait);
+ 			kill_fasync(&u->evtchn_async_queue,
+@@ -245,7 +245,7 @@ static ssize_t evtchn_read(struct file *file, char __user *buf,
+ 	}
+ 
+ 	rc = -EFAULT;
+-	rmb(); /* Ensure that we see the port before we copy it. */
++	smp_rmb(); /* Ensure that we see the port before we copy it. */
+ 	if (copy_to_user(buf, evtchn_ring_entry(u, c), bytes1) ||
+ 	    ((bytes2 != 0) &&
+ 	     copy_to_user(&buf[bytes1], &u->ring[0], bytes2)))
+-- 
+2.27.0
+

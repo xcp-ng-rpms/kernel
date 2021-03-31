@@ -22,7 +22,7 @@
 Name: kernel
 License: GPLv2
 Version: 4.19.19
-Release: 6.0.13.3%{?dist}
+Release: 6.0.13.4%{?dist}
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
@@ -247,7 +247,6 @@ Patch190: xsa350-linux.patch
 Patch191: abi-version.patch
 
 # XCP-ng patches
-Patch1000: xsa332-linux-fix-perfs.patch
 Patch1001: xsa361-linux-1.patch
 Patch1002: xsa361-linux-2.patch
 Patch1003: xsa361-linux-3.patch
@@ -259,6 +258,15 @@ Patch1009: 0001-xen-netback-avoid-race-in-xenvif_rx_ring_slots_avail.patch
 # apply backport before applying xsa365 patch
 Patch1010: f9bd84a8a845d82f9b5a081a7ae68c98a11d2e84.patch
 Patch1011: xsa365-linux.patch
+# Backported from XS82E024
+Patch1020: xsa371-linux.patch
+Patch1021: xsa367-linux.patch
+Patch1022: 0001-xen-netback-fix-spurious-event-detection-for-common-.patch
+Patch1023: 0007-xen-evtchn-use-smp-barriers-for-user-event-ring.patch
+Patch1024: 0008-xen-evtchn-use-READ-WRITE_ONCE-for-accessing-ring-in.patch
+Patch1025: xen-events-reset-affinity-of-2-level-event-when-tearing-it-down.patch
+Patch1026: xen-events-don-t-unmask-an-event-channel-when-an-eoi-is-pending.patch
+Patch1027: xen-events-avoid-handling-the-same-event-on-two-cpus-at-the-same-time.patch
 
 Provides: gitsha(ssh://git@code.citrite.net/xs/linux.pg.git) = 24ec6a2aefc49b1e6b22a8fca75e667752b2954e
 Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XSU/repos/linux-stable/archive?at=refs%2Ftags%2Fv4.19.19&format=tar.gz&prefix=kernel-4.19.19#/kernel-4.19.19.tar.gz) = dffbba4348e9686d6bf42d54eb0f2cd1c4fb3520
@@ -563,6 +571,13 @@ fi
 %{python2_sitearch}/*
 
 %changelog
+* Wed Mar 31 2021 Samuel Verschelde <stormi-xcp@ylix.fr> - 4.19.19-6.0.13.4
+- Security (XSAs 367 and 371) and bugfix update, backported from 8.2
+- XSA-367: Linux: netback fails to honor grant mapping errors
+- XSA-371: Linux: blkback driver may leak persistent grants
+- Patches backported from linus kernel to fix event-related issues caused by XSA-332
+- Remove xsa332-linux-fix-perfs.patch, not needed anymore
+
 * Wed Feb 24 2021 Samuel Verschelde <stormi-xcp@ylix.fr> - 4.19.19-6.0.13.3
 - Security update
 - Fix XSA-361 XSA-362 XSA-365
