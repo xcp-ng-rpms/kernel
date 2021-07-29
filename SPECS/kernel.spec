@@ -22,7 +22,7 @@
 Name: kernel
 License: Portions GPL, Portions Non-Redistributable (See description)
 Version: 4.19.19
-Release: 7.0.11
+Release: 7.0.12
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
@@ -30,6 +30,7 @@ BuildRequires: kmod
 BuildRequires: bc
 BuildRequires: hostname
 BuildRequires: elfutils-libelf-devel
+BuildRequires: libunwind-devel
 BuildRequires: bison
 BuildRequires: flex
 %if %{do_kabichk}
@@ -420,10 +421,14 @@ Patch362: 0008-xen-evtchn-use-READ-WRITE_ONCE-for-accessing-ring-in.patch
 Patch363: xen-events-reset-affinity-of-2-level-event-when-tearing-it-down.patch
 Patch364: xen-events-don-t-unmask-an-event-channel-when-an-eoi-is-pending.patch
 Patch365: xen-events-avoid-handling-the-same-event-on-two-cpus-at-the-same-time.patch
-Patch366: abi-version.patch
+Patch366: 0001-x86-ioperm-Add-new-paravirt-function-update_io_bitma.patch
+Patch367: 0001-bpf-x86-Validate-computation-of-branch-displacements.patch
+Patch368: 0002-bpf-x86-Validate-computation-of-branch-displacements.patch
+Patch369: 0001-xen-events-fix-setting-irq-affinity.patch
+Patch370: abi-version.patch
 
 Provides: gitsha(ssh://git@code.citrite.net/XSU/linux-stable.git) = dffbba4348e9686d6bf42d54eb0f2cd1c4fb3520
-Provides: gitsha(ssh://git@code.citrite.net/XS/linux.pg.git) = cb3c28f7e8213ef44e5c06369b577a18b86af291
+Provides: gitsha(ssh://git@code.citrite.net/XS/linux.pg.git) = 724b82b1bbb2c409b68ad6223d4fed1d96cf458f
 
 %if %{do_kabichk}
 %endif
@@ -449,7 +454,7 @@ copyright and licensing information see the relevant source RPM.
 
 %package headers
 Provides: gitsha(ssh://git@code.citrite.net/XSU/linux-stable.git) = dffbba4348e9686d6bf42d54eb0f2cd1c4fb3520
-Provides: gitsha(ssh://git@code.citrite.net/XS/linux.pg.git) = cb3c28f7e8213ef44e5c06369b577a18b86af291
+Provides: gitsha(ssh://git@code.citrite.net/XS/linux.pg.git) = 724b82b1bbb2c409b68ad6223d4fed1d96cf458f
 License: GPLv2
 Summary: Header files for the Linux kernel for use by glibc
 Group: Development/System
@@ -467,7 +472,7 @@ glibc package.
 
 %package devel
 Provides: gitsha(ssh://git@code.citrite.net/XSU/linux-stable.git) = dffbba4348e9686d6bf42d54eb0f2cd1c4fb3520
-Provides: gitsha(ssh://git@code.citrite.net/XS/linux.pg.git) = cb3c28f7e8213ef44e5c06369b577a18b86af291
+Provides: gitsha(ssh://git@code.citrite.net/XS/linux.pg.git) = 724b82b1bbb2c409b68ad6223d4fed1d96cf458f
 License: GPLv2
 Summary: Development package for building kernel modules to match the %{uname} kernel
 Group: System Environment/Kernel
@@ -482,7 +487,7 @@ against the %{uname} kernel.
 
 %package -n perf
 Provides: gitsha(ssh://git@code.citrite.net/XSU/linux-stable.git) = dffbba4348e9686d6bf42d54eb0f2cd1c4fb3520
-Provides: gitsha(ssh://git@code.citrite.net/XS/linux.pg.git) = cb3c28f7e8213ef44e5c06369b577a18b86af291
+Provides: gitsha(ssh://git@code.citrite.net/XS/linux.pg.git) = 724b82b1bbb2c409b68ad6223d4fed1d96cf458f
 Summary: Performance monitoring for the Linux kernel
 License: GPLv2
 %description -n perf
@@ -496,7 +501,7 @@ to manipulate perf events.
 
 %package -n python2-perf
 Provides: gitsha(ssh://git@code.citrite.net/XSU/linux-stable.git) = dffbba4348e9686d6bf42d54eb0f2cd1c4fb3520
-Provides: gitsha(ssh://git@code.citrite.net/XS/linux.pg.git) = cb3c28f7e8213ef44e5c06369b577a18b86af291
+Provides: gitsha(ssh://git@code.citrite.net/XS/linux.pg.git) = 724b82b1bbb2c409b68ad6223d4fed1d96cf458f
 Summary: %{pythonperfsum}
 Provides: python2-perf
 %description -n python2-perf
@@ -558,7 +563,7 @@ make silentoldconfig
 
 # make perf
 %global perf_make \
-  make EXTRA_CFLAGS="${RPM_OPT_FLAGS}" LDFLAGS="%{__global_ldflags}" %{?cross_opts} V=1 NO_PERF_READ_VDSO32=1 NO_PERF_READ_VDSOX32=1 WERROR=0 NO_LIBUNWIND=1 HAVE_CPLUS_DEMANGLE=1 NO_GTK2=1 NO_STRLCPY=1 NO_BIONIC=1 NO_JVMTI=1 prefix=%{_prefix}
+  make EXTRA_CFLAGS="${RPM_OPT_FLAGS}" LDFLAGS="%{__global_ldflags}" %{?cross_opts} V=1 NO_PERF_READ_VDSO32=1 NO_PERF_READ_VDSOX32=1 WERROR=0 HAVE_CPLUS_DEMANGLE=1 NO_GTK2=1 NO_STRLCPY=1 NO_BIONIC=1 NO_JVMTI=1 prefix=%{_prefix}
 %global perf_python2 -C tools/perf PYTHON=%{__python2}
 # perf
 # make sure check-headers.sh is executable
@@ -743,6 +748,11 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Fri Jun 18 2021 Ross Lagerwall <ross.lagerwall@citrix.com> - 4.19.19-7.0.12
+- CA-353048: Add new paravirt function for ioperm() syscall support
+- CA-353093: CVE-2021-29154: Validate computation of branch displacements for x86
+- CA-355291: Fix affinity setting for xen-dyn-lateeoi IRQs
+
 * Fri Mar 19 2021 Lin Liu <lin.liu@citrix.com> - 4.19.19-7.0.11
 - CA-349120: Backport patches to fix spurious event-related warnings
 - CA-352473: XSA-367: Linux: netback fails to honor grant mapping errors
