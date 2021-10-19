@@ -4,9 +4,9 @@
 
 # Control whether we perform a compat. check against published ABI.
 # Default enabled: (to override: --without kabichk)
-%define do_kabichk  %{?_without_kabichk: 0} %{?!_without_kabichk: 1}
+#%define do_kabichk  %{?_without_kabichk: 0} %{?!_without_kabichk: 1}
 # Default disabled: (to override: --with kabichk)
-#%%define do_kabichk  %{?_with_kabichk: 1} %{?!_with_kabichk: 0}
+%define do_kabichk  %{?_with_kabichk: 1} %{?!_with_kabichk: 0}
 
 #
 # Adjust debuginfo generation to suit building a kernel:
