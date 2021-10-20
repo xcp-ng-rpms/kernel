@@ -22,7 +22,7 @@
 Name: kernel
 License: GPLv2
 Version: 4.19.19
-Release: 7.0.9.1%{?dist}
+Release: 7.0.9.1.0.hostsb.0%{?dist}
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
@@ -712,6 +712,9 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Wed Oct 20 2021 Bobby Eshleman <bobbyeshleman@gmail.com> - 4.19.19-7.0.9.1.0.hostsb.0
+- Build the kernel with the EFI stub
+
 * Wed Dec 16 2020 Samuel Verschelde <stormi-xcp@ylix.fr> - 4.19.19-7.0.9.1
 - Security update (XSAs 349 and 350)
 - Sync to 4.19.19-7.0.9
