@@ -22,7 +22,7 @@
 Name: kernel
 License: GPLv2
 Version: 4.19.19
-Release: 7.0.12.1%{?dist}
+Release: 7.0.13.1%{?dist}
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
@@ -425,10 +425,19 @@ Patch366: 0001-x86-ioperm-Add-new-paravirt-function-update_io_bitma.patch
 Patch367: 0001-bpf-x86-Validate-computation-of-branch-displacements.patch
 Patch368: 0002-bpf-x86-Validate-computation-of-branch-displacements.patch
 Patch369: 0001-xen-events-fix-setting-irq-affinity.patch
-Patch370: abi-version.patch
+Patch370: 0001-xen-events-reset-active-flag-for-lateeoi-events-late.patch
+Patch371: 0001-seq_file-disallow-extremely-large-seq-buffer-allocat.patch
+Patch372: 0001-xen-events-Fix-race-in-set_evtchn_to_irq.patch
+Patch373: 0001-bpf-Do-not-use-ax-register-in-interpreter-on-div-mod.patch
+Patch374: 0002-bpf-Fix-32-bit-src-register-truncation-on-div-mod.patch
+Patch375: 0003-bpf-Fix-truncation-handling-for-mod32-dst-reg-wrt-ze.patch
+Patch376: 0001-x86-timer-Skip-PIT-initialization-on-modern-chipsets.patch
+Patch377: 0001-x86-timer-Force-PIT-initialization-when-X86_FEATURE_.patch
+Patch378: 0001-x86-timer-Don-t-skip-PIT-setup-when-APIC-is-disabled.patch
+Patch379: abi-version.patch
 
 Provides: gitsha(ssh://git@code.citrite.net/XSU/linux-stable.git) = dffbba4348e9686d6bf42d54eb0f2cd1c4fb3520
-Provides: gitsha(ssh://git@code.citrite.net/XS/linux.pg.git) = 724b82b1bbb2c409b68ad6223d4fed1d96cf458f
+Provides: gitsha(ssh://git@code.citrite.net/XS/linux.pg.git) = 36f98df50a6a4b8155d1a43cb388e67564f21fd5
 
 %if %{do_kabichk}
 %endif
@@ -442,7 +451,7 @@ and output, etc.
 
 %package headers
 Provides: gitsha(ssh://git@code.citrite.net/XSU/linux-stable.git) = dffbba4348e9686d6bf42d54eb0f2cd1c4fb3520
-Provides: gitsha(ssh://git@code.citrite.net/XS/linux.pg.git) = 724b82b1bbb2c409b68ad6223d4fed1d96cf458f
+Provides: gitsha(ssh://git@code.citrite.net/XS/linux.pg.git) = 36f98df50a6a4b8155d1a43cb388e67564f21fd5
 License: GPLv2
 Summary: Header files for the Linux kernel for use by glibc
 Group: Development/System
@@ -460,7 +469,7 @@ glibc package.
 
 %package devel
 Provides: gitsha(ssh://git@code.citrite.net/XSU/linux-stable.git) = dffbba4348e9686d6bf42d54eb0f2cd1c4fb3520
-Provides: gitsha(ssh://git@code.citrite.net/XS/linux.pg.git) = 724b82b1bbb2c409b68ad6223d4fed1d96cf458f
+Provides: gitsha(ssh://git@code.citrite.net/XS/linux.pg.git) = 36f98df50a6a4b8155d1a43cb388e67564f21fd5
 License: GPLv2
 Summary: Development package for building kernel modules to match the %{uname} kernel
 Group: System Environment/Kernel
@@ -475,7 +484,7 @@ against the %{uname} kernel.
 
 %package -n perf
 Provides: gitsha(ssh://git@code.citrite.net/XSU/linux-stable.git) = dffbba4348e9686d6bf42d54eb0f2cd1c4fb3520
-Provides: gitsha(ssh://git@code.citrite.net/XS/linux.pg.git) = 724b82b1bbb2c409b68ad6223d4fed1d96cf458f
+Provides: gitsha(ssh://git@code.citrite.net/XS/linux.pg.git) = 36f98df50a6a4b8155d1a43cb388e67564f21fd5
 Summary: Performance monitoring for the Linux kernel
 License: GPLv2
 %description -n perf
@@ -489,7 +498,7 @@ to manipulate perf events.
 
 %package -n python2-perf
 Provides: gitsha(ssh://git@code.citrite.net/XSU/linux-stable.git) = dffbba4348e9686d6bf42d54eb0f2cd1c4fb3520
-Provides: gitsha(ssh://git@code.citrite.net/XS/linux.pg.git) = 724b82b1bbb2c409b68ad6223d4fed1d96cf458f
+Provides: gitsha(ssh://git@code.citrite.net/XS/linux.pg.git) = 36f98df50a6a4b8155d1a43cb388e67564f21fd5
 Summary: %{pythonperfsum}
 Provides: python2-perf
 %description -n python2-perf
@@ -734,6 +743,16 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Wed Oct 27 2021 Samuel Verschelde <stormi-xcp@ylix.fr> - 4.19.19-7.0.13.1
+- Bugfix update based on XS82E034
+- *** Upstream changelog ***
+- * Mon Sep 20 2021 Ross Lagerwall <ross.lagerwall@citrix.com> - 4.19.19-7.0.13
+- - CA-358056: CVE-2021-3444: bpf: Fix truncation handling for mod32 dst reg wrt zero
+- - CA-358059: CVE-2021-3600: bpf: Fix 32 bit src register truncation on div/mod
+- - CA-357418: Fix race in set_evtchn_to_irq
+- - CA-356822: CVE-2021-33909: size_t-to-int vulnerability in Linux's filesystem layer
+- - CA-354789: Backport upstream patch to fix warning in evtchn_interrupt()
+
 * Thu Jul 29 2021 Samuel Verschelde <stormi-xcp@ylix.fr> - 4.19.19-7.0.12.1
 - Bugfix update based on XS82E030
 - *** Upstream changelog ***
