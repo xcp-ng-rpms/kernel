@@ -20,9 +20,9 @@
 %define _find_debuginfo_opts -r
 
 Name: kernel
-License: Portions GPL, Portions Non-Redistributable (See description)
+License: GPLv2 and CitrixCommercial
 Version: 4.19.19
-Release: 7.0.13
+Release: 7.0.14
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
@@ -54,6 +54,7 @@ Source2: SOURCES/kernel/macros.kernel
 Source3: SOURCES/kernel/check-kabi
 Source4: SOURCES/kernel/Module.kabi
 Source5: https://repo.citrite.net/list/ctx-local-contrib/citrix/branding/Citrix_Logo_Black.png
+Source6: SOURCES/kernel/COPYING.CitrixCommercial
 
 Patch0: 0001-Fix-net-ipv4-do-not-handle-duplicate-fragments-as-ov.patch
 Patch1: 0001-mm-zero-remaining-unavailable-struct-pages.patch
@@ -434,10 +435,12 @@ Patch375: 0003-bpf-Fix-truncation-handling-for-mod32-dst-reg-wrt-ze.patch
 Patch376: 0001-x86-timer-Skip-PIT-initialization-on-modern-chipsets.patch
 Patch377: 0001-x86-timer-Force-PIT-initialization-when-X86_FEATURE_.patch
 Patch378: 0001-x86-timer-Don-t-skip-PIT-setup-when-APIC-is-disabled.patch
-Patch379: abi-version.patch
+Patch379: xsa392-linux-1.patch
+Patch380: xsa392-linux-2.patch
+Patch381: abi-version.patch
 
 Provides: gitsha(ssh://git@code.citrite.net/XSU/linux-stable.git) = dffbba4348e9686d6bf42d54eb0f2cd1c4fb3520
-Provides: gitsha(ssh://git@code.citrite.net/XS/linux.pg.git) = 36f98df50a6a4b8155d1a43cb388e67564f21fd5
+Provides: gitsha(ssh://git@code.citrite.net/XS/linux.pg.git) = 36ae6b3fc7679d819f05402b14b2fb74a31507b4
 
 %if %{do_kabichk}
 %endif
@@ -457,13 +460,13 @@ authorization of Citrix. Nothing herein shall restrict your rights, if
 any, in the software contained within this package under an applicable
 open source license.
 
-Portions of this package are © 2018 Citrix Systems, Inc. For other
-copyright and licensing information see the relevant source RPM.
+Portions of this package are © 2021 Citrix Systems, Inc. For other
+copyright and licensing information see %{_docdir}.
 
 
 %package headers
 Provides: gitsha(ssh://git@code.citrite.net/XSU/linux-stable.git) = dffbba4348e9686d6bf42d54eb0f2cd1c4fb3520
-Provides: gitsha(ssh://git@code.citrite.net/XS/linux.pg.git) = 36f98df50a6a4b8155d1a43cb388e67564f21fd5
+Provides: gitsha(ssh://git@code.citrite.net/XS/linux.pg.git) = 36ae6b3fc7679d819f05402b14b2fb74a31507b4
 License: GPLv2
 Summary: Header files for the Linux kernel for use by glibc
 Group: Development/System
@@ -481,7 +484,7 @@ glibc package.
 
 %package devel
 Provides: gitsha(ssh://git@code.citrite.net/XSU/linux-stable.git) = dffbba4348e9686d6bf42d54eb0f2cd1c4fb3520
-Provides: gitsha(ssh://git@code.citrite.net/XS/linux.pg.git) = 36f98df50a6a4b8155d1a43cb388e67564f21fd5
+Provides: gitsha(ssh://git@code.citrite.net/XS/linux.pg.git) = 36ae6b3fc7679d819f05402b14b2fb74a31507b4
 License: GPLv2
 Summary: Development package for building kernel modules to match the %{uname} kernel
 Group: System Environment/Kernel
@@ -496,7 +499,7 @@ against the %{uname} kernel.
 
 %package -n perf
 Provides: gitsha(ssh://git@code.citrite.net/XSU/linux-stable.git) = dffbba4348e9686d6bf42d54eb0f2cd1c4fb3520
-Provides: gitsha(ssh://git@code.citrite.net/XS/linux.pg.git) = 36f98df50a6a4b8155d1a43cb388e67564f21fd5
+Provides: gitsha(ssh://git@code.citrite.net/XS/linux.pg.git) = 36ae6b3fc7679d819f05402b14b2fb74a31507b4
 Summary: Performance monitoring for the Linux kernel
 License: GPLv2
 %description -n perf
@@ -510,7 +513,7 @@ to manipulate perf events.
 
 %package -n python2-perf
 Provides: gitsha(ssh://git@code.citrite.net/XSU/linux-stable.git) = dffbba4348e9686d6bf42d54eb0f2cd1c4fb3520
-Provides: gitsha(ssh://git@code.citrite.net/XS/linux.pg.git) = 36f98df50a6a4b8155d1a43cb388e67564f21fd5
+Provides: gitsha(ssh://git@code.citrite.net/XS/linux.pg.git) = 36ae6b3fc7679d819f05402b14b2fb74a31507b4
 Summary: %{pythonperfsum}
 Provides: python2-perf
 %description -n python2-perf
@@ -531,7 +534,7 @@ Provides: python2-perf
 export AFTER_LINK='sh -xc "/usr/lib/rpm/debugedit -b %{buildroot} -d /usr/src/debug -i $@ > $@.id"'
 
 cp -f %{SOURCE1} .config
-cp -f %{SOURCE5} .
+cp -f %{SOURCE5} %{SOURCE6} .
 echo %{version}-%{release} > .xsversion
 make silentoldconfig
 %{?_cov_wrap} make %{?_smp_mflags} bzImage
@@ -729,6 +732,11 @@ fi
 %ghost /lib/modules/%{uname}/modules.symbols
 %ghost /lib/modules/%{uname}/modules.symbols.bin
 %doc Citrix_Logo_Black.png
+%doc COPYING.CitrixCommercial
+%doc COPYING
+%doc LICENSES/preferred/GPL-2.0
+%doc LICENSES/exceptions/Linux-syscall-note
+%doc Documentation/process/license-rules.rst
 
 %files headers
 /usr/include/*
@@ -757,6 +765,10 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Thu Dec 09 2021 Ross Lagerwall <ross.lagerwall@citrix.com> - 4.19.19-7.0.14
+- CP-37340: Clarify licensing and conform to Fedora packaging guidelines
+- CA-361715: Limit netback rx queue length (XSA-392)
+
 * Mon Sep 20 2021 Ross Lagerwall <ross.lagerwall@citrix.com> - 4.19.19-7.0.13
 - CA-358056: CVE-2021-3444: bpf: Fix truncation handling for mod32 dst reg wrt zero
 - CA-358059: CVE-2021-3600: bpf: Fix 32 bit src register truncation on div/mod
