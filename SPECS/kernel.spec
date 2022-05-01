@@ -437,6 +437,7 @@ Patch378: 0001-x86-timer-Don-t-skip-PIT-setup-when-APIC-is-disabled.patch
 Patch379: xsa392-linux-1.patch
 Patch380: xsa392-linux-2.patch
 Patch381: abi-version.patch
+Patch381: xen_dom0_64bit-efi.patch
 
 Provides: gitsha(ssh://git@code.citrite.net/XSU/linux-stable.git) = dffbba4348e9686d6bf42d54eb0f2cd1c4fb3520
 Provides: gitsha(ssh://git@code.citrite.net/XS/linux.pg.git) = 36ae6b3fc7679d819f05402b14b2fb74a31507b4
