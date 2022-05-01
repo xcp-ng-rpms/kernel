@@ -1,0 +1,44 @@
+
+Patch by Andrew Lindh <andrew@netplex.net>
+Patch code copied from Linux Kernel 5.17
+Code tested on NUC 11 UEFI 64 bit EFI-FB and Supermicro UEFI 32 bit EFI-FB
+
+--- a/include/xen/interface/xen.h	2019-01-31 07:14:42.000000000 +0000
++++ b/include/xen/interface/xen.h	2022-04-22 17:41:38.053055993 +0000
+@@ -737,6 +722,9 @@
+ 			uint32_t gbl_caps;
+ 			/* Mode attributes (offset 0x0, VESA command 0x4f01). */
+ 			uint16_t mode_attrs;
++			uint16_t pad;
++			/* high 32 bits of lfb_base */
++			uint32_t ext_lfb_base;
+ 		} vesa_lfb;
+ 	} u;
+ };
+--- a/arch/x86/xen/vga.c	2019-01-31 07:14:42.000000000 +0000
++++ b/arch/x86/xen/vga.c	2022-04-22 17:41:22.260930826 +0000
+@@ -57,16 +57,20 @@
+ 		screen_info->rsvd_size = info->u.vesa_lfb.rsvd_size;
+ 		screen_info->rsvd_pos = info->u.vesa_lfb.rsvd_pos;
+ 
++		if (size >= offsetof(struct dom0_vga_console_info,
++				     u.vesa_lfb.ext_lfb_base)
++		    + sizeof(info->u.vesa_lfb.ext_lfb_base)
++		    && info->u.vesa_lfb.ext_lfb_base) {
++			screen_info->ext_lfb_base = info->u.vesa_lfb.ext_lfb_base;
++			screen_info->capabilities |= VIDEO_CAPABILITY_64BIT_BASE;
++		}
++
+ 		if (info->video_type == XEN_VGATYPE_EFI_LFB) {
+ 			screen_info->orig_video_isVGA = VIDEO_TYPE_EFI;
+ 			break;
+ 		}
+ 
+ 		if (size >= offsetof(struct dom0_vga_console_info,
+-				     u.vesa_lfb.gbl_caps)
+-		    + sizeof(info->u.vesa_lfb.gbl_caps))
+-			screen_info->capabilities = info->u.vesa_lfb.gbl_caps;
+-		if (size >= offsetof(struct dom0_vga_console_info,
+ 				     u.vesa_lfb.mode_attrs)
+ 		    + sizeof(info->u.vesa_lfb.mode_attrs))
+ 			screen_info->vesa_attributes = info->u.vesa_lfb.mode_attrs;
