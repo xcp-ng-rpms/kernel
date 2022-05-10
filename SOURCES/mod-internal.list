@@ -15,6 +15,7 @@ soc-topology-test
 string-stream-test
 test_linear_ranges
 test_bits
+test_kasan
 locktorture
 mac80211_hwsim
 netdevsim
