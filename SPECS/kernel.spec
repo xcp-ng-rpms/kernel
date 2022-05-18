@@ -437,6 +437,7 @@ Patch378: 0001-x86-timer-Don-t-skip-PIT-setup-when-APIC-is-disabled.patch
 Patch379: xsa392-linux-1.patch
 Patch380: xsa392-linux-2.patch
 Patch381: abi-version.patch
+Patch382: xen_dom0_64bit-efi.patch
 
 Provides: gitsha(ssh://git@code.citrite.net/XSU/linux-stable.git) = dffbba4348e9686d6bf42d54eb0f2cd1c4fb3520
 Provides: gitsha(ssh://git@code.citrite.net/XS/linux.pg.git) = 36ae6b3fc7679d819f05402b14b2fb74a31507b4
@@ -749,6 +750,9 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Fri May 13 2022 Andrew Lindh <andrew@netplex.net>
+- Fix UEFI Dom0 boot EFIFB with 64 bit BAR from Xen (from kernel 5.17)
+
 * Thu Jan 13 2022 Samuel Verschelde <stormi-xcp@ylix.fr> - 4.19.19-7.0.14.1
 - Security update based on XS82E036 (XSA-392)
 - Remove new Citrix Commercial COPYING file that doesn't concern us (we don't ship their logo)
