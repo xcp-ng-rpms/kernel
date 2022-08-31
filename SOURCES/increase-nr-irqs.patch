@@ -1,0 +1,28 @@
+CA-341597: Increase NR_IRQS
+
+With many VMs, it is possible to hit the IRQ descriptor limit
+(IRQ_BITMAP_BITS) since each event channel consumes an IRQ descriptor.
+With our configuration:
+
+    IRQ_BITMAP_BITS = NR_IRQS + 8196
+    NR_IRQS = 64 * NR_CPUS + 256
+
+Increasing the per-CPU IRQ scaling from 64 to 512 increases
+IRQ_BITMAP_BITS from 12548 to 41220 which should be enough to
+achieve our current scalability limits.
+
+While it is possible to increase NR_CPUS to achieve a similar affect, this
+changes the kABI so it is not an option.
+diff --git a/arch/x86/include/asm/irq_vectors.h b/arch/x86/include/asm/irq_vectors.h
+index 548d90bbf919..315898de559b 100644
+--- a/arch/x86/include/asm/irq_vectors.h
++++ b/arch/x86/include/asm/irq_vectors.h
+@@ -127,7 +127,7 @@
+ 
+ #define NR_IRQS_LEGACY			16
+ 
+-#define CPU_VECTOR_LIMIT		(64 * NR_CPUS)
++#define CPU_VECTOR_LIMIT		(512 * NR_CPUS)
+ #define IO_APIC_VECTOR_LIMIT		(32 * MAX_IO_APICS)
+ 
+ #if defined(CONFIG_X86_IO_APIC) && defined(CONFIG_PCI_MSI)

@@ -1,0 +1,36 @@
+From eabe741782d5a52ce884dba4bab8825f977ab1eb Mon Sep 17 00:00:00 2001
+From: Juergen Gross <jgross@suse.com>
+Date: Thu, 22 Oct 2020 11:49:06 +0200
+Subject: [PATCH 14/14] xen/events: unmask a fifo event channel only if it was
+ masked
+
+Unmasking an event channel with fifo events channels being used can
+require a hypercall to be made, so try to avoid that by checking
+whether the event channel was really masked.
+
+Suggested-by: Jan Beulich <jbeulich@suse.com>
+Signed-off-by: Juergen Gross <jgross@suse.com>
+Reviewed-by: Jan Beulich <jbeulich@suse.com>
+Link: https://lore.kernel.org/r/20201022094907.28560-5-jgross@suse.com
+Signed-off-by: Boris Ostrovsky <boris.ostrovsky@oracle.com>
+---
+ drivers/xen/events/events_fifo.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/drivers/xen/events/events_fifo.c b/drivers/xen/events/events_fifo.c
+index 243e7b6d7b96..b234f1766810 100644
+--- a/drivers/xen/events/events_fifo.c
++++ b/drivers/xen/events/events_fifo.c
+@@ -237,6 +237,9 @@ static bool clear_masked_cond(volatile event_word_t *word)
+ 	w = *word;
+ 
+ 	do {
++		if (!(w & (1 << EVTCHN_FIFO_MASKED)))
++			return true;
++
+ 		if (w & (1 << EVTCHN_FIFO_PENDING))
+ 			return false;
+ 
+-- 
+2.21.1
+

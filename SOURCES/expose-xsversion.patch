@@ -46,21 +46,25 @@ index ef4012ec4375..8ce3e2bc86f1 100644
 +
  BUILD_SALT;
 diff --git a/scripts/mkcompile_h b/scripts/mkcompile_h
-index 87f1fc9801d7..5fd6058f9551 100755
+index 87f1fc9801d7..c9f992ec88d6 100755
 --- a/scripts/mkcompile_h
 +++ b/scripts/mkcompile_h
-@@ -33,6 +33,10 @@ else
+@@ -33,6 +33,14 @@ else
  	VERSION=$KBUILD_BUILD_VERSION
  fi
  
-+XS_VERSION=$(cat .xsversion 2>/dev/null || echo dev)
-+XS_BASE_COMMIT=$([ -f .gitarchive-info ] && awk '/Commit:/{print $2}' < .gitarchive-info || echo unknown)
-+XS_PQ_COMMIT=$([ -f .gitarchive-info-pq ] && awk '/Commit:/{print $2}' < .gitarchive-info-pq || echo unknown)
++if [ -f .xsversion ]; then
++    . ./.xsversion
++else
++    XS_VERSION=dev
++    XS_BASE_COMMIT=unknown
++    XS_PQ_COMMIT=unknown
++fi
 +
  if [ -z "$KBUILD_BUILD_TIMESTAMP" ]; then
  	TIMESTAMP=`date`
  else
-@@ -73,6 +77,10 @@ UTS_TRUNCATE="cut -b -$UTS_LEN"
+@@ -73,6 +81,10 @@ UTS_TRUNCATE="cut -b -$UTS_LEN"
    echo \#define LINUX_COMPILE_HOST \"`echo $LINUX_COMPILE_HOST | $UTS_TRUNCATE`\"
  
    echo \#define LINUX_COMPILER \"`$CC -v 2>&1 | grep ' version ' | sed 's/[[:space:]]*$//'`\"
