@@ -1,0 +1,59 @@
+From f084a4f4a14b97d2ad6e4bd6406933b2d39e6eca Mon Sep 17 00:00:00 2001
+From: Ross Lagerwall <ross.lagerwall@citrix.com>
+Date: Wed, 29 Apr 2020 13:15:41 +0100
+Subject: [PATCH 1/1] dlm: Switch to using wait_event()
+
+We saw an issue in a production server on a customer deployment where
+DLM 4.0.7 gets "stuck" and unable to join new lockspaces.
+
+There is no useful response for the dlm in do_event() if
+wait_event_interruptible() is interrupted, so switch to
+wait_event().
+
+Signed-off-by: Ross Lagerwall <ross.lagerwall@citrix.com>
+Signed-off-by: David Teigland <teigland@redhat.com>
+---
+ fs/dlm/lockspace.c | 18 ++++--------------
+ 1 file changed, 4 insertions(+), 14 deletions(-)
+
+diff --git a/fs/dlm/lockspace.c b/fs/dlm/lockspace.c
+index afb8340918b8..e93670ecfae5 100644
+--- a/fs/dlm/lockspace.c
++++ b/fs/dlm/lockspace.c
+@@ -197,8 +197,6 @@ static struct kset *dlm_kset;
+ 
+ static int do_uevent(struct dlm_ls *ls, int in)
+ {
+-	int error;
+-
+ 	if (in)
+ 		kobject_uevent(&ls->ls_kobj, KOBJ_ONLINE);
+ 	else
+@@ -209,20 +207,12 @@ static int do_uevent(struct dlm_ls *ls, int in)
+ 	/* dlm_controld will see the uevent, do the necessary group management
+ 	   and then write to sysfs to wake us */
+ 
+-	error = wait_event_interruptible(ls->ls_uevent_wait,
+-			test_and_clear_bit(LSFL_UEVENT_WAIT, &ls->ls_flags));
++	wait_event(ls->ls_uevent_wait,
++		   test_and_clear_bit(LSFL_UEVENT_WAIT, &ls->ls_flags));
+ 
+-	log_rinfo(ls, "group event done %d %d", error, ls->ls_uevent_result);
+-
+-	if (error)
+-		goto out;
++	log_rinfo(ls, "group event done %d", ls->ls_uevent_result);
+ 
+-	error = ls->ls_uevent_result;
+- out:
+-	if (error)
+-		log_error(ls, "group %s failed %d %d", in ? "join" : "leave",
+-			  error, ls->ls_uevent_result);
+-	return error;
++	return ls->ls_uevent_result;
+ }
+ 
+ static int dlm_uevent(struct kset *kset, struct kobject *kobj,
+-- 
+2.21.1
+

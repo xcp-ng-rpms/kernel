@@ -41,7 +41,7 @@ index 1d3002d773f7..e41d5e246c7e 100644
  
  struct phys_req {
 diff --git a/drivers/block/xen-blkback/xenbus.c b/drivers/block/xen-blkback/xenbus.c
-index a4bc74e72c39..f9222948e1b8 100644
+index dc954fbc664f..c31dc95a3513 100644
 --- a/drivers/block/xen-blkback/xenbus.c
 +++ b/drivers/block/xen-blkback/xenbus.c
 @@ -26,15 +26,6 @@
@@ -130,7 +130,7 @@ index a4bc74e72c39..f9222948e1b8 100644
  	return;
  }
  
-@@ -246,6 +272,14 @@ static int xen_blkif_disconnect(struct xen_blkif *blkif)
+@@ -245,6 +271,14 @@ static int xen_blkif_disconnect(struct xen_blkif *blkif)
  	struct pending_req *req, *n;
  	unsigned int j, r;
  	bool busy = false;
@@ -145,16 +145,16 @@ index a4bc74e72c39..f9222948e1b8 100644
  
  	for (r = 0; r < blkif->nr_rings; r++) {
  		struct xen_blkif_ring *ring = &blkif->rings[r];
-@@ -256,6 +290,9 @@ static int xen_blkif_disconnect(struct xen_blkif *blkif)
+@@ -255,6 +289,9 @@ static int xen_blkif_disconnect(struct xen_blkif *blkif)
  
  		if (ring->xenblkd) {
  			kthread_stop(ring->xenblkd);
 +			if (xspath)
 +				cleanup_xs_pid(xspath, xspathsize,
 +					       blkif->be->dev->nodename, r);
+ 			ring->xenblkd = NULL;
  			wake_up(&ring->shutdown_wq);
  		}
- 
 @@ -304,6 +341,7 @@ static int xen_blkif_disconnect(struct xen_blkif *blkif)
  		WARN_ON(i != (XEN_BLKIF_REQS_PER_PAGE * blkif->nr_ring_pages));
  		ring->active = false;
