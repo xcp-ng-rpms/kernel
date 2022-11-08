@@ -1,0 +1,36 @@
+# additional rpminspect configuration for this branch
+
+---
+inspections:
+    abidiff: off
+    addedfiles: off
+    badfuncs: off
+    changedfiles: off
+    kmidiff: off
+    kmod: off
+    manpage: off
+    movedfiles: off
+    permissions: off
+    removedfiles: off
+    rpmdeps: off
+    upstream: off
+
+elf:
+    ignore:
+        - /usr/libexec/ksamples/*
+        - /usr/libexec/kselftests/*
+
+emptyrpm:
+    expected_empty:
+        - kernel
+        - kernel-debug
+        - kernel-zfcpdump
+        - kernel-zfcpdump-modules
+
+patches:
+    ignore_list:
+        - linux-kernel-test.patch
+
+types:
+    ignore:
+        - /usr/src/kernel/*

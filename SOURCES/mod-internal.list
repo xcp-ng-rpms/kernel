@@ -16,6 +16,10 @@ string-stream-test
 test_linear_ranges
 test_bits
 test_kasan
+fat_test
+test_list_sort
+slub_kunit
+memcpy_kunit
 locktorture
 mac80211_hwsim
 netdevsim
@@ -35,3 +39,6 @@ test_klp_shadow_vars
 test_klp_state
 test_klp_state2
 test_klp_state3
+test_hmm
+test_vmalloc
+mtty
