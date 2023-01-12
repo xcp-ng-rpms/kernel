@@ -90,6 +90,7 @@
 0xd979a547	__x86_indirect_thunk_rdi	vmlinux	EXPORT_SYMBOL
 0xb601be4c	__x86_indirect_thunk_rdx	vmlinux	EXPORT_SYMBOL
 0xa1f9a134	__x86_indirect_thunk_rsi	vmlinux	EXPORT_SYMBOL
+0x9262d817	__x86_paravirt_patch_template	vmlinux	EXPORT_SYMBOL_GPL
 0xcf4fdd4d	_atomic_dec_and_lock	vmlinux	EXPORT_SYMBOL
 0xa1c76e0a	_cond_resched	vmlinux	EXPORT_SYMBOL
 0x362ef408	_copy_from_user	vmlinux	EXPORT_SYMBOL
