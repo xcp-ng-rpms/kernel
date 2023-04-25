@@ -22,7 +22,7 @@
 Name: kernel
 License: GPLv2
 Version: 4.19.19
-Release: 7.0.15.1%{?dist}
+Release: 7.0.15.1.0.fixnetregression.1%{?dist}
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
@@ -485,6 +485,9 @@ Patch426: xsa423-linux.patch
 Patch427: xsa424-linux.patch
 Patch428: abi-version.patch
 
+# XCP-ng patches
+Patch1000: xen-netback-dont-do-grant-copy-across-page-boundary.backport.patch
+
 Provides: gitsha(ssh://git@code.citrite.net/XSU/linux-stable.git) = dffbba4348e9686d6bf42d54eb0f2cd1c4fb3520
 Provides: gitsha(ssh://git@code.citrite.net/XS/linux.pg.git) = 5767fb29836f60ca86404d14714305d8c57621dc
 
@@ -796,6 +799,9 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Tue Apr 25 2023 Samuel Verschelde <stormi-xcp@ylix.fr> - 4.19.19-7.0.15.1.0.fixnetregression.1
+- Add xen-netback-dont-do-grant-copy-across-page-boundary.backport.patch
+
 * Mon Dec 19 2022 Samuel Verschelde <stormi-xcp@ylix.fr> - 4.19.19-7.0.15.1
 - Security update based on XS82ECU1024
 - *** Upstream changelog ***
