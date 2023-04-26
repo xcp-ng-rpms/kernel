@@ -22,7 +22,7 @@
 Name: kernel
 License: GPLv2
 Version: 4.19.19
-Release: 7.0.15.1%{?dist}
+Release: 7.0.15.1.0.noxsa423.1%{?dist}
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
@@ -481,7 +481,7 @@ Patch422: 0001-xen-blkfront-fix-leaking-data-in-shared-pages.patch
 Patch423: 0002-xen-netfront-fix-leaking-data-in-shared-pages.patch
 Patch424: 0003-xen-netfront-force-data-bouncing-when-backend-is-unt.patch
 Patch425: 0004-xen-blkfront-force-data-bouncing-when-backend-is-unt.patch
-Patch426: xsa423-linux.patch
+#Patch426: xsa423-linux.patch
 Patch427: xsa424-linux.patch
 Patch428: abi-version.patch
 
@@ -796,6 +796,9 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Wed Apr 26 2023 Samuel Verschelde <stormi-xcp@ylix.fr> - 4.19.19-7.0.15.1.0.noxsa423.1
+- Build without XSA-423 to try and troubleshoot a network issue
+
 * Mon Dec 19 2022 Samuel Verschelde <stormi-xcp@ylix.fr> - 4.19.19-7.0.15.1
 - Security update based on XS82ECU1024
 - *** Upstream changelog ***
