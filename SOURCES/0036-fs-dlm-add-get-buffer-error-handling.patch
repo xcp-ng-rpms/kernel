@@ -1,0 +1,37 @@
+From 692f51c8cbe752cb16ea2a75016ea0a497d00b1c Mon Sep 17 00:00:00 2001
+From: Alexander Aring <aahringo@redhat.com>
+Date: Mon, 2 Nov 2020 20:04:18 -0500
+Subject: [PATCH 36/36] fs: dlm: add get buffer error handling
+
+This patch adds an error handling to the get buffer functionality if the
+user is requesting a buffer length which is more than possible of
+the internal buffer allocator. This should never happen because specific
+handling decided by compile time, but will warn if somebody forget about
+to handle this limitation right.
+
+Signed-off-by: Alexander Aring <aahringo@redhat.com>
+Signed-off-by: David Teigland <teigland@redhat.com>
+---
+ fs/dlm/lowcomms.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/fs/dlm/lowcomms.c b/fs/dlm/lowcomms.c
+index 77382c2ce6da..620eca3979d5 100644
+--- a/fs/dlm/lowcomms.c
++++ b/fs/dlm/lowcomms.c
+@@ -1352,6 +1352,12 @@ void *dlm_lowcomms_get_buffer(int nodeid, int len, gfp_t allocation, char **ppc)
+ 	struct writequeue_entry *e;
+ 	int offset = 0;
+ 
++	if (len > LOWCOMMS_MAX_TX_BUFFER_LEN) {
++		BUILD_BUG_ON(PAGE_SIZE < LOWCOMMS_MAX_TX_BUFFER_LEN);
++		log_print("failed to allocate a buffer of size %d", len);
++		return NULL;
++	}
++
+ 	con = nodeid2con(nodeid, allocation);
+ 	if (!con)
+ 		return NULL;
+-- 
+2.31.1
+

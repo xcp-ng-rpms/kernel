@@ -1,0 +1,66 @@
+From e1a7cbce53f6524e28421b980464a36f0fa9631c Mon Sep 17 00:00:00 2001
+From: Alexander Aring <aahringo@redhat.com>
+Date: Mon, 1 Mar 2021 17:05:15 -0500
+Subject: [PATCH 54/54] fs: dlm: use GFP_ZERO for page buffer
+
+This patch uses GFP_ZERO for allocate a page for the internal dlm
+sending buffer allocator instead of calling memset zero after every
+allocation. An already allocated space will never be reused again.
+
+Signed-off-by: Alexander Aring <aahringo@redhat.com>
+Signed-off-by: David Teigland <teigland@redhat.com>
+---
+ fs/dlm/lock.c     | 2 --
+ fs/dlm/lowcomms.c | 2 +-
+ fs/dlm/rcom.c     | 2 --
+ 3 files changed, 1 insertion(+), 5 deletions(-)
+
+diff --git a/fs/dlm/lock.c b/fs/dlm/lock.c
+index 002123efc6b0..b93df39d0915 100644
+--- a/fs/dlm/lock.c
++++ b/fs/dlm/lock.c
+@@ -3541,8 +3541,6 @@ static int _create_message(struct dlm_ls *ls, int mb_len,
+ 	if (!mh)
+ 		return -ENOBUFS;
+ 
+-	memset(mb, 0, mb_len);
+-
+ 	ms = (struct dlm_message *) mb;
+ 
+ 	ms->m_header.h_version = (DLM_HEADER_MAJOR | DLM_HEADER_MINOR);
+diff --git a/fs/dlm/lowcomms.c b/fs/dlm/lowcomms.c
+index 206bd30feb29..97d0c93dd644 100644
+--- a/fs/dlm/lowcomms.c
++++ b/fs/dlm/lowcomms.c
+@@ -1355,7 +1355,7 @@ static struct writequeue_entry *new_writequeue_entry(struct connection *con,
+ 	if (!entry)
+ 		return NULL;
+ 
+-	entry->page = alloc_page(allocation);
++	entry->page = alloc_page(allocation | __GFP_ZERO);
+ 	if (!entry->page) {
+ 		kfree(entry);
+ 		return NULL;
+diff --git a/fs/dlm/rcom.c b/fs/dlm/rcom.c
+index 73ddee5159d7..f5b1bd65728d 100644
+--- a/fs/dlm/rcom.c
++++ b/fs/dlm/rcom.c
+@@ -41,7 +41,6 @@ static int create_rcom(struct dlm_ls *ls, int to_nodeid, int type, int len,
+ 			  to_nodeid, type, len);
+ 		return -ENOBUFS;
+ 	}
+-	memset(mb, 0, mb_len);
+ 
+ 	rc = (struct dlm_rcom *) mb;
+ 
+@@ -462,7 +461,6 @@ int dlm_send_ls_not_ready(int nodeid, struct dlm_rcom *rc_in)
+ 	mh = dlm_lowcomms_get_buffer(nodeid, mb_len, GFP_NOFS, &mb);
+ 	if (!mh)
+ 		return -ENOBUFS;
+-	memset(mb, 0, mb_len);
+ 
+ 	rc = (struct dlm_rcom *) mb;
+ 
+-- 
+2.31.1
+

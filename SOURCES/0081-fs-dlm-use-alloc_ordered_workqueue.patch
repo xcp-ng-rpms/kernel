@@ -1,0 +1,40 @@
+From 6c6a1cc666956cbb3ac6db79ed401ee027e6f950 Mon Sep 17 00:00:00 2001
+From: Alexander Aring <aahringo@redhat.com>
+Date: Wed, 2 Jun 2021 09:45:17 -0400
+Subject: [PATCH 81/81] fs: dlm: use alloc_ordered_workqueue
+
+The proper way to allocate ordered workqueues is to use
+alloc_ordered_workqueue() function. The current way implies an ordered
+workqueue which is also required by dlm.
+
+Signed-off-by: Alexander Aring <aahringo@redhat.com>
+Signed-off-by: David Teigland <teigland@redhat.com>
+---
+ fs/dlm/lowcomms.c | 6 ++----
+ 1 file changed, 2 insertions(+), 4 deletions(-)
+
+diff --git a/fs/dlm/lowcomms.c b/fs/dlm/lowcomms.c
+index b71f7eafb808..02b636d113fb 100644
+--- a/fs/dlm/lowcomms.c
++++ b/fs/dlm/lowcomms.c
+@@ -1816,15 +1816,13 @@ static void work_stop(void)
+ 
+ static int work_start(void)
+ {
+-	recv_workqueue = alloc_workqueue("dlm_recv",
+-					 WQ_UNBOUND | WQ_MEM_RECLAIM, 1);
++	recv_workqueue = alloc_ordered_workqueue("dlm_recv", WQ_MEM_RECLAIM);
+ 	if (!recv_workqueue) {
+ 		log_print("can't start dlm_recv");
+ 		return -ENOMEM;
+ 	}
+ 
+-	send_workqueue = alloc_workqueue("dlm_send",
+-					 WQ_UNBOUND | WQ_MEM_RECLAIM, 1);
++	send_workqueue = alloc_ordered_workqueue("dlm_send", WQ_MEM_RECLAIM);
+ 	if (!send_workqueue) {
+ 		log_print("can't start dlm_send");
+ 		destroy_workqueue(recv_workqueue);
+-- 
+2.31.1
+

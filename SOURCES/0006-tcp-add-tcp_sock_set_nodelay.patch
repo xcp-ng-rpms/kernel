@@ -1,0 +1,121 @@
+From 12abc5ee7873a085cc280240822b8ac53c86fecd Mon Sep 17 00:00:00 2001
+From: Christoph Hellwig <hch@lst.de>
+Date: Thu, 28 May 2020 07:12:19 +0200
+Subject: [PATCH 6/6] tcp: add tcp_sock_set_nodelay
+
+Add a helper to directly set the TCP_NODELAY sockopt from kernel space
+without going through a fake uaccess.  Cleanup the callers to avoid
+pointless wrappers now that this is a simple function call.
+
+Signed-off-by: Christoph Hellwig <hch@lst.de>
+Acked-by: Sagi Grimberg <sagi@grimberg.me>
+Acked-by: Jason Gunthorpe <jgg@mellanox.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+diff --git a/fs/dlm/lowcomms.c b/fs/dlm/lowcomms.c
+index 4f58eaa0637f..5cf384eb0092 100644
+--- a/fs/dlm/lowcomms.c
++++ b/fs/dlm/lowcomms.c
+@@ -1013,7 +1013,6 @@ static void tcp_connect_to_sock(struct connection *con)
+ 	struct sockaddr_storage saddr, src_addr;
+ 	int addr_len;
+ 	struct socket *sock = NULL;
+-	int one = 1;
+ 	int result;
+ 
+ 	if (con->nodeid == 0) {
+@@ -1062,8 +1061,7 @@ static void tcp_connect_to_sock(struct connection *con)
+ 	log_print("connecting to %d", con->nodeid);
+ 
+ 	/* Turn off Nagle's algorithm */
+-	kernel_setsockopt(sock, SOL_TCP, TCP_NODELAY, (char *)&one,
+-			  sizeof(one));
++	tcp_sock_set_nodelay(sock->sk);
+ 
+ 	result = sock->ops->connect(sock, (struct sockaddr *)&saddr, addr_len,
+ 				   O_NONBLOCK);
+@@ -1105,7 +1103,6 @@ static struct socket *tcp_create_listen_sock(struct connection *con,
+ {
+ 	struct socket *sock = NULL;
+ 	int result = 0;
+-	int one = 1;
+ 	int addr_len;
+ 
+ 	if (dlm_local_addr[0]->ss_family == AF_INET)
+@@ -1122,8 +1119,7 @@ static struct socket *tcp_create_listen_sock(struct connection *con,
+ 	}
+ 
+ 	/* Turn off Nagle's algorithm */
+-	kernel_setsockopt(sock, SOL_TCP, TCP_NODELAY, (char *)&one,
+-			  sizeof(one));
++	tcp_sock_set_nodelay(sock->sk);
+ 
+ 	sock_set_reuseaddr(sock->sk);
+ 
+diff --git a/include/linux/tcp.h b/include/linux/tcp.h
+index 4374196b98ea..f661e5804731 100644
+--- a/include/linux/tcp.h
++++ b/include/linux/tcp.h
+@@ -489,4 +489,6 @@ static inline u16 tcp_mss_clamp(const struct tcp_sock *tp, u16 mss)
+ int tcp_skb_shift(struct sk_buff *to, struct sk_buff *from, int pcount,
+ 		  int shiftlen);
+ 
++void tcp_sock_set_nodelay(struct sock *sk);
++
+ #endif	/* _LINUX_TCP_H */
+diff --git a/net/ipv4/tcp.c b/net/ipv4/tcp.c
+index aaa6bc2a762d..e03da0de9dea 100644
+--- a/net/ipv4/tcp.c
++++ b/net/ipv4/tcp.c
+@@ -2697,6 +2697,30 @@ static int tcp_repair_options_est(struct sock *sk,
+ 	return 0;
+ }
+ 
++/* TCP_NODELAY is weaker than TCP_CORK, so that this option on corked socket is
++ * remembered, but it is not activated until cork is cleared.
++ *
++ * However, when TCP_NODELAY is set we make an explicit push, which overrides
++ * even TCP_CORK for currently queued segments.
++ */
++static void __tcp_sock_set_nodelay(struct sock *sk, bool on)
++{
++	if (on) {
++		tcp_sk(sk)->nonagle |= TCP_NAGLE_OFF|TCP_NAGLE_PUSH;
++		tcp_push_pending_frames(sk);
++	} else {
++		tcp_sk(sk)->nonagle &= ~TCP_NAGLE_OFF;
++	}
++}
++
++void tcp_sock_set_nodelay(struct sock *sk)
++{
++	lock_sock(sk);
++	__tcp_sock_set_nodelay(sk, true);
++	release_sock(sk);
++}
++EXPORT_SYMBOL(tcp_sock_set_nodelay);
++
+ /*
+  *	Socket option code for TCP.
+  */
+@@ -2784,20 +2808,7 @@ static int do_tcp_setsockopt(struct sock *sk, int level,
+ 		break;
+ 
+ 	case TCP_NODELAY:
+-		if (val) {
+-			/* TCP_NODELAY is weaker than TCP_CORK, so that
+-			 * this option on corked socket is remembered, but
+-			 * it is not activated until cork is cleared.
+-			 *
+-			 * However, when TCP_NODELAY is set we make
+-			 * an explicit push, which overrides even TCP_CORK
+-			 * for currently queued segments.
+-			 */
+-			tp->nonagle |= TCP_NAGLE_OFF|TCP_NAGLE_PUSH;
+-			tcp_push_pending_frames(sk);
+-		} else {
+-			tp->nonagle &= ~TCP_NAGLE_OFF;
+-		}
++		__tcp_sock_set_nodelay(sk, val);
+ 		break;
+ 
+ 	case TCP_THIN_LINEAR_TIMEOUTS:

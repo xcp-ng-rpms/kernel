@@ -1,0 +1,211 @@
+From 5b2f981fde8b0dbf0bfa117bb4322342fcfb7174 Mon Sep 17 00:00:00 2001
+From: Alexander Aring <aahringo@redhat.com>
+Date: Fri, 21 May 2021 15:08:47 -0400
+Subject: [PATCH 75/75] fs: dlm: add midcomms debugfs functionality
+
+This patch adds functionality to debug midcomms per connection state
+inside a comms directory which is similar like dlm configfs. Currently
+there exists the possibility to read out two attributes which is the
+send queue counter and the version of each midcomms node state.
+
+Signed-off-by: Alexander Aring <aahringo@redhat.com>
+Signed-off-by: David Teigland <teigland@redhat.com>
+---
+ fs/dlm/debug_fs.c     | 54 +++++++++++++++++++++++++++++++++++++++++++
+ fs/dlm/dlm_internal.h |  4 ++++
+ fs/dlm/midcomms.c     | 27 ++++++++++++++++++++++
+ fs/dlm/midcomms.h     |  6 +++++
+ 4 files changed, 91 insertions(+)
+
+diff --git a/fs/dlm/debug_fs.c b/fs/dlm/debug_fs.c
+index d5bd990bcab8..47e9d57e4cae 100644
+--- a/fs/dlm/debug_fs.c
++++ b/fs/dlm/debug_fs.c
+@@ -16,6 +16,7 @@
+ #include <linux/slab.h>
+ 
+ #include "dlm_internal.h"
++#include "midcomms.h"
+ #include "lock.h"
+ 
+ #define DLM_DEBUG_BUF_LEN 4096
+@@ -23,6 +24,7 @@ static char debug_buf[DLM_DEBUG_BUF_LEN];
+ static struct mutex debug_buf_lock;
+ 
+ static struct dentry *dlm_root;
++static struct dentry *dlm_comms;
+ 
+ static char *print_lockmode(int mode)
+ {
+@@ -738,6 +740,57 @@ void dlm_delete_debug_file(struct dlm_ls *ls)
+ 	debugfs_remove(ls->ls_debug_toss_dentry);
+ }
+ 
++static int dlm_state_show(struct seq_file *file, void *offset)
++{
++	seq_printf(file, "%s\n", dlm_midcomms_state(file->private));
++	return 0;
++}
++DEFINE_SHOW_ATTRIBUTE(dlm_state);
++
++static int dlm_flags_show(struct seq_file *file, void *offset)
++{
++	seq_printf(file, "%lu\n", dlm_midcomms_flags(file->private));
++	return 0;
++}
++DEFINE_SHOW_ATTRIBUTE(dlm_flags);
++
++static int dlm_send_queue_cnt_show(struct seq_file *file, void *offset)
++{
++	seq_printf(file, "%d\n", dlm_midcomms_send_queue_cnt(file->private));
++	return 0;
++}
++DEFINE_SHOW_ATTRIBUTE(dlm_send_queue_cnt);
++
++static int dlm_version_show(struct seq_file *file, void *offset)
++{
++	seq_printf(file, "0x%08x\n", dlm_midcomms_version(file->private));
++	return 0;
++}
++DEFINE_SHOW_ATTRIBUTE(dlm_version);
++
++void *dlm_create_debug_comms_file(int nodeid, void *data)
++{
++	struct dentry *d_node;
++	char name[256];
++
++	memset(name, 0, sizeof(name));
++	snprintf(name, 256, "%d", nodeid);
++
++	d_node = debugfs_create_dir(name, dlm_comms);
++	debugfs_create_file("state", 0444, d_node, data, &dlm_state_fops);
++	debugfs_create_file("flags", 0444, d_node, data, &dlm_flags_fops);
++	debugfs_create_file("send_queue_count", 0444, d_node, data,
++			    &dlm_send_queue_cnt_fops);
++	debugfs_create_file("version", 0444, d_node, data, &dlm_version_fops);
++
++	return d_node;
++}
++
++void dlm_delete_debug_comms_file(void *ctx)
++{
++	debugfs_remove(ctx);
++}
++
+ void dlm_create_debug_file(struct dlm_ls *ls)
+ {
+ 	char name[DLM_LOCKSPACE_LEN + 8];
+@@ -797,6 +850,7 @@ void __init dlm_register_debugfs(void)
+ {
+ 	mutex_init(&debug_buf_lock);
+ 	dlm_root = debugfs_create_dir("dlm", NULL);
++	dlm_comms = debugfs_create_dir("comms", dlm_root);
+ }
+ 
+ void dlm_unregister_debugfs(void)
+diff --git a/fs/dlm/dlm_internal.h b/fs/dlm/dlm_internal.h
+index 40917c878370..91d1ca3a121a 100644
+--- a/fs/dlm/dlm_internal.h
++++ b/fs/dlm/dlm_internal.h
+@@ -754,11 +754,15 @@ void dlm_register_debugfs(void);
+ void dlm_unregister_debugfs(void);
+ void dlm_create_debug_file(struct dlm_ls *ls);
+ void dlm_delete_debug_file(struct dlm_ls *ls);
++void *dlm_create_debug_comms_file(int nodeid, void *data);
++void dlm_delete_debug_comms_file(void *ctx);
+ #else
+ static inline void dlm_register_debugfs(void) { }
+ static inline void dlm_unregister_debugfs(void) { }
+ static inline void dlm_create_debug_file(struct dlm_ls *ls) { }
+ static inline void dlm_delete_debug_file(struct dlm_ls *ls) { }
++static inline void *dlm_create_debug_comms_file(int nodeid, void *data) { return NULL; }
++static inline void dlm_delete_debug_comms_file(void *ctx) { }
+ #endif
+ 
+ #endif				/* __DLM_INTERNAL_DOT_H__ */
+diff --git a/fs/dlm/midcomms.c b/fs/dlm/midcomms.c
+index eef3938a363e..35664950f6b7 100644
+--- a/fs/dlm/midcomms.c
++++ b/fs/dlm/midcomms.c
+@@ -189,6 +189,9 @@ struct midcomms_node {
+ 	 */
+ 	int users;
+ 
++	/* not protected by srcu, node_hash lifetime */
++	void *debugfs;
++
+ 	struct hlist_node hlist;
+ 	struct rcu_head rcu;
+ };
+@@ -244,6 +247,26 @@ static inline const char *dlm_state_str(int state)
+ 	}
+ }
+ 
++const char *dlm_midcomms_state(struct midcomms_node *node)
++{
++	return dlm_state_str(node->state);
++}
++
++unsigned long dlm_midcomms_flags(struct midcomms_node *node)
++{
++	return node->flags;
++}
++
++int dlm_midcomms_send_queue_cnt(struct midcomms_node *node)
++{
++	return atomic_read(&node->send_queue_cnt);
++}
++
++uint32_t dlm_midcomms_version(struct midcomms_node *node)
++{
++	return node->version;
++}
++
+ static struct midcomms_node *__find_node(int nodeid, int r)
+ {
+ 	struct midcomms_node *node;
+@@ -332,6 +355,8 @@ static struct midcomms_node *nodeid2node(int nodeid, gfp_t alloc)
+ 
+ 	hlist_add_head_rcu(&node->hlist, &node_hash[r]);
+ 	spin_unlock(&nodes_lock);
++
++	node->debugfs = dlm_create_debug_comms_file(nodeid, node);
+ 	return node;
+ }
+ 
+@@ -1285,6 +1310,8 @@ void dlm_midcomms_shutdown(void)
+ 		hlist_for_each_entry_rcu(node, &node_hash[i], hlist) {
+ 			midcomms_shutdown(node);
+ 
++			dlm_delete_debug_comms_file(node->debugfs);
++
+ 			spin_lock(&nodes_lock);
+ 			hlist_del_rcu(&node->hlist);
+ 			spin_unlock(&nodes_lock);
+diff --git a/fs/dlm/midcomms.h b/fs/dlm/midcomms.h
+index 1178b836315b..579abc6929be 100644
+--- a/fs/dlm/midcomms.h
++++ b/fs/dlm/midcomms.h
+@@ -12,6 +12,8 @@
+ #ifndef __MIDCOMMS_DOT_H__
+ #define __MIDCOMMS_DOT_H__
+ 
++struct midcomms_node;
++
+ int dlm_process_incoming_buffer(int nodeid, unsigned char *buf, int buflen);
+ struct dlm_mhandle *dlm_midcomms_get_mhandle(int nodeid, int len,
+ 					     gfp_t allocation, char **ppc);
+@@ -22,6 +24,10 @@ void dlm_midcomms_shutdown(void);
+ void dlm_midcomms_add_member(int nodeid);
+ void dlm_midcomms_remove_member(int nodeid);
+ void dlm_midcomms_unack_msg_resend(int nodeid);
++const char *dlm_midcomms_state(struct midcomms_node *node);
++unsigned long dlm_midcomms_flags(struct midcomms_node *node);
++int dlm_midcomms_send_queue_cnt(struct midcomms_node *node);
++uint32_t dlm_midcomms_version(struct midcomms_node *node);
+ 
+ #endif				/* __MIDCOMMS_DOT_H__ */
+ 
+-- 
+2.31.1
+

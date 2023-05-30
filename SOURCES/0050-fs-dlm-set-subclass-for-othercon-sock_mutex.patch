@@ -1,0 +1,39 @@
+From e9a470acd930574be812663708dfad6f6f94d80a Mon Sep 17 00:00:00 2001
+From: Alexander Aring <aahringo@redhat.com>
+Date: Mon, 1 Mar 2021 17:05:11 -0500
+Subject: [PATCH 50/50] fs: dlm: set subclass for othercon sock_mutex
+
+This patch sets the lockdep subclass for the othercon socket mutex. In
+various places the connection socket mutex is held while locking the
+othercon socket mutex. This patch will remove lockdep warnings when such
+case occurs.
+
+Signed-off-by: Alexander Aring <aahringo@redhat.com>
+Signed-off-by: David Teigland <teigland@redhat.com>
+---
+ fs/dlm/lowcomms.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/fs/dlm/lowcomms.c b/fs/dlm/lowcomms.c
+index f169e35d19f4..ca9bf54b94a9 100644
+--- a/fs/dlm/lowcomms.c
++++ b/fs/dlm/lowcomms.c
+@@ -934,13 +934,14 @@ static int accept_from_sock(struct listen_connection *con)
+ 				goto accept_err;
+ 			}
+ 
++			lockdep_set_subclass(&othercon->sock_mutex, 1);
+ 			newcon->othercon = othercon;
+ 		} else {
+ 			/* close other sock con if we have something new */
+ 			close_connection(othercon, false, true, false);
+ 		}
+ 
+-		mutex_lock_nested(&othercon->sock_mutex, 1);
++		mutex_lock(&othercon->sock_mutex);
+ 		add_sock(newsock, othercon);
+ 		addcon = othercon;
+ 		mutex_unlock(&othercon->sock_mutex);
+-- 
+2.31.1
+
