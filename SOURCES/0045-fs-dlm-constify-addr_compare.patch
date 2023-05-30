@@ -1,0 +1,31 @@
+From 40c6b83e5a07d1dc3952a5ad040eb1c7c966c4fe Mon Sep 17 00:00:00 2001
+From: Alexander Aring <aahringo@redhat.com>
+Date: Mon, 2 Nov 2020 20:04:27 -0500
+Subject: [PATCH 45/45] fs: dlm: constify addr_compare
+
+This patch just constify some function parameter which should be have a
+read access only.
+
+Signed-off-by: Alexander Aring <aahringo@redhat.com>
+Signed-off-by: David Teigland <teigland@redhat.com>
+---
+ fs/dlm/lowcomms.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/fs/dlm/lowcomms.c b/fs/dlm/lowcomms.c
+index f7e86791a082..7f85594b663a 100644
+--- a/fs/dlm/lowcomms.c
++++ b/fs/dlm/lowcomms.c
+@@ -274,7 +274,8 @@ static struct dlm_node_addr *find_node_addr(int nodeid)
+ 	return NULL;
+ }
+ 
+-static int addr_compare(struct sockaddr_storage *x, struct sockaddr_storage *y)
++static int addr_compare(const struct sockaddr_storage *x,
++			const struct sockaddr_storage *y)
+ {
+ 	switch (x->ss_family) {
+ 	case AF_INET: {
+-- 
+2.31.1
+

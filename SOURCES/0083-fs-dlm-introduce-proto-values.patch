@@ -1,0 +1,97 @@
+From ac7d5d036dc93710971f532ed57f9a6858a2b262 Mon Sep 17 00:00:00 2001
+From: Alexander Aring <aahringo@redhat.com>
+Date: Wed, 2 Jun 2021 09:45:19 -0400
+Subject: [PATCH 83/83] fs: dlm: introduce proto values
+
+Currently the dlm protocol values are that TCP is 0 and everything else
+is SCTP. This makes it difficult to introduce possible other transport
+layers. The only one user space tool dlm_controld, which I am aware of,
+handles the protocol value 1 for SCTP. We change it now to handle SCTP
+as 1, this will break user space API but it will fix it so we can add
+possible other transport layers.
+
+Signed-off-by: Alexander Aring <aahringo@redhat.com>
+Signed-off-by: David Teigland <teigland@redhat.com>
+---
+ fs/dlm/config.c   |  2 +-
+ fs/dlm/config.h   |  3 +++
+ fs/dlm/lowcomms.c | 23 +++++++++++++++++++----
+ 3 files changed, 23 insertions(+), 5 deletions(-)
+
+diff --git a/fs/dlm/config.c b/fs/dlm/config.c
+index db717a879537..c91c1c73ed9d 100644
+--- a/fs/dlm/config.c
++++ b/fs/dlm/config.c
+@@ -952,7 +952,7 @@ int dlm_our_addr(struct sockaddr_storage *addr, int num)
+ #define DEFAULT_SCAN_SECS          5
+ #define DEFAULT_LOG_DEBUG          0
+ #define DEFAULT_LOG_INFO           1
+-#define DEFAULT_PROTOCOL           0
++#define DEFAULT_PROTOCOL           DLM_PROTO_TCP
+ #define DEFAULT_MARK               0
+ #define DEFAULT_TIMEWARN_CS      500 /* 5 sec = 500 centiseconds */
+ #define DEFAULT_WAITWARN_US	   0
+diff --git a/fs/dlm/config.h b/fs/dlm/config.h
+index d2cd4bd20313..00374b45c748 100644
+--- a/fs/dlm/config.h
++++ b/fs/dlm/config.h
+@@ -23,6 +23,9 @@ struct dlm_config_node {
+ 
+ #define DLM_MAX_ADDR_COUNT 3
+ 
++#define DLM_PROTO_TCP	0
++#define DLM_PROTO_SCTP	1
++
+ struct dlm_config_info {
+ 	int ci_tcp_port;
+ 	int ci_buffer_size;
+diff --git a/fs/dlm/lowcomms.c b/fs/dlm/lowcomms.c
+index 6b150e3aa30c..f2a3b0401b9c 100644
+--- a/fs/dlm/lowcomms.c
++++ b/fs/dlm/lowcomms.c
+@@ -208,12 +208,18 @@ static int dlm_con_init(struct connection *con, int nodeid)
+ 	INIT_WORK(&con->rwork, process_recv_sockets);
+ 	init_waitqueue_head(&con->shutdown_wait);
+ 
+-	if (dlm_config.ci_protocol == 0) {
++	switch (dlm_config.ci_protocol) {
++	case DLM_PROTO_TCP:
+ 		con->connect_action = tcp_connect_to_sock;
+ 		con->shutdown_action = dlm_tcp_shutdown;
+ 		con->eof_condition = tcp_eof_condition;
+-	} else {
++		break;
++	case DLM_PROTO_SCTP:
+ 		con->connect_action = sctp_connect_to_sock;
++		break;
++	default:
++		kfree(con->rx_buf);
++		return -EINVAL;
+ 	}
+ 
+ 	return 0;
+@@ -1968,10 +1974,19 @@ int dlm_lowcomms_start(void)
+ 	dlm_allow_conn = 1;
+ 
+ 	/* Start listening */
+-	if (dlm_config.ci_protocol == 0)
++	switch (dlm_config.ci_protocol) {
++	case DLM_PROTO_TCP:
+ 		error = tcp_listen_for_all();
+-	else
++		break;
++	case DLM_PROTO_SCTP:
+ 		error = sctp_listen_for_all(&listen_con);
++		break;
++	default:
++		log_print("Invalid protocol identifier %d set",
++			  dlm_config.ci_protocol);
++		error = -EINVAL;
++		break;
++	}
+ 	if (error)
+ 		goto fail_unlisten;
+ 
+-- 
+2.31.1
+

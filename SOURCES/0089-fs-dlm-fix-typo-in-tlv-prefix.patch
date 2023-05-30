@@ -1,0 +1,31 @@
+From b892e4792c992a0d5a272c3bdd6155bf772acfa7 Mon Sep 17 00:00:00 2001
+From: Alexander Aring <aahringo@redhat.com>
+Date: Fri, 16 Jul 2021 16:22:36 -0400
+Subject: [PATCH 89/89] fs: dlm: fix typo in tlv prefix
+
+This patch fixes a small typo in a unused struct field. It should named
+be t_pad instead of o_pad. Came over this as I updated wireshark
+dissector.
+
+Signed-off-by: Alexander Aring <aahringo@redhat.com>
+Signed-off-by: David Teigland <teigland@redhat.com>
+---
+ fs/dlm/dlm_internal.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/fs/dlm/dlm_internal.h b/fs/dlm/dlm_internal.h
+index 91d1ca3a121a..5f57538b5d45 100644
+--- a/fs/dlm/dlm_internal.h
++++ b/fs/dlm/dlm_internal.h
+@@ -468,7 +468,7 @@ struct dlm_rcom {
+ struct dlm_opt_header {
+ 	uint16_t	t_type;
+ 	uint16_t	t_length;
+-	uint32_t	o_pad;
++	uint32_t	t_pad;
+ 	/* need to be 8 byte aligned */
+ 	char		t_value[];
+ };
+-- 
+2.31.1
+

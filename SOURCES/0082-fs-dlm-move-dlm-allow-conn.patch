@@ -1,0 +1,42 @@
+From 9a4139a79403161f190cf30be7d89ac877ae3b12 Mon Sep 17 00:00:00 2001
+From: Alexander Aring <aahringo@redhat.com>
+Date: Wed, 2 Jun 2021 09:45:18 -0400
+Subject: [PATCH 82/82] fs: dlm: move dlm allow conn
+
+This patch checks if possible allowing new connections is allowed before
+queueing the listen socket to accept new connections.
+
+Signed-off-by: Alexander Aring <aahringo@redhat.com>
+Signed-off-by: David Teigland <teigland@redhat.com>
+---
+ fs/dlm/lowcomms.c | 7 +++----
+ 1 file changed, 3 insertions(+), 4 deletions(-)
+
+diff --git a/fs/dlm/lowcomms.c b/fs/dlm/lowcomms.c
+index 02b636d113fb..6b150e3aa30c 100644
+--- a/fs/dlm/lowcomms.c
++++ b/fs/dlm/lowcomms.c
+@@ -471,6 +471,9 @@ static void lowcomms_data_ready(struct sock *sk)
+ 
+ static void lowcomms_listen_data_ready(struct sock *sk)
+ {
++	if (!dlm_allow_conn)
++		return;
++
+ 	queue_work(recv_workqueue, &listen_con.rwork);
+ }
+ 
+@@ -969,10 +972,6 @@ static int accept_from_sock(struct listen_connection *con)
+ 	struct connection *addcon;
+ 	unsigned int mark;
+ 
+-	if (!dlm_allow_conn) {
+-		return -1;
+-	}
+-
+ 	if (!con->sock)
+ 		return -ENOTCONN;
+ 
+-- 
+2.31.1
+

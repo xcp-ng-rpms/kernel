@@ -1,0 +1,32 @@
+From 1a26bfafbce0f2ec8cfe04d9cdcaead0e6dd58ec Mon Sep 17 00:00:00 2001
+From: Alexander Aring <aahringo@redhat.com>
+Date: Mon, 2 Nov 2020 20:04:26 -0500
+Subject: [PATCH 44/44] fs: dlm: fix check for multi-homed hosts
+
+This patch will use the runtime array size dlm_local_count variable
+to check the actual size of the dlm_local_addr array. There exists
+currently a cleanup bug, because the tcp_listen_for_all() functionality
+might check on a dangled pointer.
+
+Signed-off-by: Alexander Aring <aahringo@redhat.com>
+Signed-off-by: David Teigland <teigland@redhat.com>
+---
+ fs/dlm/lowcomms.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/fs/dlm/lowcomms.c b/fs/dlm/lowcomms.c
+index b042ef56eba6..f7e86791a082 100644
+--- a/fs/dlm/lowcomms.c
++++ b/fs/dlm/lowcomms.c
+@@ -1288,7 +1288,7 @@ static int sctp_listen_for_all(struct listen_connection *con)
+ static int tcp_listen_for_all(void)
+ {
+ 	/* We don't support multi-homed hosts */
+-	if (dlm_local_addr[1] != NULL) {
++	if (dlm_local_count > 1) {
+ 		log_print("TCP protocol can't handle multi-homed hosts, "
+ 			  "try SCTP");
+ 		return -EINVAL;
+-- 
+2.31.1
+

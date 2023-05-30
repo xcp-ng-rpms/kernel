@@ -1,0 +1,30 @@
+From 90db4f8be38629bd09183b78079d582221523e25 Mon Sep 17 00:00:00 2001
+From: Wu Bo <wubo40@huawei.com>
+Date: Wed, 22 Apr 2020 14:59:27 +0800
+Subject: [PATCH 11/11] fs:dlm:remove unneeded semicolon in rcom.c
+
+Fix the following coccicheck warning:
+fs/dlm/rcom.c:566:2-3: Unneeded semicolon
+
+Signed-off-by: Wu Bo <wubo40@huawei.com>
+Signed-off-by: David Teigland <teigland@redhat.com>
+---
+ fs/dlm/rcom.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/fs/dlm/rcom.c b/fs/dlm/rcom.c
+index e3d9f72c640d..4daf5dc2b51c 100644
+--- a/fs/dlm/rcom.c
++++ b/fs/dlm/rcom.c
+@@ -563,7 +563,7 @@ void dlm_receive_rcom(struct dlm_ls *ls, struct dlm_rcom *rc, int nodeid)
+ 		lock = 1;
+ 		reply = 1;
+ 		break;
+-	};
++	}
+ 
+ 	spin_lock(&ls->ls_recover_lock);
+ 	status = ls->ls_recover_status;
+-- 
+2.31.1
+

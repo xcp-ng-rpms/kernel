@@ -1,0 +1,110 @@
+From a8449f232ee316208185ef7fbedc4a2c48da2a34 Mon Sep 17 00:00:00 2001
+From: Alexander Aring <aahringo@redhat.com>
+Date: Mon, 4 Apr 2022 16:06:37 -0400
+Subject: [PATCH 1/1] dlm: add __CHECKER__ for false positives
+
+This patch will adds #ifndef __CHECKER__ for false positives warnings
+about an imbalance lock/unlock srcu handling. Which are shown by running
+sparse checks:
+
+fs/dlm/midcomms.c:1065:20: warning: context imbalance in 'dlm_midcomms_get_mhandle' - wrong count at exit
+
+Using __CHECKER__ will tell sparse to ignore these sections.
+
+Those imbalances are false positive because from upper layer it is
+always required to call a function in sequence, e.g. if
+dlm_midcomms_get_mhandle() is successful there must be a
+dlm_midcomms_commit_mhandle() call afterwards.
+
+Signed-off-by: Alexander Aring <aahringo@redhat.com>
+Signed-off-by: David Teigland <teigland@redhat.com>
+---
+ fs/dlm/lowcomms.c | 10 ++++++++++
+ fs/dlm/midcomms.c | 10 ++++++++++
+ 2 files changed, 20 insertions(+)
+
+diff --git a/fs/dlm/lowcomms.c b/fs/dlm/lowcomms.c
+index 6ed935ad8247..19e82f08c0e0 100644
+--- a/fs/dlm/lowcomms.c
++++ b/fs/dlm/lowcomms.c
+@@ -1303,6 +1303,10 @@ static struct dlm_msg *dlm_lowcomms_new_msg_con(struct connection *con, int len,
+ 	return msg;
+ }
+ 
++/* avoid false positive for nodes_srcu, unlock happens in
++ * dlm_lowcomms_commit_msg which is a must call if success
++ */
++#ifndef __CHECKER__
+ struct dlm_msg *dlm_lowcomms_new_msg(int nodeid, int len, gfp_t allocation,
+ 				     char **ppc, void (*cb)(void *data),
+ 				     void *data)
+@@ -1336,6 +1340,7 @@ struct dlm_msg *dlm_lowcomms_new_msg(int nodeid, int len, gfp_t allocation,
+ 	msg->idx = idx;
+ 	return msg;
+ }
++#endif
+ 
+ static void _dlm_lowcomms_commit_msg(struct dlm_msg *msg)
+ {
+@@ -1362,11 +1367,16 @@ static void _dlm_lowcomms_commit_msg(struct dlm_msg *msg)
+ 	return;
+ }
+ 
++/* avoid false positive for nodes_srcu, lock was happen in
++ * dlm_lowcomms_new_msg
++ */
++#ifndef __CHECKER__
+ void dlm_lowcomms_commit_msg(struct dlm_msg *msg)
+ {
+ 	_dlm_lowcomms_commit_msg(msg);
+ 	srcu_read_unlock(&connections_srcu, msg->idx);
+ }
++#endif
+ 
+ void dlm_lowcomms_put_msg(struct dlm_msg *msg)
+ {
+diff --git a/fs/dlm/midcomms.c b/fs/dlm/midcomms.c
+index 3635e42b0669..f95f6f40c404 100644
+--- a/fs/dlm/midcomms.c
++++ b/fs/dlm/midcomms.c
+@@ -1062,6 +1062,10 @@ static struct dlm_msg *dlm_midcomms_get_msg_3_2(struct dlm_mhandle *mh, int node
+ 	return msg;
+ }
+ 
++/* avoid false positive for nodes_srcu, unlock happens in
++ * dlm_midcomms_commit_mhandle which is a must call if success
++ */
++#ifndef __CHECKER__
+ struct dlm_mhandle *dlm_midcomms_get_mhandle(int nodeid, int len,
+ 					     gfp_t allocation, char **ppc)
+ {
+@@ -1127,6 +1131,7 @@ struct dlm_mhandle *dlm_midcomms_get_mhandle(int nodeid, int len,
+ 	srcu_read_unlock(&nodes_srcu, idx);
+ 	return NULL;
+ }
++#endif
+ 
+ static void dlm_midcomms_commit_msg_3_2(struct dlm_mhandle *mh)
+ {
+@@ -1136,6 +1141,10 @@ static void dlm_midcomms_commit_msg_3_2(struct dlm_mhandle *mh)
+ 	dlm_lowcomms_commit_msg(mh->msg);
+ }
+ 
++/* avoid false positive for nodes_srcu, lock was happen in
++ * dlm_midcomms_get_mhandle
++ */
++#ifndef __CHECKER__
+ void dlm_midcomms_commit_mhandle(struct dlm_mhandle *mh)
+ {
+ 	switch (mh->node->version) {
+@@ -1157,6 +1166,7 @@ void dlm_midcomms_commit_mhandle(struct dlm_mhandle *mh)
+ 		break;
+ 	}
+ }
++#endif
+ 
+ int dlm_midcomms_start(void)
+ {
+-- 
+2.31.1
+

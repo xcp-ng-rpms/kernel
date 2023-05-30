@@ -1,0 +1,55 @@
+From 4f2b30fd9b4bd6e3620fe55786df7fc5f89ad526 Mon Sep 17 00:00:00 2001
+From: Alexander Aring <aahringo@redhat.com>
+Date: Wed, 30 Sep 2020 18:37:29 -0400
+Subject: [PATCH 33/33] fs: dlm: fix race in nodeid2con
+
+This patch fixes a race in nodeid2con in cases that we parallel running
+a lookup and both will create a connection structure for the same nodeid.
+It's a rare case to create a new connection structure to keep reader
+lockless we just do a lookup inside the protection area again and drop
+previous work if this race happens.
+
+Fixes: a47666eb763cc ("fs: dlm: make connection hash lockless")
+Signed-off-by: Alexander Aring <aahringo@redhat.com>
+Signed-off-by: David Teigland <teigland@redhat.com>
+---
+ fs/dlm/lowcomms.c | 16 +++++++++++++++-
+ 1 file changed, 15 insertions(+), 1 deletion(-)
+
+diff --git a/fs/dlm/lowcomms.c b/fs/dlm/lowcomms.c
+index b7b7360be609..79f56f16bc2c 100644
+--- a/fs/dlm/lowcomms.c
++++ b/fs/dlm/lowcomms.c
+@@ -175,7 +175,7 @@ static struct connection *__find_con(int nodeid)
+  */
+ static struct connection *nodeid2con(int nodeid, gfp_t alloc)
+ {
+-	struct connection *con = NULL;
++	struct connection *con, *tmp;
+ 	int r;
+ 
+ 	con = __find_con(nodeid);
+@@ -213,6 +213,20 @@ static struct connection *nodeid2con(int nodeid, gfp_t alloc)
+ 	r = nodeid_hash(nodeid);
+ 
+ 	spin_lock(&connections_lock);
++	/* Because multiple workqueues/threads calls this function it can
++	 * race on multiple cpu's. Instead of locking hot path __find_con()
++	 * we just check in rare cases of recently added nodes again
++	 * under protection of connections_lock. If this is the case we
++	 * abort our connection creation and return the existing connection.
++	 */
++	tmp = __find_con(nodeid);
++	if (tmp) {
++		spin_unlock(&connections_lock);
++		kfree(con->rx_buf);
++		kfree(con);
++		return tmp;
++	}
++
+ 	hlist_add_head_rcu(&con->list, &connection_hash[r]);
+ 	spin_unlock(&connections_lock);
+ 
+-- 
+2.31.1
+

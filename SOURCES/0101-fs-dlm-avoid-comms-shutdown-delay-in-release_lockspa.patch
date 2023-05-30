@@ -1,0 +1,42 @@
+From ecd95673142ef80169a6c003b569b8a86d1e6329 Mon Sep 17 00:00:00 2001
+From: Alexander Aring <aahringo@redhat.com>
+Date: Thu, 26 Aug 2021 10:06:31 -0400
+Subject: [PATCH 101/101] fs: dlm: avoid comms shutdown delay in
+ release_lockspace
+
+When dlm_release_lockspace does active shutdown on connections to
+other nodes, the active shutdown will wait for any exisitng passive
+shutdowns to be resolved.  But, the sequence of operations during
+dlm_release_lockspace can prevent the normal resolution of passive
+shutdowns (processed normally by way of lockspace recovery.)
+This disruption of passive shutdown handling can cause the active
+shutdown to wait for a full timeout period, delaying the completion
+of dlm_release_lockspace.
+
+To fix this, make dlm_release_lockspace resolve existing passive
+shutdowns (by calling dlm_clear_members earlier), before it does
+active shutdowns.  The active shutdowns will not find any passive
+shutdowns to wait for, and will not be delayed.
+
+Reported-by: Chris Mackowski <cmackows@redhat.com>
+Signed-off-by: Alexander Aring <aahringo@redhat.com>
+Signed-off-by: David Teigland <teigland@redhat.com>
+---
+ fs/dlm/lockspace.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/fs/dlm/lockspace.c b/fs/dlm/lockspace.c
+index 23c2d7308050..10eddfa6c3d7 100644
+--- a/fs/dlm/lockspace.c
++++ b/fs/dlm/lockspace.c
+@@ -793,6 +793,7 @@ static int release_lockspace(struct dlm_ls *ls, int force)
+ 
+ 	if (ls_count == 1) {
+ 		dlm_scand_stop();
++		dlm_clear_members(ls);
+ 		dlm_midcomms_shutdown();
+ 	}
+ 
+-- 
+2.31.1
+

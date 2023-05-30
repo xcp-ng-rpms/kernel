@@ -1,0 +1,73 @@
+From 76ee0785f42afbc0418072b7179d95f450d3c9a8 Mon Sep 17 00:00:00 2001
+From: Christoph Hellwig <hch@lst.de>
+Date: Thu, 28 May 2020 07:12:12 +0200
+Subject: [PATCH 3/3] net: add sock_set_sndtimeo
+
+Add a helper to directly set the SO_SNDTIMEO_NEW sockopt from kernel
+space without going through a fake uaccess.  The interface is
+simplified to only pass the seconds value, as that is the only
+thing needed at the moment.
+
+Signed-off-by: Christoph Hellwig <hch@lst.de>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+diff --git a/fs/dlm/lowcomms.c b/fs/dlm/lowcomms.c
+index f9eca3e0111b..80405c21cc0c 100644
+--- a/fs/dlm/lowcomms.c
++++ b/fs/dlm/lowcomms.c
+@@ -920,7 +920,6 @@ static void sctp_connect_to_sock(struct connection *con)
+ 	int result;
+ 	int addr_len;
+ 	struct socket *sock;
+-	struct timeval tv = { .tv_sec = 5, .tv_usec = 0 };
+ 
+ 	if (con->nodeid == 0) {
+ 		log_print("attempt to connect sock 0 foiled");
+@@ -972,13 +971,10 @@ static void sctp_connect_to_sock(struct connection *con)
+ 	 * since O_NONBLOCK argument in connect() function does not work here,
+ 	 * then, we should restore the default value of this attribute.
+ 	 */
+-	kernel_setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (char *)&tv,
+-			  sizeof(tv));
++	sock_set_sndtimeo(sock->sk, 5);
+ 	result = sock->ops->connect(sock, (struct sockaddr *)&daddr, addr_len,
+ 				   0);
+-	memset(&tv, 0, sizeof(tv));
+-	kernel_setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (char *)&tv,
+-			  sizeof(tv));
++	sock_set_sndtimeo(sock->sk, 0);
+ 
+ 	if (result == -EINPROGRESS)
+ 		result = 0;
+diff --git a/include/net/sock.h b/include/net/sock.h
+index 9ec3a84ce08c..d79cba9bc461 100644
+--- a/include/net/sock.h
++++ b/include/net/sock.h
+@@ -2542,5 +2542,6 @@ static inline bool sk_dev_equal_l3scope(struct sock *sk, int dif)
+ }
+ 
+ void sock_set_reuseaddr(struct sock *sk);
++void sock_set_sndtimeo(struct sock *sk, s64 secs);
+ 
+ #endif	/* _SOCK_H */
+diff --git a/net/core/sock.c b/net/core/sock.c
+index bb287b112018..ded4e4c5c09c 100644
+--- a/net/core/sock.c
++++ b/net/core/sock.c
+@@ -653,6 +653,17 @@ void sock_set_reuseaddr(struct sock *sk)
+ }
+ EXPORT_SYMBOL(sock_set_reuseaddr);
+ 
++void sock_set_sndtimeo(struct sock *sk, s64 secs)
++{
++	lock_sock(sk);
++	if (secs && secs < MAX_SCHEDULE_TIMEOUT / HZ - 1)
++		sk->sk_sndtimeo = secs * HZ;
++	else
++		sk->sk_sndtimeo = MAX_SCHEDULE_TIMEOUT;
++	release_sock(sk);
++}
++EXPORT_SYMBOL(sock_set_sndtimeo);
++
+ /*
+  *	This is meant for all protocols to use and covers goings on
+  *	at the socket level. Everything here is generic.

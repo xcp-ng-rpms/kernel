@@ -1,0 +1,48 @@
+From aa7ab1e20882b04fc3e45da77a9dad5cbbefba99 Mon Sep 17 00:00:00 2001
+From: Alexander Aring <aahringo@redhat.com>
+Date: Thu, 27 Aug 2020 15:02:48 -0400
+Subject: [PATCH 21/21] fs: dlm: synchronize dlm before shutdown
+
+This patch moves the dlm workqueue dlm synchronization before shutdown
+handling. The patch just flushes all pending work before starting to
+shutdown the connection. At least for the send_workqeue we should flush
+the workqueue to make sure there is no new connection handling going on
+as dlm_allow_conn switch is turned to false before.
+
+Signed-off-by: Alexander Aring <aahringo@redhat.com>
+Signed-off-by: David Teigland <teigland@redhat.com>
+---
+ fs/dlm/lowcomms.c | 10 ++++++----
+ 1 file changed, 6 insertions(+), 4 deletions(-)
+
+diff --git a/fs/dlm/lowcomms.c b/fs/dlm/lowcomms.c
+index 5050fe05769b..ed098870ba0d 100644
+--- a/fs/dlm/lowcomms.c
++++ b/fs/dlm/lowcomms.c
+@@ -1624,10 +1624,6 @@ static void work_flush(void)
+ 	struct hlist_node *n;
+ 	struct connection *con;
+ 
+-	if (recv_workqueue)
+-		flush_workqueue(recv_workqueue);
+-	if (send_workqueue)
+-		flush_workqueue(send_workqueue);
+ 	do {
+ 		ok = 1;
+ 		foreach_conn(stop_conn);
+@@ -1659,6 +1655,12 @@ void dlm_lowcomms_stop(void)
+ 	mutex_lock(&connections_lock);
+ 	dlm_allow_conn = 0;
+ 	mutex_unlock(&connections_lock);
++
++	if (recv_workqueue)
++		flush_workqueue(recv_workqueue);
++	if (send_workqueue)
++		flush_workqueue(send_workqueue);
++
+ 	foreach_conn(shutdown_conn);
+ 	work_flush();
+ 	clean_writequeues();
+-- 
+2.31.1
+
