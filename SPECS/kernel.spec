@@ -1,6 +1,6 @@
-%global package_speccommit e2a1e44ad2bd6c57e3ef46c6181ce0211e6a1080
+%global package_speccommit 340a59263c0c4abe795d18e10fd2443f6549d004
 %global usver 4.19.19
-%global xsver 7.0.16
+%global xsver 7.0.17
 %global xsrel %{xsver}%{?xscount}%{?xshash}
 %global package_srccommit refs/tags/v4.19.19
 %define uname 4.19.0+1
@@ -610,7 +610,8 @@ Patch550: 0002-xen-netback-remove-unused-variables-pending_idx-and-.patch
 Patch551: 0003-xen-netback-don-t-do-grant-copy-across-page-boundary.patch
 Patch552: 0004-xen-netback-remove-not-needed-test-in-xenvif_tx_buil.patch
 Patch553: 0005-xen-netback-use-same-error-messages-for-same-errors.patch
-Patch554: abi-version.patch
+Patch554: xsa432-linux.patch
+Patch555: abi-version.patch
 %if %{do_kabichk}
 Source3: check-kabi
 Source4: Module.kabi
@@ -915,6 +916,12 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Tue Aug 08 2023 Gael Duperrey <gduperrey@vates.fr> - 4.19.19-7.0.17.1
+- Synced with hotfix XS82ECU1042
+- *** Upstream changelog ***
+- * Thu Jul 20 2023 Ross Lagerwall <ross.lagerwall@citrix.com> - 4.19.19-7.0.17
+- - CA-379289: Add a fix for XSA-432
+
 * Wed May 31 2023 Gael Duperrey <gduperrey@vates.fr> - 4.19.19-7.0.16.1
 - Synced with hotfix XS82ECU1028
 - *** Upstream changelog ***
