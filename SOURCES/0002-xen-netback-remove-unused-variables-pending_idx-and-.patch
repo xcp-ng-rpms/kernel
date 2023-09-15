@@ -1,0 +1,55 @@
+From ccf8f7d71424ce37394c8333482853dba4f33978 Mon Sep 17 00:00:00 2001
+From: Tom Rix <trix@redhat.com>
+Date: Sun, 26 Feb 2023 11:34:29 -0500
+Subject: [PATCH 2/2] xen-netback: remove unused variables pending_idx and
+ index
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+building with gcc and W=1 reports
+drivers/net/xen-netback/netback.c:886:21: error: variable
+  ‘pending_idx’ set but not used [-Werror=unused-but-set-variable]
+  886 |                 u16 pending_idx;
+      |                     ^~~~~~~~~~~
+
+pending_idx is not used so remove it.  Since index was only
+used to set pending_idx, remove index as well.
+
+Signed-off-by: Tom Rix <trix@redhat.com>
+Reviewed-by: Juergen Gross <jgross@suse.com>
+Link: https://lore.kernel.org/r/20230226163429.2351600-1-trix@redhat.com
+Signed-off-by: Jakub Kicinski <kuba@kernel.org>
+---
+ drivers/net/xen-netback/netback.c | 5 -----
+ 1 file changed, 5 deletions(-)
+
+diff --git a/drivers/net/xen-netback/netback.c b/drivers/net/xen-netback/netback.c
+index bf627af723bf..1b42676ca141 100644
+--- a/drivers/net/xen-netback/netback.c
++++ b/drivers/net/xen-netback/netback.c
+@@ -883,11 +883,9 @@ static void xenvif_tx_build_gops(struct xenvif_queue *queue,
+ 		struct xen_netif_tx_request txfrags[XEN_NETBK_LEGACY_SLOTS_MAX];
+ 		struct xen_netif_extra_info extras[XEN_NETIF_EXTRA_TYPE_MAX-1];
+ 		unsigned int extra_count;
+-		u16 pending_idx;
+ 		RING_IDX idx;
+ 		int work_to_do;
+ 		unsigned int data_len;
+-		pending_ring_idx_t index;
+ 
+ 		if (queue->tx.sring->req_prod - queue->tx.req_cons >
+ 		    XEN_NETIF_TX_RING_SIZE) {
+@@ -983,9 +981,6 @@ static void xenvif_tx_build_gops(struct xenvif_queue *queue,
+ 			break;
+ 		}
+ 
+-		index = pending_index(queue->pending_cons);
+-		pending_idx = queue->pending_ring[index];
+-
+ 		if (ret >= XEN_NETBK_LEGACY_SLOTS_MAX - 1 && data_len < txreq.size)
+ 			data_len = txreq.size;
+ 
+-- 
+2.31.1
+

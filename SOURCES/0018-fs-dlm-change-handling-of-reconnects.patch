@@ -1,0 +1,85 @@
+From ba3ab3ca68caafb7700c4abae357b7fb7538df11 Mon Sep 17 00:00:00 2001
+From: Alexander Aring <aahringo@redhat.com>
+Date: Mon, 27 Jul 2020 09:13:37 -0400
+Subject: [PATCH 18/18] fs: dlm: change handling of reconnects
+
+This patch changes the handling of reconnects. At first we only close
+the connection related to the communication failure. If we get a new
+connection for an already existing connection we close the existing
+connection and take the new one.
+
+This patch improves significantly the stability of tcp connections while
+running "tcpkill -9 -i $IFACE port 21064" while generating a lot of dlm
+messages e.g. on a gfs2 mount with many files. My test setup shows that a
+deadlock is "more" unlikely. Before this patch I wasn't able to get
+not a deadlock after 5 seconds. After this patch my observation is
+that it's more likely to survive after 5 seconds and more, but still a
+deadlock occurs after certain time. My guess is that there are still
+"segments" inside the tcp writequeue or retransmit queue which get dropped
+when receiving a tcp reset [1]. Hard to reproduce because the right message
+need to be inside these queues, which might even be in the 5 first seconds
+with this patch.
+
+[1] https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/net/ipv4/tcp_input.c?h=v5.8-rc6#n4122
+
+Signed-off-by: Alexander Aring <aahringo@redhat.com>
+Signed-off-by: David Teigland <teigland@redhat.com>
+---
+ fs/dlm/lowcomms.c | 25 ++++++++++---------------
+ 1 file changed, 10 insertions(+), 15 deletions(-)
+
+diff --git a/fs/dlm/lowcomms.c b/fs/dlm/lowcomms.c
+index 9e6acbb47bb9..289439fdca99 100644
+--- a/fs/dlm/lowcomms.c
++++ b/fs/dlm/lowcomms.c
+@@ -713,7 +713,7 @@ static int receive_from_sock(struct connection *con)
+ out_close:
+ 	mutex_unlock(&con->sock_mutex);
+ 	if (ret != -EAGAIN) {
+-		close_connection(con, true, true, false);
++		close_connection(con, false, true, false);
+ 		/* Reconnect when there is something to send */
+ 	}
+ 	/* Don't return success if we really got EOF */
+@@ -804,21 +804,16 @@ static int accept_from_sock(struct connection *con)
+ 			INIT_WORK(&othercon->swork, process_send_sockets);
+ 			INIT_WORK(&othercon->rwork, process_recv_sockets);
+ 			set_bit(CF_IS_OTHERCON, &othercon->flags);
++		} else {
++			/* close other sock con if we have something new */
++			close_connection(othercon, false, true, false);
+ 		}
++
+ 		mutex_lock_nested(&othercon->sock_mutex, 2);
+-		if (!othercon->sock) {
+-			newcon->othercon = othercon;
+-			add_sock(newsock, othercon);
+-			addcon = othercon;
+-			mutex_unlock(&othercon->sock_mutex);
+-		}
+-		else {
+-			printk("Extra connection from node %d attempted\n", nodeid);
+-			result = -EAGAIN;
+-			mutex_unlock(&othercon->sock_mutex);
+-			mutex_unlock(&newcon->sock_mutex);
+-			goto accept_err;
+-		}
++		newcon->othercon = othercon;
++		add_sock(newsock, othercon);
++		addcon = othercon;
++		mutex_unlock(&othercon->sock_mutex);
+ 	}
+ 	else {
+ 		newcon->rx_action = receive_from_sock;
+@@ -1415,7 +1410,7 @@ static void send_to_sock(struct connection *con)
+ 
+ send_error:
+ 	mutex_unlock(&con->sock_mutex);
+-	close_connection(con, true, false, true);
++	close_connection(con, false, false, true);
+ 	/* Requeue the send work. When the work daemon runs again, it will try
+ 	   a new connection, then call this function again. */
+ 	queue_work(send_workqueue, &con->swork);
+-- 
+2.31.1
+

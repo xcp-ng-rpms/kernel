@@ -1,0 +1,50 @@
+From f6089981d07e6e1cc053f4c239e458eed122c092 Mon Sep 17 00:00:00 2001
+From: Colin Ian King <colin.king@canonical.com>
+Date: Wed, 26 May 2021 15:46:05 +0100
+Subject: [PATCH 77/77] fs: dlm: Fix memory leak of object mh
+
+There is an error return path that is not kfree'ing mh after
+it has been successfully allocates.  Fix this by moving the
+call to create_rcom to after the check on rc_in->rc_id check
+to avoid this.
+
+Thanks to Alexander Ahring Oder Aring for suggesting the
+correct way to fix this.
+
+Addresses-Coverity: ("Resource leak")
+Fixes: a070a91cf140 ("fs: dlm: add more midcomms hooks")
+Signed-off-by: Colin Ian King <colin.king@canonical.com>
+Signed-off-by: David Teigland <teigland@redhat.com>
+---
+ fs/dlm/rcom.c | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/fs/dlm/rcom.c b/fs/dlm/rcom.c
+index 085f21966c72..a7727b9e5e83 100644
+--- a/fs/dlm/rcom.c
++++ b/fs/dlm/rcom.c
+@@ -385,10 +385,6 @@ static void receive_rcom_lookup(struct dlm_ls *ls, struct dlm_rcom *rc_in)
+ 	int error, ret_nodeid, nodeid = rc_in->rc_header.h_nodeid;
+ 	int len = rc_in->rc_header.h_length - sizeof(struct dlm_rcom);
+ 
+-	error = create_rcom(ls, nodeid, DLM_RCOM_LOOKUP_REPLY, 0, &rc, &mh);
+-	if (error)
+-		return;
+-
+ 	/* Old code would send this special id to trigger a debug dump. */
+ 	if (rc_in->rc_id == 0xFFFFFFFF) {
+ 		log_error(ls, "receive_rcom_lookup dump from %d", nodeid);
+@@ -396,6 +392,10 @@ static void receive_rcom_lookup(struct dlm_ls *ls, struct dlm_rcom *rc_in)
+ 		return;
+ 	}
+ 
++	error = create_rcom(ls, nodeid, DLM_RCOM_LOOKUP_REPLY, 0, &rc, &mh);
++	if (error)
++		return;
++
+ 	error = dlm_master_lookup(ls, nodeid, rc_in->rc_buf, len,
+ 				  DLM_LU_RECOVER_MASTER, &ret_nodeid, NULL);
+ 	if (error)
+-- 
+2.31.1
+

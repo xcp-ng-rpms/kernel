@@ -1,0 +1,52 @@
+From 42873c903bd712b40d827c2bed100ccefa66fce8 Mon Sep 17 00:00:00 2001
+From: Alexander Aring <aahringo@redhat.com>
+Date: Mon, 2 Nov 2020 20:04:23 -0500
+Subject: [PATCH 41/41] fs: dlm: move shutdown action to node creation
+
+This patch move the assignment for the shutdown action callback to the
+node creation functionality.
+
+Signed-off-by: Alexander Aring <aahringo@redhat.com>
+Signed-off-by: David Teigland <teigland@redhat.com>
+---
+ fs/dlm/lowcomms.c | 8 +++++---
+ 1 file changed, 5 insertions(+), 3 deletions(-)
+
+diff --git a/fs/dlm/lowcomms.c b/fs/dlm/lowcomms.c
+index 30a101de0a0c..9723df4e67b8 100644
+--- a/fs/dlm/lowcomms.c
++++ b/fs/dlm/lowcomms.c
+@@ -144,6 +144,7 @@ static void process_send_sockets(struct work_struct *work);
+ 
+ static void sctp_connect_to_sock(struct connection *con);
+ static void tcp_connect_to_sock(struct connection *con);
++static void dlm_tcp_shutdown(struct connection *con);
+ 
+ /* This is deliberately very simple because most clusters have simple
+    sequential nodeids, so we should be able to go straight to a connection
+@@ -187,10 +188,12 @@ static int dlm_con_init(struct connection *con, int nodeid)
+ 	INIT_WORK(&con->rwork, process_recv_sockets);
+ 	init_waitqueue_head(&con->shutdown_wait);
+ 
+-	if (dlm_config.ci_protocol == 0)
++	if (dlm_config.ci_protocol == 0) {
+ 		con->connect_action = tcp_connect_to_sock;
+-	else
++		con->shutdown_action = dlm_tcp_shutdown;
++	} else {
+ 		con->connect_action = sctp_connect_to_sock;
++	}
+ 
+ 	return 0;
+ }
+@@ -1101,7 +1104,6 @@ static void tcp_connect_to_sock(struct connection *con)
+ 	}
+ 
+ 	con->rx_action = receive_from_sock;
+-	con->shutdown_action = dlm_tcp_shutdown;
+ 	add_sock(sock, con);
+ 
+ 	/* Bind to our cluster-known address connecting to avoid
+-- 
+2.31.1
+

@@ -1,0 +1,52 @@
+From 0de984323ac56aa420e6f28d7ce205a293fdb649 Mon Sep 17 00:00:00 2001
+From: Alexander Aring <aahringo@redhat.com>
+Date: Thu, 27 Aug 2020 15:02:52 -0400
+Subject: [PATCH 25/25] fs: dlm: move free writequeue into con free
+
+This patch just move the free of struct connection member writequeue
+into the functionality when struct connection will be freed instead of
+doing two iterations.
+
+Signed-off-by: Alexander Aring <aahringo@redhat.com>
+Signed-off-by: David Teigland <teigland@redhat.com>
+---
+ fs/dlm/lowcomms.c | 9 +--------
+ 1 file changed, 1 insertion(+), 8 deletions(-)
+
+diff --git a/fs/dlm/lowcomms.c b/fs/dlm/lowcomms.c
+index d0ece252a0d9..04afc7178afb 100644
+--- a/fs/dlm/lowcomms.c
++++ b/fs/dlm/lowcomms.c
+@@ -1550,13 +1550,6 @@ static void process_send_sockets(struct work_struct *work)
+ 		send_to_sock(con);
+ }
+ 
+-
+-/* Discard all entries on the write queues */
+-static void clean_writequeues(void)
+-{
+-	foreach_conn(clean_one_writequeue);
+-}
+-
+ static void work_stop(void)
+ {
+ 	if (recv_workqueue)
+@@ -1620,6 +1613,7 @@ static void free_conn(struct connection *con)
+ 	spin_lock(&connections_lock);
+ 	hlist_del_rcu(&con->list);
+ 	spin_unlock(&connections_lock);
++	clean_one_writequeue(con);
+ 	kfree_rcu(con, rcu);
+ }
+ 
+@@ -1668,7 +1662,6 @@ void dlm_lowcomms_stop(void)
+ 
+ 	foreach_conn(shutdown_conn);
+ 	work_flush();
+-	clean_writequeues();
+ 	foreach_conn(free_conn);
+ 	work_stop();
+ 	deinit_local();
+-- 
+2.31.1
+

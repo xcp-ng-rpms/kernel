@@ -1,0 +1,26 @@
+From 1844e4636cc1a76a4a96a28a1bf601f3f58a9402 Mon Sep 17 00:00:00 2001
+From: Stephen Cheng <stephen.cheng@citrix.com>
+Date: Thu, 3 Aug 2023 14:16:44 +0800
+Subject: [PATCH] CP-41018: Make CONFIG_AUXILIARY_BUS=y work
+
+Signed-off-by: Stephen Cheng <stephen.cheng@citrix.com>
+---
+ drivers/base/Kconfig | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/base/Kconfig b/drivers/base/Kconfig
+index d08d3170f1f5..77580387ff38 100644
+--- a/drivers/base/Kconfig
++++ b/drivers/base/Kconfig
+@@ -2,7 +2,7 @@
+ menu "Generic Driver Options"
+ 
+ config AUXILIARY_BUS
+-	bool
++	bool "Support auxiliary bus"
+ 
+ config UEVENT_HELPER
+ 	bool "Support for uevent helper"
+-- 
+2.34.1
+

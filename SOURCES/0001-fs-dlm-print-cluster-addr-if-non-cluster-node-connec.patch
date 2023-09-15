@@ -1,0 +1,57 @@
+From feae43f8aa88309224b27bbe3a59fcb9aefab6f5 Mon Sep 17 00:00:00 2001
+From: Alexander Aring <aahringo@redhat.com>
+Date: Tue, 4 Jan 2022 09:09:47 -0500
+Subject: [PATCH 1/1] fs: dlm: print cluster addr if non-cluster node connects
+
+This patch prints the cluster node address if a non-cluster node
+(according to the dlm config setting) tries to connect. The current
+hexdump call will print in a different loglevel and only available if
+dynamic debug is enabled. Additional we using the ip address format
+strings to print an IETF ip4/6 string represenation.
+
+Signed-off-by: Alexander Aring <aahringo@redhat.com>
+Signed-off-by: David Teigland <teigland@redhat.com>
+---
+ fs/dlm/lowcomms.c | 26 ++++++++++++++++++++++----
+ 1 file changed, 22 insertions(+), 4 deletions(-)
+
+diff --git a/fs/dlm/lowcomms.c b/fs/dlm/lowcomms.c
+index 23a1ff690725..e284d696c1fd 100644
+--- a/fs/dlm/lowcomms.c
++++ b/fs/dlm/lowcomms.c
+@@ -1028,10 +1028,28 @@ static int accept_from_sock(struct listen_connection *con)
+ 	/* Get the new node's NODEID */
+ 	make_sockaddr(&peeraddr, 0, &len);
+ 	if (addr_to_nodeid(&peeraddr, &nodeid, &mark)) {
+-		unsigned char *b=(unsigned char *)&peeraddr;
+-		log_print("connect from non cluster node");
+-		print_hex_dump_bytes("ss: ", DUMP_PREFIX_NONE, 
+-				     b, sizeof(struct sockaddr_storage));
++		switch (peeraddr.ss_family) {
++		case AF_INET: {
++			struct sockaddr_in *sin = (struct sockaddr_in *)&peeraddr;
++
++			log_print("connect from non cluster IPv4 node %pI4",
++				  &sin->sin_addr);
++			break;
++		}
++#if IS_ENABLED(CONFIG_IPV6)
++		case AF_INET6: {
++			struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)&peeraddr;
++
++			log_print("connect from non cluster IPv6 node %pI6c",
++				  &sin6->sin6_addr);
++			break;
++		}
++#endif
++		default:
++			log_print("invalid family from non cluster node");
++			break;
++		}
++
+ 		sock_release(newsock);
+ 		return -1;
+ 	}
+-- 
+2.31.1
+

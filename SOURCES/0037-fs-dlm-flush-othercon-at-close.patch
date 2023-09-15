@@ -1,0 +1,30 @@
+From 53a5edaa05c1073e47668f167ec9788383c780e1 Mon Sep 17 00:00:00 2001
+From: Alexander Aring <aahringo@redhat.com>
+Date: Mon, 2 Nov 2020 20:04:19 -0500
+Subject: [PATCH 37/37] fs: dlm: flush othercon at close
+
+This patch ensures we also flush the othercon writequeue when a lowcomms
+close occurs.
+
+Signed-off-by: Alexander Aring <aahringo@redhat.com>
+Signed-off-by: David Teigland <teigland@redhat.com>
+---
+ fs/dlm/lowcomms.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/fs/dlm/lowcomms.c b/fs/dlm/lowcomms.c
+index 620eca3979d5..c0c688aac223 100644
+--- a/fs/dlm/lowcomms.c
++++ b/fs/dlm/lowcomms.c
+@@ -1512,6 +1512,8 @@ int dlm_lowcomms_close(int nodeid)
+ 		set_bit(CF_CLOSE, &con->flags);
+ 		close_connection(con, true, true, true);
+ 		clean_one_writequeue(con);
++		if (con->othercon)
++			clean_one_writequeue(con->othercon);
+ 	}
+ 
+ 	spin_lock(&dlm_node_addrs_spin);
+-- 
+2.31.1
+

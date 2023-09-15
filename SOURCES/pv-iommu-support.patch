@@ -1,5 +1,5 @@
 diff --git a/arch/x86/include/asm/xen/hypercall.h b/arch/x86/include/asm/xen/hypercall.h
-index d66ba01..1cef4d4 100644
+index d66ba01478ac..1cef4d44a165 100644
 --- a/arch/x86/include/asm/xen/hypercall.h
 +++ b/arch/x86/include/asm/xen/hypercall.h
 @@ -49,6 +49,7 @@
@@ -10,21 +10,21 @@ index d66ba01..1cef4d4 100644
  #include <xen/interface/platform.h>
  #include <xen/interface/xen-mca.h>
  
-@@ -325,6 +326,12 @@ HYPERVISOR_multicall(void *call_list, uint32_t nr_calls)
+@@ -324,6 +325,12 @@ HYPERVISOR_multicall(void *call_list, uint32_t nr_calls)
+ 	return _hypercall2(int, multicall, call_list, nr_calls);
  }
  
- static inline int
++static inline int
 +HYPERVISOR_iommu_op(void *uop, unsigned int count)
 +{
 +       return _hypercall2(int, iommu_op, uop, count);
 +}
 +
-+static inline int
+ static inline int
  HYPERVISOR_update_va_mapping(unsigned long va, pte_t new_val,
  			     unsigned long flags)
- {
 diff --git a/arch/x86/xen/pci-swiotlb-xen.c b/arch/x86/xen/pci-swiotlb-xen.c
-index 37c6056..447d7bb 100644
+index 37c6056a7bba..447d7bb733f0 100644
 --- a/arch/x86/xen/pci-swiotlb-xen.c
 +++ b/arch/x86/xen/pci-swiotlb-xen.c
 @@ -2,21 +2,134 @@
@@ -305,8 +305,19 @@ index 37c6056..447d7bb 100644
  		  pci_xen_swiotlb_init,
 -		  NULL);
 +		  pci_xen_pv_iommu_late_init);
+diff --git a/arch/x86/xen/xen-head.S b/arch/x86/xen/xen-head.S
+index 5077ead5e59c..4bd40dac7ca2 100644
+--- a/arch/x86/xen/xen-head.S
++++ b/arch/x86/xen/xen-head.S
+@@ -100,5 +100,6 @@ END(hypercall_page)
+ 	ELFNOTE(Xen, XEN_ELFNOTE_MOD_START_PFN,  .long 1)
+ 	ELFNOTE(Xen, XEN_ELFNOTE_HV_START_LOW,   _ASM_PTR __HYPERVISOR_VIRT_START)
+ 	ELFNOTE(Xen, XEN_ELFNOTE_PADDR_OFFSET,   _ASM_PTR 0)
++	ELFNOTE(XS, XS_ELFNOTE_PV_IOMMU, .long 1)
+ 
+ #endif /*CONFIG_XEN */
 diff --git a/drivers/xen/Makefile b/drivers/xen/Makefile
-index 5d58370..6db17a6 100644
+index 5d58370d81ac..6db17a6d3196 100644
 --- a/drivers/xen/Makefile
 +++ b/drivers/xen/Makefile
 @@ -28,6 +28,7 @@ obj-$(CONFIG_XEN_SYS_HYPERVISOR)	+= sys-hypervisor.o
@@ -318,7 +329,7 @@ index 5d58370..6db17a6 100644
  obj-$(CONFIG_XEN_PCIDEV_BACKEND)	+= xen-pciback/
  obj-$(CONFIG_XEN_PRIVCMD)		+= xen-privcmd.o
 diff --git a/drivers/xen/balloon.c b/drivers/xen/balloon.c
-index d4e8b71..5879f79 100644
+index d4e8b717ce2b..5879f7933977 100644
 --- a/drivers/xen/balloon.c
 +++ b/drivers/xen/balloon.c
 @@ -113,6 +113,9 @@ static struct ctl_table xen_root[] = {
@@ -348,7 +359,7 @@ index d4e8b71..5879f79 100644
  
  	mutex_lock(&balloon_mutex);
 diff --git a/drivers/xen/biomerge.c b/drivers/xen/biomerge.c
-index 55ed80c..bdf57c6 100644
+index 55ed80c3a17c..bdf57c63213f 100644
 --- a/drivers/xen/biomerge.c
 +++ b/drivers/xen/biomerge.c
 @@ -3,13 +3,23 @@
@@ -378,7 +389,7 @@ index 55ed80c..bdf57c6 100644
  	return bfn1 + PFN_DOWN(vec1->bv_offset + vec1->bv_len) == bfn2;
  #else
 diff --git a/drivers/xen/ioemu.c b/drivers/xen/ioemu.c
-index 7c89d11..e9a8022 100644
+index 7c89d11043b2..e9a8022d8e15 100644
 --- a/drivers/xen/ioemu.c
 +++ b/drivers/xen/ioemu.c
 @@ -83,4 +83,49 @@ int xen_ioemu_inject_msi(domid_t domid, uint64_t addr, uint32_t data)
@@ -432,7 +443,7 @@ index 7c89d11..e9a8022 100644
 +EXPORT_SYMBOL(xen_ioemu_map_foreign_gfn_to_bfn);
 +EXPORT_SYMBOL(xen_ioemu_unmap_foreign_gfn_to_bfn);
 diff --git a/drivers/xen/mem-reservation.c b/drivers/xen/mem-reservation.c
-index 3782cf0..1df1ede 100644
+index 3782cf070338..1df1edeacfdb 100644
 --- a/drivers/xen/mem-reservation.c
 +++ b/drivers/xen/mem-reservation.c
 @@ -16,6 +16,10 @@
@@ -492,7 +503,7 @@ index 3782cf0..1df1ede 100644
  EXPORT_SYMBOL_GPL(__xenmem_reservation_va_mapping_reset);
 diff --git a/drivers/xen/pv-iommu-xen.c b/drivers/xen/pv-iommu-xen.c
 new file mode 100644
-index 00000000..23f84ba
+index 000000000000..23f84baa518f
 --- /dev/null
 +++ b/drivers/xen/pv-iommu-xen.c
 @@ -0,0 +1,134 @@
@@ -630,9 +641,32 @@ index 00000000..23f84ba
 +
 +}
 +EXPORT_SYMBOL_GPL(xen_pv_iommu_map_sg_attrs);
+diff --git a/include/xen/interface/elfnote.h b/include/xen/interface/elfnote.h
+index 9e9f9bf7c66d..9f4ceba7cefe 100644
+--- a/include/xen/interface/elfnote.h
++++ b/include/xen/interface/elfnote.h
+@@ -207,6 +207,18 @@
+  */
+ #define XEN_ELFNOTE_MAX XEN_ELFNOTE_PHYS32_ENTRY
+ 
++
++/* XenServer specific ELF notes */
++
++/*
++ * If this note is present, Dom0 can use PV-IOMMU.
++ * Xen should initialise PV-IOMMU only if Dom0 supports it. Otherwise it leads
++ * to DMA errors.
++ */
++#define XS_ELFNOTE_PV_IOMMU               0
++
++#define XS_ELFNOTE_MAX XS_ELFNOTE_PV_IOMMU
++
+ #endif /* __XEN_PUBLIC_ELFNOTE_H__ */
+ 
+ /*
 diff --git a/include/xen/interface/pv-iommu.h b/include/xen/interface/pv-iommu.h
 new file mode 100644
-index 00000000..8b76544
+index 000000000000..8b765445f229
 --- /dev/null
 +++ b/include/xen/interface/pv-iommu.h
 @@ -0,0 +1,100 @@
@@ -737,7 +771,7 @@ index 00000000..8b76544
 + * End:
 + */
 diff --git a/include/xen/interface/xen.h b/include/xen/interface/xen.h
-index 8bfb242..484058e 100644
+index 191696bbca5c..b0cdbb4b9f53 100644
 --- a/include/xen/interface/xen.h
 +++ b/include/xen/interface/xen.h
 @@ -93,6 +93,7 @@
@@ -749,7 +783,7 @@ index 8bfb242..484058e 100644
   * VIRTUAL INTERRUPTS
   *
 diff --git a/include/xen/ioemu.h b/include/xen/ioemu.h
-index 95eb4e7..fc44d772 100644
+index 95eb4e7c5060..fc44d7720b2d 100644
 --- a/include/xen/ioemu.h
 +++ b/include/xen/ioemu.h
 @@ -29,7 +29,10 @@
@@ -764,7 +798,7 @@ index 95eb4e7..fc44d772 100644
  
  #endif /* #ifndef _XEN_IOEMU_H */
 diff --git a/include/xen/swiotlb-xen.h b/include/xen/swiotlb-xen.h
-index ff66b40..5d39bf4 100644
+index ff66b40dfb53..5d39bf40e29b 100644
 --- a/include/xen/swiotlb-xen.h
 +++ b/include/xen/swiotlb-xen.h
 @@ -10,4 +10,6 @@ extern const struct dma_map_ops xen_swiotlb_dma_ops;
@@ -775,7 +809,7 @@ index ff66b40..5d39bf4 100644
 +
  #endif /* __LINUX_SWIOTLB_XEN_H */
 diff --git a/kernel/dma/swiotlb.c b/kernel/dma/swiotlb.c
-index 4f8a6db..530b0c3 100644
+index 4f8a6dbf0b60..530b0c326dc9 100644
 --- a/kernel/dma/swiotlb.c
 +++ b/kernel/dma/swiotlb.c
 @@ -64,7 +64,10 @@ enum swiotlb_force swiotlb_force;
@@ -791,7 +825,7 @@ index 4f8a6db..530b0c3 100644
  /*
   * The number of IO TLB blocks (in groups of 64) between io_tlb_start and
 diff --git a/kernel/ksysfs.c b/kernel/ksysfs.c
-index 46ba853..c0b63ab 100644
+index 46ba853656f6..c0b63abc8672 100644
 --- a/kernel/ksysfs.c
 +++ b/kernel/ksysfs.c
 @@ -184,6 +184,17 @@ static ssize_t rcu_normal_store(struct kobject *kobj,

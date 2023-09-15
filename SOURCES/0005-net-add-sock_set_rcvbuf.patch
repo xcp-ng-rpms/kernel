@@ -1,0 +1,123 @@
+From 26cfabf9cdd273650126d84a48a7f8dedbcded48 Mon Sep 17 00:00:00 2001
+From: Christoph Hellwig <hch@lst.de>
+Date: Thu, 28 May 2020 07:12:16 +0200
+Subject: [PATCH 5/5] net: add sock_set_rcvbuf
+
+Add a helper to directly set the SO_RCVBUFFORCE sockopt from kernel space
+without going through a fake uaccess.
+
+Signed-off-by: Christoph Hellwig <hch@lst.de>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+diff --git a/fs/dlm/lowcomms.c b/fs/dlm/lowcomms.c
+index bacc1c69ca1a..4f58eaa0637f 100644
+--- a/fs/dlm/lowcomms.c
++++ b/fs/dlm/lowcomms.c
+@@ -1182,7 +1182,6 @@ static int sctp_listen_for_all(void)
+ 	struct socket *sock = NULL;
+ 	int result = -EINVAL;
+ 	struct connection *con = nodeid2con(0, GFP_NOFS);
+-	int bufsize = NEEDED_RMEM;
+ 	int one = 1;
+ 
+ 	if (!con)
+@@ -1197,11 +1196,7 @@ static int sctp_listen_for_all(void)
+ 		goto out;
+ 	}
+ 
+-	result = kernel_setsockopt(sock, SOL_SOCKET, SO_RCVBUFFORCE,
+-				 (char *)&bufsize, sizeof(bufsize));
+-	if (result)
+-		log_print("Error increasing buffer space on socket %d", result);
+-
++	sock_set_rcvbuf(sock->sk, NEEDED_RMEM);
+ 	result = kernel_setsockopt(sock, SOL_SCTP, SCTP_NODELAY, (char *)&one,
+ 				   sizeof(one));
+ 	if (result < 0)
+diff --git a/include/net/sock.h b/include/net/sock.h
+index 10ddfdd98b0d..db7f68771292 100644
+--- a/include/net/sock.h
++++ b/include/net/sock.h
+@@ -2544,5 +2544,6 @@ static inline bool sk_dev_equal_l3scope(struct sock *sk, int dif)
+ void sock_set_reuseaddr(struct sock *sk);
+ void sock_set_sndtimeo(struct sock *sk, s64 secs);
+ void sock_set_keepalive(struct sock *sk);
++void sock_set_rcvbuf(struct sock *sk, int val);
+ 
+ #endif	/* _SOCK_H */
+diff --git a/net/core/sock.c b/net/core/sock.c
+index c7f9213b8973..cd1f118657f4 100644
+--- a/net/core/sock.c
++++ b/net/core/sock.c
+@@ -674,6 +674,35 @@ void sock_set_keepalive(struct sock *sk)
+ }
+ EXPORT_SYMBOL(sock_set_keepalive);
+ 
++static void __sock_set_rcvbuf(struct sock *sk, int val)
++{
++	/* Ensure val * 2 fits into an int, to prevent max_t() from treating it
++	 * as a negative value.
++	 */
++	val = min_t(int, val, INT_MAX / 2);
++	sk->sk_userlocks |= SOCK_RCVBUF_LOCK;
++
++	/* We double it on the way in to account for "struct sk_buff" etc.
++	 * overhead.   Applications assume that the SO_RCVBUF setting they make
++	 * will allow that much actual data to be received on that socket.
++	 *
++	 * Applications are unaware that "struct sk_buff" and other overheads
++	 * allocate from the receive buffer during socket buffer allocation.
++	 *
++	 * And after considering the possible alternatives, returning the value
++	 * we actually used in getsockopt is the most desirable behavior.
++	 */
++	WRITE_ONCE(sk->sk_rcvbuf, max_t(int, val * 2, SOCK_MIN_RCVBUF));
++}
++
++void sock_set_rcvbuf(struct sock *sk, int val)
++{
++	lock_sock(sk);
++	__sock_set_rcvbuf(sk, val);
++	release_sock(sk);
++}
++EXPORT_SYMBOL(sock_set_rcvbuf);
++
+ /*
+  *	This is meant for all protocols to use and covers goings on
+  *	at the socket level. Everything here is generic.
+@@ -759,25 +788,7 @@ int sock_setsockopt(struct socket *sock, int level, int optname,
+ 		 * play 'guess the biggest size' games. RCVBUF/SNDBUF
+ 		 * are treated in BSD as hints
+ 		 */
+-		val = min_t(u32, val, sysctl_rmem_max);
+-set_rcvbuf:
+-		sk->sk_userlocks |= SOCK_RCVBUF_LOCK;
+-		/*
+-		 * We double it on the way in to account for
+-		 * "struct sk_buff" etc. overhead.   Applications
+-		 * assume that the SO_RCVBUF setting they make will
+-		 * allow that much actual data to be received on that
+-		 * socket.
+-		 *
+-		 * Applications are unaware that "struct sk_buff" and
+-		 * other overheads allocate from the receive buffer
+-		 * during socket buffer allocation.
+-		 *
+-		 * And after considering the possible alternatives,
+-		 * returning the value we actually used in getsockopt
+-		 * is the most desirable behavior.
+-		 */
+-		sk->sk_rcvbuf = max_t(int, val * 2, SOCK_MIN_RCVBUF);
++		__sock_set_rcvbuf(sk, min_t(u32, val, sysctl_rmem_max));
+ 		break;
+ 
+ 	case SO_RCVBUFFORCE:
+@@ -785,7 +796,8 @@ int sock_setsockopt(struct socket *sock, int level, int optname,
+ 			ret = -EPERM;
+ 			break;
+ 		}
+-		goto set_rcvbuf;
++		__sock_set_rcvbuf(sk, max(val, 0));
++		break;
+ 
+ 	case SO_KEEPALIVE:
+ 		if (sk->sk_prot->keepalive)

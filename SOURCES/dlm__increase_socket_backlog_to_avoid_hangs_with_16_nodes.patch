@@ -35,15 +35,15 @@ consistently trigger it lets try to avoid the bug by avoiding the SYN cookies.
 Signed-off-by: Edwin Török <edvin.torok@citrix.com>
 
 diff --git a/fs/dlm/lowcomms.c b/fs/dlm/lowcomms.c
-index 9d7a4a7..09eb8e4 100644
+index 31e91b78acef..a056ffc5c1bb 100644
 --- a/fs/dlm/lowcomms.c
 +++ b/fs/dlm/lowcomms.c
-@@ -1209,7 +1209,7 @@ static struct socket *tcp_create_listen_sock(struct connection *con,
- 		log_print("Set keepalive failed: %d", result);
- 	}
+@@ -1715,7 +1715,7 @@ static int dlm_listen_for_all(void)
+ 	add_listen_sock(sock, &listen_con);
  
+ 	INIT_WORK(&listen_con.rwork, process_listen_recv_socket);
 -	result = sock->ops->listen(sock, 5);
 +	result = sock->ops->listen(sock, 128);
  	if (result < 0) {
- 		log_print("Can't listen on port %d", dlm_config.ci_tcp_port);
- 		sock_release(sock);
+ 		dlm_close_sock(&listen_con.sock);
+ 		return result;

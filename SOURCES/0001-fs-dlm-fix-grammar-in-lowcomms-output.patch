@@ -1,0 +1,40 @@
+From dfc020f334f8daa36bf44417b3066c78ffa5d083 Mon Sep 17 00:00:00 2001
+From: Alexander Aring <aahringo@redhat.com>
+Date: Wed, 22 Jun 2022 21:04:22 -0400
+Subject: [PATCH 1/1] fs: dlm: fix grammar in lowcomms output
+
+This patch fixes some grammar output in lowcomms implementation by
+removing the "successful" word which should be "successfully" but it
+can never be unsuccessfully so we remove it.
+
+Signed-off-by: Alexander Aring <aahringo@redhat.com>
+Signed-off-by: David Teigland <teigland@redhat.com>
+---
+ fs/dlm/lowcomms.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/fs/dlm/lowcomms.c b/fs/dlm/lowcomms.c
+index 19e82f08c0e0..a4e84e8d94c8 100644
+--- a/fs/dlm/lowcomms.c
++++ b/fs/dlm/lowcomms.c
+@@ -529,7 +529,7 @@ static void lowcomms_write_space(struct sock *sk)
+ 		return;
+ 
+ 	if (!test_and_set_bit(CF_CONNECTED, &con->flags)) {
+-		log_print("successful connected to node %d", con->nodeid);
++		log_print("connected to node %d", con->nodeid);
+ 		queue_work(send_workqueue, &con->swork);
+ 		return;
+ 	}
+@@ -1931,7 +1931,7 @@ static int dlm_sctp_connect(struct connection *con, struct socket *sock,
+ 		return ret;
+ 
+ 	if (!test_and_set_bit(CF_CONNECTED, &con->flags))
+-		log_print("successful connected to node %d", con->nodeid);
++		log_print("connected to node %d", con->nodeid);
+ 
+ 	return 0;
+ }
+-- 
+2.31.1
+

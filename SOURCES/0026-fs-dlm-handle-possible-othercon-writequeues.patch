@@ -1,0 +1,37 @@
+From 948c47e9bcb6a42229cb1da1cc350c887a33ebb8 Mon Sep 17 00:00:00 2001
+From: Alexander Aring <aahringo@redhat.com>
+Date: Thu, 27 Aug 2020 15:02:53 -0400
+Subject: [PATCH 26/26] fs: dlm: handle possible othercon writequeues
+
+This patch adds free of possible other writequeue entries in othercon
+member of struct connection.
+
+Signed-off-by: Alexander Aring <aahringo@redhat.com>
+Signed-off-by: David Teigland <teigland@redhat.com>
+---
+ fs/dlm/lowcomms.c | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/fs/dlm/lowcomms.c b/fs/dlm/lowcomms.c
+index 04afc7178afb..794216eb728c 100644
+--- a/fs/dlm/lowcomms.c
++++ b/fs/dlm/lowcomms.c
+@@ -1608,11 +1608,13 @@ static void shutdown_conn(struct connection *con)
+ static void free_conn(struct connection *con)
+ {
+ 	close_connection(con, true, true, true);
+-	if (con->othercon)
+-		kfree_rcu(con->othercon, rcu);
+ 	spin_lock(&connections_lock);
+ 	hlist_del_rcu(&con->list);
+ 	spin_unlock(&connections_lock);
++	if (con->othercon) {
++		clean_one_writequeue(con->othercon);
++		kfree_rcu(con->othercon, rcu);
++	}
+ 	clean_one_writequeue(con);
+ 	kfree_rcu(con, rcu);
+ }
+-- 
+2.31.1
+

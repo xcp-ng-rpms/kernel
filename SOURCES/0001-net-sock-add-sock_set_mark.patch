@@ -1,0 +1,41 @@
+From 84d1c617402e7e67fc95ab2384da8dae7d1b0efe Mon Sep 17 00:00:00 2001
+From: Alexander Aring <aahringo@redhat.com>
+Date: Fri, 26 Jun 2020 13:26:48 -0400
+Subject: [PATCH 1/1] net: sock: add sock_set_mark
+
+This patch adds a new socket helper function to set the mark value for a
+kernel socket.
+
+Signed-off-by: Alexander Aring <aahringo@redhat.com>
+Signed-off-by: David Teigland <teigland@redhat.com>
+diff --git a/include/net/sock.h b/include/net/sock.h
+index 488f718a1d80..c2492bdfa95a 100644
+--- a/include/net/sock.h
++++ b/include/net/sock.h
+@@ -2543,6 +2543,7 @@ static inline bool sk_dev_equal_l3scope(struct sock *sk, int dif)
+ 	return false;
+ }
+ 
++void sock_set_mark(struct sock *sk, u32 val);
+ void sock_set_reuseaddr(struct sock *sk);
+ void sock_set_sndtimeo(struct sock *sk, s64 secs);
+ void sock_set_keepalive(struct sock *sk);
+diff --git a/net/core/sock.c b/net/core/sock.c
+index 95fb6f2e1630..c9310ea88d95 100644
+--- a/net/core/sock.c
++++ b/net/core/sock.c
+@@ -703,6 +703,14 @@ void sock_set_rcvbuf(struct sock *sk, int val)
+ }
+ EXPORT_SYMBOL(sock_set_rcvbuf);
+ 
++void sock_set_mark(struct sock *sk, u32 val)
++{
++	lock_sock(sk);
++	sk->sk_mark = val;
++	release_sock(sk);
++}
++EXPORT_SYMBOL(sock_set_mark);
++
+ /*
+  *	This is meant for all protocols to use and covers goings on
+  *	at the socket level. Everything here is generic.
