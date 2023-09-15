@@ -1,0 +1,71 @@
+From 0461e0db941f8f49dcfd0576c4449f2e5beda2f6 Mon Sep 17 00:00:00 2001
+From: Alexander Aring <aahringo@redhat.com>
+Date: Thu, 24 Sep 2020 10:31:22 -0400
+Subject: [PATCH 28/28] fs: dlm: remove lock dependency warning
+
+During my experiments to make dlm robust against tcpkill application I
+was able to run sometimes in a circular lock dependency warning between
+clusters_root.subsys.su_mutex and con->sock_mutex. We don't need to
+held the sock_mutex when getting the mark value which held the
+clusters_root.subsys.su_mutex. This patch moves the specific handling
+just before the sock_mutex will be held.
+
+Signed-off-by: Alexander Aring <aahringo@redhat.com>
+Signed-off-by: David Teigland <teigland@redhat.com>
+---
+ fs/dlm/lowcomms.c | 18 ++++++++----------
+ 1 file changed, 8 insertions(+), 10 deletions(-)
+
+diff --git a/fs/dlm/lowcomms.c b/fs/dlm/lowcomms.c
+index 1bf1808bfa6b..24f5e55313d8 100644
+--- a/fs/dlm/lowcomms.c
++++ b/fs/dlm/lowcomms.c
+@@ -971,6 +971,10 @@ static void sctp_connect_to_sock(struct connection *con)
+ 		return;
+ 	}
+ 
++	result = dlm_comm_mark(con->nodeid, &mark);
++	if (result < 0)
++		return;
++
+ 	mutex_lock(&con->sock_mutex);
+ 
+ 	/* Some odd races can cause double-connects, ignore them */
+@@ -995,11 +999,6 @@ static void sctp_connect_to_sock(struct connection *con)
+ 	if (result < 0)
+ 		goto socket_err;
+ 
+-	/* set skb mark */
+-	result = dlm_comm_mark(con->nodeid, &mark);
+-	if (result < 0)
+-		goto bind_err;
+-
+ 	sock_set_mark(sock->sk, mark);
+ 
+ 	con->rx_action = receive_from_sock;
+@@ -1072,6 +1071,10 @@ static void tcp_connect_to_sock(struct connection *con)
+ 		return;
+ 	}
+ 
++	result = dlm_comm_mark(con->nodeid, &mark);
++	if (result < 0)
++		return;
++
+ 	mutex_lock(&con->sock_mutex);
+ 	if (con->retries++ > MAX_CONNECT_RETRIES)
+ 		goto out;
+@@ -1086,11 +1089,6 @@ static void tcp_connect_to_sock(struct connection *con)
+ 	if (result < 0)
+ 		goto out_err;
+ 
+-	/* set skb mark */
+-	result = dlm_comm_mark(con->nodeid, &mark);
+-	if (result < 0)
+-		goto out_err;
+-
+ 	sock_set_mark(sock->sk, mark);
+ 
+ 	memset(&saddr, 0, sizeof(saddr));
+-- 
+2.31.1
+

@@ -1,0 +1,49 @@
+From c937aabbd7f46fa3b283744169a6b48dafbd6cc7 Mon Sep 17 00:00:00 2001
+From: Alexander Aring <aahringo@redhat.com>
+Date: Fri, 21 May 2021 15:08:33 -0400
+Subject: [PATCH 61/61] fs: dlm: always run complete for possible waiters
+
+This patch changes the ping_members() result that we always run
+complete() for possible waiters. We handle the -EINTR error code as
+successful. This error code is returned if the recovery is stopped which
+is likely that a new recovery is triggered with a new members
+configuration and ping_members() runs again.
+
+Signed-off-by: Alexander Aring <aahringo@redhat.com>
+Signed-off-by: David Teigland <teigland@redhat.com>
+---
+ fs/dlm/member.c | 18 ++++++++++++------
+ 1 file changed, 12 insertions(+), 6 deletions(-)
+
+diff --git a/fs/dlm/member.c b/fs/dlm/member.c
+index ceef3f2074ff..48245ba3c640 100644
+--- a/fs/dlm/member.c
++++ b/fs/dlm/member.c
+@@ -576,12 +576,18 @@ int dlm_recover_members(struct dlm_ls *ls, struct dlm_recover *rv, int *neg_out)
+ 	*neg_out = neg;
+ 
+ 	error = ping_members(ls);
+-	if (!error || error == -EPROTO) {
+-		/* new_lockspace() may be waiting to know if the config
+-		   is good or bad */
+-		ls->ls_members_result = error;
+-		complete(&ls->ls_members_done);
+-	}
++	/* error -EINTR means that a new recovery action is triggered.
++	 * We ignore this recovery action and let run the new one which might
++	 * have new member configuration.
++	 */
++	if (error == -EINTR)
++		error = 0;
++
++	/* new_lockspace() may be waiting to know if the config
++	 * is good or bad
++	 */
++	ls->ls_members_result = error;
++	complete(&ls->ls_members_done);
+ 
+ 	log_rinfo(ls, "dlm_recover_members %d nodes", ls->ls_num_nodes);
+ 	return error;
+-- 
+2.31.1
+

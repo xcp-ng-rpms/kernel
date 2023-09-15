@@ -1,0 +1,106 @@
+From a5b7ab6352bfaab6eec4df6618a135341d72c247 Mon Sep 17 00:00:00 2001
+From: Alexander Aring <aahringo@redhat.com>
+Date: Fri, 26 Jun 2020 13:26:49 -0400
+Subject: [PATCH 15/15] fs: dlm: set skb mark for listen socket
+
+This patch adds support to set the skb mark value for the DLM listen
+tcp and sctp sockets. The mark value will be offered as cluster
+configuration. At creation time of the listen socket it will be set as
+socket option.
+
+Signed-off-by: Alexander Aring <aahringo@redhat.com>
+Signed-off-by: David Teigland <teigland@redhat.com>
+---
+ fs/dlm/config.c   | 6 ++++++
+ fs/dlm/config.h   | 1 +
+ fs/dlm/lowcomms.c | 3 +++
+ 3 files changed, 10 insertions(+)
+
+diff --git a/fs/dlm/config.c b/fs/dlm/config.c
+index 3b21082e1b55..d74655cd6cd3 100644
+--- a/fs/dlm/config.c
++++ b/fs/dlm/config.c
+@@ -73,6 +73,7 @@ struct dlm_cluster {
+ 	unsigned int cl_log_debug;
+ 	unsigned int cl_log_info;
+ 	unsigned int cl_protocol;
++	unsigned int cl_mark;
+ 	unsigned int cl_timewarn_cs;
+ 	unsigned int cl_waitwarn_us;
+ 	unsigned int cl_new_rsb_count;
+@@ -96,6 +97,7 @@ enum {
+ 	CLUSTER_ATTR_LOG_DEBUG,
+ 	CLUSTER_ATTR_LOG_INFO,
+ 	CLUSTER_ATTR_PROTOCOL,
++	CLUSTER_ATTR_MARK,
+ 	CLUSTER_ATTR_TIMEWARN_CS,
+ 	CLUSTER_ATTR_WAITWARN_US,
+ 	CLUSTER_ATTR_NEW_RSB_COUNT,
+@@ -168,6 +170,7 @@ CLUSTER_ATTR(scan_secs, 1);
+ CLUSTER_ATTR(log_debug, 0);
+ CLUSTER_ATTR(log_info, 0);
+ CLUSTER_ATTR(protocol, 0);
++CLUSTER_ATTR(mark, 0);
+ CLUSTER_ATTR(timewarn_cs, 1);
+ CLUSTER_ATTR(waitwarn_us, 0);
+ CLUSTER_ATTR(new_rsb_count, 0);
+@@ -183,6 +186,7 @@ static struct configfs_attribute *cluster_attrs[] = {
+ 	[CLUSTER_ATTR_LOG_DEBUG] = &cluster_attr_log_debug,
+ 	[CLUSTER_ATTR_LOG_INFO] = &cluster_attr_log_info,
+ 	[CLUSTER_ATTR_PROTOCOL] = &cluster_attr_protocol,
++	[CLUSTER_ATTR_MARK] = &cluster_attr_mark,
+ 	[CLUSTER_ATTR_TIMEWARN_CS] = &cluster_attr_timewarn_cs,
+ 	[CLUSTER_ATTR_WAITWARN_US] = &cluster_attr_waitwarn_us,
+ 	[CLUSTER_ATTR_NEW_RSB_COUNT] = &cluster_attr_new_rsb_count,
+@@ -855,6 +859,7 @@ int dlm_our_addr(struct sockaddr_storage *addr, int num)
+ #define DEFAULT_LOG_DEBUG          0
+ #define DEFAULT_LOG_INFO           1
+ #define DEFAULT_PROTOCOL           0
++#define DEFAULT_MARK               0
+ #define DEFAULT_TIMEWARN_CS      500 /* 5 sec = 500 centiseconds */
+ #define DEFAULT_WAITWARN_US	   0
+ #define DEFAULT_NEW_RSB_COUNT    128
+@@ -871,6 +876,7 @@ struct dlm_config_info dlm_config = {
+ 	.ci_log_debug = DEFAULT_LOG_DEBUG,
+ 	.ci_log_info = DEFAULT_LOG_INFO,
+ 	.ci_protocol = DEFAULT_PROTOCOL,
++	.ci_mark = DEFAULT_MARK,
+ 	.ci_timewarn_cs = DEFAULT_TIMEWARN_CS,
+ 	.ci_waitwarn_us = DEFAULT_WAITWARN_US,
+ 	.ci_new_rsb_count = DEFAULT_NEW_RSB_COUNT,
+diff --git a/fs/dlm/config.h b/fs/dlm/config.h
+index 2b471aae4e61..13508ec3ff5e 100644
+--- a/fs/dlm/config.h
++++ b/fs/dlm/config.h
+@@ -31,6 +31,7 @@ struct dlm_config_info {
+ 	int ci_log_debug;
+ 	int ci_log_info;
+ 	int ci_protocol;
++	int ci_mark;
+ 	int ci_timewarn_cs;
+ 	int ci_waitwarn_us;
+ 	int ci_new_rsb_count;
+diff --git a/fs/dlm/lowcomms.c b/fs/dlm/lowcomms.c
+index 3543a8fec907..eaedad7d069a 100644
+--- a/fs/dlm/lowcomms.c
++++ b/fs/dlm/lowcomms.c
+@@ -1111,6 +1111,8 @@ static struct socket *tcp_create_listen_sock(struct connection *con,
+ 		goto create_out;
+ 	}
+ 
++	sock_set_mark(sock->sk, dlm_config.ci_mark);
++
+ 	/* Turn off Nagle's algorithm */
+ 	tcp_sock_set_nodelay(sock->sk);
+ 
+@@ -1185,6 +1187,7 @@ static int sctp_listen_for_all(void)
+ 	}
+ 
+ 	sock_set_rcvbuf(sock->sk, NEEDED_RMEM);
++	sock_set_mark(sock->sk, dlm_config.ci_mark);
+ 	sctp_sock_set_nodelay(sock->sk);
+ 
+ 	write_lock_bh(&sock->sk->sk_callback_lock);
+-- 
+2.31.1
+

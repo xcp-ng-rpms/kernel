@@ -1,0 +1,61 @@
+From 194a3fb488f2760eda67c3ab0ce3a095e8006d72 Mon Sep 17 00:00:00 2001
+From: Alexander Aring <aahringo@redhat.com>
+Date: Thu, 27 Oct 2022 16:45:24 -0400
+Subject: [PATCH 1/1] fs: dlm: relax sending to allow receiving
+
+This patch drops additionally the sock_mutex when there is a sending
+message burst. Since we have acknowledge handling we free sending
+buffers only when we receive an ack back, but if we are stuck in
+send_to_sock() looping because dlm sends a lot of messages and we never
+leave the loop the sending buffer fill up very quickly. We can't receive
+during this iteration because the sock_mutex is held. This patch will
+unlock the sock_mutex so it should be possible to receive messages when
+a burst of sending messages happens. This will allow to free up memory
+because acks which are already received can be processed.
+
+Signed-off-by: Alexander Aring <aahringo@redhat.com>
+Signed-off-by: David Teigland <teigland@redhat.com>
+---
+ fs/dlm/lowcomms.c | 15 ++++++++++-----
+ 1 file changed, 10 insertions(+), 5 deletions(-)
+
+diff --git a/fs/dlm/lowcomms.c b/fs/dlm/lowcomms.c
+index 871d4e9f49fb..b05c6d9b5102 100644
+--- a/fs/dlm/lowcomms.c
++++ b/fs/dlm/lowcomms.c
+@@ -1418,7 +1418,10 @@ static void send_to_sock(struct connection *con)
+ 	const int msg_flags = MSG_DONTWAIT | MSG_NOSIGNAL;
+ 	struct writequeue_entry *e;
+ 	int len, offset, ret;
+-	int count = 0;
++	int count;
++
++again:
++	count = 0;
+ 
+ 	mutex_lock(&con->sock_mutex);
+ 	if (con->sock == NULL)
+@@ -1453,14 +1456,16 @@ static void send_to_sock(struct connection *con)
+ 		} else if (ret < 0)
+ 			goto out;
+ 
++		spin_lock(&con->writequeue_lock);
++		writequeue_entry_complete(e, ret);
++
+ 		/* Don't starve people filling buffers */
+ 		if (++count >= MAX_SEND_MSG_COUNT) {
++			spin_unlock(&con->writequeue_lock);
++			mutex_unlock(&con->sock_mutex);
+ 			cond_resched();
+-			count = 0;
++			goto again;
+ 		}
+-
+-		spin_lock(&con->writequeue_lock);
+-		writequeue_entry_complete(e, ret);
+ 	}
+ 	spin_unlock(&con->writequeue_lock);
+ 
+-- 
+2.31.1
+

@@ -1,0 +1,113 @@
+From 3f78cd7d2449a07904b3a23751758cbdeaaa20f3 Mon Sep 17 00:00:00 2001
+From: Alexander Aring <aahringo@redhat.com>
+Date: Thu, 24 Sep 2020 10:31:23 -0400
+Subject: [PATCH 29/29] fs: dlm: fix mark per nodeid setting
+
+This patch fixes to set per nodeid mark configuration for accepted
+sockets as well. Before this patch only the listen socket mark value was
+used for all accepted connections. This patch will ensure that the
+cluster mark attribute value will be always used for all sockets, if a
+per nodeid mark value is specified dlm will use this value for the
+specific node.
+
+Signed-off-by: Alexander Aring <aahringo@redhat.com>
+Signed-off-by: David Teigland <teigland@redhat.com>
+---
+ fs/dlm/config.c   | 16 ++++++++++------
+ fs/dlm/config.h   |  2 +-
+ fs/dlm/lowcomms.c | 12 ++++++------
+ 3 files changed, 17 insertions(+), 13 deletions(-)
+
+diff --git a/fs/dlm/config.c b/fs/dlm/config.c
+index f33a7e4ae917..ca4a9795afbe 100644
+--- a/fs/dlm/config.c
++++ b/fs/dlm/config.c
+@@ -860,18 +860,22 @@ int dlm_comm_seq(int nodeid, uint32_t *seq)
+ 	return 0;
+ }
+ 
+-int dlm_comm_mark(int nodeid, unsigned int *mark)
++void dlm_comm_mark(int nodeid, unsigned int *mark)
+ {
+ 	struct dlm_comm *cm;
+ 
+ 	cm = get_comm(nodeid);
+-	if (!cm)
+-		return -ENOENT;
++	if (!cm) {
++		*mark = dlm_config.ci_mark;
++		return;
++	}
+ 
+-	*mark = cm->mark;
+-	put_comm(cm);
++	if (cm->mark)
++		*mark = cm->mark;
++	else
++		*mark = dlm_config.ci_mark;
+ 
+-	return 0;
++	put_comm(cm);
+ }
+ 
+ int dlm_our_nodeid(void)
+diff --git a/fs/dlm/config.h b/fs/dlm/config.h
+index f62996cad561..3b284ae9aeeb 100644
+--- a/fs/dlm/config.h
++++ b/fs/dlm/config.h
+@@ -46,7 +46,7 @@ void dlm_config_exit(void);
+ int dlm_config_nodes(char *lsname, struct dlm_config_node **nodes_out,
+ 		     int *count_out);
+ int dlm_comm_seq(int nodeid, uint32_t *seq);
+-int dlm_comm_mark(int nodeid, unsigned int *mark);
++void dlm_comm_mark(int nodeid, unsigned int *mark);
+ int dlm_our_nodeid(void);
+ int dlm_our_addr(struct sockaddr_storage *addr, int num);
+ 
+diff --git a/fs/dlm/lowcomms.c b/fs/dlm/lowcomms.c
+index 24f5e55313d8..96f84541867c 100644
+--- a/fs/dlm/lowcomms.c
++++ b/fs/dlm/lowcomms.c
+@@ -790,6 +790,7 @@ static int accept_from_sock(struct connection *con)
+ 	int nodeid;
+ 	struct connection *newcon;
+ 	struct connection *addcon;
++	unsigned int mark;
+ 
+ 	if (!dlm_allow_conn) {
+ 		return -1;
+@@ -826,6 +827,9 @@ static int accept_from_sock(struct connection *con)
+ 		return -1;
+ 	}
+ 
++	dlm_comm_mark(nodeid, &mark);
++	sock_set_mark(newsock->sk, mark);
++
+ 	log_print("got connection from %d", nodeid);
+ 
+ 	/*  Check to see if we already have a connection to this node. This
+@@ -971,9 +975,7 @@ static void sctp_connect_to_sock(struct connection *con)
+ 		return;
+ 	}
+ 
+-	result = dlm_comm_mark(con->nodeid, &mark);
+-	if (result < 0)
+-		return;
++	dlm_comm_mark(con->nodeid, &mark);
+ 
+ 	mutex_lock(&con->sock_mutex);
+ 
+@@ -1071,9 +1073,7 @@ static void tcp_connect_to_sock(struct connection *con)
+ 		return;
+ 	}
+ 
+-	result = dlm_comm_mark(con->nodeid, &mark);
+-	if (result < 0)
+-		return;
++	dlm_comm_mark(con->nodeid, &mark);
+ 
+ 	mutex_lock(&con->sock_mutex);
+ 	if (con->retries++ > MAX_CONNECT_RETRIES)
+-- 
+2.31.1
+

@@ -1,0 +1,54 @@
+From 2df6b7627a81b1407378125246eacdb1d8c90036 Mon Sep 17 00:00:00 2001
+From: Alexander Aring <aahringo@redhat.com>
+Date: Fri, 21 May 2021 15:08:34 -0400
+Subject: [PATCH 62/62] fs: dlm: add dlm macros for ratelimit log
+
+This patch add ratelimit macro to dlm subsystem and will set the
+connecting log message to ratelimit. In non blocking connecting cases it
+will print out this message a lot.
+
+Signed-off-by: Alexander Aring <aahringo@redhat.com>
+Signed-off-by: David Teigland <teigland@redhat.com>
+---
+ fs/dlm/dlm_internal.h | 2 ++
+ fs/dlm/lowcomms.c     | 4 ++--
+ 2 files changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/fs/dlm/dlm_internal.h b/fs/dlm/dlm_internal.h
+index 04fe9f525ac7..ae3fdf6d9cda 100644
+--- a/fs/dlm/dlm_internal.h
++++ b/fs/dlm/dlm_internal.h
+@@ -60,6 +60,8 @@ struct dlm_mhandle;
+ 
+ #define log_print(fmt, args...) \
+ 	printk(KERN_ERR "dlm: "fmt"\n" , ##args)
++#define log_print_ratelimited(fmt, args...) \
++	printk_ratelimited(KERN_ERR "dlm: "fmt"\n", ##args)
+ #define log_error(ls, fmt, args...) \
+ 	printk(KERN_ERR "dlm: %s: " fmt "\n", (ls)->ls_name , ##args)
+ 
+diff --git a/fs/dlm/lowcomms.c b/fs/dlm/lowcomms.c
+index 166e36fcf3e4..15810701b13e 100644
+--- a/fs/dlm/lowcomms.c
++++ b/fs/dlm/lowcomms.c
+@@ -1075,7 +1075,7 @@ static void sctp_connect_to_sock(struct connection *con)
+ 
+ 	make_sockaddr(&daddr, dlm_config.ci_tcp_port, &addr_len);
+ 
+-	log_print("connecting to %d", con->nodeid);
++	log_print_ratelimited("connecting to %d", con->nodeid);
+ 
+ 	/* Turn off Nagle's algorithm */
+ 	sctp_sock_set_nodelay(sock->sk);
+@@ -1171,7 +1171,7 @@ static void tcp_connect_to_sock(struct connection *con)
+ 
+ 	make_sockaddr(&saddr, dlm_config.ci_tcp_port, &addr_len);
+ 
+-	log_print("connecting to %d", con->nodeid);
++	log_print_ratelimited("connecting to %d", con->nodeid);
+ 
+ 	/* Turn off Nagle's algorithm */
+ 	tcp_sock_set_nodelay(sock->sk);
+-- 
+2.31.1
+

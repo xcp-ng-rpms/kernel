@@ -1,0 +1,38 @@
+From 5cbec208dc994de860ae72d3340bc54f14e71b39 Mon Sep 17 00:00:00 2001
+From: Alexander Aring <aahringo@redhat.com>
+Date: Mon, 2 Nov 2020 20:04:16 -0500
+Subject: [PATCH 34/34] fs: dlm: fix proper srcu api call
+
+This patch will use call_srcu() instead of call_rcu() because the
+related datastructure resource are handled under srcu context. I assume
+the current code is fine anyway since free_conn() must be called when
+the related resource are not in use otherwise. However it will correct
+the overall handling in a srcu context.
+
+Signed-off-by: Alexander Aring <aahringo@redhat.com>
+Signed-off-by: David Teigland <teigland@redhat.com>
+---
+ fs/dlm/lowcomms.c | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/fs/dlm/lowcomms.c b/fs/dlm/lowcomms.c
+index 79f56f16bc2c..77382c2ce6da 100644
+--- a/fs/dlm/lowcomms.c
++++ b/fs/dlm/lowcomms.c
+@@ -1616,10 +1616,11 @@ static void free_conn(struct connection *con)
+ 	spin_unlock(&connections_lock);
+ 	if (con->othercon) {
+ 		clean_one_writequeue(con->othercon);
+-		call_rcu(&con->othercon->rcu, connection_release);
++		call_srcu(&connections_srcu, &con->othercon->rcu,
++			  connection_release);
+ 	}
+ 	clean_one_writequeue(con);
+-	call_rcu(&con->rcu, connection_release);
++	call_srcu(&connections_srcu, &con->rcu, connection_release);
+ }
+ 
+ static void work_flush(void)
+-- 
+2.31.1
+

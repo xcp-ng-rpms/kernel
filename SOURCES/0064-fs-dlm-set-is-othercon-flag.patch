@@ -1,0 +1,39 @@
+From 7443bc962509912c70c587db71449daff26b9678 Mon Sep 17 00:00:00 2001
+From: Alexander Aring <aahringo@redhat.com>
+Date: Fri, 21 May 2021 15:08:36 -0400
+Subject: [PATCH 64/64] fs: dlm: set is othercon flag
+
+There is a is othercon flag which is never used, this patch will set it
+and printout a warning if the othercon ever sends a dlm message which
+should never be the case.
+
+Signed-off-by: Alexander Aring <aahringo@redhat.com>
+Signed-off-by: David Teigland <teigland@redhat.com>
+---
+ fs/dlm/lowcomms.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/fs/dlm/lowcomms.c b/fs/dlm/lowcomms.c
+index 7c7a31377f27..4944aef24aa5 100644
+--- a/fs/dlm/lowcomms.c
++++ b/fs/dlm/lowcomms.c
+@@ -938,6 +938,7 @@ static int accept_from_sock(struct listen_connection *con)
+ 			}
+ 
+ 			lockdep_set_subclass(&othercon->sock_mutex, 1);
++			set_bit(CF_IS_OTHERCON, &othercon->flags);
+ 			newcon->othercon = othercon;
+ 		} else {
+ 			/* close other sock con if we have something new */
+@@ -1601,6 +1602,8 @@ static void process_send_sockets(struct work_struct *work)
+ {
+ 	struct connection *con = container_of(work, struct connection, swork);
+ 
++	WARN_ON(test_bit(CF_IS_OTHERCON, &con->flags));
++
+ 	clear_bit(CF_WRITE_PENDING, &con->flags);
+ 	if (con->sock == NULL) /* not mutex protected so check it inside too */
+ 		con->connect_action(con);
+-- 
+2.31.1
+

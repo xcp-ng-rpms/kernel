@@ -1,0 +1,36 @@
+From bcbfea41e1f9d516faed1faf0f2d390c000bf0d9 Mon Sep 17 00:00:00 2001
+From: Alexander Aring <aahringo@redhat.com>
+Date: Tue, 30 Nov 2021 14:47:15 -0500
+Subject: [PATCH 1/1] fs: dlm: check for pending users filling buffers
+
+Currently we don't care if the DLM application stack is filling buffers
+(not committed yet) while we transmit some already committed buffers.
+By checking on active writequeue users before dequeue a writequeue entry
+we know there is coming more data and do nothing. We wait until the send
+worker will be triggered again if the writequeue entry users hit zero.
+
+Signed-off-by: Alexander Aring <aahringo@redhat.com>
+Signed-off-by: David Teigland <teigland@redhat.com>
+---
+ fs/dlm/lowcomms.c | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/fs/dlm/lowcomms.c b/fs/dlm/lowcomms.c
+index f7fc1ac76ce8..6d500ebc6145 100644
+--- a/fs/dlm/lowcomms.c
++++ b/fs/dlm/lowcomms.c
+@@ -201,7 +201,10 @@ static struct writequeue_entry *con_next_wq(struct connection *con)
+ 
+ 	e = list_first_entry(&con->writequeue, struct writequeue_entry,
+ 			     list);
+-	if (e->len == 0)
++	/* if len is zero nothing is to send, if there are users filling
++	 * buffers we wait until the users are done so we can send more.
++	 */
++	if (e->users || e->len == 0)
+ 		return NULL;
+ 
+ 	return e;
+-- 
+2.31.1
+

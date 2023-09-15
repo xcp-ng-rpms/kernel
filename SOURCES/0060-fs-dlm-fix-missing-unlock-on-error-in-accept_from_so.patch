@@ -1,0 +1,32 @@
+From 2fd8db2dd05d895961c7c7b9fa02d72f385560e4 Mon Sep 17 00:00:00 2001
+From: Yang Yingliang <yangyingliang@huawei.com>
+Date: Sat, 27 Mar 2021 16:37:04 +0800
+Subject: [PATCH 60/60] fs: dlm: fix missing unlock on error in
+ accept_from_sock()
+
+Add the missing unlock before return from accept_from_sock()
+in the error handling case.
+
+Fixes: 6cde210a9758 ("fs: dlm: add helper for init connection")
+Reported-by: Hulk Robot <hulkci@huawei.com>
+Signed-off-by: Yang Yingliang <yangyingliang@huawei.com>
+Signed-off-by: David Teigland <teigland@redhat.com>
+---
+ fs/dlm/lowcomms.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/fs/dlm/lowcomms.c b/fs/dlm/lowcomms.c
+index 73cc1809050a..166e36fcf3e4 100644
+--- a/fs/dlm/lowcomms.c
++++ b/fs/dlm/lowcomms.c
+@@ -931,6 +931,7 @@ static int accept_from_sock(struct listen_connection *con)
+ 			result = dlm_con_init(othercon, nodeid);
+ 			if (result < 0) {
+ 				kfree(othercon);
++				mutex_unlock(&newcon->sock_mutex);
+ 				goto accept_err;
+ 			}
+ 
+-- 
+2.31.1
+

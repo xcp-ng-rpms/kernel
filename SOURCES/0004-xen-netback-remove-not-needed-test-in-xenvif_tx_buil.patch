@@ -1,0 +1,42 @@
+From 8fb8ebf9487785184846d04e915bfe327bf4ccd5 Mon Sep 17 00:00:00 2001
+From: Juergen Gross <jgross@suse.com>
+Date: Mon, 27 Mar 2023 10:36:46 +0200
+Subject: [PATCH 4/4] xen/netback: remove not needed test in
+ xenvif_tx_build_gops()
+
+The tests for the number of grant mapping or copy operations reaching
+the array size of the operations buffer at the end of the main loop in
+xenvif_tx_build_gops() isn't needed.
+
+The loop can handle at maximum MAX_PENDING_REQS transfer requests, as
+XEN_RING_NR_UNCONSUMED_REQUESTS() is taking unsent responses into
+consideration, too.
+
+Remove the tests.
+
+Suggested-by: Jan Beulich <jbeulich@suse.com>
+Signed-off-by: Juergen Gross <jgross@suse.com>
+Reviewed-by: Paul Durrant <paul@xen.org>
+Signed-off-by: Paolo Abeni <pabeni@redhat.com>
+---
+ drivers/net/xen-netback/netback.c | 4 ----
+ 1 file changed, 4 deletions(-)
+
+diff --git a/drivers/net/xen-netback/netback.c b/drivers/net/xen-netback/netback.c
+index 111c179f161b..4943be4fd99d 100644
+--- a/drivers/net/xen-netback/netback.c
++++ b/drivers/net/xen-netback/netback.c
+@@ -1082,10 +1082,6 @@ static void xenvif_tx_build_gops(struct xenvif_queue *queue,
+ 		__skb_queue_tail(&queue->tx_queue, skb);
+ 
+ 		queue->tx.req_cons = idx;
+-
+-		if ((*map_ops >= ARRAY_SIZE(queue->tx_map_ops)) ||
+-		    (*copy_ops >= ARRAY_SIZE(queue->tx_copy_ops)))
+-			break;
+ 	}
+ 
+ 	return;
+-- 
+2.31.1
+

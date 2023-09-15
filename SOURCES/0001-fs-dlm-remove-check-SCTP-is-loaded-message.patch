@@ -1,0 +1,33 @@
+From fe93367541bcedaba1dd5cb9cf138eec0267ea56 Mon Sep 17 00:00:00 2001
+From: Alexander Aring <aahringo@redhat.com>
+Date: Tue, 2 Nov 2021 15:17:10 -0400
+Subject: [PATCH 1/1] fs: dlm: remove check SCTP is loaded message
+
+Since commit 764ff4011424 ("fs: dlm: auto load sctp module") we try
+load the sctp module before we try to create a sctp kernel socket. That
+a socket creation fails now has more likely other reasons. This patch
+removes the part of error to load the sctp module and instead printout
+the error code.
+
+Signed-off-by: Alexander Aring <aahringo@redhat.com>
+Signed-off-by: David Teigland <teigland@redhat.com>
+---
+ fs/dlm/lowcomms.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/fs/dlm/lowcomms.c b/fs/dlm/lowcomms.c
+index 8f715c620e1f..bee3757eb4c7 100644
+--- a/fs/dlm/lowcomms.c
++++ b/fs/dlm/lowcomms.c
+@@ -1775,7 +1775,7 @@ static int dlm_listen_for_all(void)
+ 	result = sock_create_kern(&init_net, dlm_local_addr[0]->ss_family,
+ 				  SOCK_STREAM, dlm_proto_ops->proto, &sock);
+ 	if (result < 0) {
+-		log_print("Can't create comms socket, check SCTP is loaded");
++		log_print("Can't create comms socket: %d", result);
+ 		goto out;
+ 	}
+ 
+-- 
+2.31.1
+

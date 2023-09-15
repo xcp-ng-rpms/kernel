@@ -1,0 +1,151 @@
+From 3af2326ca0a13cf84aeb75e001e757ff3cefeae9 Mon Sep 17 00:00:00 2001
+From: Alexander Aring <aahringo@redhat.com>
+Date: Tue, 30 Nov 2021 14:47:19 -0500
+Subject: [PATCH 1/1] fs: dlm: memory cache for writequeue_entry
+
+This patch introduces a kmem cache for writequeue entry. A writequeue
+entry get quite a lot allocated if dlm transmit messages.
+
+Signed-off-by: Alexander Aring <aahringo@redhat.com>
+Signed-off-by: David Teigland <teigland@redhat.com>
+diff --git a/fs/dlm/lowcomms.c b/fs/dlm/lowcomms.c
+index 62cfdf640972..e77d461d2626 100644
+--- a/fs/dlm/lowcomms.c
++++ b/fs/dlm/lowcomms.c
+@@ -58,6 +58,7 @@
+ #include "dlm_internal.h"
+ #include "lowcomms.h"
+ #include "midcomms.h"
++#include "memory.h"
+ #include "config.h"
+ 
+ #define NEEDED_RMEM (4*1024*1024)
+@@ -190,6 +191,19 @@ static const struct dlm_proto_ops *dlm_proto_ops;
+ static void process_recv_sockets(struct work_struct *work);
+ static void process_send_sockets(struct work_struct *work);
+ 
++static void writequeue_entry_ctor(void *data)
++{
++	struct writequeue_entry *entry = data;
++
++	INIT_LIST_HEAD(&entry->msgs);
++}
++
++struct kmem_cache *dlm_lowcomms_writequeue_cache_create(void)
++{
++	return kmem_cache_create("dlm_writequeue", sizeof(struct writequeue_entry),
++				 0, 0, writequeue_entry_ctor);
++}
++
+ /* need to held writequeue_lock */
+ static struct writequeue_entry *con_next_wq(struct connection *con)
+ {
+@@ -728,7 +742,7 @@ static void dlm_page_release(struct kref *kref)
+ 						  ref);
+ 
+ 	__free_page(e->page);
+-	kfree(e);
++	dlm_free_writequeue(e);
+ }
+ 
+ static void dlm_msg_release(struct kref *kref)
+@@ -1179,21 +1193,23 @@ static struct writequeue_entry *new_writequeue_entry(struct connection *con)
+ {
+ 	struct writequeue_entry *entry;
+ 
+-	entry = kzalloc(sizeof(*entry), GFP_ATOMIC);
++	entry = dlm_allocate_writequeue();
+ 	if (!entry)
+ 		return NULL;
+ 
+ 	entry->page = alloc_page(GFP_ATOMIC | __GFP_ZERO);
+ 	if (!entry->page) {
+-		kfree(entry);
++		dlm_free_writequeue(entry);
+ 		return NULL;
+ 	}
+ 
++	entry->offset = 0;
++	entry->len = 0;
++	entry->end = 0;
++	entry->dirty = false;
+ 	entry->con = con;
+ 	entry->users = 1;
+ 	kref_init(&entry->ref);
+-	INIT_LIST_HEAD(&entry->msgs);
+-
+ 	return entry;
+ }
+ 
+diff --git a/fs/dlm/lowcomms.h b/fs/dlm/lowcomms.h
+index 91e4172480cd..0c2df805a586 100644
+--- a/fs/dlm/lowcomms.h
++++ b/fs/dlm/lowcomms.h
+@@ -49,6 +49,7 @@ int dlm_lowcomms_connect_node(int nodeid);
+ int dlm_lowcomms_nodes_set_mark(int nodeid, unsigned int mark);
+ int dlm_lowcomms_addr(int nodeid, struct sockaddr_storage *addr, int len);
+ void dlm_midcomms_receive_done(int nodeid);
++struct kmem_cache *dlm_lowcomms_writequeue_cache_create(void);
+ 
+ #endif				/* __LOWCOMMS_DOT_H__ */
+ 
+diff --git a/fs/dlm/memory.c b/fs/dlm/memory.c
+index 37be29f21d04..2fd8ee3d2ccb 100644
+--- a/fs/dlm/memory.c
++++ b/fs/dlm/memory.c
+@@ -12,15 +12,21 @@
+ ******************************************************************************/
+ 
+ #include "dlm_internal.h"
++#include "lowcomms.h"
+ #include "config.h"
+ #include "memory.h"
+ 
++static struct kmem_cache *writequeue_cache;
+ static struct kmem_cache *lkb_cache;
+ static struct kmem_cache *rsb_cache;
+ 
+ 
+ int __init dlm_memory_init(void)
+ {
++	writequeue_cache = dlm_lowcomms_writequeue_cache_create();
++	if (!writequeue_cache)
++		return -ENOMEM;
++
+ 	lkb_cache = kmem_cache_create("dlm_lkb", sizeof(struct dlm_lkb),
+ 				__alignof__(struct dlm_lkb), 0, NULL);
+ 	if (!lkb_cache)
+@@ -38,6 +44,7 @@ int __init dlm_memory_init(void)
+ 
+ void dlm_memory_exit(void)
+ {
++	kmem_cache_destroy(writequeue_cache);
+ 	kmem_cache_destroy(lkb_cache);
+ 	kmem_cache_destroy(rsb_cache);
+ }
+@@ -91,3 +98,12 @@ void dlm_free_lkb(struct dlm_lkb *lkb)
+ 	kmem_cache_free(lkb_cache, lkb);
+ }
+ 
++struct writequeue_entry *dlm_allocate_writequeue(void)
++{
++	return kmem_cache_alloc(writequeue_cache, GFP_ATOMIC);
++}
++
++void dlm_free_writequeue(struct writequeue_entry *writequeue)
++{
++	kmem_cache_free(writequeue_cache, writequeue);
++}
+diff --git a/fs/dlm/memory.h b/fs/dlm/memory.h
+index 177c11cbb0a6..cffc4de8c539 100644
+--- a/fs/dlm/memory.h
++++ b/fs/dlm/memory.h
+@@ -22,6 +22,8 @@ struct dlm_lkb *dlm_allocate_lkb(struct dlm_ls *ls);
+ void dlm_free_lkb(struct dlm_lkb *l);
+ char *dlm_allocate_lvb(struct dlm_ls *ls);
+ void dlm_free_lvb(char *l);
++struct writequeue_entry *dlm_allocate_writequeue(void);
++void dlm_free_writequeue(struct writequeue_entry *writequeue);
+ 
+ #endif		/* __MEMORY_DOT_H__ */
+ 

@@ -1,0 +1,35 @@
+From c4f5578708507ac6163a0f0f59f027b51f5e86cf Mon Sep 17 00:00:00 2001
+From: Ira Weiny <ira.weiny@intel.com>
+Date: Wed, 1 Dec 2021 20:43:02 -0800
+Subject: [PATCH 10/13] Documentation/auxiliary_bus: Clarify
+ __auxiliary_driver_register
+
+__auxiliary_driver_register is not intended to be called directly unless
+a custom name is required.  Add documentation for this fact.
+
+Signed-off-by: Ira Weiny <ira.weiny@intel.com>
+Link: https://lore.kernel.org/r/20211202044305.4006853-5-ira.weiny@intel.com
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+---
+ drivers/base/auxiliary.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/drivers/base/auxiliary.c b/drivers/base/auxiliary.c
+index 3190eccbb881..8e7e523a540d 100644
+--- a/drivers/base/auxiliary.c
++++ b/drivers/base/auxiliary.c
+@@ -227,6 +227,11 @@ EXPORT_SYMBOL_GPL(auxiliary_find_device);
+  * @auxdrv: auxiliary_driver structure
+  * @owner: owning module/driver
+  * @modname: KBUILD_MODNAME for parent driver
++ *
++ * The expectation is that users will call the "auxiliary_driver_register"
++ * macro so that the caller's KBUILD_MODNAME is automatically inserted for the
++ * modname parameter.  Only if a user requires a custom name would this version
++ * be called directly.
+  */
+ int __auxiliary_driver_register(struct auxiliary_driver *auxdrv,
+ 				struct module *owner, const char *modname)
+-- 
+2.18.4
+

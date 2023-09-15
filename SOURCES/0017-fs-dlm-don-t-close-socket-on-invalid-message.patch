@@ -1,0 +1,45 @@
+From 0ea47e4d2109efd61e9949d014b37ea835f20861 Mon Sep 17 00:00:00 2001
+From: Alexander Aring <aahringo@redhat.com>
+Date: Mon, 27 Jul 2020 09:13:36 -0400
+Subject: [PATCH 17/17] fs: dlm: don't close socket on invalid message
+
+This patch doesn't close sockets when there is an invalid dlm message
+received. The connection will probably reconnect anyway so. To not
+close the connection will reduce the number of possible failtures.
+As we don't have a different strategy to react on such scenario
+just keep going the connection and ignore the message.
+
+Signed-off-by: Alexander Aring <aahringo@redhat.com>
+Signed-off-by: David Teigland <teigland@redhat.com>
+---
+ fs/dlm/lowcomms.c | 12 ++++++------
+ 1 file changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/fs/dlm/lowcomms.c b/fs/dlm/lowcomms.c
+index 3fa1b93dbbc7..9e6acbb47bb9 100644
+--- a/fs/dlm/lowcomms.c
++++ b/fs/dlm/lowcomms.c
+@@ -685,14 +685,14 @@ static int receive_from_sock(struct connection *con)
+ 					  page_address(con->rx_page),
+ 					  con->cb.base, con->cb.len,
+ 					  PAGE_SIZE);
+-	if (ret == -EBADMSG) {
+-		log_print("lowcomms: addr=%p, base=%u, len=%u, read=%d",
+-			  page_address(con->rx_page), con->cb.base,
++	if (ret < 0) {
++		log_print("lowcomms err %d: addr=%p, base=%u, len=%u, read=%d",
++			  ret, page_address(con->rx_page), con->cb.base,
+ 			  con->cb.len, r);
++		cbuf_eat(&con->cb, r);
++	} else {
++		cbuf_eat(&con->cb, ret);
+ 	}
+-	if (ret < 0)
+-		goto out_close;
+-	cbuf_eat(&con->cb, ret);
+ 
+ 	if (cbuf_empty(&con->cb) && !call_again_soon) {
+ 		__free_page(con->rx_page);
+-- 
+2.31.1
+

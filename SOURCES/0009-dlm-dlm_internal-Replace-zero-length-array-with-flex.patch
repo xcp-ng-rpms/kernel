@@ -1,0 +1,74 @@
+From a4e439a6f628a52f7074c9d73ec7eb4f6c1a4dfc Mon Sep 17 00:00:00 2001
+From: "Gustavo A. R. Silva" <gustavo@embeddedor.com>
+Date: Mon, 9 Mar 2020 10:56:08 -0500
+Subject: [PATCH 9/9] dlm: dlm_internal: Replace zero-length array with
+ flexible-array member
+
+The current codebase makes use of the zero-length array language
+extension to the C90 standard, but the preferred mechanism to declare
+variable-length types such as these ones is a flexible array member[1][2],
+introduced in C99:
+
+struct foo {
+        int stuff;
+        struct boo array[];
+};
+
+By making use of the mechanism above, we will get a compiler warning
+in case the flexible array does not occur last in the structure, which
+will help us prevent some kind of undefined behavior bugs from being
+inadvertently introduced[3] to the codebase from now on.
+
+Also, notice that, dynamic memory allocations won't be affected by
+this change:
+
+"Flexible array members have incomplete type, and so the sizeof operator
+may not be applied. As a quirk of the original implementation of
+zero-length arrays, sizeof evaluates to zero."[1]
+
+This issue was found with the help of Coccinelle.
+
+[1] https://gcc.gnu.org/onlinedocs/gcc/Zero-Length.html
+[2] https://github.com/KSPP/linux/issues/21
+[3] commit 76497732932f ("cxgb3/l2t: Fix undefined behaviour")
+
+Signed-off-by: Gustavo A. R. Silva <gustavo@embeddedor.com>
+Signed-off-by: David Teigland <teigland@redhat.com>
+---
+ fs/dlm/dlm_internal.h | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/fs/dlm/dlm_internal.h b/fs/dlm/dlm_internal.h
+index 416d9de35679..d231ae5d2c65 100644
+--- a/fs/dlm/dlm_internal.h
++++ b/fs/dlm/dlm_internal.h
+@@ -421,7 +421,7 @@ struct dlm_message {
+ 	int			m_bastmode;
+ 	int			m_asts;
+ 	int			m_result;	/* 0 or -EXXX */
+-	char			m_extra[0];	/* name or lvb */
++	char			m_extra[];	/* name or lvb */
+ };
+ 
+ 
+@@ -450,7 +450,7 @@ struct dlm_rcom {
+ 	uint64_t		rc_id;		/* match reply with request */
+ 	uint64_t		rc_seq;		/* sender's ls_recover_seq */
+ 	uint64_t		rc_seq_reply;	/* remote ls_recover_seq */
+-	char			rc_buf[0];
++	char			rc_buf[];
+ };
+ 
+ union dlm_packet {
+@@ -506,7 +506,7 @@ struct rcom_lock {
+ 	__le16			rl_wait_type;
+ 	__le16			rl_namelen;
+ 	char			rl_name[DLM_RESNAME_MAXLEN];
+-	char			rl_lvb[0];
++	char			rl_lvb[];
+ };
+ 
+ /*
+-- 
+2.31.1
+

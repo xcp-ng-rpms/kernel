@@ -1,0 +1,32 @@
+From d921a23f3e1a703875db436cc7cdb4404cf1565f Mon Sep 17 00:00:00 2001
+From: Alexander Aring <aahringo@redhat.com>
+Date: Fri, 16 Jul 2021 16:22:35 -0400
+Subject: [PATCH 88/88] fs: dlm: use READ_ONCE for config var
+
+This patch will use READ_ONCE to signal the compiler to read this
+variable only one time. If we don't do that it could be that the
+compiler read this value more than one time, because some optimizations,
+from the configure data which might can be changed during this time.
+
+Signed-off-by: Alexander Aring <aahringo@redhat.com>
+Signed-off-by: David Teigland <teigland@redhat.com>
+---
+ fs/dlm/lockspace.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/fs/dlm/lockspace.c b/fs/dlm/lockspace.c
+index d71aba8c3e64..23c2d7308050 100644
+--- a/fs/dlm/lockspace.c
++++ b/fs/dlm/lockspace.c
+@@ -498,7 +498,7 @@ static int new_lockspace(const char *name, const char *cluster,
+ 	ls->ls_exflags = (flags & ~(DLM_LSFL_TIMEWARN | DLM_LSFL_FS |
+ 				    DLM_LSFL_NEWEXCL));
+ 
+-	size = dlm_config.ci_rsbtbl_size;
++	size = READ_ONCE(dlm_config.ci_rsbtbl_size);
+ 	ls->ls_rsbtbl_size = size;
+ 
+ 	ls->ls_rsbtbl = vmalloc(array_size(size, sizeof(struct dlm_rsbtable)));
+-- 
+2.31.1
+

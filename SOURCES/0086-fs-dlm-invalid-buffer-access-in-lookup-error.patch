@@ -1,0 +1,50 @@
+From 957adb68b3f7df8421a05f1647d3027f2acad310 Mon Sep 17 00:00:00 2001
+From: Alexander Aring <aahringo@redhat.com>
+Date: Fri, 11 Jun 2021 12:55:41 -0400
+Subject: [PATCH 86/86] fs: dlm: invalid buffer access in lookup error
+
+This patch will evaluate the message length if a dlm opts header can fit
+in before accessing it if a node lookup fails. The invalid sequence
+error means that the version detection failed and an unexpected message
+arrived. For debugging such situation the type of arrived message is
+important to know.
+
+Signed-off-by: Alexander Aring <aahringo@redhat.com>
+Signed-off-by: David Teigland <teigland@redhat.com>
+---
+ fs/dlm/midcomms.c | 19 +++++++++++++++++--
+ 1 file changed, 17 insertions(+), 2 deletions(-)
+
+diff --git a/fs/dlm/midcomms.c b/fs/dlm/midcomms.c
+index 92f95ee7003a..e3de268898ed 100644
+--- a/fs/dlm/midcomms.c
++++ b/fs/dlm/midcomms.c
+@@ -621,8 +621,23 @@ dlm_midcomms_recv_node_lookup(int nodeid, const union dlm_packet *p,
+ 
+ 	node = nodeid2node(nodeid, allocation);
+ 	if (!node) {
+-		log_print_ratelimited("received dlm message cmd %d nextcmd %d from node %d in an invalid sequence",
+-				      p->header.h_cmd, p->opts.o_nextcmd, nodeid);
++		switch (p->header.h_cmd) {
++		case DLM_OPTS:
++			if (msglen < sizeof(struct dlm_opts)) {
++				log_print("opts msg too small: %u, will skip this message from node %d",
++					  msglen, nodeid);
++				return NULL;
++			}
++
++			log_print_ratelimited("received dlm opts message nextcmd %d from node %d in an invalid sequence",
++					      p->opts.o_nextcmd, nodeid);
++			break;
++		default:
++			log_print_ratelimited("received dlm message cmd %d from node %d in an invalid sequence",
++					      p->header.h_cmd, nodeid);
++			break;
++		}
++
+ 		return NULL;
+ 	}
+ 
+-- 
+2.31.1
+

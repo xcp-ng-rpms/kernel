@@ -1,0 +1,31 @@
+From 052849beeab02306d1420d03da959e7db883b375 Mon Sep 17 00:00:00 2001
+From: Alexander Aring <aahringo@redhat.com>
+Date: Fri, 16 Jul 2021 16:22:37 -0400
+Subject: [PATCH 90/90] fs: dlm: clear CF_APP_LIMITED on close
+
+If send_to_sock() sets CF_APP_LIMITED limited bit and it has not been
+cleared by a waiting lowcomms_write_space() yet and a close_connection()
+apprears we should clear the CF_APP_LIMITED bit again because the
+connection starts from a new state again at reconnect.
+
+Signed-off-by: Alexander Aring <aahringo@redhat.com>
+Signed-off-by: David Teigland <teigland@redhat.com>
+---
+ fs/dlm/lowcomms.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/fs/dlm/lowcomms.c b/fs/dlm/lowcomms.c
+index bf309c12a2c0..1bdd24bce709 100644
+--- a/fs/dlm/lowcomms.c
++++ b/fs/dlm/lowcomms.c
+@@ -800,6 +800,7 @@ static void close_connection(struct connection *con, bool and_other,
+ 
+ 	con->rx_leftover = 0;
+ 	con->retries = 0;
++	clear_bit(CF_APP_LIMITED, &con->flags);
+ 	clear_bit(CF_CONNECTED, &con->flags);
+ 	clear_bit(CF_DELAY_CONNECT, &con->flags);
+ 	clear_bit(CF_RECONNECT, &con->flags);
+-- 
+2.31.1
+

@@ -1,0 +1,63 @@
+From 4f19d071f9bee1bb2040ae73436314a5ec9ede44 Mon Sep 17 00:00:00 2001
+From: Alexander Aring <aahringo@redhat.com>
+Date: Mon, 2 Nov 2020 20:04:28 -0500
+Subject: [PATCH 46/46] fs: dlm: check on existing node address
+
+This patch checks if we add twice the same address to a per node address
+array. This should never be the case and we report -EEXIST to the user
+space.
+
+Signed-off-by: Alexander Aring <aahringo@redhat.com>
+Signed-off-by: David Teigland <teigland@redhat.com>
+---
+ fs/dlm/lowcomms.c | 23 +++++++++++++++++++++++
+ 1 file changed, 23 insertions(+)
+
+diff --git a/fs/dlm/lowcomms.c b/fs/dlm/lowcomms.c
+index 7f85594b663a..372c34ff8594 100644
+--- a/fs/dlm/lowcomms.c
++++ b/fs/dlm/lowcomms.c
+@@ -374,10 +374,25 @@ static int addr_to_nodeid(struct sockaddr_storage *addr, int *nodeid)
+ 	return rv;
+ }
+ 
++/* caller need to held dlm_node_addrs_spin lock */
++static bool dlm_lowcomms_na_has_addr(const struct dlm_node_addr *na,
++				     const struct sockaddr_storage *addr)
++{
++	int i;
++
++	for (i = 0; i < na->addr_count; i++) {
++		if (addr_compare(na->addr[i], addr))
++			return true;
++	}
++
++	return false;
++}
++
+ int dlm_lowcomms_addr(int nodeid, struct sockaddr_storage *addr, int len)
+ {
+ 	struct sockaddr_storage *new_addr;
+ 	struct dlm_node_addr *new_node, *na;
++	bool ret;
+ 
+ 	new_node = kzalloc(sizeof(struct dlm_node_addr), GFP_NOFS);
+ 	if (!new_node)
+@@ -402,6 +417,14 @@ int dlm_lowcomms_addr(int nodeid, struct sockaddr_storage *addr, int len)
+ 		return 0;
+ 	}
+ 
++	ret = dlm_lowcomms_na_has_addr(na, addr);
++	if (ret) {
++		spin_unlock(&dlm_node_addrs_spin);
++		kfree(new_addr);
++		kfree(new_node);
++		return -EEXIST;
++	}
++
+ 	if (na->addr_count >= DLM_MAX_ADDR_COUNT) {
+ 		spin_unlock(&dlm_node_addrs_spin);
+ 		kfree(new_addr);
+-- 
+2.31.1
+
