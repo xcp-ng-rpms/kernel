@@ -27,7 +27,7 @@
 Name: kernel
 License: GPLv2
 Version: 4.19.19
-Release: %{?xsrel}.1%{?dist}
+Release: %{?xsrel}.2%{?dist}
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
@@ -612,6 +612,10 @@ Patch552: 0004-xen-netback-remove-not-needed-test-in-xenvif_tx_buil.patch
 Patch553: 0005-xen-netback-use-same-error-messages-for-same-errors.patch
 Patch554: xsa432-linux.patch
 Patch555: abi-version.patch
+
+# XCP-ng patches
+Patch1001: xsa441-linux.patch
+
 %if %{do_kabichk}
 Source3: check-kabi
 Source4: Module.kabi
@@ -916,6 +920,10 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Wed Oct 4 2023 Andrei Semenov <andrei.semenov@vates.tech> - 4.19.19-7.0.17.2
+- Security update
+- Fixes XSA-441 - Possible deadlock in Linux kernel event handling
+
 * Tue Aug 08 2023 Gael Duperrey <gduperrey@vates.fr> - 4.19.19-7.0.17.1
 - Synced with hotfix XS82ECU1042
 - *** Upstream changelog ***
