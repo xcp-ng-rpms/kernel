@@ -1,6 +1,6 @@
-%global package_speccommit 340a59263c0c4abe795d18e10fd2443f6549d004
+%global package_speccommit d214b4918618c6af33d28514601b451633780add
 %global usver 4.19.19
-%global xsver 7.0.17
+%global xsver 7.0.18
 %global xsrel %{xsver}%{?xscount}%{?xshash}
 %global package_srccommit refs/tags/v4.19.19
 %define uname 4.19.0+1
@@ -610,7 +610,8 @@ Patch551: 0003-xen-netback-don-t-do-grant-copy-across-page-boundary.patch
 Patch552: 0004-xen-netback-remove-not-needed-test-in-xenvif_tx_buil.patch
 Patch553: 0005-xen-netback-use-same-error-messages-for-same-errors.patch
 Patch554: xsa432-linux.patch
-Patch555: abi-version.patch
+Patch555: xsa441-linux.patch
+Patch556: abi-version.patch
 %if %{do_kabichk}
 Source3: check-kabi
 Source4: Module.kabi
@@ -932,6 +933,9 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Fri Sep 29 2023 Ross Lagerwall <ross.lagerwall@citrix.com> - 4.19.19-7.0.18
+- CA-383484: Backport fix for XSA-441
+
 * Thu Jul 20 2023 Ross Lagerwall <ross.lagerwall@citrix.com> - 4.19.19-7.0.17
 - CA-379289: Add a fix for XSA-432
 
