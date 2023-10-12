@@ -1,5 +1,46 @@
+From b9518bb105635144acdbf9160583ab98521af89e Mon Sep 17 00:00:00 2001
+From: Juergen Gross <jgross@suse.com>
+Date: Mon, 28 Aug 2023 08:09:47 +0200
+Subject: [PATCH v3] xen/events: replace evtchn_rwlock with RCU
+
+In unprivileged Xen guests event handling can cause a deadlock with
+Xen console handling. The evtchn_rwlock and the hvc_lock are taken in
+opposite sequence in __hvc_poll() and in Xen console IRQ handling.
+Normally this is no problem, as the evtchn_rwlock is taken as a reader
+in both paths, but as soon as an event channel is being closed, the
+lock will be taken as a writer, which will cause read_lock() to block:
+
+CPU0                     CPU1                CPU2
+(IRQ handling)           (__hvc_poll())      (closing event channel)
+
+read_lock(evtchn_rwlock)
+                         spin_lock(hvc_lock)
+                                             write_lock(evtchn_rwlock)
+                                                 [blocks]
+spin_lock(hvc_lock)
+    [blocks]
+                        read_lock(evtchn_rwlock)
+                            [blocks due to writer waiting,
+                             and not in_interrupt()]
+
+This issue can be avoided by replacing evtchn_rwlock with RCU in
+xen_free_irq(). Note that RCU is used only to delay freeing of the
+irq_info memory. There is no RCU based dereferencing or replacement of
+pointers involved.
+
+In order to avoid potential races between removing the irq_info
+reference and handling of interrupts, set the irq_info pointer to NULL
+only when freeing its memory. The IRQ itself must be freed at that
+time, too, as otherwise the same IRQ number could be allocated again
+before handling of the old instance would have been finished.
+
+This is XSA-441 / CVE-2023-34324.
+
+Fixes: 54c9de89895e ("xen/events: add a new "late EOI" evtchn framework")
+Signed-off-by: Juergen Gross <jgross@suse.com>
+Reviewed-by: Julien Grall <jgrall@amazon.com>
 diff --git a/drivers/xen/events/events_base.c b/drivers/xen/events/events_base.c
-index 7c07f8b..c55e12b 100644
+index 7c07f8b17ecc..c55e12baa6af 100644
 --- a/drivers/xen/events/events_base.c
 +++ b/drivers/xen/events/events_base.c
 @@ -32,6 +32,7 @@
@@ -192,7 +233,7 @@ index 7c07f8b..c55e12b 100644
  	/*
  	 * Increment irq_epoch only now to defer EOIs only for
 diff --git a/drivers/xen/events/events_internal.h b/drivers/xen/events/events_internal.h
-index 3df6f28..226ddf7 100644
+index 3df6f28b75e6..226ddf72bde2 100644
 --- a/drivers/xen/events/events_internal.h
 +++ b/drivers/xen/events/events_internal.h
 @@ -33,6 +33,7 @@ enum xen_irq_type {

@@ -1,6 +1,6 @@
-%global package_speccommit 340a59263c0c4abe795d18e10fd2443f6549d004
+%global package_speccommit d214b4918618c6af33d28514601b451633780add
 %global usver 4.19.19
-%global xsver 7.0.17
+%global xsver 7.0.18
 %global xsrel %{xsver}%{?xscount}%{?xshash}
 %global package_srccommit refs/tags/v4.19.19
 %define uname 4.19.0+1
@@ -27,7 +27,7 @@
 Name: kernel
 License: GPLv2
 Version: 4.19.19
-Release: %{?xsrel}.2%{?dist}
+Release: %{?xsrel}.1%{?dist}
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
@@ -611,11 +611,8 @@ Patch551: 0003-xen-netback-don-t-do-grant-copy-across-page-boundary.patch
 Patch552: 0004-xen-netback-remove-not-needed-test-in-xenvif_tx_buil.patch
 Patch553: 0005-xen-netback-use-same-error-messages-for-same-errors.patch
 Patch554: xsa432-linux.patch
-Patch555: abi-version.patch
-
-# XCP-ng patches
-Patch1001: xsa441-linux.patch
-
+Patch555: xsa441-linux.patch
+Patch556: abi-version.patch
 %if %{do_kabichk}
 Source3: check-kabi
 Source4: Module.kabi
@@ -920,7 +917,11 @@ fi
 %{?_cov_results_package}
 
 %changelog
-* Wed Oct 4 2023 Andrei Semenov <andrei.semenov@vates.tech> - 4.19.19-7.0.17.2
+* Thu Oct 12 2023 Samuel Verschelde <stormi-xcp@ylix.fr> - 4.19.19-7.0.18.1
+- Sync with hotfix XS82ECU1052
+- No functional changes: we already had applied the fix for XSA-441 previously
+
+* Wed Oct 04 2023 Andrei Semenov <andrei.semenov@vates.tech> - 4.19.19-7.0.17.2
 - Security update
 - Fixes XSA-441 - Possible deadlock in Linux kernel event handling
 
