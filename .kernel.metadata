@@ -1,5 +1,12 @@
-e725ef0926373499de3a23fe92c993f5d9d7f021 SOURCES/kernel-abi-stablelists-4.18.0-477.tar.bz2
-e5db84dd1b699a0ec6795e645cb9ea1d62acc739 SOURCES/kernel-kabi-dw-4.18.0-477.tar.bz2
-03744e5ffb9fb64236ce0a2c6d425bb22c4f43af SOURCES/linux-4.18.0-477.13.1.el8_8.tar.xz
+2ba40bf9138b48311e5aa1b737b7f0a8ad66066f SOURCES/centossecureboot201.cer
+bfdb3d7cffc43f579655af5155d50c08671d95e5 SOURCES/centossecurebootca2.cer
+e2d6746c1f365c70a86fbaf7b838cd3cb8d8fa2d SOURCES/kernel-abi-stablelists-4.18.0-513.tar.bz2
+d9e217a6d22813077e87aa0cc67fa30185081998 SOURCES/kernel-kabi-dw-4.18.0-513.tar.bz2
+1b1a5200d9c1e8d1cf86e1d3b85d0edc971e314d SOURCES/linux-4.18.0-513.el8.tar.xz
+13e5cd3f856b472fde80a4deb75f4c18dfb5b255 SOURCES/redhatsecureboot302.cer
+e89890ca0ded2f9058651cc5fa838b78db2e6cc2 SOURCES/redhatsecureboot303.cer
+ba0b760e594ff668ee72ae348adf3e49b97f75fb SOURCES/redhatsecureboot501.cer
+cf9230e69000076727e5b784ec871d22716dc5da SOURCES/redhatsecurebootca3.cer
+905d91a282727c7f5ad433a49ac42a0772311c6a SOURCES/redhatsecurebootca7.cer
 95b9b811c7b0a6c98b2eafc4e7d6d24f2cb63289 SOURCES/rheldup3.x509
 d90885108d225a234a5a9d054fc80893a5bd54d0 SOURCES/rhelkpatch1.x509

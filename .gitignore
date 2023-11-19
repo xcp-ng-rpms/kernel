@@ -1,5 +1,12 @@
-SOURCES/kernel-abi-stablelists-4.18.0-477.tar.bz2
-SOURCES/kernel-kabi-dw-4.18.0-477.tar.bz2
-SOURCES/linux-4.18.0-477.13.1.el8_8.tar.xz
+SOURCES/centossecureboot201.cer
+SOURCES/centossecurebootca2.cer
+SOURCES/kernel-abi-stablelists-4.18.0-513.tar.bz2
+SOURCES/kernel-kabi-dw-4.18.0-513.tar.bz2
+SOURCES/linux-4.18.0-513.el8.tar.xz
+SOURCES/redhatsecureboot302.cer
+SOURCES/redhatsecureboot303.cer
+SOURCES/redhatsecureboot501.cer
+SOURCES/redhatsecurebootca3.cer
+SOURCES/redhatsecurebootca7.cer
 SOURCES/rheldup3.x509
 SOURCES/rhelkpatch1.x509
