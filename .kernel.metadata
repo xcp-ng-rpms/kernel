@@ -1,8 +1,8 @@
 2ba40bf9138b48311e5aa1b737b7f0a8ad66066f SOURCES/centossecureboot201.cer
 bfdb3d7cffc43f579655af5155d50c08671d95e5 SOURCES/centossecurebootca2.cer
-e2d6746c1f365c70a86fbaf7b838cd3cb8d8fa2d SOURCES/kernel-abi-stablelists-4.18.0-513.tar.bz2
-d9e217a6d22813077e87aa0cc67fa30185081998 SOURCES/kernel-kabi-dw-4.18.0-513.tar.bz2
-1b1a5200d9c1e8d1cf86e1d3b85d0edc971e314d SOURCES/linux-4.18.0-513.el8.tar.xz
+1b80f3713df5b69a8f2db146d970264f3c0bd634 SOURCES/kernel-abi-stablelists-4.18.0-513.tar.bz2
+d23322be97d0641ecaf432900ace3c5ee7987c5b SOURCES/kernel-kabi-dw-4.18.0-513.tar.bz2
+b24e12fe467bffa371c13a72fda5e583189a2616 SOURCES/linux-4.18.0-513.5.1.el8_9.tar.xz
 13e5cd3f856b472fde80a4deb75f4c18dfb5b255 SOURCES/redhatsecureboot302.cer
 e89890ca0ded2f9058651cc5fa838b78db2e6cc2 SOURCES/redhatsecureboot303.cer
 ba0b760e594ff668ee72ae348adf3e49b97f75fb SOURCES/redhatsecureboot501.cer
