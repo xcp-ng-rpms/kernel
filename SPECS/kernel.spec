@@ -37,7 +37,7 @@
 Name: kernel
 License: GPLv2
 Version: 4.19.19
-Release: %{?xsrel}.1%{?dist}
+Release: %{?xsrel}.2%{?dist}
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
@@ -967,6 +967,9 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Fri Dec 15 2023 Thierry Escande <thierry.escande@vates.tech> - 4.19.19-8.0.29.2
+- Disable i40iw driver in kernel config
+
 * Fri Sep 15 2023 Samuel Verschelde <stormi-xcp@ylix.fr> - 4.19.19-8.0.29.1
 - Update to 4.19.19-8.0.29
 - *** Upstream changelog ***
