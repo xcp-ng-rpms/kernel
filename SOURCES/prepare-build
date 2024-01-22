@@ -1,0 +1,3 @@
+# This file is sourced before the %build and %install phases to do any
+# preparations needed (e.g. set PATH so the correct compiler is used). It is
+# also sourced before building a live patch.
