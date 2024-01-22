@@ -1,0 +1,24 @@
+nfs: Avoid a double timeout in access()
+
+nfs_access_get_cached may call __nfs_revalidate_inode() which makes network
+calls and will timeout if the NFS server is unreachable. Currently, the error
+is ignored and it calls ->access() which will again make network calls and time
+out. The result is that the operation fails after twice the configured timeout.
+This can be reproduced by stat()ing a file within the root of the NFS mount
+when the NFS server is unavailable.
+
+Fix it by handling most errors from nfs_access_get_cached().
+Signed-off-by: Ross Lagerwall <ross.lagerwall@citrix.com>
+diff --git a/fs/nfs/dir.c b/fs/nfs/dir.c
+index 8bfaa658b2c1..2a135a93d10d 100644
+--- a/fs/nfs/dir.c
++++ b/fs/nfs/dir.c
+@@ -2444,6 +2444,8 @@ static int nfs_do_access(struct inode *inode, struct rpc_cred *cred, int mask)
+ 		status = nfs_access_get_cached(inode, cred, &cache, may_block);
+ 	if (status == 0)
+ 		goto out_cached;
++	else if (!(status == -ENOENT || status == -ECHILD))
++		goto out;
+ 
+ 	status = -ECHILD;
+ 	if (!may_block)
