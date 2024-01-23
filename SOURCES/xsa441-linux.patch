@@ -40,17 +40,17 @@ Fixes: 54c9de89895e ("xen/events: add a new "late EOI" evtchn framework")
 Signed-off-by: Juergen Gross <jgross@suse.com>
 Reviewed-by: Julien Grall <jgrall@amazon.com>
 diff --git a/drivers/xen/events/events_base.c b/drivers/xen/events/events_base.c
-index 7c07f8b17ecc..c55e12baa6af 100644
+index fefad62443ac..1bb1b7fcd09f 100644
 --- a/drivers/xen/events/events_base.c
 +++ b/drivers/xen/events/events_base.c
-@@ -32,6 +32,7 @@
+@@ -33,6 +33,7 @@
  #include <linux/slab.h>
  #include <linux/irqnr.h>
  #include <linux/pci.h>
 +#include <linux/rcupdate.h>
  #include <linux/spinlock.h>
- #include <linux/cpuhotplug.h>
  #include <linux/atomic.h>
+ #include <linux/ktime.h>
 @@ -82,23 +83,13 @@ const struct evtchn_ops *evtchn_ops;
   */
  static DEFINE_MUTEX(irq_mapping_update_lock);
