@@ -1,0 +1,11 @@
+--- a/arch/x86/kernel/setup.c	2019-03-13 04:04:53.000000000 -0700
++++ b/arch/x86/kernel/setup.c	2019-05-27 08:35:54.580595314 -0700
+@@ -900,7 +900,7 @@ static void rh_check_supported(void)
+ 	if (((boot_cpu_data.x86_max_cores * smp_num_siblings) == 1) &&
+ 	    !guest && is_kdump_kernel()) {
+ 		pr_crit("Detected single cpu native boot.\n");
+-		pr_crit("Important:  In Red Hat Enterprise Linux 8, single threaded, single CPU 64-bit physical systems are unsupported by Red Hat. Please contact your Red Hat support representative for a list of certified and supported systems.");
++		pr_crit("Important:  In EuroLinux 8, single threaded, single CPU 64-bit physical systems are unsupported.");
+ 	}
+ 
+ 	/*
