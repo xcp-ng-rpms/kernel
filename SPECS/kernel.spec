@@ -1,6 +1,6 @@
 %global package_speccommit 0d85484a705866d152265c9b9b8327882c5a5ec6
 %global usver 4.19.19
-%global xsver 8.0.32
+%global xsver 8.0.33
 %global xsrel %{xsver}%{?xscount}%{?xshash}
 %global package_srccommit refs/tags/v4.19.19
 %define uname 4.19.0+1
@@ -667,6 +667,7 @@ Patch581: 0011-Documentation-auxiliary_bus-Clarify-the-release-of-d.patch
 Patch582: 0012-Documentation-auxiliary_bus-Move-the-text-into-the-c.patch
 Patch583: 0013-CP-41018-Make-CONFIG_AUXILIARY_BUS-y-work.patch
 Patch584: abi-version.patch
+Patch585: ceph.patch
 %if %{do_kabichk}
 Source3: check-kabi
 Source4: Module.kabi
@@ -995,6 +996,9 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Fri Mar 08 2024 Petr Bena <benapetr@gmail.com> - 4.19.19-8.0.33
+- Integrated ceph code from kernel 4.19.29
+
 * Mon Jan 22 2024 Samuel Verschelde <stormi-xcp@ylix.fr> - 4.19.19-8.0.32.1
 - Update to 4.19.19-8.0.32
 - *** Upstream changelog ***
