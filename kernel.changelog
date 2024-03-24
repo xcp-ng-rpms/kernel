@@ -1,6 +1,181 @@
-* Fri Feb 09 2024 Fedora Kernel Team <kernel-team@fedoraproject.org> [6.8.0-0.rc3.1f719a2f3fa6.31]
-- tools/rv: Fix Makefile compiler options for clang (Daniel Bristot de Oliveira)
-- tools/rtla: Fix Makefile compiler options for clang (Daniel Bristot de Oliveira)
+* Mon Mar 11 2024 Fedora Kernel Team <kernel-team@fedoraproject.org> [6.8.0-63]
+- Linux v6.8.0
+Resolves: 
+
+* Sun Mar 10 2024 Fedora Kernel Team <kernel-team@fedoraproject.org> [6.8.0-0.rc7.005f6f34bd47.62]
+- Linux v6.8.0-0.rc7.005f6f34bd47
+Resolves: 
+
+* Sat Mar 09 2024 Fedora Kernel Team <kernel-team@fedoraproject.org> [6.8.0-0.rc7.09e5c48fea17.61]
+- Linux v6.8.0-0.rc7.09e5c48fea17
+Resolves: 
+
+* Fri Mar 08 2024 Fedora Kernel Team <kernel-team@fedoraproject.org> [6.8.0-0.rc7.3aaa8ce7a335.60]
+- gitlab-ci: enable all variants for rawhide/eln builder image gating (Michael Hofmann)
+- Linux v6.8.0-0.rc7.3aaa8ce7a335
+Resolves: 
+
+* Thu Mar 07 2024 Fedora Kernel Team <kernel-team@fedoraproject.org> [6.8.0-0.rc7.67be068d31d4.59]
+- Linux v6.8.0-0.rc7.67be068d31d4
+Resolves: 
+
+* Thu Mar 07 2024 Fedora Kernel Team <kernel-team@fedoraproject.org> [6.8.0-0.rc7.58]
+- Fedora: enable Microchip and their useful drivers (Peter Robinson)
+- spec: suppress "set +x" output (Jan Stancek)
+- redhat/configs: Disable CONFIG_RDMA_SIW (Kamal Heib)
+- redhat/configs: Disable CONFIG_RDMA_RXE (Kamal Heib)
+- redhat/configs: Disable CONFIG_MLX4 (Kamal Heib)
+- redhat/configs: Disable CONFIG_INFINIBAND_HFI1 and CONFIG_INFINIBAND_RDMAVT (Kamal Heib)
+Resolves: 
+
+* Wed Mar 06 2024 Fedora Kernel Team <kernel-team@fedoraproject.org> [6.8.0-0.rc7.57]
+- Consolidate 6.8 configs to common (Justin M. Forbes)
+Resolves: 
+
+* Tue Mar 05 2024 Fedora Kernel Team <kernel-team@fedoraproject.org> [6.8.0-0.rc7.56]
+- Remove rt-automated and master-rt-devel logic (Don Zickus)
+- Add support for CI octopus merging (Don Zickus)
+Resolves: 
+
+* Mon Mar 04 2024 Fedora Kernel Team <kernel-team@fedoraproject.org> [6.8.0-0.rc7.55]
+- Linux v6.8.0-0.rc7
+Resolves: 
+
+* Sun Mar 03 2024 Fedora Kernel Team <kernel-team@fedoraproject.org> [6.8.0-0.rc6.04b8076df253.54]
+- redhat/configs: Disable CONFIG_INFINIBAND_VMWARE_PVRDMA (Kamal Heib)
+- Linux v6.8.0-0.rc6.04b8076df253
+Resolves: 
+
+* Sat Mar 02 2024 Fedora Kernel Team <kernel-team@fedoraproject.org> [6.8.0-0.rc6.5ad3cb0ed525.53]
+- Linux v6.8.0-0.rc6.5ad3cb0ed525
+Resolves: 
+
+* Fri Mar 01 2024 Fedora Kernel Team <kernel-team@fedoraproject.org> [6.8.0-0.rc6.87adedeba51a.52]
+- Linux v6.8.0-0.rc6.87adedeba51a
+Resolves: 
+
+* Thu Feb 29 2024 Fedora Kernel Team <kernel-team@fedoraproject.org> [6.8.0-0.rc6.805d849d7c3c.51]
+- gitlab-ci: fix merge tree URL for gating pipelines (Michael Hofmann)
+- Revert "net: bump CONFIG_MAX_SKB_FRAGS to 45" (Marcelo Ricardo Leitner)
+- uki: use systemd-pcrphase dracut module (Gerd Hoffmann)
+- Add libperf-debuginfo subpackage (Justin M. Forbes)
+- redhat/kernel.spec.template: Add log_msg macro (Prarit Bhargava)
+- Linux v6.8.0-0.rc6.805d849d7c3c
+Resolves: 
+
+* Wed Feb 28 2024 Fedora Kernel Team <kernel-team@fedoraproject.org> [6.8.0-0.rc6.cf1182944c7c.50]
+- Linux v6.8.0-0.rc6.cf1182944c7c
+Resolves: 
+
+* Tue Feb 27 2024 Fedora Kernel Team <kernel-team@fedoraproject.org> [6.8.0-0.rc6.45ec2f5f6ed3.49]
+- redhat/configs: Disable CONFIG_INFINIBAND_USNIC (Kamal Heib)
+- Enable CONFIG_BMI323_I2C=m for Fedora x86_64 builds (Hans de Goede)
+- gitlab-ci: drop test_makefile job (Scott Weaver)
+- Linux v6.8.0-0.rc6.45ec2f5f6ed3
+Resolves: 
+
+* Mon Feb 26 2024 Fedora Kernel Team <kernel-team@fedoraproject.org> [6.8.0-0.rc6.48]
+- Linux v6.8.0-0.rc6
+Resolves: 
+
+* Mon Feb 26 2024 Fedora Kernel Team <kernel-team@fedoraproject.org> [6.8.0-0.rc5.ab0a97cffa0b.47]
+- Enable merge-rt pipeline (Don Zickus)
+- kernel.spec: include the GDB plugin in kernel-debuginfo (Ondrej Mosnacek)
+Resolves: 
+
+* Sun Feb 25 2024 Fedora Kernel Team <kernel-team@fedoraproject.org> [6.8.0-0.rc5.ab0a97cffa0b.46]
+- Turn on DRM_NOUVEAU_GSP_DEFAULT for Fedora (Justin M. Forbes)
+- Linux v6.8.0-0.rc5.ab0a97cffa0b
+Resolves: 
+
+* Sat Feb 24 2024 Fedora Kernel Team <kernel-team@fedoraproject.org> [6.8.0-0.rc5.603c04e27c3e.45]
+- Linux v6.8.0-0.rc5.603c04e27c3e
+Resolves: 
+
+* Fri Feb 23 2024 Fedora Kernel Team <kernel-team@fedoraproject.org> [6.8.0-0.rc5.ffd2cb6b718e.44]
+- Set late new config HDC3020 for Fedora (Justin M. Forbes)
+- Linux v6.8.0-0.rc5.ffd2cb6b718e
+Resolves: 
+
+* Thu Feb 22 2024 Fedora Kernel Team <kernel-team@fedoraproject.org> [6.8.0-0.rc5.39133352cbed.43]
+- redhat/self-test: Update CROSS_DISABLED_PACKAGES (Prarit Bhargava)
+- redhat: Do not build libperf with cross builds (Prarit Bhargava)
+- redhat/configs: enable CONFIG_PINCTRL_INTEL_PLATFORM for RHEL (David Arcari)
+- redhat/configs: enable CONFIG_PINCTRL_METEORPOINT for RHEL (David Arcari)
+- redhat/configs: intel pinctrl config cleanup (David Arcari)
+- Linux v6.8.0-0.rc5.39133352cbed
+Resolves: 
+
+* Wed Feb 21 2024 Fedora Kernel Team <kernel-team@fedoraproject.org> [6.8.0-0.rc5.9fc1ccccfd8d.42]
+- redhat/configs: For aarch64/RT, default kstack randomization off (Jeremy Linton)
+- redhat/Makefile: remove an unused target (Ondrej Mosnacek)
+- redhat/Makefile: fix setup-source and document its caveat (Ondrej Mosnacek)
+- redhat/Makefile: fix race condition when making the KABI tarball (Ondrej Mosnacek)
+- redhat/Makefile: refactor KABI tarball creation (Ondrej Mosnacek)
+- Turn XFS_SUPPORT_V4 back on for Fedora (Justin M. Forbes)
+- Linux v6.8.0-0.rc5.9fc1ccccfd8d
+Resolves: 
+
+* Mon Feb 19 2024 Fedora Kernel Team <kernel-team@fedoraproject.org> [6.8.0-0.rc5.41]
+- Linux v6.8.0-0.rc5
+Resolves: 
+
+* Sun Feb 18 2024 Fedora Kernel Team <kernel-team@fedoraproject.org> [6.8.0-0.rc4.c02197fc9076.40]
+- Linux v6.8.0-0.rc4.c02197fc9076
+Resolves: 
+
+* Sat Feb 17 2024 Fedora Kernel Team <kernel-team@fedoraproject.org> [6.8.0-0.rc4.c1ca10ceffbb.39]
+- Add xe to drm module filters (Justin M. Forbes)
+- Turn off the DRM_XE_KUNIT_TEST for Fedora (Justin M. Forbes)
+- Flip secureboot signature order (Justin M. Forbes)
+- all: clean up some removed configs (Peter Robinson)
+- redhat: add nvidia oot signing key (Dave Airlie)
+- gitlab-ci: support CI for zfcpdump kernel on ELN (Michael Hofmann)
+- Linux v6.8.0-0.rc4.c1ca10ceffbb
+Resolves: 
+
+* Fri Feb 16 2024 Fedora Kernel Team <kernel-team@fedoraproject.org> [6.8.0-0.rc4.4f5e5092fdbf.38]
+- Fedora configs for 6.8 (Justin M. Forbes)
+- Linux v6.8.0-0.rc4.4f5e5092fdbf
+Resolves: 
+
+* Thu Feb 15 2024 Fedora Kernel Team <kernel-team@fedoraproject.org> [6.8.0-0.rc4.8d3dea210042.37]
+- Linux v6.8.0-0.rc4.8d3dea210042
+Resolves: 
+
+* Wed Feb 14 2024 Fedora Kernel Team <kernel-team@fedoraproject.org> [6.8.0-0.rc4.7e90b5c295ec.36]
+- Turn off CONFIG_INTEL_VSC for Fedora (Justin M. Forbes)
+- Linux v6.8.0-0.rc4.7e90b5c295ec
+Resolves: 
+
+* Tue Feb 13 2024 Fedora Kernel Team <kernel-team@fedoraproject.org> [6.8.0-0.rc4.c664e16bb1ba.35]
+- redhat/configs: rhel wireless requests (Jose Ignacio Tornos Martinez)
+- Linux v6.8.0-0.rc4.c664e16bb1ba
+Resolves: 
+
+* Mon Feb 12 2024 Fedora Kernel Team <kernel-team@fedoraproject.org> [6.8.0-0.rc4.716f4aaa7b48.34]
+- spec: Set EXTRA_CXXFLAGS for perf demangle-cxx.o (Josh Stone) [2233269]
+- Flip values for FSCACHE and NETFS_SUPPORT to avoid mismatch (Justin M. Forbes)
+- Turn on SECURITY_DMESG_RESTRICT (Justin M. Forbes)
+- redhat: forward-port genlog.py updates from c9s (Jan Stancek)
+- arch/x86: mark x86_64-v1 and x86_64-v2 processors as deprecated (Prarit Bhargava)
+- Linux v6.8.0-0.rc4.716f4aaa7b48
+Resolves: rhbz#2233269
+
+* Mon Feb 12 2024 Fedora Kernel Team <kernel-team@fedoraproject.org> [6.8.0-0.rc4.33]
+- fedora: Enable more Renesas RZ platform drivers (Peter Robinson)
+- fedora: a few aarch64 drivers and cleanups (Peter Robinson)
+- fedora: cavium nitrox cnn55xx (Peter Robinson)
+- Fix dist-get-buildreqs breakage around perl(ExtUtils::Embed) (Don Zickus)
+- Linux v6.8.0-0.rc4
+Resolves: 
+
+* Sun Feb 11 2024 Fedora Kernel Team <kernel-team@fedoraproject.org> [6.8.0-0.rc3.7521f258ea30.32]
+- Linux v6.8.0-0.rc3.7521f258ea30
+Resolves: 
+
+* Sat Feb 10 2024 Fedora Kernel Team <kernel-team@fedoraproject.org> [6.8.0-0.rc3.4a7bbe7519b6.31]
+- Linux v6.8.0-0.rc3.4a7bbe7519b6
 Resolves: 
 
 * Fri Feb 09 2024 Fedora Kernel Team <kernel-team@fedoraproject.org> [6.8.0-0.rc3.1f719a2f3fa6.30]
@@ -2617,3 +2792,140 @@ Resolves:
 - [initial commit] Add Makefiles (Laura Abbott)
 - Linux v6.7.0-0.rc0.5a6a09e97199
 Resolves: rhbz#1471185, rhbz#1495307, rhbz#1509329, rhbz#1518076, rhbz#1518874, rhbz#1519554, rhbz#1546831, rhbz#1559877, rhbz#1561171, rhbz#1563590, rhbz#1565704, rhbz#1565717, rhbz#1572321, rhbz#1574502, rhbz#1590829, rhbz#1595918, rhbz#1598366, rhbz#1602033, rhbz#1609604, rhbz#1610493, rhbz#1613522, rhbz#1638087, rhbz#1652256, rhbz#1652266, rhbz#1663728, rhbz#1670017, rhbz#1722136, rhbz#1730649, rhbz#1802694, rhbz#1810301, rhbz#1821565, rhbz#1831065, rhbz#1855161, rhbz#1856174, rhbz#1856176, rhbz#1858592, rhbz#1858594, rhbz#1858596, rhbz#1858599, rhbz#1869674, rhbz#1871130, rhbz#1876435, rhbz#1876436, rhbz#1876977, rhbz#1877192, rhbz#1880486, rhbz#1890304, rhbz#1903201, rhbz#1915073, rhbz#1915290, rhbz#1930649, rhbz#1939095, rhbz#1940075, rhbz#1940794, rhbz#1943423, rhbz#1945002, rhbz#1945179, rhbz#1945477, rhbz#1947240, rhbz#1948340, rhbz#1952426, rhbz#1952863, rhbz#1953486, rhbz#1956988, rhbz#1957210, rhbz#1957219, rhbz#1957305, rhbz#1957636, rhbz#1957819, rhbz#1961178, rhbz#1962936, rhbz#1964537, rhbz#1967640, rhbz#1972795, rhbz#1976270, rhbz#1976835, rhbz#1976877, rhbz#1976884, rhbz#1977056, rhbz#1977529, rhbz#1978539, rhbz#1979379, rhbz#1981406, rhbz#1983298, rhbz#1986223, rhbz#1988254, rhbz#1988384, rhbz#1990040, rhbz#1993393, rhbz#1994858, rhbz#1998953, rhbz#2000835, rhbz#2002344, rhbz#2004233, rhbz#2004821, rhbz#2006813, rhbz#2007430, rhbz#2012226, rhbz#2014492, rhbz#2019377, rhbz#2020132, rhbz#2022578, rhbz#2023782, rhbz#2024595, rhbz#2025985, rhbz#2026319, rhbz#2027506, rhbz#2031547, rhbz#2032758, rhbz#2034670, rhbz#2038999, rhbz#2040643, rhbz#2041184, rhbz#2041186, rhbz#2041365, rhbz#2041990, rhbz#2042240, rhbz#2042241, rhbz#2043141, rhbz#2044155, rhbz#2053836, rhbz#2054579, rhbz#2062054, rhbz#2062909, rhbz#2071969, rhbz#2089765, rhbz#2115876, rhbz#2122595, rhbz#2140017, rhbz#2142658, rhbz#2149273, rhbz#2153073, rhbz#2188441, rhbz#2208834, rhbz#2216678, rhbz#2227793, rhbz#2231407
+* Thu Mar 21 2024 Jan Stancek <jstancek@redhat.com> [6.8.0-1.el10]
+- redhat: remove fedora configs and files (Jan Stancek)
+- redhat: init RHEL10.0 beta variables and dist tag (Jan Stancek)
+- v6.8-rt8 (Sebastian Andrzej Siewior)
+- net: Provide SMP threads for backlog NAPI. (Sebastian Andrzej Siewior)
+- perf: Split __perf_pending_irq() out of perf_pending_irq() (Sebastian Andrzej Siewior)
+- perf: Remove perf_swevent_get_recursion_context() from perf_pending_task(). (Sebastian Andrzej Siewior)
+- perf: Enqueue SIGTRAP always via task_work. (Sebastian Andrzej Siewior)
+- perf: Move irq_work_queue() where the event is prepared. (Sebastian Andrzej Siewior)
+- v6.8-rt7 (Sebastian Andrzej Siewior)
+- Remove rt pending configs (Don Zickus)
+- redhat: enable changes to build rt variants (Clark Williams)
+- gitlab-ci: enable all variants for rawhide/eln builder image gating (Michael Hofmann)
+- Fedora: enable Microchip and their useful drivers (Peter Robinson)
+- spec: suppress "set +x" output (Jan Stancek)
+- redhat/configs: Disable CONFIG_RDMA_SIW (Kamal Heib)
+- redhat/configs: Disable CONFIG_RDMA_RXE (Kamal Heib)
+- redhat/configs: Disable CONFIG_MLX4 (Kamal Heib)
+- redhat/configs: Disable CONFIG_INFINIBAND_HFI1 and CONFIG_INFINIBAND_RDMAVT (Kamal Heib)
+- Consolidate 6.8 configs to common (Justin M. Forbes)
+- v6.8-rc7-rt6 (Sebastian Andrzej Siewior)
+- serial: Use uart_prepare_sysrq_char(). (Sebastian Andrzej Siewior)
+- v6.8-rc7-rt5 (Sebastian Andrzej Siewior)
+- Remove rt-automated and master-rt-devel logic (Don Zickus)
+- Add support for CI octopus merging (Don Zickus)
+- redhat/configs: Disable CONFIG_INFINIBAND_VMWARE_PVRDMA (Kamal Heib)
+- gitlab-ci: fix merge tree URL for gating pipelines (Michael Hofmann)
+- Revert "net: bump CONFIG_MAX_SKB_FRAGS to 45" (Marcelo Ricardo Leitner)
+- uki: use systemd-pcrphase dracut module (Gerd Hoffmann)
+- Add libperf-debuginfo subpackage (Justin M. Forbes)
+- redhat/kernel.spec.template: Add log_msg macro (Prarit Bhargava)
+- v6.8-rc4-rt4 (Sebastian Andrzej Siewior)
+- printk: Update the printk series. (Sebastian Andrzej Siewior)
+- i915: Correct macro definition for !i915 builds. (Sebastian Andrzej Siewior)
+- v6.8-rc4-rt3 (Sebastian Andrzej Siewior)
+- v6.8-rc1-rt2 (Sebastian Andrzej Siewior)
+- arm: Disable FAST_GUP on PREEMPT_RT if HIGHPTE is also enabled. (Sebastian Andrzej Siewior)
+- printk: nbcon: move locked_port flag to struct uart_port (Junxiao Chang)
+- Add localversion for -RT release (Thomas Gleixner)
+- sysfs: Add /sys/kernel/realtime entry (Clark Williams)
+- riscv: allow to enable RT (Jisheng Zhang)
+- riscv: add PREEMPT_AUTO support (Jisheng Zhang)
+- POWERPC: Allow to enable RT (Sebastian Andrzej Siewior)
+- powerpc/stackprotector: work around stack-guard init from atomic (Sebastian Andrzej Siewior)
+- powerpc/kvm: Disable in-kernel MPIC emulation for PREEMPT_RT (Bogdan Purcareata)
+- powerpc/pseries: Select the generic memory allocator. (Sebastian Andrzej Siewior)
+- powerpc/pseries/iommu: Use a locallock instead local_irq_save() (Sebastian Andrzej Siewior)
+- powerpc: traps: Use PREEMPT_RT (Sebastian Andrzej Siewior)
+- ARM64: Allow to enable RT (Sebastian Andrzej Siewior)
+- ARM: Allow to enable RT (Sebastian Andrzej Siewior)
+- ARM: vfp: Move sending signals outside of vfp_lock()ed section. (Sebastian Andrzej Siewior)
+- ARM: vfp: Use vfp_lock() in vfp_support_entry(). (Sebastian Andrzej Siewior)
+- ARM: vfp: Use vfp_lock() in vfp_sync_hwstate(). (Sebastian Andrzej Siewior)
+- ARM: vfp: Provide vfp_lock() for VFP locking. (Sebastian Andrzej Siewior)
+- tty/serial/pl011: Make the locking work on RT (Thomas Gleixner)
+- tty/serial/omap: Make the locking RT aware (Thomas Gleixner)
+- ARM: enable irq in translation/section permission fault handlers (Yadi.hu)
+- arm: Disable jump-label on PREEMPT_RT. (Thomas Gleixner)
+- sched: define TIF_ALLOW_RESCHED (Thomas Gleixner)
+- Revert "drm/i915: Depend on !PREEMPT_RT." (Sebastian Andrzej Siewior)
+- drm/i915/guc: Consider also RCU depth in busy loop. (Sebastian Andrzej Siewior)
+- drm/i915: Drop the irqs_disabled() check (Sebastian Andrzej Siewior)
+- drm/i915/gt: Use spin_lock_irq() instead of local_irq_disable() + spin_lock() (Sebastian Andrzej Siewior)
+- drm/i915/gt: Queue and wait for the irq_work item. (Sebastian Andrzej Siewior)
+- drm/i915: skip DRM_I915_LOW_LEVEL_TRACEPOINTS with NOTRACE (Sebastian Andrzej Siewior)
+- drm/i915: Disable tracing points on PREEMPT_RT (Sebastian Andrzej Siewior)
+- drm/i915: Don't check for atomic context on PREEMPT_RT (Sebastian Andrzej Siewior)
+- drm/i915: Don't disable interrupts on PREEMPT_RT during atomic updates (Mike Galbraith)
+- drm/i915: Use preempt_disable/enable_rt() where recommended (Mike Galbraith)
+- printk: Avoid false positive lockdep report for legacy driver. (John Ogness)
+- serial: 8250: revert "drop lockdep annotation from serial8250_clear_IER()" (John Ogness)
+- printk: Add kthread for all legacy consoles (John Ogness)
+- serial: 8250: Switch to nbcon console (John Ogness)
+- serial: core: Provide low-level functions to port lock (John Ogness)
+- printk: nbcon: Provide function to reacquire ownership (John Ogness)
+- tty: sysfs: Add nbcon support for 'active' (John Ogness)
+- proc: Add nbcon support for /proc/consoles (John Ogness)
+- printk: nbcon: Start printing threads (John Ogness)
+- printk: nbcon: Stop threads on shutdown/reboot (John Ogness)
+- printk: nbcon: Add printer thread wakeups (Thomas Gleixner)
+- printk: nbcon: Add context to console_is_usable() (John Ogness)
+- printk: Atomic print in printk context on shutdown (John Ogness)
+- printk: nbcon: Introduce printing kthreads (Thomas Gleixner)
+- lockdep: Mark emergency section in lockdep splats (John Ogness)
+- rcu: Mark emergency section in rcu stalls (John Ogness)
+- panic: Mark emergency section in oops (John Ogness)
+- panic: Mark emergency section in warn (Thomas Gleixner)
+- printk: nbcon: Implement emergency sections (Thomas Gleixner)
+- printk: Coordinate direct printing in panic (John Ogness)
+- printk: Track nbcon consoles (John Ogness)
+- printk: Avoid console_lock dance if no legacy or boot consoles (John Ogness)
+- printk: nbcon: Add unsafe flushing on panic (John Ogness)
+- printk: nbcon: Assign priority based on CPU state (John Ogness)
+- printk: nbcon: Use nbcon consoles in console_flush_all() (John Ogness)
+- printk: Track registered boot consoles (John Ogness)
+- printk: nbcon: Provide function to flush using write_atomic() (Thomas Gleixner)
+- printk: Add @flags argument for console_is_usable() (John Ogness)
+- printk: Let console_is_usable() handle nbcon (John Ogness)
+- printk: Make console_is_usable() available to nbcon (John Ogness)
+- printk: nbcon: Add driver_enter/driver_exit console callbacks (John Ogness)
+- printk: nbcon: Implement processing in port->lock wrapper (John Ogness)
+- printk: Check printk_deferred_enter()/_exit() usage (Sebastian Andrzej Siewior)
+- printk: nbcon: Ensure ownership release on failed emit (John Ogness)
+- printk: Add sparse notation to console_srcu locking (John Ogness)
+- printk: Consider nbcon boot consoles on seq init (John Ogness)
+- panic: Flush kernel log buffer at the end (John Ogness)
+- printk: Avoid non-panic CPUs writing to ringbuffer (John Ogness)
+- printk: Disable passing console lock owner completely during panic() (Petr Mladek)
+- printk: ringbuffer: Consider committed as finalized in panic (John Ogness)
+- printk: ringbuffer: Skip non-finalized records in panic (John Ogness)
+- printk: Wait for all reserved records with pr_flush() (John Ogness)
+- printk: ringbuffer: Cleanup reader terminology (John Ogness)
+- printk: Add this_cpu_in_panic() (John Ogness)
+- printk: For @suppress_panic_printk check for other CPU in panic (John Ogness)
+- printk: ringbuffer: Clarify special lpos values (John Ogness)
+- printk: ringbuffer: Do not skip non-finalized records with prb_next_seq() (John Ogness)
+- printk: Use prb_first_seq() as base for 32bit seq macros (John Ogness)
+- printk: Adjust mapping for 32bit seq macros (Sebastian Andrzej Siewior)
+- printk: nbcon: Relocate 32bit seq macros (John Ogness)
+- time: Allow to preempt after a callback. (Sebastian Andrzej Siewior)
+- softirq: Add function to preempt serving softirqs. (Sebastian Andrzej Siewior)
+- sched/core: Provide a method to check if a task is PI-boosted. (Sebastian Andrzej Siewior)
+- zram: Replace bit spinlocks with spinlock_t for PREEMPT_RT. (Mike Galbraith)
+- softirq: Wake ktimers thread also in softirq. (Junxiao Chang)
+- tick: Fix timer storm since introduction of timersd (Frederic Weisbecker)
+- rcutorture: Also force sched priority to timersd on boosting test. (Frederic Weisbecker)
+- softirq: Use a dedicated thread for timer wakeups. (Sebastian Andrzej Siewior)
+- sched/rt: Don't try push tasks if there are none. (Sebastian Andrzej Siewior)
+- x86: Enable RT also on 32bit (Sebastian Andrzej Siewior)
+- x86: Allow to enable RT (Sebastian Andrzej Siewior)
+- net: Avoid the IPI to free the (Sebastian Andrzej Siewior)
+Resolves: 
+
+* Mon Mar 11 2024 Fedora Kernel Team <kernel-team@fedoraproject.org> [6.8.0-63]
+- Linux v6.8.0
+Resolves: 
+
