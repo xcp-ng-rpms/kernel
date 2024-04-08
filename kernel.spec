@@ -160,18 +160,18 @@ Summary: The Linux kernel
 #  the --with-release option overrides this setting.)
 %define debugbuildsenabled 1
 # define buildid .local
-%define specrpmversion 6.8.0
-%define specversion 6.8.0
-%define patchversion 6.8
-%define pkgrelease 1
+%define specrpmversion 6.9.0
+%define specversion 6.9.0
+%define patchversion 6.9
+%define pkgrelease 0.rc2.1
 %define kversion 6
-%define tarfile_release 6.8.0-1.el10
+%define tarfile_release 6.9.0-0.rc2.1.el10
 # This is needed to do merge window version magic
-%define patchlevel 8
+%define patchlevel 9
 # This allows pkg_release to have configurable %%{?dist} tag
-%define specrelease 1%{?buildid}%{?dist}
+%define specrelease 0.rc2.1%{?buildid}%{?dist}
 # This defines the kabi tarball version
-%define kabiversion 6.8.0-1.el10
+%define kabiversion 6.9.0-0.rc2.1.el10
 
 # If this variable is set to 1, a bpf selftests build failure will cause a
 # fatal kernel package build error
@@ -393,8 +393,6 @@ Summary: The Linux kernel
 %define with_bpftool 0
 %define with_kernel_abi_stablelists 0
 %define with_selftests 0
-%define with_cross 0
-%define with_cross_headers 0
 %define with_ipaclones 0
 %endif
 
@@ -424,8 +422,6 @@ Summary: The Linux kernel
 %define with_bpftool 0
 %define with_kernel_abi_stablelists 0
 %define with_selftests 0
-%define with_cross 0
-%define with_cross_headers 0
 %define with_ipaclones 0
 %define with_headers 0
 %define with_efiuki 0
@@ -638,7 +634,7 @@ Summary: The Linux kernel
 
 
 Name: %{package_name}
-License: ((GPL-2.0-only WITH Linux-syscall-note) OR BSD-2-Clause) AND ((GPL-2.0-only WITH Linux-syscall-note) OR BSD-3-Clause) AND ((GPL-2.0-only WITH Linux-syscall-note) OR CDDL-1.0) AND ((GPL-2.0-only WITH Linux-syscall-note) OR Linux-OpenIB) AND ((GPL-2.0-only WITH Linux-syscall-note) OR MIT) AND ((GPL-2.0-or-later WITH Linux-syscall-note) OR BSD-3-Clause) AND ((GPL-2.0-or-later WITH Linux-syscall-note) OR MIT) AND BSD-2-Clause AND BSD-3-Clause AND BSD-3-Clause-Clear AND GFDL-1.1-no-invariants-or-later AND GPL-1.0-or-later AND (GPL-1.0-or-later OR BSD-3-Clause) AND (GPL-1.0-or-later WITH Linux-syscall-note) AND GPL-2.0-only AND (GPL-2.0-only OR Apache-2.0) AND (GPL-2.0-only OR BSD-2-Clause) AND (GPL-2.0-only OR BSD-3-Clause) AND (GPL-2.0-only OR CDDL-1.0) AND (GPL-2.0-only OR GFDL-1.1-no-invariants-or-later) AND (GPL-2.0-only OR GFDL-1.2-no-invariants-only) AND (GPL-2.0-only WITH Linux-syscall-note) AND GPL-2.0-or-later AND (GPL-2.0-or-later OR BSD-2-Clause) AND (GPL-2.0-or-later OR BSD-3-Clause) AND (GPL-2.0-or-later OR CC-BY-4.0) AND (GPL-2.0-or-later WITH GCC-exception-2.0) AND (GPL-2.0-or-later WITH Linux-syscall-note) AND ISC AND LGPL-2.0-or-later AND (LGPL-2.0-or-later OR BSD-2-Clause) AND (LGPL-2.0-or-later WITH Linux-syscall-note) AND LGPL-2.1-only AND (LGPL-2.1-only OR BSD-2-Clause) AND (LGPL-2.1-only WITH Linux-syscall-note) AND LGPL-2.1-or-later AND (LGPL-2.1-or-later WITH Linux-syscall-note) AND (Linux-OpenIB OR GPL-2.0-only) AND (Linux-OpenIB OR GPL-2.0-only OR BSD-2-Clause) AND Linux-man-pages-copyleft AND MIT AND (MIT OR Apache-2.0) AND (MIT OR GPL-2.0-only) AND (MIT OR GPL-2.0-or-later) AND (MIT OR LGPL-2.1-only) AND (MPL-1.1 OR GPL-2.0-only) AND (X11 OR GPL-2.0-only) AND (X11 OR GPL-2.0-or-later) AND Zlib AND (copyleft-next-0.3.1 OR GPL-2.0-or-later)
+License: ((GPL-2.0-only WITH Linux-syscall-note) OR BSD-2-Clause) AND ((GPL-2.0-only WITH Linux-syscall-note) OR BSD-3-Clause) AND ((GPL-2.0-only WITH Linux-syscall-note) OR CDDL-1.0) AND ((GPL-2.0-only WITH Linux-syscall-note) OR Linux-OpenIB) AND ((GPL-2.0-only WITH Linux-syscall-note) OR MIT) AND ((GPL-2.0-or-later WITH Linux-syscall-note) OR BSD-3-Clause) AND ((GPL-2.0-or-later WITH Linux-syscall-note) OR MIT) AND BSD-2-Clause AND (BSD-2-Clause OR Apache-2.0) AND BSD-3-Clause AND BSD-3-Clause-Clear AND GFDL-1.1-no-invariants-or-later AND GPL-1.0-or-later AND (GPL-1.0-or-later OR BSD-3-Clause) AND (GPL-1.0-or-later WITH Linux-syscall-note) AND GPL-2.0-only AND (GPL-2.0-only OR Apache-2.0) AND (GPL-2.0-only OR BSD-2-Clause) AND (GPL-2.0-only OR BSD-3-Clause) AND (GPL-2.0-only OR CDDL-1.0) AND (GPL-2.0-only OR GFDL-1.1-no-invariants-or-later) AND (GPL-2.0-only OR GFDL-1.2-no-invariants-only) AND (GPL-2.0-only WITH Linux-syscall-note) AND GPL-2.0-or-later AND (GPL-2.0-or-later OR BSD-2-Clause) AND (GPL-2.0-or-later OR BSD-3-Clause) AND (GPL-2.0-or-later OR CC-BY-4.0) AND (GPL-2.0-or-later WITH GCC-exception-2.0) AND (GPL-2.0-or-later WITH Linux-syscall-note) AND ISC AND LGPL-2.0-or-later AND (LGPL-2.0-or-later OR BSD-2-Clause) AND (LGPL-2.0-or-later WITH Linux-syscall-note) AND LGPL-2.1-only AND (LGPL-2.1-only OR BSD-2-Clause) AND (LGPL-2.1-only WITH Linux-syscall-note) AND LGPL-2.1-or-later AND (LGPL-2.1-or-later WITH Linux-syscall-note) AND (Linux-OpenIB OR GPL-2.0-only) AND (Linux-OpenIB OR GPL-2.0-only OR BSD-2-Clause) AND Linux-man-pages-copyleft AND MIT AND (MIT OR Apache-2.0) AND (MIT OR GPL-2.0-only) AND (MIT OR GPL-2.0-or-later) AND (MIT OR LGPL-2.1-only) AND (MPL-1.1 OR GPL-2.0-only) AND (X11 OR GPL-2.0-only) AND (X11 OR GPL-2.0-or-later) AND Zlib AND (copyleft-next-0.3.1 OR GPL-2.0-or-later)
 URL: https://www.kernel.org/
 Version: %{specrpmversion}
 Release: %{pkg_release}
@@ -671,7 +667,7 @@ BuildRequires: kernel-rpm-macros
 # glibc-static is required for a consistent build environment (specifically
 # CONFIG_CC_CAN_LINK_STATIC=y).
 BuildRequires: glibc-static
-%if %{with_headers}
+%if %{with_headers} || %{with_cross_headers}
 BuildRequires: rsync
 %endif
 %if %{with_doc}
@@ -1135,6 +1131,7 @@ This package contains the kernel source perf library.
 
 %package -n libperf-devel
 Summary: Developement files for the perf library from kernel source
+Requires: libperf = %{version}-%{release}
 %description -n libperf-devel
 This package includes libraries and header files needed for development
 of applications which use perf library from kernel source.
@@ -1151,7 +1148,7 @@ This package provides debug information for the libperf package.
 # symlinks because of the trailing nonmatching alternation and
 # the leading .*, because of find-debuginfo.sh's buggy handling
 # of matching the pattern against the symlinks file.
-%{expand:%%global _find_debuginfo_opts %{?_find_debuginfo_opts} -p '.*%%{_libdir}/libperf.so(\.debug)?|XXX' -o libperf-debuginfo.list}
+%{expand:%%global _find_debuginfo_opts %{?_find_debuginfo_opts} -p '.*%%{_libdir}/libperf.so.*(\.debug)?|XXX' -o libperf-debuginfo.list}
 # with_libperf
 %endif
 
@@ -1506,7 +1503,7 @@ The meta-package for the %{1} kernel\
 %package %{?1:%{1}-}kvm\
 Summary: KVM modules for package kernel%{?1:-%{1}}\
 Group: System Environment/Kernel\
-Requires: kernel%{?1:-%{1}} = %{version}-%{release}\
+Requires: kernel-uname-r = %{KVERREL}%{uname_suffix %{?1:%{1}}}\
 Provides: installonlypkg(kernel-module)\
 Provides: kernel%{?1:-%{1}}-kvm-%{_target_cpu} = %{version}-%{release}\
 AutoReq: no\
@@ -2486,7 +2483,7 @@ BuildKernel() {
     fi
 
     # build and copy the vmlinux-gdb plugin files into kernel-debuginfo
-    %{make} %{?_smp_mflags} scripts_gdb
+    %{make} ARCH=$Arch %{?_smp_mflags} scripts_gdb
     cp -a --parents scripts/gdb/{,linux/}*.py $RPM_BUILD_ROOT%{debuginfodir}/lib/modules/$KernelVer
     # this should be a relative symlink (Kbuild creates an absolute one)
     ln -s scripts/gdb/vmlinux-gdb.py $RPM_BUILD_ROOT%{debuginfodir}/lib/modules/$KernelVer/vmlinux-gdb.py
@@ -2858,7 +2855,7 @@ chmod +x tools/perf/check-headers.sh
 %endif
 
 %global tools_make \
-  CFLAGS="${RPM_OPT_FLAGS}" LDFLAGS="%{__global_ldflags}" %{make} %{?make_opts}
+  CFLAGS="${RPM_OPT_FLAGS}" LDFLAGS="%{__global_ldflags}" EXTRA_CFLAGS="${RPM_OPT_FLAGS}" %{make} %{?make_opts}
 
 %if %{with_tools}
 %ifarch %{cpupowerarchs}
@@ -3824,7 +3821,7 @@ fi\
 %ghost /%{image_install_path}/dtb-%{KVERREL}%{?3:+%{3}} \
 %endif\
 /lib/modules/%{KVERREL}%{?3:+%{3}}/System.map\
-%ghost %attr(0600, root, root) /boot/System.map-%{KVERREL}%{?3:+%{3}}\
+%ghost /boot/System.map-%{KVERREL}%{?3:+%{3}}\
 %dir /lib/modules\
 %dir /lib/modules/%{KVERREL}%{?3:+%{3}}\
 /lib/modules/%{KVERREL}%{?3:+%{3}}/symvers.%compext\
@@ -3963,44 +3960,196 @@ fi\
 #
 #
 %changelog
-* Thu Mar 21 2024 Jan Stancek <jstancek@redhat.com> [6.8.0-1.el10]
+* Mon Apr 08 2024 Jan Stancek <jstancek@redhat.com> [6.9.0-0.rc2.1.el10]
+- remove ARK .gitlab-ci.yml (Jan Stancek)
+- redhat: update rpminspect with c9s one (Jan Stancek)
 - redhat: remove fedora configs and files (Jan Stancek)
-- redhat: init RHEL10.0 beta variables and dist tag (Jan Stancek)
-- v6.8-rt8 (Sebastian Andrzej Siewior)
-- net: Provide SMP threads for backlog NAPI. (Sebastian Andrzej Siewior)
-- perf: Split __perf_pending_irq() out of perf_pending_irq() (Sebastian Andrzej Siewior)
-- perf: Remove perf_swevent_get_recursion_context() from perf_pending_task(). (Sebastian Andrzej Siewior)
-- perf: Enqueue SIGTRAP always via task_work. (Sebastian Andrzej Siewior)
-- perf: Move irq_work_queue() where the event is prepared. (Sebastian Andrzej Siewior)
-- v6.8-rt7 (Sebastian Andrzej Siewior)
-- Remove rt pending configs (Don Zickus)
+- redhat: init RHEL10.0 beta variables and dist tag (Jan Stancek) [RHEL-29722]
+- nfsd: hold a lighter-weight client reference over CB_RECALL_ANY (Jeff Layton)
+- SUNRPC: Fix a slow server-side memory leak with RPC-over-TCP (Chuck Lever)
+- i2c: pxa: hide unused icr_bits[] variable (Arnd Bergmann)
+- xfs: allow cross-linking special files without project quota (Andrey Albershteyn)
+- smb: client: fix potential UAF in cifs_signal_cifsd_for_reconnect() (Paulo Alcantara)
+- smb: client: fix potential UAF in smb2_is_network_name_deleted() (Paulo Alcantara)
+- smb: client: fix potential UAF in is_valid_oplock_break() (Paulo Alcantara)
+- smb: client: fix potential UAF in smb2_is_valid_oplock_break() (Paulo Alcantara)
+- smb: client: fix potential UAF in smb2_is_valid_lease_break() (Paulo Alcantara)
+- smb: client: fix potential UAF in cifs_stats_proc_show() (Paulo Alcantara)
+- smb: client: fix potential UAF in cifs_stats_proc_write() (Paulo Alcantara)
+- smb: client: fix potential UAF in cifs_dump_full_key() (Paulo Alcantara)
+- smb: client: fix potential UAF in cifs_debug_files_proc_show() (Paulo Alcantara)
+- smb3: retrying on failed server close (Ritvik Budhiraja)
+- smb: client: serialise cifs_construct_tcon() with cifs_mount_mutex (Paulo Alcantara)
+- smb: client: handle DFS tcons in cifs_construct_tcon() (Paulo Alcantara)
+- smb: client: refresh referral without acquiring refpath_lock (Paulo Alcantara)
+- smb: client: guarantee refcounted children from parent session (Paulo Alcantara)
+- cifs: Fix caching to try to do open O_WRONLY as rdwr on server (David Howells)
+- smb: client: fix UAF in smb2_reconnect_server() (Paulo Alcantara)
+- smb: client: replace deprecated strncpy with strscpy (Justin Stitt)
+- firewire: ohci: mask bus reset interrupts between ISR and bottom half (Adam Goldman)
+- spi: mchp-pci1xxx: Fix a possible null pointer dereference in pci1xxx_spi_probe (Huai-Yuan Liu)
+- spi: spi-fsl-lpspi: remove redundant spi_controller_put call (Carlos Song)
+- spi: s3c64xx: Use DMA mode from fifo size (Jaewon Kim)
+- regulator: tps65132: Add of_match table (André Apitzsch)
+- regmap: maple: Fix uninitialized symbol 'ret' warnings (Richard Fitzgerald)
+- regmap: maple: Fix cache corruption in regcache_maple_drop() (Richard Fitzgerald)
+- nvme-fc: rename free_ctrl callback to match name pattern (Daniel Wagner)
+- nvmet-fc: move RCU read lock to nvmet_fc_assoc_exists (Daniel Wagner)
+- nvmet: implement unique discovery NQN (Hannes Reinecke)
+- nvme: don't create a multipath node for zero capacity devices (Christoph Hellwig)
+- nvme: split nvme_update_zone_info (Christoph Hellwig)
+- nvme-multipath: don't inherit LBA-related fields for the multipath node (Christoph Hellwig)
+- block: fix overflow in blk_ioctl_discard() (Li Nan)
+- nullblk: Fix cleanup order in null_add_dev() error path (Damien Le Moal)
+- io_uring/kbuf: hold io_buffer_list reference over mmap (Jens Axboe)
+- io_uring/kbuf: protect io_buffer_list teardown with a reference (Jens Axboe)
+- io_uring/kbuf: get rid of bl->is_ready (Jens Axboe)
+- io_uring/kbuf: get rid of lower BGID lists (Jens Axboe)
+- io_uring: use private workqueue for exit work (Jens Axboe)
+- io_uring: disable io-wq execution of multishot NOWAIT requests (Jens Axboe)
+- io_uring/rw: don't allow multishot reads without NOWAIT support (Jens Axboe)
+- scsi: ufs: core: Fix MCQ mode dev command timeout (Peter Wang)
+- scsi: libsas: Align SMP request allocation to ARCH_DMA_MINALIGN (Yihang Li)
+- scsi: sd: Unregister device if device_add_disk() failed in sd_probe() (Li Nan)
+- scsi: ufs: core: WLUN suspend dev/link state error recovery (Peter Wang)
+- scsi: mylex: Fix sysfs buffer lengths (Arnd Bergmann)
+- nios2: Only use built-in devicetree blob if configured to do so (Guenter Roeck)
+- dt-bindings: timer: narrow regex for unit address to hex numbers (Krzysztof Kozlowski)
+- dt-bindings: soc: fsl: narrow regex for unit address to hex numbers (Krzysztof Kozlowski)
+- dt-bindings: remoteproc: ti,davinci: remove unstable remark (Krzysztof Kozlowski)
+- dt-bindings: clock: ti: remove unstable remark (Krzysztof Kozlowski)
+- dt-bindings: clock: keystone: remove unstable remark (Krzysztof Kozlowski)
+- of: module: prevent NULL pointer dereference in vsnprintf() (Sergey Shtylyov)
+- dt-bindings: ufs: qcom: document SM6125 UFS (Krzysztof Kozlowski)
+- dt-bindings: ufs: qcom: document SC7180 UFS (Krzysztof Kozlowski)
+- dt-bindings: ufs: qcom: document SC8180X UFS (Krzysztof Kozlowski)
+- of: dynamic: Synchronize of_changeset_destroy() with the devlink removals (Herve Codina)
+- driver core: Introduce device_link_wait_removal() (Herve Codina)
+- docs: dt-bindings: add missing address/size-cells to example (Krzysztof Kozlowski)
+- MAINTAINERS: Add TPM DT bindings to TPM maintainers (Rob Herring)
+- stackdepot: rename pool_index to pool_index_plus_1 (Peter Collingbourne)
+- x86/mm/pat: fix VM_PAT handling in COW mappings (David Hildenbrand)
+- MAINTAINERS: change vmware.com addresses to broadcom.com (Alexey Makhalov)
+- selftests/mm: include strings.h for ffsl (Edward Liaw)
+- mm: vmalloc: fix lockdep warning (Uladzislau Rezki (Sony))
+- mm: vmalloc: bail out early in find_vmap_area() if vmap is not init (Uladzislau Rezki (Sony))
+- init: open output files from cpio unpacking with O_LARGEFILE (John Sperbeck)
+- mm/secretmem: fix GUP-fast succeeding on secretmem folios (David Hildenbrand)
+- arm64/ptrace: Use saved floating point state type to determine SVE layout (Mark Brown)
+- riscv: process: Fix kernel gp leakage (Stefan O'Rear)
+- riscv: Disable preemption when using patch_map() (Alexandre Ghiti)
+- riscv: Fix warning by declaring arch_cpu_idle() as noinstr (Alexandre Ghiti)
+- riscv: use KERN_INFO in do_trap (Andreas Schwab)
+- riscv: Fix vector state restore in rt_sigreturn() (Björn Töpel)
+- riscv: mm: implement pgprot_nx (Jisheng Zhang)
+- riscv: compat_vdso: align VDSOAS build log (Masahiro Yamada)
+- RISC-V: Update AT_VECTOR_SIZE_ARCH for new AT_MINSIGSTKSZ (Victor Isaev)
+- riscv: Mark __se_sys_* functions __used (Sami Tolvanen)
+- drivers/perf: riscv: Disable PERF_SAMPLE_BRANCH_* while not supported (Pu Lehui)
+- riscv: compat_vdso: install compat_vdso.so.dbg to /lib/modules/*/vdso/ (Masahiro Yamada)
+- riscv: hwprobe: do not produce frtace relocation (Vladimir Isaev)
+- riscv: Fix spurious errors from __get/put_kernel_nofault (Samuel Holland)
+- riscv: mm: Fix prototype to avoid discarding const (Samuel Holland)
+- s390/entry: align system call table on 8 bytes (Sumanth Korikkar)
+- s390/pai: fix sampling event removal for PMU device driver (Thomas Richter)
+- s390/preempt: mark all functions __always_inline (Ilya Leoshkevich)
+- s390/atomic: mark all functions __always_inline (Ilya Leoshkevich)
+- s390/mm: fix NULL pointer dereference (Heiko Carstens)
+- PM: EM: fix wrong utilization estimation in em_cpu_energy() (Vincent Guittot)
+- ACPI: thermal: Register thermal zones without valid trip points (Stephen Horvath)
+- thermal: gov_power_allocator: Allow binding without trip points (Nikita Travkin)
+- thermal: gov_power_allocator: Allow binding without cooling devices (Nikita Travkin)
+- gpio: cdev: fix missed label sanitizing in debounce_setup() (Kent Gibson)
+- gpio: cdev: check for NULL labels when sanitizing them for irqs (Bartosz Golaszewski)
+- gpiolib: Fix triggering "kobject: 'gpiochipX' is not initialized, yet" kobject_get() errors (Hans de Goede)
+- ata: sata_gemini: Check clk_enable() result (Chen Ni)
+- ata: sata_mv: Fix PCI device ID table declaration compilation warning (Arnd Bergmann)
+- ata: ahci_st: Remove an unused field in struct st_ahci_drv_data (Christophe JAILLET)
+- ata: pata_macio: drop driver owner assignment (Krzysztof Kozlowski)
+- ata: sata_sx4: fix pdc20621_get_from_dimm() on 64-bit (Arnd Bergmann)
+- ASoC: SOF: Core: Add remove_late() to sof_init_environment failure path (Chaitanya Kumar Borah)
+- ASoC: SOF: amd: fix for false dsp interrupts (Vijendar Mukunda)
+- ASoC: SOF: Intel: lnl: Disable DMIC/SSP offload on remove (Peter Ujfalusi)
+- ASoC: wm_adsp: Fix missing mutex_lock in wm_adsp_write_ctl() (Richard Fitzgerald)
+- ASoC: codecs: ES8326: Removing the control of ADC_SCALE (Zhang Yi)
+- ASoC: codecs: ES8326: Solve a headphone detection issue after suspend and resume (Zhang Yi)
+- ASoC: codecs: ES8326: modify clock table (Zhang Yi)
+- ASoC: codecs: ES8326: Solve error interruption issue (Zhang Yi)
+- ASoC: Intel: avs: boards: Add modules description (Amadeusz Sławiński)
+- ASoC: amd: acp: fix for acp_init function error handling (Vijendar Mukunda)
+- ASoC: rt-sdw*: add __func__ to all error logs (Pierre-Louis Bossart)
+- ASoC: rt722-sdca-sdw: fix locking sequence (Pierre-Louis Bossart)
+- ASoC: rt712-sdca-sdw: fix locking sequence (Pierre-Louis Bossart)
+- ASoC: rt711-sdw: fix locking sequence (Pierre-Louis Bossart)
+- ASoC: rt711-sdca: fix locking sequence (Pierre-Louis Bossart)
+- ASoC: rt5682-sdw: fix locking sequence (Pierre-Louis Bossart)
+- ASoC: ops: Fix wraparound for mask in snd_soc_get_volsw (Stephen Lee)
+- ASoC: amd: acp: fix for acp pdm configuration check (Vijendar Mukunda)
+- ASoC: SOF: Intel: hda: Compensate LLP in case it is not reset (Peter Ujfalusi)
+- ALSA: hda: Add pplcllpl/u members to hdac_ext_stream (Peter Ujfalusi)
+- ASoC: SOF: ipc4-pcm: Correct the delay calculation (Peter Ujfalusi)
+- ASoC: SOF: sof-pcm: Add pointer callback to sof_ipc_pcm_ops (Peter Ujfalusi)
+- ASoC: SOF: ipc4-pcm: Invalidate the stream_start_offset in PAUSED state (Peter Ujfalusi)
+- ASoC: SOF: ipc4-pcm: Combine the SOF_IPC4_PIPE_PAUSED cases in pcm_trigger (Peter Ujfalusi)
+- ASoC: SOF: ipc4-pcm: Move struct sof_ipc4_timestamp_info definition locally (Peter Ujfalusi)
+- ASoC: SOF: Remove the get_stream_position callback (Peter Ujfalusi)
+- ASoC: SOF: Intel: hda-common-ops: Do not set the get_stream_position callback (Peter Ujfalusi)
+- ASoC: SOF: ipc4-pcm: Use the snd_sof_pcm_get_dai_frame_counter() for pcm_delay (Peter Ujfalusi)
+- ASoC: SOF: Intel: Set the dai/host get frame/byte counter callbacks (Peter Ujfalusi)
+- ASoC: SOF: Introduce a new callback pair to be used for PCM delay reporting (Peter Ujfalusi)
+- ASoC: SOF: Intel: mtl/lnl: Use the generic get_stream_position callback (Peter Ujfalusi)
+- ASoC: SOF: Intel: hda: Implement get_stream_position (Linear Link Position) (Peter Ujfalusi)
+- ASoC: SOF: Intel: hda-pcm: Use dsp_max_burst_size_in_ms to place constraint (Peter Ujfalusi)
+- ASoC: SOF: ipc4-topology: Save the DMA maximum burst size for PCMs (Peter Ujfalusi)
+- ASoC: SOF: Add dsp_max_burst_size_in_ms member to snd_sof_pcm_stream (Peter Ujfalusi)
+- ASoC: cs42l43: Correct extraction of data pointer in suspend/resume (Charles Keepax)
+- ASoC: SOF: mtrace: rework mtrace timestamp setting (Rander Wang)
+- ASoC: cs-amp-lib: Check for no firmware controls when writing calibration (Simon Trimmer)
+- ASoC: SOF: Intel: hda-dsp: Skip IMR boot on ACE platforms in case of S3 suspend (Peter Ujfalusi)
+- ALSA: line6: Zero-initialize message buffers (Takashi Iwai)
+- ALSA: hda/realtek: cs35l41: Support ASUS ROG G634JYR (Luke D. Jones)
+- ALSA: hda/realtek: Update Panasonic CF-SZ6 quirk to support headset with microphone (I Gede Agastya Darma Laksana)
+- ALSA: hda/realtek: Add sound quirks for Lenovo Legion slim 7 16ARHA7 models (Christian Bendiksen)
+- Revert "ALSA: emu10k1: fix synthesizer sample playback position and caching" (Oswald Buddenhagen)
+- OSS: dmasound/paula: Mark driver struct with __refdata to prevent section mismatch (Uwe Kleine-König)
+- ALSA: hda/realtek: Add quirks for ASUS Laptops using CS35L56 (Simon Trimmer)
+- ASoC: tas2781: mark dvc_tlv with __maybe_unused (Gergo Koteles)
+- ALSA: hda: cs35l56: Add ACPI device match tables (Simon Trimmer)
+- ALSA: hda/realtek - Fix inactive headset mic jack (Christoffer Sandberg)
+- drm/i915/mst: Reject FEC+MST on ICL (Ville Syrjälä)
+- drm/i915/mst: Limit MST+DSC to TGL+ (Ville Syrjälä)
+- drm/i915/dp: Fix the computation for compressed_bpp for DISPLAY < 13 (Ankit Nautiyal)
+- drm/i915/gt: Enable only one CCS for compute workload (Andi Shyti)
+- drm/i915/gt: Do not generate the command streamer for all the CCS (Andi Shyti)
+- drm/i915/gt: Disable HW load balancing for CCS (Andi Shyti)
+- drm/i915/gt: Limit the reserved VM space to only the platforms that need it (Andi Shyti)
+- drm/i915/psr: Fix intel_psr2_sel_fetch_et_alignment usage (Jouni Högander)
+- drm/i915/psr: Move writing early transport pipe src (Jouni Högander)
+- drm/i915/psr: Calculate PIPE_SRCSZ_ERLY_TPT value (Jouni Högander)
+- drm/i915/dp: Remove support for UHBR13.5 (Arun R Murthy)
+- drm/i915/dp: Fix DSC state HW readout for SST connectors (Imre Deak)
+- drm/xe: Use ordered wq for preempt fence waiting (Matthew Brost)
+- drm/xe: Move vma rebinding to the drm_exec locking loop (Thomas Hellström)
+- drm/xe: Make TLB invalidation fences unordered (Thomas Hellström)
+- drm/xe: Rework rebinding (Thomas Hellström)
+- drm/xe: Use ring ops TLB invalidation for rebinds (Thomas Hellström)
+- drm/display: fix typo (Oleksandr Natalenko)
+- drm/prime: Unbreak virtgpu dma-buf export (Rob Clark)
+- nouveau/uvmm: fix addr/range calcs for remap operations (Dave Airlie)
+- drm/nouveau/gr/gf100: Remove second semicolon (Colin Ian King)
+- drm/panfrost: fix power transition timeout warnings (Christian Hewitt)
+- 9p: remove SLAB_MEM_SPREAD flag usage (Chengming Zhou)
+- 9p: Fix read/write debug statements to report server reply (Dominique Martinet)
+- 9p/trans_fd: remove Excess kernel-doc comment (Randy Dunlap)
+- ksmbd: do not set SMB2_GLOBAL_CAP_ENCRYPTION for SMB 3.1.1 (Namjae Jeon)
+- ksmbd: validate payload size in ipc response (Namjae Jeon)
+- ksmbd: don't send oplock break if rename fails (Namjae Jeon)
+- aio: Fix null ptr deref in aio_complete() wakeup (Kent Overstreet)
+- fs,block: yield devices early (Christian Brauner)
+- block: count BLK_OPEN_RESTRICT_WRITES openers (Christian Brauner)
+- block: handle BLK_OPEN_RESTRICT_WRITES correctly (Christian Brauner)
+- redhat/configs: remove CONFIG_INTEL_MENLOW as it is obsolete. (David Arcari)
 - redhat: enable changes to build rt variants (Clark Williams)
-- gitlab-ci: enable all variants for rawhide/eln builder image gating (Michael Hofmann)
-- Fedora: enable Microchip and their useful drivers (Peter Robinson)
-- spec: suppress "set +x" output (Jan Stancek)
-- redhat/configs: Disable CONFIG_RDMA_SIW (Kamal Heib)
-- redhat/configs: Disable CONFIG_RDMA_RXE (Kamal Heib)
-- redhat/configs: Disable CONFIG_MLX4 (Kamal Heib)
-- redhat/configs: Disable CONFIG_INFINIBAND_HFI1 and CONFIG_INFINIBAND_RDMAVT (Kamal Heib)
-- Consolidate 6.8 configs to common (Justin M. Forbes)
-- v6.8-rc7-rt6 (Sebastian Andrzej Siewior)
-- serial: Use uart_prepare_sysrq_char(). (Sebastian Andrzej Siewior)
-- v6.8-rc7-rt5 (Sebastian Andrzej Siewior)
-- Remove rt-automated and master-rt-devel logic (Don Zickus)
-- Add support for CI octopus merging (Don Zickus)
-- redhat/configs: Disable CONFIG_INFINIBAND_VMWARE_PVRDMA (Kamal Heib)
-- gitlab-ci: fix merge tree URL for gating pipelines (Michael Hofmann)
-- Revert "net: bump CONFIG_MAX_SKB_FRAGS to 45" (Marcelo Ricardo Leitner)
-- uki: use systemd-pcrphase dracut module (Gerd Hoffmann)
-- Add libperf-debuginfo subpackage (Justin M. Forbes)
-- redhat/kernel.spec.template: Add log_msg macro (Prarit Bhargava)
-- v6.8-rc4-rt4 (Sebastian Andrzej Siewior)
-- printk: Update the printk series. (Sebastian Andrzej Siewior)
-- i915: Correct macro definition for !i915 builds. (Sebastian Andrzej Siewior)
-- v6.8-rc4-rt3 (Sebastian Andrzej Siewior)
-- v6.8-rc1-rt2 (Sebastian Andrzej Siewior)
-- arm: Disable FAST_GUP on PREEMPT_RT if HIGHPTE is also enabled. (Sebastian Andrzej Siewior)
-- printk: nbcon: move locked_port flag to struct uart_port (Junxiao Chang)
 - Add localversion for -RT release (Thomas Gleixner)
 - sysfs: Add /sys/kernel/realtime entry (Clark Williams)
 - riscv: allow to enable RT (Jisheng Zhang)
@@ -4017,8 +4166,7 @@ fi\
 - ARM: vfp: Use vfp_lock() in vfp_support_entry(). (Sebastian Andrzej Siewior)
 - ARM: vfp: Use vfp_lock() in vfp_sync_hwstate(). (Sebastian Andrzej Siewior)
 - ARM: vfp: Provide vfp_lock() for VFP locking. (Sebastian Andrzej Siewior)
-- tty/serial/pl011: Make the locking work on RT (Thomas Gleixner)
-- tty/serial/omap: Make the locking RT aware (Thomas Gleixner)
+- arm: Disable FAST_GUP on PREEMPT_RT if HIGHPTE is also enabled. (Sebastian Andrzej Siewior)
 - ARM: enable irq in translation/section permission fault handlers (Yadi.hu)
 - arm: Disable jump-label on PREEMPT_RT. (Thomas Gleixner)
 - sched: define TIF_ALLOW_RESCHED (Thomas Gleixner)
@@ -4032,22 +4180,24 @@ fi\
 - drm/i915: Don't check for atomic context on PREEMPT_RT (Sebastian Andrzej Siewior)
 - drm/i915: Don't disable interrupts on PREEMPT_RT during atomic updates (Mike Galbraith)
 - drm/i915: Use preempt_disable/enable_rt() where recommended (Mike Galbraith)
-- printk: Avoid false positive lockdep report for legacy driver. (John Ogness)
-- serial: 8250: revert "drop lockdep annotation from serial8250_clear_IER()" (John Ogness)
+- printk: Avoid false positive lockdep report for legacy printing (John Ogness)
+- printk: Provide threadprintk boot argument (John Ogness)
 - printk: Add kthread for all legacy consoles (John Ogness)
+- serial: 8250: Revert "drop lockdep annotation from serial8250_clear_IER()" (John Ogness)
 - serial: 8250: Switch to nbcon console (John Ogness)
-- serial: core: Provide low-level functions to port lock (John Ogness)
 - printk: nbcon: Provide function to reacquire ownership (John Ogness)
 - tty: sysfs: Add nbcon support for 'active' (John Ogness)
 - proc: Add nbcon support for /proc/consoles (John Ogness)
+- printk: nbcon: Show replay message on takeover (John Ogness)
+- printk: Provide helper for message prepending (John Ogness)
 - printk: nbcon: Start printing threads (John Ogness)
 - printk: nbcon: Stop threads on shutdown/reboot (John Ogness)
 - printk: nbcon: Add printer thread wakeups (Thomas Gleixner)
 - printk: nbcon: Add context to console_is_usable() (John Ogness)
 - printk: Atomic print in printk context on shutdown (John Ogness)
 - printk: nbcon: Introduce printing kthreads (Thomas Gleixner)
-- lockdep: Mark emergency section in lockdep splats (John Ogness)
-- rcu: Mark emergency section in rcu stalls (John Ogness)
+- lockdep: Mark emergency sections in lockdep splats (John Ogness)
+- rcu: Mark emergency sections in rcu stalls (John Ogness)
 - panic: Mark emergency section in oops (John Ogness)
 - panic: Mark emergency section in warn (Thomas Gleixner)
 - printk: nbcon: Implement emergency sections (Thomas Gleixner)
@@ -4062,26 +4212,16 @@ fi\
 - printk: Add @flags argument for console_is_usable() (John Ogness)
 - printk: Let console_is_usable() handle nbcon (John Ogness)
 - printk: Make console_is_usable() available to nbcon (John Ogness)
-- printk: nbcon: Add driver_enter/driver_exit console callbacks (John Ogness)
+- printk: nbcon: Do not rely on proxy headers (John Ogness)
 - printk: nbcon: Implement processing in port->lock wrapper (John Ogness)
+- serial: core: Provide low-level functions to lock port (John Ogness)
+- printk: nbcon: Use driver synchronization while registering (John Ogness)
+- printk: nbcon: Add callbacks to synchronize with driver (John Ogness)
+- printk: nbcon: Add detailed doc for write_atomic() (John Ogness)
 - printk: Check printk_deferred_enter()/_exit() usage (Sebastian Andrzej Siewior)
-- printk: nbcon: Ensure ownership release on failed emit (John Ogness)
-- printk: Add sparse notation to console_srcu locking (John Ogness)
-- printk: Consider nbcon boot consoles on seq init (John Ogness)
-- panic: Flush kernel log buffer at the end (John Ogness)
-- printk: Avoid non-panic CPUs writing to ringbuffer (John Ogness)
-- printk: Disable passing console lock owner completely during panic() (Petr Mladek)
-- printk: ringbuffer: Consider committed as finalized in panic (John Ogness)
-- printk: ringbuffer: Skip non-finalized records in panic (John Ogness)
-- printk: Wait for all reserved records with pr_flush() (John Ogness)
-- printk: ringbuffer: Cleanup reader terminology (John Ogness)
-- printk: Add this_cpu_in_panic() (John Ogness)
-- printk: For @suppress_panic_printk check for other CPU in panic (John Ogness)
-- printk: ringbuffer: Clarify special lpos values (John Ogness)
-- printk: ringbuffer: Do not skip non-finalized records with prb_next_seq() (John Ogness)
-- printk: Use prb_first_seq() as base for 32bit seq macros (John Ogness)
-- printk: Adjust mapping for 32bit seq macros (Sebastian Andrzej Siewior)
-- printk: nbcon: Relocate 32bit seq macros (John Ogness)
+- printk: nbcon: Remove return value for write_atomic() (John Ogness)
+- printk: Properly deal with nbcon consoles on seq init (John Ogness)
+- printk: Add notation to console_srcu locking (John Ogness)
 - time: Allow to preempt after a callback. (Sebastian Andrzej Siewior)
 - softirq: Add function to preempt serving softirqs. (Sebastian Andrzej Siewior)
 - sched/core: Provide a method to check if a task is PI-boosted. (Sebastian Andrzej Siewior)
@@ -4093,10 +4233,17 @@ fi\
 - sched/rt: Don't try push tasks if there are none. (Sebastian Andrzej Siewior)
 - x86: Enable RT also on 32bit (Sebastian Andrzej Siewior)
 - x86: Allow to enable RT (Sebastian Andrzej Siewior)
-- net: Avoid the IPI to free the (Sebastian Andrzej Siewior)
-
-* Mon Mar 11 2024 Fedora Kernel Team <kernel-team@fedoraproject.org> [6.8.0-63]
-- Linux v6.8.0
+- drm/ttm/tests: Let ttm_bo_test consider different ww_mutex implementation. (Sebastian Andrzej Siewior)
+- Locking: Let PREEMPT_RT compile again with new rwsem asserts. (Sebastian Andrzej Siewior)
+- perf: Split __perf_pending_irq() out of perf_pending_irq() (Sebastian Andrzej Siewior)
+- perf: Remove perf_swevent_get_recursion_context() from perf_pending_task(). (Sebastian Andrzej Siewior)
+- perf: Enqueue SIGTRAP always via task_work. (Sebastian Andrzej Siewior)
+- perf: Move irq_work_queue() where the event is prepared. (Sebastian Andrzej Siewior)
+- net: Rename rps_lock to backlog_lock. (Sebastian Andrzej Siewior)
+- net: Use backlog-NAPI to clean up the defer_list. (Sebastian Andrzej Siewior)
+- net: Allow to use SMP threads for backlog NAPI. (Sebastian Andrzej Siewior)
+- net: Remove conditional threaded-NAPI wakeup based on task state. (Sebastian Andrzej Siewior)
+- Linux v6.9.0-0.rc2
 
 
 ###

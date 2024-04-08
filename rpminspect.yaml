@@ -2,7 +2,13 @@
 
 ---
 inspections:
+    abidiff: off
+    kmidiff: off
     upstream: off
+    subpackages: off
+    license: off
+    debuginfo: off
+    removedfiles: off
 
 badfuncs:
     ignore:
@@ -23,9 +29,20 @@ emptyrpm:
 patches:
     ignore_list:
         - linux-kernel-test.patch
-        - patch-6.8-redhat.patch
+        - patch-6.9-redhat.patch
+        - patch-%{patchversion}-redhat.patch
 
 runpath:
     ignore:
         - /usr/libexec/kselftests/bpf/urandom_read
         - /usr/libexec/kselftests/bpf/no_alu32/urandom_read
+
+debuginfo:
+    ignore:
+        - /usr/libexec/kselftests/bpf/*
+        - /usr/lib/debug/usr/libexec/perf-core/tests/shell/coresight/*
+
+elf:
+    ignore:
+        - /usr/libexec/perf-core/tests/shell/coresight/*
+        - /usr/lib/debug/usr/libexec/perf-core/tests/shell/coresight/*

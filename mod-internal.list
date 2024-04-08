@@ -25,7 +25,6 @@ drm_mm_test
 drm_modes_test
 drm_plane_helper_test
 drm_probe_helper_test
-drm_exec_test
 drm_rect_test
 ext4-inode-test
 fat_test
@@ -36,9 +35,11 @@ handshake-test
 hashtable_test
 hid-uclogic-test
 iio-test-format
+iio-test-gts
 iio-test-rescale
 input_test
 is_signed_type_kunit
+iwlwifi-tests
 kasan_test
 kfence_test
 kunit
@@ -54,6 +55,7 @@ mptcp_crypto_test
 mptcp_token_test
 mtty
 netdevsim
+of_test
 overflow_kunit
 pktgen
 property-entry-test
@@ -68,10 +70,14 @@ scftorture
 siphash_kunit
 slub_kunit
 snd-hda-cirrus-scodec-test
+snd-soc-cs-amp-lib-test
 soc-topology-test
 soc-utils-test
+sound_kunit
 stackinit_kunit
 strcat_kunit
+string_kunit
+string_helpers_kunit
 strscpy_kunit
 sysctl-test
 test_bits
