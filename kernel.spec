@@ -163,15 +163,15 @@ Summary: The Linux kernel
 %define specrpmversion 6.9.0
 %define specversion 6.9.0
 %define patchversion 6.9
-%define pkgrelease 0.rc2.1
+%define pkgrelease 0.rc4.2
 %define kversion 6
-%define tarfile_release 6.9.0-0.rc2.1.el10
+%define tarfile_release 6.9.0-0.rc4.2.el10
 # This is needed to do merge window version magic
 %define patchlevel 9
 # This allows pkg_release to have configurable %%{?dist} tag
-%define specrelease 0.rc2.1%{?buildid}%{?dist}
+%define specrelease 0.rc4.2%{?buildid}%{?dist}
 # This defines the kabi tarball version
-%define kabiversion 6.9.0-0.rc2.1.el10
+%define kabiversion 6.9.0-0.rc4.2.el10
 
 # If this variable is set to 1, a bpf selftests build failure will cause a
 # fatal kernel package build error
@@ -207,7 +207,7 @@ Summary: The Linux kernel
 # kernel-64k (aarch64 kernel with 64K page_size)
 %define with_arm64_64k %{?_without_arm64_64k: 0} %{?!_without_arm64_64k: 1}
 # kernel-rt (x86_64 and aarch64 only PREEMPT_RT enabled kernel)
-%define with_realtime  %{?_without_realtime:  0} %{?!_with_realtime:     1}
+%define with_realtime  %{?_without_realtime:  0} %{?!_without_realtime:  1}
 
 # Supported variants
 #            with_base with_debug    with_gcov
@@ -322,7 +322,8 @@ Summary: The Linux kernel
 %endif
 %global clang_make_opts HOSTCC=clang CC=clang LLVM_IAS=%{llvm_ias}
 %if %{with clang_lto}
-%global clang_make_opts %{clang_make_opts} LD=ld.lld HOSTLD=ld.lld AR=llvm-ar NM=llvm-nm HOSTAR=llvm-ar HOSTNM=llvm-nm
+# LLVM=1 enables use of all LLVM tools.
+%global clang_make_opts %{clang_make_opts} LLVM=1
 %endif
 %global make_opts %{make_opts} %{clang_make_opts}
 # clang does not support the -fdump-ipa-clones option
@@ -662,7 +663,9 @@ BuildRequires: bzip2, xz, findutils, m4, perl-interpreter, perl-Carp, perl-devel
 BuildRequires: gcc, binutils, redhat-rpm-config, hmaccalc, bison, flex, gcc-c++
 BuildRequires: net-tools, hostname, bc, elfutils-devel
 BuildRequires: dwarves
+BuildRequires: python3
 BuildRequires: python3-devel
+BuildRequires: python3-pyyaml
 BuildRequires: kernel-rpm-macros
 # glibc-static is required for a consistent build environment (specifically
 # CONFIG_CC_CAN_LINK_STATIC=y).
@@ -671,7 +674,7 @@ BuildRequires: glibc-static
 BuildRequires: rsync
 %endif
 %if %{with_doc}
-BuildRequires: xmlto, asciidoc, python3-sphinx, python3-sphinx_rtd_theme, python3-pyyaml
+BuildRequires: xmlto, asciidoc, python3-sphinx, python3-sphinx_rtd_theme
 %endif
 %if %{with_sparse}
 BuildRequires: sparse
@@ -860,6 +863,7 @@ Source13: redhatsecureboot003.cer
 
 Source20: mod-denylist.sh
 Source21: mod-sign.sh
+Source22: filtermods.py
 
 %define modsign_cmd %{SOURCE21}
 
@@ -868,7 +872,6 @@ Source23: x509.genkey.rhel
 
 Source24: %{name}-aarch64-rhel.config
 Source25: %{name}-aarch64-debug-rhel.config
-Source26: mod-extra.list.rhel
 
 Source27: %{name}-ppc64le-rhel.config
 Source28: %{name}-ppc64le-debug-rhel.config
@@ -878,11 +881,7 @@ Source31: %{name}-s390x-zfcpdump-rhel.config
 Source32: %{name}-x86_64-rhel.config
 Source33: %{name}-x86_64-debug-rhel.config
 
-Source34: filter-x86_64.sh.rhel
-Source35: filter-aarch64.sh.rhel
-Source36: filter-ppc64le.sh.rhel
-Source37: filter-s390x.sh.rhel
-Source38: filter-modules.sh.rhel
+Source34: def_variants.yaml.rhel
 
 Source41: x509.genkey.centos
 # ARM64 64K page-size kernel config
@@ -893,7 +892,6 @@ Source43: %{name}-aarch64-64k-debug-rhel.config
 
 %if 0%{?include_fedora}
 Source50: x509.genkey.fedora
-Source51: mod-extra.list.fedora
 
 Source52: %{name}-aarch64-fedora.config
 Source53: %{name}-aarch64-debug-fedora.config
@@ -906,11 +904,7 @@ Source59: %{name}-s390x-debug-fedora.config
 Source60: %{name}-x86_64-fedora.config
 Source61: %{name}-x86_64-debug-fedora.config
 
-Source62: filter-x86_64.sh.fedora
-Source63: filter-aarch64.sh.fedora
-Source64: filter-ppc64le.sh.fedora
-Source65: filter-s390x.sh.fedora
-Source66: filter-modules.sh.fedora
+Source62: def_variants.yaml.fedora
 %endif
 
 Source70: partial-kgcov-snip.config
@@ -923,9 +917,6 @@ Source76: partial-clang_lto-aarch64-snip.config
 Source77: partial-clang_lto-aarch64-debug-snip.config
 Source80: generate_all_configs.sh
 Source81: process_configs.sh
-
-Source84: mod-internal.list
-Source85: mod-partner.list
 
 Source86: dracut-virt.conf
 
@@ -949,9 +940,6 @@ Source213: Module.kabi_dup_x86_64
 
 Source300: kernel-abi-stablelists-%{kabiversion}.tar.xz
 Source301: kernel-kabi-dw-%{kabiversion}.tar.xz
-
-# RT specific virt module
-Source400: mod-kvm.list
 
 %if %{include_rt}
 # realtime config files
@@ -1504,6 +1492,7 @@ The meta-package for the %{1} kernel\
 Summary: KVM modules for package kernel%{?1:-%{1}}\
 Group: System Environment/Kernel\
 Requires: kernel-uname-r = %{KVERREL}%{uname_suffix %{?1:%{1}}}\
+Requires: kernel%{?1:-%{1}}-modules-core-uname-r = %{KVERREL}%{uname_suffix %{?1:+%{1}}}\
 Provides: installonlypkg(kernel-module)\
 Provides: kernel%{?1:-%{1}}-kvm-%{_target_cpu} = %{version}-%{release}\
 AutoReq: no\
@@ -2524,97 +2513,30 @@ BuildKernel() {
     ( find $RPM_BUILD_ROOT/lib/modules/$KernelVer -name '*.ko' | xargs /sbin/modinfo -l | \
         grep -E -v 'GPL( v2)?$|Dual BSD/GPL$|Dual MPL/GPL$|GPL and additional rights$' ) && exit 1
 
-    remove_depmod_files()
-    {
-        # remove files that will be auto generated by depmod at rpm -i time
-        pushd $RPM_BUILD_ROOT/lib/modules/$KernelVer/
-            # in case below list needs to be extended, remember to add a
-            # matching ghost entry in the files section as well
-            rm -f modules.{alias,alias.bin,builtin.alias.bin,builtin.bin} \
-                  modules.{dep,dep.bin,devname,softdep,symbols,symbols.bin}
-        popd
-    }
 
-    %{log_msg "Remove depmod files"}
-    remove_depmod_files
-
-    %{log_msg "Identify modules in kenrel-modules-* packages"}
-    # Identify modules in the kernel-modules-extras package
-    %{SOURCE20} $RPM_BUILD_ROOT lib/modules/$KernelVer $(realpath configs/mod-extra.list)
-    # Identify modules in the kernel-modules-internal package
-    %{SOURCE20} $RPM_BUILD_ROOT lib/modules/$KernelVer %{SOURCE84} internal
-%if 0%{!?fedora:1}
-    # Identify modules in the kernel-modules-partner package
-    %{SOURCE20} $RPM_BUILD_ROOT lib/modules/$KernelVer %{SOURCE85} partner
-%endif
-    if [[ "$Variant" == "rt" || "$Variant" == "rt-debug" ]]; then
-    # Identify modules in the kernel-rt-kvm package
-        %{SOURCE20} $RPM_BUILD_ROOT lib/modules/$KernelVer %{SOURCE400} kvm
+    if [ $DoModules -eq 0 ]; then
+        %{log_msg "Create empty files for RPM packaging"}
+        # Ensure important files/directories exist to let the packaging succeed
+        echo '%%defattr(-,-,-)' > ../kernel${Variant:+-${Variant}}-modules-core.list
+        echo '%%defattr(-,-,-)' > ../kernel${Variant:+-${Variant}}-modules.list
+        echo '%%defattr(-,-,-)' > ../kernel${Variant:+-${Variant}}-modules-extra.list
+        echo '%%defattr(-,-,-)' > ../kernel${Variant:+-${Variant}}-modules-internal.list
+        echo '%%defattr(-,-,-)' > ../kernel${Variant:+-${Variant}}-modules-partner.list
+        mkdir -p $RPM_BUILD_ROOT/lib/modules/$KernelVer/kernel
+        # Add files usually created by make modules, needed to prevent errors
+        # thrown by depmod during package installation
+        touch $RPM_BUILD_ROOT/lib/modules/$KernelVer/modules.order
+        touch $RPM_BUILD_ROOT/lib/modules/$KernelVer/modules.builtin
     fi
 
-    #
-    # Generate the kernel-core and kernel-modules files lists
-    #
-    %{log_msg "Gemerate the kernel-core and kernel-modules files lists"}
-
-    # Copy the System.map file for depmod to use, and create a backup of the
-    # full module tree so we can restore it after we're done filtering
+    # Copy the System.map file for depmod to use
     cp System.map $RPM_BUILD_ROOT/.
-    cp configs/filter-*.sh $RPM_BUILD_ROOT/.
-    pushd $RPM_BUILD_ROOT
-    mkdir restore
-    cp -r lib/modules/$KernelVer/* restore/.
-
-    %{log_msg "Remove files in the kernel-modules-* file lists"}
-    # don't include anything going into kernel-modules-extra in the file lists
-    xargs rm -rf < mod-extra.list
-    # don't include anything going into kernel-modules-internal in the file lists
-    xargs rm -rf < mod-internal.list
-%if 0%{!?fedora:1}
-    # don't include anything going into kernel-modules-partner in the file lists
-    xargs rm -rf < mod-partner.list
-%endif
-    if [[ "$Variant" == "rt" || "$Variant" == "rt-debug" ]]; then
-    	# don't include anything going into kernel-rt-kvm in the file lists
-	xargs rm -rf < mod-kvm.list
-    fi
-
-    if [ $DoModules -eq 1 ]; then
-	%{log_msg "Filter files into core and modules lists"}
-	# Find all the module files and filter them out into the core and
-	# modules lists.  This actually removes anything going into -modules
-	# from the dir.
-	find lib/modules/$KernelVer/kernel -name *.ko | sort -n > modules.list
-	./filter-modules.sh modules.list %{_target_cpu}
-	rm filter-*.sh
-
-	# Run depmod on the resulting module tree and make sure it isn't broken
-	depmod -b . -aeF ./System.map $KernelVer &> depmod.out
-	if [ -s depmod.out ]; then
-	    %{log_msg "Depmod failure"}
-	    cat depmod.out
-	    exit 1
-	else
-	    rm depmod.out
-	fi
-    else
-	%{log_msg "Create empty files for RPM packaging"}
-	# Ensure important files/directories exist to let the packaging succeed
-	echo '%%defattr(-,-,-)' > modules.list
-	echo '%%defattr(-,-,-)' > k-d.list
-	mkdir -p lib/modules/$KernelVer/kernel
-	# Add files usually created by make modules, needed to prevent errors
-	# thrown by depmod during package installation
-	touch lib/modules/$KernelVer/modules.order
-	touch lib/modules/$KernelVer/modules.builtin
-    fi
 
     if [[ "$Variant" == "rt" || "$Variant" == "rt-debug" ]]; then
 	%{log_msg "Skipping efiuki build"}
     else
 %if %{with_efiuki}
-	%{log_msg "Setup the EFI UKI kernel"}
-	popd
+        %{log_msg "Setup the EFI UKI kernel"}
 
 	KernelUnifiedImageDir="$RPM_BUILD_ROOT/lib/modules/$KernelVer"
     	KernelUnifiedImage="$KernelUnifiedImageDir/$InstallName-virt.efi"
@@ -2647,57 +2569,116 @@ BuildKernel() {
 # signkernel
 %endif
 
-	pushd $RPM_BUILD_ROOT
 
 # with_efiuki
 %endif
 	:  # in case of empty block
     fi # "$Variant" == "rt" || "$Variant" == "rt-debug"
 
-    remove_depmod_files
 
-    # Go back and find all of the various directories in the tree.  We use this
-    # for the dir lists in kernel-core
-    find lib/modules/$KernelVer/kernel -mindepth 1 -type d | sort -n > module-dirs.list
+    #
+    # Generate the modules files lists
+    #
+    move_kmod_list()
+    {
+        local module_list="$1"
+        local subdir_name="$2"
+
+        mkdir -p "$RPM_BUILD_ROOT/lib/modules/$KernelVer/$subdirname"
+
+        set +x
+        while read -r kmod; do
+            local target_file="$RPM_BUILD_ROOT/lib/modules/$KernelVer/$subdir_name/$kmod"
+            local target_dir="${target_file%/*}"
+            mkdir -p "$target_dir"
+            mv "$RPM_BUILD_ROOT/lib/modules/$KernelVer/kernel/$kmod" "$target_dir"
+        done < <(sed -e 's|^kernel/||' "$module_list")
+        set -x
+    }
+
+    create_module_file_list()
+    {
+        # subdirectory within /lib/modules/$KernelVer where kmods should go
+        local module_subdir="$1"
+        # kmod list with relative paths produced by filtermods.py
+        local relative_kmod_list="$2"
+        # list with absolute paths to kmods and other files to be included
+        local absolute_file_list="$3"
+        # if 1, this adds also all kmod directories to absolute_file_list
+        local add_all_dirs="$4"
+
+        if [ "$module_subdir" == "kernel" ]; then
+            # make kmod paths absolute
+            sed -e 's|^kernel/|/lib/modules/'$KernelVer'/kernel/|' %{?zipsed} $relative_kmod_list > $absolute_file_list
+        else
+            # move kmods into subdirs if needed (internal, partner, extra,..)
+            move_kmod_list $relative_kmod_list $module_subdir
+            # make kmod paths absolute
+            sed -e 's|^kernel/|/lib/modules/'$KernelVer'/'$module_subdir'/|' $relative_kmod_list > $absolute_file_list
+            # run deny-mod script, this adds blacklist-* files to absolute_file_list
+            %{SOURCE20} "$RPM_BUILD_ROOT" lib/modules/$KernelVer $absolute_file_list
+%if %{zipmodules}
+            # deny-mod script works with kmods as they are now (not compressed),
+            # but if they will be we need to add compext to all
+            sed -i %{?zipsed} $absolute_file_list
+%endif
+            # add also dir for the case when there are no kmods
+            echo "%dir /lib/modules/$KernelVer/$module_subdir" >> $absolute_file_list
+        fi
+
+        if [ "$add_all_dirs" -eq 1 ]; then
+            (cd $RPM_BUILD_ROOT; find lib/modules/$KernelVer/kernel -mindepth 1 -type d | sort -n) > ../module-dirs.list
+            sed -e 's|^lib|%dir /lib|' ../module-dirs.list >> $absolute_file_list
+        fi
+    }
+
+    if [ $DoModules -eq 1 ]; then
+        # save modules.dep for debugging
+        cp $RPM_BUILD_ROOT/lib/modules/$KernelVer/modules.dep ../
+
+        %{log_msg "Create module list files for all kernel variants"}
+        variants_param=""
+        if [[ "$Variant" == "rt" || "$Variant" == "rt-debug" ]]; then
+            variants_param="-r rt"
+        fi
+        # this creates ../modules-*.list output, where each kmod path is as it
+        # appears in modules.dep (relative to lib/modules/$KernelVer)
+        %{SOURCE22} sort -d $RPM_BUILD_ROOT/lib/modules/$KernelVer/modules.dep -c configs/def_variants.yaml $variants_param -o ..
+        if [ $? -ne 0 ]; then
+            echo "8< --- modules.dep ---"
+            cat $RPM_BUILD_ROOT/lib/modules/$KernelVer/modules.dep
+            echo "--- modules.dep --- >8"
+            exit 1
+        fi
+
+        create_module_file_list "kernel" ../modules-core.list ../kernel${Variant:+-${Variant}}-modules-core.list 1
+        create_module_file_list "kernel" ../modules.list ../kernel${Variant:+-${Variant}}-modules.list 0
+        create_module_file_list "internal" ../modules-internal.list ../kernel${Variant:+-${Variant}}-modules-internal.list 0
+        create_module_file_list "extra" ../modules-extra.list ../kernel${Variant:+-${Variant}}-modules-extra.list 0
+        if [[ "$Variant" == "rt" || "$Variant" == "rt-debug" ]]; then
+            create_module_file_list "kvm" ../modules-rt-kvm.list ../kernel${Variant:+-${Variant}}-modules-rt-kvm.list 0
+        fi
+%if 0%{!?fedora:1}
+        create_module_file_list "partner" ../modules-partner.list ../kernel${Variant:+-${Variant}}-modules-partner.list 1 0
+%endif
+    fi # $DoModules -eq 1
+
+    remove_depmod_files()
+    {
+        # remove files that will be auto generated by depmod at rpm -i time
+        pushd $RPM_BUILD_ROOT/lib/modules/$KernelVer/
+            # in case below list needs to be extended, remember to add a
+            # matching ghost entry in the files section as well
+            rm -f modules.{alias,alias.bin,builtin.alias.bin,builtin.bin} \
+                  modules.{dep,dep.bin,devname,softdep,symbols,symbols.bin}
+        popd
+    }
 
     # Cleanup
     %{log_msg "Cleanup build files"}
-    rm System.map
-    # Just "cp -r" can be very slow: here, it rewrites _existing files_
-    # with open(O_TRUNC). Many filesystems synchronously wait for metadata
-    # update for such file rewrites (seen in strace as final close syscall
-    # taking a long time). On a rotational disk, cp was observed to take
-    # more than 5 minutes on ext4 and more than 15 minutes (!) on xfs.
-    # With --remove-destination, we avoid this, and copying
-    # (with enough RAM to cache it) takes 5 seconds:
-    cp -r --remove-destination restore/* lib/modules/$KernelVer/.
-    rm -rf restore
-    popd
-
-    # Make sure the files lists start with absolute paths or rpmbuild fails.
-    # Also add in the dir entries
-    %{log_msg "Create module list files for all kernel variants"}
-    sed -e 's/^lib*/\/lib/' %{?zipsed} $RPM_BUILD_ROOT/k-d.list > ../kernel${Variant:+-${Variant}}-modules.list
-    sed -e 's/^lib*/%dir \/lib/' %{?zipsed} $RPM_BUILD_ROOT/module-dirs.list > ../kernel${Variant:+-${Variant}}-modules-core.list
-    sed -e 's/^lib*/\/lib/' %{?zipsed} $RPM_BUILD_ROOT/modules.list >> ../kernel${Variant:+-${Variant}}-modules-core.list
-    sed -e 's/^lib*/\/lib/' %{?zipsed} $RPM_BUILD_ROOT/mod-extra.list >> ../kernel${Variant:+-${Variant}}-modules-extra.list
-    if [[ "$Variant" == "rt" || "$Variant" == "rt-debug" ]]; then
-    	sed -e 's/^lib*/\/lib/' %{?zipsed} $RPM_BUILD_ROOT/mod-kvm.list >> ../kernel${Variant:+-${Variant}}-kvm.list
-    fi
-
-    # Cleanup kernel variant module lists
-    %{log_msg "Clean up kernel variant module lists"}
-    rm -f $RPM_BUILD_ROOT/k-d.list
-    rm -f $RPM_BUILD_ROOT/modules.list
-    rm -f $RPM_BUILD_ROOT/module-dirs.list
-    rm -f $RPM_BUILD_ROOT/mod-extra.list
-    rm -f $RPM_BUILD_ROOT/mod-internal.list
-%if 0%{!?fedora:1}
-    rm -f $RPM_BUILD_ROOT/mod-partner.list
-%endif
-    if [[ "$Variant" == "rt" || "$Variant" == "rt-debug" ]]; then
-    	rm -f $RPM_BUILD_ROOT/mod-kvm.list
-    fi
+    rm -f $RPM_BUILD_ROOT/System.map
+    %{log_msg "Remove depmod files"}
+    remove_depmod_files
 
 %if %{signmodules}
     if [ $DoModules -eq 1 ]; then
@@ -3466,7 +3447,7 @@ fi\
 rm -f %{_localstatedir}/lib/rpm-state/%{name}/installing_core_%{KVERREL}%{?-v:+%{-v*}}\
 /bin/kernel-install add %{KVERREL}%{?-v:+%{-v*}} /lib/modules/%{KVERREL}%{?-v:+%{-v*}}/vmlinuz%{?-u:-%{-u*}.efi} || exit $?\
 if [[ ! -e "/boot/symvers-%{KVERREL}%{?-v:+%{-v*}}.%compext" ]]; then\
-    ln -s "/lib/modules/%{KVERREL}%{?-v:+%{-v*}}/symvers.%compext" "/boot/symvers-%{KVERREL}%{?-v:+%{-v*}}.%compext"\
+    cp "/lib/modules/%{KVERREL}%{?-v:+%{-v*}}/symvers.%compext" "/boot/symvers-%{KVERREL}%{?-v:+%{-v*}}.%compext"\
     if command -v restorecon &>/dev/null; then\
         restorecon "/boot/symvers-%{KVERREL}%{?-v:+%{-v*}}.%compext"\
     fi\
@@ -3862,12 +3843,9 @@ fi\
 /usr/src/kernels/%{KVERREL}%{?3:+%{3}}\
 %{expand:%%files %{?3:%{3}-}devel-matched}\
 %{expand:%%files -f kernel-%{?3:%{3}-}modules-extra.list %{?3:%{3}-}modules-extra}\
-%config(noreplace) /etc/modprobe.d/*-blacklist.conf\
-%{expand:%%files %{?3:%{3}-}modules-internal}\
-/lib/modules/%{KVERREL}%{?3:+%{3}}/internal\
+%{expand:%%files -f kernel-%{?3:%{3}-}modules-internal.list %{?3:%{3}-}modules-internal}\
 %if 0%{!?fedora:1}\
-%{expand:%%files %{?3:%{3}-}modules-partner}\
-/lib/modules/%{KVERREL}%{?3:+%{3}}/partner\
+%{expand:%%files -f kernel-%{?3:%{3}-}modules-partner.list %{?3:%{3}-}modules-partner}\
 %endif\
 %if %{with_debuginfo}\
 %ifnarch noarch\
@@ -3875,8 +3853,7 @@ fi\
 %endif\
 %endif\
 %if "%{3}" == "rt" || "%{3}" == "rt-debug"\
-%{expand:%%files %{?3:%{3}-}kvm}\
-/lib/modules/%{KVERREL}%{?3:+%{3}}/kvm\
+%{expand:%%files -f kernel-%{?3:%{3}-}modules-rt-kvm.list %{?3:%{3}-}kvm}\
 %else\
 %if %{with_efiuki}\
 %{expand:%%files %{?3:%{3}-}uki-virt}\
@@ -3960,6 +3937,604 @@ fi\
 #
 #
 %changelog
+* Mon Apr 22 2024 Jan Stancek <jstancek@redhat.com> [6.9.0-0.rc4.2.el10]
+- blk-iocost: do not WARN if iocg was already offlined (Li Nan)
+- block: propagate partition scanning errors to the BLKRRPART ioctl (Christoph Hellwig)
+- MAINTAINERS: update to working email address (James Bottomley)
+- KVM: x86: Stop compiling vmenter.S with OBJECT_FILES_NON_STANDARD (Sean Christopherson)
+- KVM: SVM: Create a stack frame in __svm_sev_es_vcpu_run() (Sean Christopherson)
+- KVM: SVM: Save/restore args across SEV-ES VMRUN via host save area (Sean Christopherson)
+- KVM: SVM: Save/restore non-volatile GPRs in SEV-ES VMRUN via host save area (Sean Christopherson)
+- KVM: SVM: Clobber RAX instead of RBX when discarding spec_ctrl_intercepted (Sean Christopherson)
+- KVM: SVM: Drop 32-bit "support" from __svm_sev_es_vcpu_run() (Sean Christopherson)
+- KVM: SVM: Wrap __svm_sev_es_vcpu_run() with #ifdef CONFIG_KVM_AMD_SEV (Sean Christopherson)
+- KVM: SVM: Create a stack frame in __svm_vcpu_run() for unwinding (Sean Christopherson)
+- KVM: SVM: Remove a useless zeroing of allocated memory (Christophe JAILLET)
+- KVM: Drop unused @may_block param from gfn_to_pfn_cache_invalidate_start() (Sean Christopherson)
+- KVM: selftests: Add coverage of EPT-disabled to vmx_dirty_log_test (David Matlack)
+- KVM: x86/mmu: Fix and clarify comments about clearing D-bit vs. write-protecting (David Matlack)
+- KVM: x86/mmu: Remove function comments above clear_dirty_{gfn_range,pt_masked}() (David Matlack)
+- KVM: x86/mmu: Write-protect L2 SPTEs in TDP MMU when clearing dirty status (David Matlack)
+- KVM: x86/mmu: Precisely invalidate MMU root_role during CPUID update (Sean Christopherson)
+- KVM: VMX: Disable LBR virtualization if the CPU doesn't support LBR callstacks (Sean Christopherson)
+- perf/x86/intel: Expose existence of callback support to KVM (Sean Christopherson)
+- KVM: VMX: Snapshot LBR capabilities during module initialization (Sean Christopherson)
+- KVM: VMX: Ignore MKTME KeyID bits when intercepting #PF for allow_smaller_maxphyaddr (Tao Su)
+- KVM: selftests: fix supported_flags for riscv (Andrew Jones)
+- KVM: selftests: fix max_guest_memory_test with more that 256 vCPUs (Maxim Levitsky)
+- KVM: selftests: Verify post-RESET value of PERF_GLOBAL_CTRL in PMCs test (Sean Christopherson)
+- KVM: x86/pmu: Set enable bits for GP counters in PERF_GLOBAL_CTRL at "RESET" (Sean Christopherson)
+- KVM: x86/mmu: x86: Don't overflow lpage_info when checking attributes (Rick Edgecombe)
+- KVM: x86/pmu: Disable support for adaptive PEBS (Sean Christopherson)
+- KVM: Explicitly disallow activatating a gfn_to_pfn_cache with INVALID_GPA (Sean Christopherson)
+- KVM: Check validity of offset+length of gfn_to_pfn_cache prior to activation (Sean Christopherson)
+- KVM: Add helpers to consolidate gfn_to_pfn_cache's page split check (Sean Christopherson)
+- KVM: x86/pmu: Do not mask LVTPC when handling a PMI on AMD platforms (Sandipan Das)
+- KVM: x86: Snapshot if a vCPU's vendor model is AMD vs. Intel compatible (Sean Christopherson)
+- selftests/powerpc/papr-vpd: Fix missing variable initialization (Nathan Lynch)
+- powerpc/crypto/chacha-p10: Fix failure on non Power10 (Michael Ellerman)
+- powerpc/iommu: Refactor spapr_tce_platform_iommu_attach_dev() (Shivaprasad G Bhat)
+- clk: mediatek: mt7988-infracfg: fix clocks for 2nd PCIe port (Daniel Golle)
+- clk: mediatek: Do a runtime PM get on controllers during probe (Pin-yen Lin)
+- clk: Get runtime PM before walking tree for clk_summary (Stephen Boyd)
+- clk: Get runtime PM before walking tree during disable_unused (Stephen Boyd)
+- clk: Initialize struct clk_core kref earlier (Stephen Boyd)
+- clk: Don't hold prepare_lock when calling kref_put() (Stephen Boyd)
+- clk: Remove prepare_lock hold assertion in __clk_release() (Stephen Boyd)
+- clk: Provide !COMMON_CLK dummy for devm_clk_rate_exclusive_get() (Uwe Kleine-König)
+- tools/include: Sync arm64 asm/cputype.h with the kernel sources (Namhyung Kim)
+- tools/include: Sync asm-generic/bitops/fls.h with the kernel sources (Namhyung Kim)
+- tools/include: Sync x86 asm/msr-index.h with the kernel sources (Namhyung Kim)
+- tools/include: Sync x86 asm/irq_vectors.h with the kernel sources (Namhyung Kim)
+- tools/include: Sync x86 CPU feature headers with the kernel sources (Namhyung Kim)
+- tools/include: Sync uapi/sound/asound.h with the kernel sources (Namhyung Kim)
+- tools/include: Sync uapi/linux/kvm.h and asm/kvm.h with the kernel sources (Namhyung Kim)
+- tools/include: Sync uapi/linux/fs.h with the kernel sources (Namhyung Kim)
+- tools/include: Sync uapi/drm/i915_drm.h with the kernel sources (Namhyung Kim)
+- perf lock contention: Add a missing NULL check (Namhyung Kim)
+- perf annotate: Make sure to call symbol__annotate2() in TUI (Namhyung Kim)
+- ubsan: Add awareness of signed integer overflow traps (Kees Cook)
+- configs/hardening: Disable CONFIG_UBSAN_SIGNED_WRAP (Nathan Chancellor)
+- configs/hardening: Fix disabling UBSAN configurations (Nathan Chancellor)
+- iommufd: Add config needed for iommufd_fail_nth (Muhammad Usama Anjum)
+- iommufd: Add missing IOMMUFD_DRIVER kconfig for the selftest (Jason Gunthorpe)
+- RDMA/mlx5: Fix port number for counter query in multi-port configuration (Michael Guralnik)
+- RDMA/cm: Print the old state when cm_destroy_id gets timeout (Mark Zhang)
+- RDMA/rxe: Fix the problem "mutex_destroy missing" (Yanjun.Zhu)
+- fs/9p: drop inodes immediately on non-.L too (Joakim Sindholt)
+- fs/9p: Revert "fs/9p: fix dups even in uncached mode" (Eric Van Hensbergen)
+- fs/9p: remove erroneous nlink init from legacy stat2inode (Eric Van Hensbergen)
+- 9p: explicitly deny setlease attempts (Jeff Layton)
+- fs/9p: fix the cache always being enabled on files with qid flags (Joakim Sindholt)
+- fs/9p: translate O_TRUNC into OTRUNC (Joakim Sindholt)
+- fs/9p: only translate RWX permissions for plain 9P2000 (Joakim Sindholt)
+- cuse: add kernel-doc comments to cuse_process_init_reply() (Yang Li)
+- fuse: fix leaked ENOSYS error on first statx call (Danny Lin)
+- fuse: fix parallel dio write on file open in passthrough mode (Amir Goldstein)
+- fuse: fix wrong ff->iomode state changes from parallel dio write (Amir Goldstein)
+- arm64: hibernate: Fix level3 translation fault in swsusp_save() (Yaxiong Tian)
+- arm64/head: Disable MMU at EL2 before clearing HCR_EL2.E2H (Ard Biesheuvel)
+- arm64/head: Drop unnecessary pre-disable-MMU workaround (Ard Biesheuvel)
+- arm64/hugetlb: Fix page table walk in huge_pte_alloc() (Anshuman Khandual)
+- s390/mm: Fix NULL pointer dereference (Sven Schnelle)
+- s390/cio: log fake IRB events (Peter Oberparleiter)
+- s390/cio: fix race condition during online processing (Peter Oberparleiter)
+- s390/qdio: handle deferred cc1 (Peter Oberparleiter)
+- bootconfig: Fix the kerneldoc of _xbc_exit() (Masami Hiramatsu (Google))
+- bootconfig: use memblock_free_late to free xbc memory to buddy (Qiang Zhang)
+- init/main.c: Fix potential static_command_line memory overflow (Yuntao Wang)
+- thermal/debugfs: Add missing count increment to thermal_debug_tz_trip_up() (Rafael J. Wysocki)
+- ALSA: seq: ump: Fix conversion from MIDI2 to MIDI1 UMP messages (Takashi Iwai)
+- ALSA: hda/realtek - Enable audio jacks of Haier Boyue G42 with ALC269VC (Ai Chao)
+- ALSA: hda/realtek: Add quirks for Huawei Matebook D14 NBLB-WAX9N (Mauro Carvalho Chehab)
+- ALSA: hda/realtek: Fix volumn control of ThinkBook 16P Gen4 (Huayu Zhang)
+- ALSA: hda/realtek: Fixes for Asus GU605M and GA403U sound (Vitalii Torshyn)
+- ALSA: hda/tas2781: Add new vendor_id and subsystem_id to support ThinkPad ICE-1 (Shenghao Ding)
+- ALSA: hda/tas2781: correct the register for pow calibrated data (Shenghao Ding)
+- ALSA: hda/realtek: Add quirk for HP SnowWhite laptops (Vitaly Rodionov)
+- drm/xe/vm: prevent UAF with asid based lookup (Matthew Auld)
+- drm/xe: Fix bo leak in intel_fb_bo_framebuffer_init (Maarten Lankhorst)
+- drm/panel: novatek-nt36682e: don't unregister DSI device (Dmitry Baryshkov)
+- drm/panel: visionox-rm69299: don't unregister DSI device (Dmitry Baryshkov)
+- drm/nouveau/dp: Don't probe eDP ports twice harder (Lyude Paul)
+- drm/nouveau/kms/nv50-: Disable AUX bus for disconnected DP ports (Lyude Paul)
+- drm/v3d: Don't increment `enabled_ns` twice (Maíra Canal)
+- drm/vmwgfx: Sort primary plane formats by order of preference (Zack Rusin)
+- drm/vmwgfx: Fix crtc's atomic check conditional (Zack Rusin)
+- drm/vmwgfx: Fix prime import/export (Zack Rusin)
+- drm/ttm: stop pooling cached NUMA pages v2 (Christian König)
+- drm: nv04: Fix out of bounds access (Mikhail Kobuk)
+- nouveau: fix instmem race condition around ptr stores (Dave Airlie)
+- drm/radeon: silence UBSAN warning (v3) (Alex Deucher)
+- drm/radeon: make -fstrict-flex-arrays=3 happy (Alex Deucher)
+- drm/amdgpu: fix visible VRAM handling during faults (Christian König)
+- drm/amdgpu: validate the parameters of bo mapping operations more clearly (xinhui pan)
+- Revert "drm/amd/display: fix USB-C flag update after enc10 feature init" (Alex Deucher)
+- drm/amdkfd: Fix memory leak in create_process failure (Felix Kuehling)
+- drm/amdgpu: remove invalid resource->start check v2 (Christian König)
+- nilfs2: fix OOB in nilfs_set_de_type (Jeongjun Park)
+- MAINTAINERS: update Naoya Horiguchi's email address (Naoya Horiguchi)
+- fork: defer linking file vma until vma is fully initialized (Miaohe Lin)
+- mm/shmem: inline shmem_is_huge() for disabled transparent hugepages (Sumanth Korikkar)
+- mm,page_owner: defer enablement of static branch (Oscar Salvador)
+- Squashfs: check the inode number is not the invalid value of zero (Phillip Lougher)
+- mm,swapops: update check in is_pfn_swap_entry for hwpoison entries (Oscar Salvador)
+- mm/memory-failure: fix deadlock when hugetlb_optimize_vmemmap is enabled (Miaohe Lin)
+- mm/userfaultfd: allow hugetlb change protection upon poison entry (Peter Xu)
+- mm,page_owner: fix printing of stack records (Oscar Salvador)
+- mm,page_owner: fix accounting of pages when migrating (Oscar Salvador)
+- mm,page_owner: fix refcount imbalance (Oscar Salvador)
+- mm,page_owner: update metadata for tail pages (Oscar Salvador)
+- userfaultfd: change src_folio after ensuring it's unpinned in UFFDIO_MOVE (Lokesh Gidra)
+- mm/madvise: make MADV_POPULATE_(READ|WRITE) handle VM_FAULT_RETRY properly (David Hildenbrand)
+- scsi: core: Fix handling of SCMD_FAIL_IF_RECOVERING (Bart Van Assche)
+- scsi: ufs: qcom: Add missing interconnect bandwidth values for Gear 5 (Manivannan Sadhasivam)
+- net: ethernet: ti: am65-cpsw-nuss: cleanup DMA Channels before using them (Siddharth Vadapalli)
+- net: usb: ax88179_178a: avoid writing the mac address before first reading (Jose Ignacio Tornos Martinez)
+- netfilter: nf_tables: fix memleak in map from abort path (Pablo Neira Ayuso)
+- netfilter: nf_tables: restore set elements when delete set fails (Pablo Neira Ayuso)
+- netfilter: nf_tables: missing iterator type in lookup walk (Pablo Neira Ayuso)
+- net: ravb: Fix RX byte accounting for jumbo packets (Paul Barker)
+- net: ravb: Fix GbEth jumbo packet RX checksum handling (Paul Barker)
+- net: ravb: Allow RX loop to move past DMA mapping errors (Paul Barker)
+- net: ravb: Count packets instead of descriptors in R-Car RX path (Paul Barker)
+- net: ethernet: mtk_eth_soc: fix WED + wifi reset (Felix Fietkau)
+- net:usb:qmi_wwan: support Rolling modules (Vanillan Wang)
+- ice: Fix checking for unsupported keys on non-tunnel device (Marcin Szycik)
+- ice: tc: allow zero flags in parsing tc flower (Michal Swiatkowski)
+- ice: tc: check src_vsi in case of traffic from VF (Michal Swiatkowski)
+- selftests: kselftest_harness: fix Clang warning about zero-length format (Jakub Kicinski)
+- net/sched: Fix mirred deadlock on device recursion (Eric Dumazet)
+- s390/ism: Properly fix receive message buffer allocation (Gerd Bayer)
+- net: dsa: mt7530: fix port mirroring for MT7988 SoC switch (Arınç ÜNAL)
+- net: dsa: mt7530: fix mirroring frames received on local port (Arınç ÜNAL)
+- tun: limit printing rate when illegal packet received by tun dev (Lei Chen)
+- net: stmmac: Fix IP-cores specific MAC capabilities (Serge Semin)
+- net: stmmac: Fix max-speed being ignored on queue re-init (Serge Semin)
+- net: stmmac: Apply half-duplex-less constraint for DW QoS Eth only (Serge Semin)
+- selftests/tcp_ao: Printing fixes to confirm with format-security (Dmitry Safonov)
+- selftests/tcp_ao: Fix fscanf() call for format-security (Dmitry Safonov)
+- selftests/tcp_ao: Zero-init tcp_ao_info_opt (Dmitry Safonov)
+- selftests/tcp_ao: Make RST tests less flaky (Dmitry Safonov)
+- octeontx2-pf: fix FLOW_DIS_IS_FRAGMENT implementation (Asbjørn Sloth Tønnesen)
+- inet: bring NLM_DONE out to a separate recv() again (Jakub Kicinski)
+- net: change maximum number of UDP segments to 128 (Yuri Benditovich)
+- net/mlx5e: Prevent deadlock while disabling aRFS (Carolina Jubran)
+- net/mlx5e: Acquire RTNL lock before RQs/SQs activation/deactivation (Carolina Jubran)
+- net/mlx5e: Use channel mdev reference instead of global mdev instance for coalescing (Rahul Rameshbabu)
+- net/mlx5: Restore mistakenly dropped parts in register devlink flow (Shay Drory)
+- net/mlx5: SD, Handle possible devcom ERR_PTR (Tariq Toukan)
+- net/mlx5: Lag, restore buckets number to default after hash LAG deactivation (Shay Drory)
+- net: sparx5: flower: fix fragment flags handling (Asbjørn Sloth Tønnesen)
+- af_unix: Don't peek OOB data without MSG_OOB. (Kuniyuki Iwashima)
+- af_unix: Call manage_oob() for every skb in unix_stream_read_generic(). (Kuniyuki Iwashima)
+- netfilter: flowtable: incorrect pppoe tuple (Pablo Neira Ayuso)
+- netfilter: flowtable: validate pppoe header (Pablo Neira Ayuso)
+- netfilter: nft_set_pipapo: do not free live element (Florian Westphal)
+- netfilter: nft_set_pipapo: walk over current view on netlink dump (Pablo Neira Ayuso)
+- netfilter: br_netfilter: skip conntrack input hook for promisc packets (Pablo Neira Ayuso)
+- netfilter: nf_tables: Fix potential data-race in __nft_obj_type_get() (Ziyang Xuan)
+- netfilter: nf_tables: Fix potential data-race in __nft_expr_type_get() (Ziyang Xuan)
+- gpiolib: swnode: Remove wrong header inclusion (Andy Shevchenko)
+- gpio: lpc32xx: fix module autoloading (Krzysztof Kozlowski)
+- gpio: crystalcove: Use -ENOTSUPP consistently (Andy Shevchenko)
+- gpio: wcove: Use -ENOTSUPP consistently (Andy Shevchenko)
+- Revert "vmgenid: emit uevent when VMGENID updates" (Jason A. Donenfeld)
+- random: handle creditable entropy from atomic process context (Jason A. Donenfeld)
+- platform/x86/amd/pmc: Extend Framework 13 quirk to more BIOSes (Mario Limonciello)
+- platform/x86/intel-uncore-freq: Increase minor number support (Srinivas Pandruvada)
+- platform/x86: ISST: Add Granite Rapids-D to HPM CPU list (Srinivas Pandruvada)
+- platform/x86/amd: pmf: Add quirk for ROG Zephyrus G14 (Mario Limonciello)
+- platform/x86/amd: pmf: Add infrastructure for quirking supported funcs (Mario Limonciello)
+- platform/x86/amd: pmf: Decrease error message to debug (Mario Limonciello)
+- gitlab-ci: harmonize DataWarehouse tree names (Michael Hofmann)
+- redhat/configs: Enable CONFIG_INTEL_IOMMU_SCALABLE_MODE_DEFAULT_ON for rhel (Jerry Snitselaar)
+- spec: make sure posttrans script doesn't fail if /boot is non-POSIX (glb)
+- btrfs: do not wait for short bulk allocation (Qu Wenruo)
+- btrfs: zoned: add ASSERT and WARN for EXTENT_BUFFER_ZONED_ZEROOUT handling (Naohiro Aota)
+- btrfs: zoned: do not flag ZEROOUT on non-dirty extent buffer (Naohiro Aota)
+- dt-bindings: pwm: mediatek,pwm-disp: Document power-domains property (AngeloGioacchino Del Regno)
+- pwm: dwc: allow suspend/resume for 16 channels (Raag Jadav)
+- Turn on UBSAN for Fedora (Justin M. Forbes)
+- Turn on XEN_BALLOON_MEMORY_HOTPLUG for Fedora (Justin M. Forbes)
+- NFSD: fix endianness issue in nfsd4_encode_fattr4 (Vasily Gorbik)
+- SUNRPC: Fix rpcgss_context trace event acceptor field (Steven Rostedt (Google))
+- bcachefs: set_btree_iter_dontneed also clears should_be_locked (Kent Overstreet)
+- bcachefs: fix error path of __bch2_read_super() (Chao Yu)
+- bcachefs: Check for backpointer bucket_offset >= bucket size (Kent Overstreet)
+- bcachefs: bch_member.btree_allocated_bitmap (Kent Overstreet)
+- bcachefs: sysfs internal/trigger_journal_flush (Kent Overstreet)
+- bcachefs: Fix bch2_btree_node_fill() for !path (Kent Overstreet)
+- bcachefs: add safety checks in bch2_btree_node_fill() (Kent Overstreet)
+- bcachefs: Interior known are required to have known key types (Kent Overstreet)
+- bcachefs: add missing bounds check in __bch2_bkey_val_invalid() (Kent Overstreet)
+- bcachefs: Fix btree node merging on write buffer btrees (Kent Overstreet)
+- bcachefs: Disable merges from interior update path (Kent Overstreet)
+- bcachefs: Run merges at BCH_WATERMARK_btree (Kent Overstreet)
+- bcachefs: Fix missing write refs in fs fio paths (Kent Overstreet)
+- bcachefs: Fix deadlock in journal replay (Kent Overstreet)
+- bcachefs: Go rw if running any explicit recovery passes (Kent Overstreet)
+- bcachefs: Standardize helpers for printing enum strs with bounds checks (Kent Overstreet)
+- bcachefs: don't queue btree nodes for rewrites during scan (Kent Overstreet)
+- bcachefs: fix race in bch2_btree_node_evict() (Kent Overstreet)
+- bcachefs: fix unsafety in bch2_stripe_to_text() (Kent Overstreet)
+- bcachefs: fix unsafety in bch2_extent_ptr_to_text() (Kent Overstreet)
+- bcachefs: btree node scan: handle encrypted nodes (Kent Overstreet)
+- bcachefs: Check for packed bkeys that are too big (Kent Overstreet)
+- bcachefs: Fix UAFs of btree_insert_entry array (Kent Overstreet)
+- bcachefs: Don't use bch2_btree_node_lock_write_nofail() in btree split path (Kent Overstreet)
+- selftests/harness: Prevent infinite loop due to Assert in FIXTURE_TEARDOWN (Shengyu Li)
+- selftests/ftrace: Limit length in subsystem-enable tests (Yuanhe Shu)
+- Linux 6.9-rc4 (Linus Torvalds)
+- kernfs: annotate different lockdep class for of->mutex of writable files (Amir Goldstein)
+- x86/cpu/amd: Move TOPOEXT enablement into the topology parser (Thomas Gleixner)
+- x86/cpu/amd: Make the NODEID_MSR union actually work (Thomas Gleixner)
+- x86/cpu/amd: Make the CPUID 0x80000008 parser correct (Thomas Gleixner)
+- x86/bugs: Replace CONFIG_SPECTRE_BHI_{ON,OFF} with CONFIG_MITIGATION_SPECTRE_BHI (Josh Poimboeuf)
+- x86/bugs: Remove CONFIG_BHI_MITIGATION_AUTO and spectre_bhi=auto (Josh Poimboeuf)
+- x86/bugs: Clarify that syscall hardening isn't a BHI mitigation (Josh Poimboeuf)
+- x86/bugs: Fix BHI handling of RRSBA (Josh Poimboeuf)
+- x86/bugs: Rename various 'ia32_cap' variables to 'x86_arch_cap_msr' (Ingo Molnar)
+- x86/bugs: Cache the value of MSR_IA32_ARCH_CAPABILITIES (Josh Poimboeuf)
+- x86/bugs: Fix BHI documentation (Josh Poimboeuf)
+- x86/cpu: Actually turn off mitigations by default for SPECULATION_MITIGATIONS=n (Sean Christopherson)
+- x86/topology: Don't update cpu_possible_map in topo_set_cpuids() (Thomas Gleixner)
+- x86/bugs: Fix return type of spectre_bhi_state() (Daniel Sneddon)
+- x86/apic: Force native_apic_mem_read() to use the MOV instruction (Adam Dunlap)
+- selftests: kselftest: Fix build failure with NOLIBC (Oleg Nesterov)
+- selftests: timers: Fix abs() warning in posix_timers test (John Stultz)
+- selftests: kselftest: Mark functions that unconditionally call exit() as __noreturn (Nathan Chancellor)
+- selftests: timers: Fix posix_timers ksft_print_msg() warning (John Stultz)
+- selftests: timers: Fix valid-adjtimex signed left-shift undefined behavior (John Stultz)
+- bug: Fix no-return-statement warning with !CONFIG_BUG (Adrian Hunter)
+- timekeeping: Use READ/WRITE_ONCE() for tick_do_timer_cpu (Thomas Gleixner)
+- selftests/timers/posix_timers: Reimplement check_timer_distribution() (Oleg Nesterov)
+- irqflags: Explicitly ignore lockdep_hrtimer_exit() argument (Arnd Bergmann)
+- perf/x86: Fix out of range data (Namhyung Kim)
+- locking: Make rwsem_assert_held_write_nolockdep() build with PREEMPT_RT=y (Sebastian Andrzej Siewior)
+- irqchip/gic-v3-its: Fix VSYNC referencing an unmapped VPE on GIC v4.1 (Nianyao Tang)
+- vhost: correct misleading printing information (Xianting Tian)
+- vhost-vdpa: change ioctl # for VDPA_GET_VRING_SIZE (Michael S. Tsirkin)
+- virtio: store owner from modules with register_virtio_driver() (Krzysztof Kozlowski)
+- vhost: Add smp_rmb() in vhost_enable_notify() (Gavin Shan)
+- vhost: Add smp_rmb() in vhost_vq_avail_empty() (Gavin Shan)
+- swiotlb: do not set total_used to 0 in swiotlb_create_debugfs_files() (Dexuan Cui)
+- swiotlb: fix swiotlb_bounce() to do partial sync's correctly (Michael Kelley)
+- swiotlb: extend buffer pre-padding to alloc_align_mask if necessary (Petr Tesarik)
+- ata: libata-core: Allow command duration limits detection for ACS-4 drives (Igor Pylypiv)
+- ata: libata-scsi: Fix ata_scsi_dev_rescan() error path (Damien Le Moal)
+- ata: ahci: Add mask_port_map module parameter (Damien Le Moal)
+- zonefs: Use str_plural() to fix Coccinelle warning (Thorsten Blum)
+- smb3: fix broken reconnect when password changing on the server by allowing password rotation (Steve French)
+- smb: client: instantiate when creating SFU files (Paulo Alcantara)
+- smb3: fix Open files on server counter going negative (Steve French)
+- smb: client: fix NULL ptr deref in cifs_mark_open_handles_for_deleted_file() (Paulo Alcantara)
+- arm64: tlb: Fix TLBI RANGE operand (Gavin Shan)
+- MAINTAINERS: Change Krzysztof Kozlowski's email address (Krzysztof Kozlowski)
+- cache: sifive_ccache: Partially convert to a platform driver (Samuel Holland)
+- firmware: arm_ffa: Fix the partition ID check in ffa_notification_info_get() (Jens Wiklander)
+- firmware: arm_scmi: Make raw debugfs entries non-seekable (Cristian Marussi)
+- firmware: arm_scmi: Fix wrong fastchannel initialization (Pierre Gondois)
+- arm64: dts: imx8qm-ss-dma: fix can lpcg indices (Frank Li)
+- arm64: dts: imx8-ss-dma: fix can lpcg indices (Frank Li)
+- arm64: dts: imx8-ss-dma: fix adc lpcg indices (Frank Li)
+- arm64: dts: imx8-ss-dma: fix pwm lpcg indices (Frank Li)
+- arm64: dts: imx8-ss-dma: fix spi lpcg indices (Frank Li)
+- arm64: dts: imx8-ss-conn: fix usb lpcg indices (Frank Li)
+- arm64: dts: imx8-ss-lsio: fix pwm lpcg indices (Frank Li)
+- ARM: dts: imx7s-warp: Pass OV2680 link-frequencies (Fabio Estevam)
+- ARM: dts: imx7-mba7: Use 'no-mmc' property (Fabio Estevam)
+- arm64: dts: imx8-ss-conn: fix usdhc wrong lpcg clock order (Frank Li)
+- arm64: dts: freescale: imx8mp-venice-gw73xx-2x: fix USB vbus regulator (Tim Harvey)
+- arm64: dts: freescale: imx8mp-venice-gw72xx-2x: fix USB vbus regulator (Tim Harvey)
+- ARM: OMAP2+: fix USB regression on Nokia N8x0 (Aaro Koskinen)
+- mmc: omap: restore original power up/down steps (Aaro Koskinen)
+- mmc: omap: fix deferred probe (Aaro Koskinen)
+- mmc: omap: fix broken slot switch lookup (Aaro Koskinen)
+- ARM: OMAP2+: fix N810 MMC gpiod table (Aaro Koskinen)
+- ARM: OMAP2+: fix bogus MMC GPIO labels on Nokia N8x0 (Aaro Koskinen)
+- iommu/amd: Change log message severity (Vasant Hegde)
+- iommu/vt-d: Fix WARN_ON in iommu probe path (Lu Baolu)
+- iommu/vt-d: Allocate local memory for page request queue (Jacob Pan)
+- iommu/vt-d: Fix wrong use of pasid config (Xuchun Shang)
+- iommu: mtk: fix module autoloading (Krzysztof Kozlowski)
+- iommu/amd: Do not enable SNP when V2 page table is enabled (Vasant Hegde)
+- iommu/amd: Fix possible irq lock inversion dependency issue (Vasant Hegde)
+- Revert "PCI: Mark LSI FW643 to avoid bus reset" (Bjorn Helgaas)
+- MAINTAINERS: Drop Gustavo Pimentel as PCI DWC Maintainer (Manivannan Sadhasivam)
+- block: fix that blk_time_get_ns() doesn't update time after schedule (Yu Kuai)
+- raid1: fix use-after-free for original bio in raid1_write_request() (Yu Kuai)
+- block: allow device to have both virt_boundary_mask and max segment size (Ming Lei)
+- block: fix q->blkg_list corruption during disk rebind (Ming Lei)
+- blk-iocost: avoid out of bounds shift (Rik van Riel)
+- io-uring: correct typo in comment for IOU_F_TWQ_LAZY_WAKE (Haiyue Wang)
+- io_uring/net: restore msg_control on sendzc retry (Pavel Begunkov)
+- io_uring: Fix io_cqring_wait() not restoring sigmask on get_timespec64() failure (Alexey Izbyshev)
+- MAINTAINERS: remove myself as a Reviewer for Ceph (Jeff Layton)
+- ceph: switch to use cap_delay_lock for the unlink delay list (Xiubo Li)
+- ceph: redirty page before returning AOP_WRITEPAGE_ACTIVATE (NeilBrown)
+- Kconfig: add some hidden tabs on purpose (Linus Torvalds)
+- ring-buffer: Only update pages_touched when a new page is touched (Steven Rostedt (Google))
+- tracing: hide unused ftrace_event_id_fops (Arnd Bergmann)
+- tracing: Fix FTRACE_RECORD_RECURSION_SIZE Kconfig entry (Prasad Pandit)
+- eventfs: Fix kernel-doc comments to functions (Yang Li)
+- MIPS: scall: Save thread_info.syscall unconditionally on entry (Jiaxun Yang)
+- amdkfd: use calloc instead of kzalloc to avoid integer overflow (Dave Airlie)
+- drm/msm/adreno: Set highest_bank_bit for A619 (Luca Weiss)
+- drm/msm: fix the `CRASHDUMP_READ` target of `a6xx_get_shader_block()` (Miguel Ojeda)
+- dt-bindings: display/msm: sm8150-mdss: add DP node (Dmitry Baryshkov)
+- drm/msm/dp: fix typo in dp_display_handle_port_status_changed() (Abhinav Kumar)
+- drm/msm/dpu: make error messages at dpu_core_irq_register_callback() more sensible (Dmitry Baryshkov)
+- drm/msm/dp: assign correct DP controller ID to x1e80100 interface table (Kuogee Hsieh)
+- drm/msm/dpu: don't allow overriding data from catalog (Dmitry Baryshkov)
+- drm/msm: Add newlines to some debug prints (Stephen Boyd)
+- drm/msm/dp: fix runtime PM leak on connect failure (Johan Hovold)
+- drm/msm/dp: fix runtime PM leak on disconnect (Johan Hovold)
+- drm/xe: Label RING_CONTEXT_CONTROL as masked (Ashutosh Dixit)
+- drm/xe/xe_migrate: Cast to output precision before multiplying operands (Himal Prasad Ghimiray)
+- drm/xe/hwmon: Cast result to output precision on left shift of operand (Karthik Poosa)
+- drm/xe/display: Fix double mutex initialization (Lucas De Marchi)
+- drm/vmwgfx: Enable DMA mappings with SEV (Zack Rusin)
+- drm/client: Fully protect modes[] with dev->mode_config.mutex (Ville Syrjälä)
+- gpu: host1x: Do not setup DMA for virtual devices (Thierry Reding)
+- accel/ivpu: Fix deadlock in context_xa (Jacek Lawrynowicz)
+- accel/ivpu: Fix missed error message after VPU rename (Jacek Lawrynowicz)
+- accel/ivpu: Return max freq for DRM_IVPU_PARAM_CORE_CLOCK_RATE (Jacek Lawrynowicz)
+- accel/ivpu: Improve clarity of MMU error messages (Wachowski, Karol)
+- accel/ivpu: Put NPU back to D3hot after failed resume (Jacek Lawrynowicz)
+- accel/ivpu: Fix PCI D0 state entry in resume (Wachowski, Karol)
+- accel/ivpu: Remove d3hot_after_power_off WA (Jacek Lawrynowicz)
+- accel/ivpu: Check return code of ipc->lock init (Wachowski, Karol)
+- nouveau: fix function cast warning (Arnd Bergmann)
+- nouveau/gsp: Avoid addressing beyond end of rpc->entries (Kees Cook)
+- Revert "drm/qxl: simplify qxl_fence_wait" (Alex Constantino)
+- drm/ast: Fix soft lockup (Jammy Huang)
+- drm/panfrost: Fix the error path in panfrost_mmu_map_fault_addr() (Boris Brezillon)
+- drm/amdgpu: differentiate external rev id for gfx 11.5.0 (Yifan Zhang)
+- drm/amd/display: Adjust dprefclk by down spread percentage. (Zhongwei)
+- drm/amd/display: Set VSC SDP Colorimetry same way for MST and SST (Harry Wentland)
+- drm/amd/display: Program VSC SDP colorimetry for all DP sinks >= 1.4 (Harry Wentland)
+- drm/amd/display: fix disable otg wa logic in DCN316 (Fudongwang)
+- drm/amd/display: Do not recursively call manual trigger programming (Dillon Varone)
+- drm/amd/display: always reset ODM mode in context when adding first plane (Wenjing Liu)
+- drm/amdgpu: fix incorrect number of active RBs for gfx11 (Tim Huang)
+- drm/amd/display: Return max resolution supported by DWB (Alex Hung)
+- amd/amdkfd: sync all devices to wait all processes being evicted (Zhigang Luo)
+- drm/amdgpu: clear set_q_mode_offs when VM changed (ZhenGuo Yin)
+- drm/amdgpu: Fix VCN allocation in CPX partition (Lijo Lazar)
+- drm/amd/pm: fix the high voltage issue after unload (Kenneth Feng)
+- drm/amd/display: Skip on writeback when it's not applicable (Alex Hung)
+- drm/amdgpu: implement IRQ_STATE_ENABLE for SDMA v4.4.2 (Tao Zhou)
+- drm/amdgpu: add smu 14.0.1 discovery support (Yifan Zhang)
+- drm/amd/swsmu: Update smu v14.0.0 headers to be 14.0.1 compatible (lima1002)
+- drm/amdgpu : Increase the mes log buffer size as per new MES FW version (shaoyunl)
+- drm/amdgpu : Add mes_log_enable to control mes log feature (shaoyunl)
+- drm/amd/pm: fixes a random hang in S4 for SMU v13.0.4/11 (Tim Huang)
+- drm/amd/display: add DCN 351 version for microcode load (Li Ma)
+- drm/amdgpu: Reset dGPU if suspend got aborted (Lijo Lazar)
+- drm/amdgpu/umsch: reinitialize write pointer in hw init (Lang Yu)
+- drm/amdgpu: Refine IB schedule error logging (Lijo Lazar)
+- drm/amdgpu: always force full reset for SOC21 (Alex Deucher)
+- drm/amdkfd: Reset GPU on queue preemption failure (Harish Kasiviswanathan)
+- drm/i915/vrr: Disable VRR when using bigjoiner (Ville Syrjälä)
+- drm/i915: Disable live M/N updates when using bigjoiner (Ville Syrjälä)
+- drm/i915: Disable port sync when bigjoiner is used (Ville Syrjälä)
+- drm/i915/psr: Disable PSR when bigjoiner is used (Ville Syrjälä)
+- drm/i915/guc: Fix the fix for reset lock confusion (John Harrison)
+- drm/i915/hdcp: Fix get remote hdcp capability function (Suraj Kandpal)
+- drm/i915/cdclk: Fix voltage_level programming edge case (Ville Syrjälä)
+- drm/i915/cdclk: Fix CDCLK programming order when pipes are active (Ville Syrjälä)
+- docs: point out that python3-pyyaml is now required (Thorsten Leemhuis)
+- cxl: Add checks to access_coordinate calculation to fail missing data (Dave Jiang)
+- cxl: Consolidate dport access_coordinate ->hb_coord and ->sw_coord into ->coord (Dave Jiang)
+- cxl: Fix incorrect region perf data calculation (Dave Jiang)
+- cxl: Fix retrieving of access_coordinates in PCIe path (Dave Jiang)
+- cxl: Remove checking of iter in cxl_endpoint_get_perf_coordinates() (Dave Jiang)
+- cxl/core: Fix initialization of mbox_cmd.size_out in get event (Kwangjin Ko)
+- cxl/core/regs: Fix usage of map->reg_type in cxl_decode_regblock() before assigned (Dave Jiang)
+- cxl/mem: Fix for the index of Clear Event Record Handle (Yuquan Wang)
+- Drivers: hv: vmbus: Don't free ring buffers that couldn't be re-encrypted (Michael Kelley)
+- uio_hv_generic: Don't free decrypted memory (Rick Edgecombe)
+- hv_netvsc: Don't free decrypted memory (Rick Edgecombe)
+- Drivers: hv: vmbus: Track decrypted status in vmbus_gpadl (Rick Edgecombe)
+- Drivers: hv: vmbus: Leak pages if set_memory_encrypted() fails (Rick Edgecombe)
+- hv/hv_kvp_daemon: Handle IPv4 and Ipv6 combination for keyfile format (Shradha Gupta)
+- hv: vmbus: Convert sprintf() family to sysfs_emit() family (Li Zhijian)
+- mshyperv: Introduce hv_numa_node_to_pxm_info() (Nuno Das Neves)
+- x86/hyperv: Cosmetic changes for hv_apic.c (Erni Sri Satya Vennela)
+- ACPI: bus: allow _UID matching for integer zero (Raag Jadav)
+- ACPI: scan: Do not increase dep_unmet for already met dependencies (Hans de Goede)
+- PM: s2idle: Make sure CPUs will wakeup directly on resume (Anna-Maria Behnsen)
+- net: ena: Set tx_info->xdpf value to NULL (David Arinzon)
+- net: ena: Fix incorrect descriptor free behavior (David Arinzon)
+- net: ena: Wrong missing IO completions check order (David Arinzon)
+- net: ena: Fix potential sign extension issue (David Arinzon)
+- Bluetooth: l2cap: Don't double set the HCI_CONN_MGMT_CONNECTED bit (Archie Pusaka)
+- Bluetooth: hci_sock: Fix not validating setsockopt user input (Luiz Augusto von Dentz)
+- Bluetooth: ISO: Fix not validating setsockopt user input (Luiz Augusto von Dentz)
+- Bluetooth: L2CAP: Fix not validating setsockopt user input (Luiz Augusto von Dentz)
+- Bluetooth: RFCOMM: Fix not validating setsockopt user input (Luiz Augusto von Dentz)
+- Bluetooth: SCO: Fix not validating setsockopt user input (Luiz Augusto von Dentz)
+- Bluetooth: Fix memory leak in hci_req_sync_complete() (Dmitry Antipov)
+- Bluetooth: hci_sync: Fix using the same interval and window for Coded PHY (Luiz Augusto von Dentz)
+- Bluetooth: ISO: Don't reject BT_ISO_QOS if parameters are unset (Luiz Augusto von Dentz)
+- af_unix: Fix garbage collector racing against connect() (Michal Luczaj)
+- net: dsa: mt7530: trap link-local frames regardless of ST Port State (Arınç ÜNAL)
+- Revert "s390/ism: fix receive message buffer allocation" (Gerd Bayer)
+- net: sparx5: fix wrong config being used when reconfiguring PCS (Daniel Machon)
+- net/mlx5: fix possible stack overflows (Arnd Bergmann)
+- net/mlx5: Disallow SRIOV switchdev mode when in multi-PF netdev (Tariq Toukan)
+- net/mlx5e: RSS, Block XOR hash with over 128 channels (Carolina Jubran)
+- net/mlx5e: Do not produce metadata freelist entries in Tx port ts WQE xmit (Rahul Rameshbabu)
+- net/mlx5e: HTB, Fix inconsistencies with QoS SQs number (Carolina Jubran)
+- net/mlx5e: Fix mlx5e_priv_init() cleanup flow (Carolina Jubran)
+- net/mlx5e: RSS, Block changing channels number when RXFH is configured (Carolina Jubran)
+- net/mlx5: Correctly compare pkt reformat ids (Cosmin Ratiu)
+- net/mlx5: Properly link new fs rules into the tree (Cosmin Ratiu)
+- net/mlx5: offset comp irq index in name by one (Michael Liang)
+- net/mlx5: Register devlink first under devlink lock (Shay Drory)
+- net/mlx5: E-switch, store eswitch pointer before registering devlink_param (Shay Drory)
+- netfilter: complete validation of user input (Eric Dumazet)
+- r8169: add missing conditional compiling for call to r8169_remove_leds (Heiner Kallweit)
+- net: dsa: mt7530: fix enabling EEE on MT7531 switch on all boards (Arınç ÜNAL)
+- r8169: fix LED-related deadlock on module removal (Heiner Kallweit)
+- pds_core: Fix pdsc_check_pci_health function to use work thread (Brett Creeley)
+- ipv6: fix race condition between ipv6_get_ifaddr and ipv6_del_addr (Jiri Benc)
+- nfc: llcp: fix nfc_llcp_setsockopt() unsafe copies (Eric Dumazet)
+- mISDN: fix MISDN_TIME_STAMP handling (Eric Dumazet)
+- net: add copy_safe_from_sockptr() helper (Eric Dumazet)
+- ipv4/route: avoid unused-but-set-variable warning (Arnd Bergmann)
+- ipv6: fib: hide unused 'pn' variable (Arnd Bergmann)
+- octeontx2-af: Fix NIX SQ mode and BP config (Geetha sowjanya)
+- af_unix: Clear stale u->oob_skb. (Kuniyuki Iwashima)
+- net: ks8851: Handle softirqs at the end of IRQ thread to fix hang (Marek Vasut)
+- net: ks8851: Inline ks8851_rx_skb() (Marek Vasut)
+- net: stmmac: mmc_core: Add GMAC mmc tx/rx missing statistics (Minda Chen)
+- net: stmmac: mmc_core: Add GMAC LPI statistics (Minda Chen)
+- bnxt_en: Reset PTP tx_avail after possible firmware reset (Pavan Chebbi)
+- bnxt_en: Fix error recovery for RoCE ulp client (Vikas Gupta)
+- bnxt_en: Fix possible memory leak in bnxt_rdma_aux_device_init() (Vikas Gupta)
+- s390/ism: fix receive message buffer allocation (Gerd Bayer)
+- geneve: fix header validation in geneve[6]_xmit_skb (Eric Dumazet)
+- MAINTAINERS: Drop Li Yang as their email address stopped working (Uwe Kleine-König)
+- batman-adv: Avoid infinite loop trying to resize local TT (Sven Eckelmann)
+- lib: checksum: hide unused expected_csum_ipv6_magic[] (Arnd Bergmann)
+- octeontx2-pf: Fix transmit scheduler resource leak (Hariprasad Kelam)
+- virtio_net: Do not send RSS key if it is not supported (Breno Leitao)
+- xsk: validate user input for XDP_{UMEM|COMPLETION}_FILL_RING (Eric Dumazet)
+- u64_stats: fix u64_stats_init() for lockdep when used repeatedly in one file (Petr Tesarik)
+- net: openvswitch: fix unwanted error log on timeout policy probing (Ilya Maximets)
+- scsi: qla2xxx: Fix off by one in qla_edif_app_getstats() (Dan Carpenter)
+- scsi: hisi_sas: Modify the deadline for ata_wait_after_reset() (Xiang Chen)
+- scsi: hisi_sas: Handle the NCQ error returned by D2H frame (Xiang Chen)
+- scsi: target: Fix SELinux error when systemd-modules loads the target module (Maurizio Lombardi)
+- scsi: sg: Avoid race in error handling & drop bogus warn (Alexander Wetzel)
+- LoongArch: Include linux/sizes.h in addrspace.h to prevent build errors (Randy Dunlap)
+- LoongArch: Update dts for Loongson-2K2000 to support GMAC/GNET (Huacai Chen)
+- LoongArch: Update dts for Loongson-2K2000 to support PCI-MSI (Huacai Chen)
+- LoongArch: Update dts for Loongson-2K2000 to support ISA/LPC (Huacai Chen)
+- LoongArch: Update dts for Loongson-2K1000 to support ISA/LPC (Huacai Chen)
+- LoongArch: Make virt_addr_valid()/__virt_addr_valid() work with KFENCE (Huacai Chen)
+- LoongArch: Make {virt, phys, page, pfn} translation work with KFENCE (Huacai Chen)
+- mm: Move lowmem_page_address() a little later (Huacai Chen)
+- bcachefs: Fix __bch2_btree_and_journal_iter_init_node_iter() (Kent Overstreet)
+- bcachefs: Kill read lock dropping in bch2_btree_node_lock_write_nofail() (Kent Overstreet)
+- bcachefs: Fix a race in btree_update_nodes_written() (Kent Overstreet)
+- bcachefs: btree_node_scan: Respect member.data_allowed (Kent Overstreet)
+- bcachefs: Don't scan for btree nodes when we can reconstruct (Kent Overstreet)
+- bcachefs: Fix check_topology() when using node scan (Kent Overstreet)
+- bcachefs: fix eytzinger0_find_gt() (Kent Overstreet)
+- bcachefs: fix bch2_get_acl() transaction restart handling (Kent Overstreet)
+- bcachefs: fix the count of nr_freed_pcpu after changing bc->freed_nonpcpu list (Hongbo Li)
+- bcachefs: Fix gap buffer bug in bch2_journal_key_insert_take() (Kent Overstreet)
+- bcachefs: Rename struct field swap to prevent macro naming collision (Thorsten Blum)
+- MAINTAINERS: Add entry for bcachefs documentation (Bagas Sanjaya)
+- Documentation: filesystems: Add bcachefs toctree (Bagas Sanjaya)
+- bcachefs: JOURNAL_SPACE_LOW (Kent Overstreet)
+- bcachefs: Disable errors=panic for BCH_IOCTL_FSCK_OFFLINE (Kent Overstreet)
+- bcachefs: Fix BCH_IOCTL_FSCK_OFFLINE for encrypted filesystems (Kent Overstreet)
+- bcachefs: fix rand_delete unit test (Kent Overstreet)
+- bcachefs: fix ! vs ~ typo in __clear_bit_le64() (Dan Carpenter)
+- bcachefs: Fix rebalance from durability=0 device (Kent Overstreet)
+- bcachefs: Print shutdown journal sequence number (Kent Overstreet)
+- bcachefs: Further improve btree_update_to_text() (Kent Overstreet)
+- bcachefs: Move btree_updates to debugfs (Kent Overstreet)
+- bcachefs: Bump limit in btree_trans_too_many_iters() (Kent Overstreet)
+- bcachefs: Make snapshot_is_ancestor() safe (Kent Overstreet)
+- bcachefs: create debugfs dir for each btree (Thomas Bertschinger)
+- platform/chrome: cros_ec_uart: properly fix race condition (Noah Loomans)
+- Use LLVM=1 for clang_lto build (Nikita Popov)
+- redhat: fix def_variants.yaml check (Jan Stancek)
+- kprobes: Fix possible use-after-free issue on kprobe registration (Zheng Yejian)
+- fs/proc: Skip bootloader comment if no embedded kernel parameters (Masami Hiramatsu)
+- fs/proc: remove redundant comments from /proc/bootconfig (Zhenhua Huang)
+- media: mediatek: vcodec: support 36 bits physical address (Yunfei Dong)
+- media: mediatek: vcodec: adding lock to protect encoder context list (Yunfei Dong)
+- media: mediatek: vcodec: adding lock to protect decoder context list (Yunfei Dong)
+- media: mediatek: vcodec: Fix oops when HEVC init fails (Nicolas Dufresne)
+- media: mediatek: vcodec: Handle VP9 superframe bitstream with 8 sub-frames (Irui Wang)
+- randomize_kstack: Improve entropy diffusion (Kees Cook)
+- ubsan: fix unused variable warning in test module (Arnd Bergmann)
+- gcc-plugins/stackleak: Avoid .head.text section (Ard Biesheuvel)
+- tools/power turbostat: v2024.04.10 (Len Brown)
+- tools/power/turbostat: Add support for Xe sysfs knobs (Zhang Rui)
+- tools/power/turbostat: Add support for new i915 sysfs knobs (Zhang Rui)
+- tools/power/turbostat: Introduce BIC_SAM_mc6/BIC_SAMMHz/BIC_SAMACTMHz (Zhang Rui)
+- tools/power/turbostat: Fix uncore frequency file string (Justin Ernst)
+- tools/power/turbostat: Unify graphics sysfs snapshots (Zhang Rui)
+- tools/power/turbostat: Cache graphics sysfs path (Zhang Rui)
+- tools/power/turbostat: Enable MSR_CORE_C1_RES support for ICX (Zhang Rui)
+- tools/power turbostat: Add selftests (Patryk Wlazlyn)
+- tools/power turbostat: read RAPL counters via perf (Patryk Wlazlyn)
+- tools/power turbostat: Add proper re-initialization for perf file descriptors (Patryk Wlazlyn)
+- tools/power turbostat: Clear added counters when in no-msr mode (Patryk Wlazlyn)
+- tools/power turbostat: add early exits for permission checks (Patryk Wlazlyn)
+- tools/power turbostat: detect and disable unavailable BICs at runtime (Patryk Wlazlyn)
+- tools/power turbostat: Add reading aperf and mperf via perf API (Patryk Wlazlyn)
+- tools/power turbostat: Add --no-perf option (Patryk Wlazlyn)
+- tools/power turbostat: Add --no-msr option (Patryk Wlazlyn)
+- tools/power turbostat: enhance -D (debug counter dump) output (Len Brown)
+- tools/power turbostat: Fix warning upon failed /dev/cpu_dma_latency read (Len Brown)
+- tools/power turbostat: Read base_hz and bclk from CPUID.16H if available (Patryk Wlazlyn)
+- tools/power turbostat: Print ucode revision only if valid (Patryk Wlazlyn)
+- tools/power turbostat: Expand probe_intel_uncore_frequency() (Len Brown)
+- tools/power turbostat: Do not print negative LPI residency (Chen Yu)
+- tools/power turbostat: Fix Bzy_MHz documentation typo (Peng Liu)
+- tools/power turbostat: Increase the limit for fd opened (Wyes Karny)
+- tools/power turbostat: Fix added raw MSR output (Doug Smythies)
+- platform/x86: lg-laptop: fix %%s null argument warning (Gergo Koteles)
+- platform/x86: intel-vbtn: Update tablet mode switch at end of probe (Gwendal Grignou)
+- platform/x86: intel-vbtn: Use acpi_has_method to check for switch (Gwendal Grignou)
+- platform/x86: toshiba_acpi: Silence logging for some events (Hans de Goede)
+- platform/x86/intel/hid: Add Lunar Lake and Arrow Lake support (Sumeet Pawnikar)
+- platform/x86/intel/hid: Don't wake on 5-button releases (David McFarland)
+- platform/x86: acer-wmi: Add support for Acer PH18-71 (Bernhard Rosenkränzer)
+- redhat: sanity check yaml files (Jan Stancek)
+- spec: rework filter-mods and mod-denylist (Jan Stancek)
+- nouveau: fix devinit paths to only handle display on GSP. (Dave Airlie)
+- compiler.h: Add missing quote in macro comment (Thorsten Blum)
+- KVM: x86: Add BHI_NO (Daniel Sneddon)
+- x86/bhi: Mitigate KVM by default (Pawan Gupta)
+- x86/bhi: Add BHI mitigation knob (Pawan Gupta)
+- x86/bhi: Enumerate Branch History Injection (BHI) bug (Pawan Gupta)
+- x86/bhi: Define SPEC_CTRL_BHI_DIS_S (Daniel Sneddon)
+- x86/bhi: Add support for clearing branch history at syscall entry (Pawan Gupta)
+- x86/syscall: Don't force use of indirect calls for system calls (Linus Torvalds)
+- x86/bugs: Change commas to semicolons in 'spectre_v2' sysfs file (Josh Poimboeuf)
+- btrfs: always clear PERTRANS metadata during commit (Boris Burkov)
+- btrfs: make btrfs_clear_delalloc_extent() free delalloc reserve (Boris Burkov)
+- btrfs: qgroup: convert PREALLOC to PERTRANS after record_root_in_trans (Boris Burkov)
+- btrfs: record delayed inode root in transaction (Boris Burkov)
+- btrfs: qgroup: fix qgroup prealloc rsv leak in subvolume operations (Boris Burkov)
+- btrfs: qgroup: correctly model root qgroup rsv in convert (Boris Burkov)
+- memblock tests: fix undefined reference to `BIT' (Wei Yang)
+- memblock tests: fix undefined reference to `panic' (Wei Yang)
+- memblock tests: fix undefined reference to `early_pfn_to_nid' (Wei Yang)
+- Linux 6.9-rc3 (Linus Torvalds)
+- x86/retpoline: Add NOENDBR annotation to the SRSO dummy return thunk (Borislav Petkov (AMD))
+- x86/mce: Make sure to grab mce_sysfs_mutex in set_bank() (Borislav Petkov (AMD))
+- x86/CPU/AMD: Track SNP host status with cc_platform_*() (Borislav Petkov (AMD))
+- x86/cc: Add cc_platform_set/_clear() helpers (Borislav Petkov (AMD))
+- x86/kvm/Kconfig: Have KVM_AMD_SEV select ARCH_HAS_CC_PLATFORM (Borislav Petkov (AMD))
+- x86/coco: Require seeding RNG with RDRAND on CoCo systems (Jason A. Donenfeld)
+- x86/numa/32: Include missing <asm/pgtable_areas.h> (Arnd Bergmann)
+- x86/resctrl: Fix uninitialized memory read when last CPU of domain goes offline (Reinette Chatre)
+- timers/migration: Return early on deactivation (Anna-Maria Behnsen)
+- timers/migration: Fix ignored event due to missing CPU update (Frederic Weisbecker)
+- vdso: Use CONFIG_PAGE_SHIFT in vdso/datapage.h (Arnd Bergmann)
+- timers: Fix text inconsistencies and spelling (Randy Dunlap)
+- tick/sched: Fix struct tick_sched doc warnings (Randy Dunlap)
+- tick/sched: Fix various kernel-doc warnings (Randy Dunlap)
+- timers: Fix kernel-doc format and add Return values (Randy Dunlap)
+- time/timekeeping: Fix kernel-doc warnings and typos (Randy Dunlap)
+- time/timecounter: Fix inline documentation (Randy Dunlap)
+- perf/x86/intel/ds: Don't clear ->pebs_data_cfg for the last PEBS event (Kan Liang)
+- redhat: regenerate test-data (Jan Stancek) [RHEL-29722]
+- redhat/Makefile.variables: don't set DISTRO (Jan Stancek) [RHEL-29722]
+- redhat/Makefile.variables: set PATCHLIST_URL to none (Jan Stancek) [RHEL-29722]
+- redhat/kernel.spec.template: fix with_realtime (Jan Stancek) [RHEL-29722]
+- Linux v6.9.0-0.rc4
+
 * Mon Apr 08 2024 Jan Stancek <jstancek@redhat.com> [6.9.0-0.rc2.1.el10]
 - remove ARK .gitlab-ci.yml (Jan Stancek)
 - redhat: update rpminspect with c9s one (Jan Stancek)
