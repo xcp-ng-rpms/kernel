@@ -163,15 +163,15 @@ Summary: The Linux kernel
 %define specrpmversion 6.9.0
 %define specversion 6.9.0
 %define patchversion 6.9
-%define pkgrelease 0.rc4.2
+%define pkgrelease 0.rc5.3
 %define kversion 6
-%define tarfile_release 6.9.0-0.rc4.2.el10
+%define tarfile_release 6.9.0-0.rc5.3.el10
 # This is needed to do merge window version magic
 %define patchlevel 9
 # This allows pkg_release to have configurable %%{?dist} tag
-%define specrelease 0.rc4.2%{?buildid}%{?dist}
+%define specrelease 0.rc5.3%{?buildid}%{?dist}
 # This defines the kabi tarball version
-%define kabiversion 6.9.0-0.rc4.2.el10
+%define kabiversion 6.9.0-0.rc5.3.el10
 
 # If this variable is set to 1, a bpf selftests build failure will cause a
 # fatal kernel package build error
@@ -3937,6 +3937,102 @@ fi\
 #
 #
 %changelog
+* Thu Apr 25 2024 Jan Stancek <jstancek@redhat.com> [6.9.0-0.rc5.3.el10]
+- cifs: reinstate original behavior again for forceuid/forcegid (Takayuki Nagata)
+- smb: client: fix rename(2) regression against samba (Paulo Alcantara)
+- cifs: Add tracing for the cifs_tcon struct refcounting (David Howells)
+- cifs: Fix reacquisition of volume cookie on still-live connection (David Howells)
+- redhat/configs: enable CONFIG_TEST_LOCKUP for non-debug kernels (Čestmír Kalina)
+- redhat/rhel_files: add test_lockup.ko to modules-extra (Čestmír Kalina)
+- Turn off some Fedora UBSAN options to avoid false positives (Justin M. Forbes)
+- ksmbd: add continuous availability share parameter (Namjae Jeon)
+- ksmbd: common: use struct_group_attr instead of struct_group for network_open_info (Namjae Jeon)
+- ksmbd: clear RENAME_NOREPLACE before calling vfs_rename (Marios Makassikis)
+- ksmbd: validate request buffer size in smb2_allocate_rsp_buf() (Namjae Jeon)
+- ksmbd: fix slab-out-of-bounds in smb2_allocate_rsp_buf (Namjae Jeon)
+- bcachefs: If we run merges at a lower watermark, they must be nonblocking (Kent Overstreet)
+- bcachefs: Fix inode early destruction path (Kent Overstreet)
+- bcachefs: Fix deadlock in journal write path (Kent Overstreet)
+- bcachefs: Tweak btree key cache shrinker so it actually frees (Kent Overstreet)
+- bcachefs: bkey_cached.btree_trans_barrier_seq needs to be a ulong (Kent Overstreet)
+- bcachefs: Fix missing call to bch2_fs_allocator_background_exit() (Kent Overstreet)
+- bcachefs: Check for journal entries overruning end of sb clean section (Kent Overstreet)
+- bcachefs: Fix bio alloc in check_extent_checksum() (Kent Overstreet)
+- bcachefs: fix leak in bch2_gc_write_reflink_key (Kent Overstreet)
+- bcachefs: KEY_TYPE_error is allowed for reflink (Kent Overstreet)
+- bcachefs: Fix bch2_dev_btree_bitmap_marked_sectors() shift (Kent Overstreet)
+- bcachefs: make sure to release last journal pin in replay (Kent Overstreet)
+- bcachefs: node scan: ignore multiple nodes with same seq if interior (Kent Overstreet)
+- bcachefs: Fix format specifier in validate_bset_keys() (Nathan Chancellor)
+- bcachefs: Fix null ptr deref in twf from BCH_IOCTL_FSCK_OFFLINE (Kent Overstreet)
+- Revert "svcrdma: Add Write chunk WRs to the RPC's Send WR chain" (Chuck Lever)
+- docs: verify/bisect: stable regressions: first stable, then mainline (Thorsten Leemhuis)
+- docs: verify/bisect: describe how to use a build host (Thorsten Leemhuis)
+- docs: verify/bisect: explain testing reverts, patches and newer code (Thorsten Leemhuis)
+- docs: verify/bisect: proper headlines and more spacing (Thorsten Leemhuis)
+- docs: verify/bisect: add and fetch stable branches ahead of time (Thorsten Leemhuis)
+- docs: verify/bisect: use git switch, tag kernel, and various fixes (Thorsten Leemhuis)
+- Linux 6.9-rc5 (Linus Torvalds)
+- peci: linux/peci.h: fix Excess kernel-doc description warning (Randy Dunlap)
+- binder: check offset alignment in binder_get_object() (Carlos Llamas)
+- comedi: vmk80xx: fix incomplete endpoint checking (Nikita Zhandarovich)
+- mei: vsc: Unregister interrupt handler for system suspend (Sakari Ailus)
+- Revert "mei: vsc: Call wake_up() in the threaded IRQ handler" (Sakari Ailus)
+- misc: rtsx: Fix rts5264 driver status incorrect when card removed (Ricky Wu)
+- mei: me: disable RPL-S on SPS and IGN firmwares (Alexander Usyskin)
+- interconnect: Don't access req_list while it's being manipulated (Mike Tipton)
+- interconnect: qcom: x1e80100: Remove inexistent ACV_PERF BCM (Konrad Dybcio)
+- speakup: Avoid crash on very long word (Samuel Thibault)
+- Documentation: embargoed-hardware-issues.rst: Add myself for Power (Michael Ellerman)
+- fs: sysfs: Fix reference leak in sysfs_break_active_protection() (Alan Stern)
+- serial: stm32: Reset .throttled state in .startup() (Uwe Kleine-König)
+- serial: stm32: Return IRQ_NONE in the ISR if no handling happend (Uwe Kleine-König)
+- serial: core: Fix missing shutdown and startup for serial base port (Tony Lindgren)
+- serial: core: Clearing the circular buffer before NULLifying it (Andy Shevchenko)
+- MAINTAINERS: mailmap: update Richard Genoud's email address (Richard Genoud)
+- serial/pmac_zilog: Remove flawed mitigation for rx irq flood (Finn Thain)
+- serial: 8250_pci: Remove redundant PCI IDs (Andy Shevchenko)
+- serial: core: Fix regression when runtime PM is not enabled (Tony Lindgren)
+- serial: mxs-auart: add spinlock around changing cts state (Emil Kronborg)
+- serial: 8250_dw: Revert: Do not reclock if already at correct rate (Hans de Goede)
+- serial: 8250_lpc18xx: disable clks on error in probe() (Dan Carpenter)
+- USB: serial: option: add Telit FN920C04 rmnet compositions (Daniele Palmas)
+- USB: serial: option: add Rolling RW101-GL and RW135-GL support (Vanillan Wang)
+- USB: serial: option: add Lonsung U8300/U9300 product (Coia Prant)
+- USB: serial: option: add support for Fibocom FM650/FG650 (Chuanhong Guo)
+- USB: serial: option: support Quectel EM060K sub-models (Jerry Meng)
+- USB: serial: option: add Fibocom FM135-GL variants (bolan wang)
+- usb: dwc3: ep0: Don't reset resource alloc flag (Thinh Nguyen)
+- Revert "usb: cdc-wdm: close race between read and workqueue" (Greg Kroah-Hartman)
+- thunderbolt: Avoid notify PM core about runtime PM resume (Gil Fine)
+- thunderbolt: Fix wake configurations after device unplug (Gil Fine)
+- thunderbolt: Do not create DisplayPort tunnels on adapters of the same router (Mika Westerberg)
+- usb: misc: onboard_usb_hub: Disable the USB hub clock on failure (Fabio Estevam)
+- usb: dwc2: host: Fix dereference issue in DDMA completion flow. (Minas Harutyunyan)
+- usb: typec: mux: it5205: Fix ChipID value typo (AngeloGioacchino Del Regno)
+- MAINTAINERS: Drop Li Yang as their email address stopped working (Uwe Kleine-König)
+- usb: gadget: fsl: Initialize udc before using it (Uwe Kleine-König)
+- usb: Disable USB3 LPM at shutdown (Kai-Heng Feng)
+- usb: gadget: f_ncm: Fix UAF ncm object at re-bind after usb ep transport error (Norihiko Hama)
+- usb: typec: tcpm: Correct the PDO counting in pd_set (Kyle Tso)
+- usb: gadget: functionfs: Wait for fences before enqueueing DMABUF (Paul Cercueil)
+- usb: gadget: functionfs: Fix inverted DMA fence direction (Paul Cercueil)
+- usb: typec: ucsi: Fix connector check on init (Christian A. Ehrhardt)
+- usb: phy: MAINTAINERS: mark Freescale USB PHY as orphaned (Krzysztof Kozlowski)
+- xhci: Fix root hub port null pointer dereference in xhci tracepoints (Mathias Nyman)
+- usb: xhci: correct return value in case of STS_HCE (Oliver Neukum)
+- sched: Add missing memory barrier in switch_mm_cid (Mathieu Desnoyers)
+- x86/cpufeatures: Fix dependencies for GFNI, VAES, and VPCLMULQDQ (Eric Biggers)
+- x86/fred: Fix incorrect error code printout in fred_bad_type() (Hou Wenlong)
+- x86/fred: Fix INT80 emulation for FRED (Xin Li (Intel))
+- x86/retpolines: Enable the default thunk warning only on relevant configs (Borislav Petkov (AMD))
+- x86/bugs: Fix BHI retpoline check (Josh Poimboeuf)
+- fedora: aarch64: Enable a QCom Robotics platforms requirements (Peter Robinson)
+- fedora: updates for 6.9 merge window (Peter Robinson)
+- gitlab-ci: rename GitLab jobs ark -> rawhide (Michael Hofmann)
+- gitlab-ci: add initial version (Michael Hofmann)
+- Linux v6.9.0-0.rc5
+
 * Mon Apr 22 2024 Jan Stancek <jstancek@redhat.com> [6.9.0-0.rc4.2.el10]
 - blk-iocost: do not WARN if iocg was already offlined (Li Nan)
 - block: propagate partition scanning errors to the BLKRRPART ioctl (Christoph Hellwig)
