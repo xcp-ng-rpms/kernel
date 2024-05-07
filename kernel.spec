@@ -163,15 +163,15 @@ Summary: The Linux kernel
 %define specrpmversion 6.9.0
 %define specversion 6.9.0
 %define patchversion 6.9
-%define pkgrelease 0.rc6.4
+%define pkgrelease 0.rc7.5
 %define kversion 6
-%define tarfile_release 6.9.0-0.rc6.4.el10
+%define tarfile_release 6.9.0-0.rc7.5.el10
 # This is needed to do merge window version magic
 %define patchlevel 9
 # This allows pkg_release to have configurable %%{?dist} tag
-%define specrelease 0.rc6.4%{?buildid}%{?dist}
+%define specrelease 0.rc7.5%{?buildid}%{?dist}
 # This defines the kabi tarball version
-%define kabiversion 6.9.0-0.rc6.4.el10
+%define kabiversion 6.9.0-0.rc7.5.el10
 
 # If this variable is set to 1, a bpf selftests build failure will cause a
 # fatal kernel package build error
@@ -587,6 +587,9 @@ Summary: The Linux kernel
 %define cpupowerarchs i686 x86_64 ppc64le aarch64
 %endif
 
+# Architectures we build kernel livepatching selftests on
+%define klptestarches x86_64 ppc64le
+
 %if 0%{?use_vdso}
 %define _use_vdso 1
 %else
@@ -809,6 +812,10 @@ Source0: linux-%{tarfile_release}.tar.xz
 Source1: Makefile.rhelver
 Source2: kernel.changelog
 
+Source10: redhatsecurebootca5.cer
+Source13: redhatsecureboot501.cer
+
+%if %{signkernel}
 # Name of the packaged file containing signing key
 %ifarch ppc64le
 %define signing_key_filename kernel-signing-ppc.cer
@@ -817,48 +824,36 @@ Source2: kernel.changelog
 %define signing_key_filename kernel-signing-s390.cer
 %endif
 
-%if %{?released_kernel}
-
-Source10: redhatsecurebootca5.cer
-Source11: redhatsecurebootca1.cer
-Source12: redhatsecureboot501.cer
-Source13: redhatsecureboot301.cer
-Source14: secureboot_s390.cer
-Source15: secureboot_ppc.cer
-
-%define secureboot_ca_0 %{SOURCE10}
-%define secureboot_ca_1 %{SOURCE11}
-%ifarch x86_64 aarch64
-%define secureboot_key_0 %{SOURCE12}
+# Fedora/ELN pesign macro expects to see these cert file names, see:
+# https://github.com/rhboot/pesign/blob/main/src/pesign-rpmbuild-helper.in#L216
+%if 0%{?fedora}%{?eln}
 %define pesign_name_0 redhatsecureboot501
-%define secureboot_key_1 %{SOURCE13}
-%define pesign_name_1 redhatsecureboot301
+%define secureboot_ca_0 %{SOURCE10}
+%define secureboot_key_0 %{SOURCE13}
+%endif
+
+# RHEL/centos certs come from system-sb-certs
+%if 0%{?rhel} && !0%{?eln}
+%define secureboot_ca_0 %{_datadir}/pki/sb-certs/secureboot-ca-%{_arch}.cer
+%define secureboot_key_0 %{_datadir}/pki/sb-certs/secureboot-kernel-%{_arch}.cer
+
+%if 0%{?centos}
+%define pesign_name_0 centossecureboot201
+%else
+%ifarch x86_64 aarch64
+%define pesign_name_0 redhatsecureboot501
 %endif
 %ifarch s390x
-%define secureboot_key_0 %{SOURCE14}
 %define pesign_name_0 redhatsecureboot302
 %endif
 %ifarch ppc64le
-%define secureboot_key_0 %{SOURCE15}
-%define pesign_name_0 redhatsecureboot303
+%define pesign_name_0 redhatsecureboot701
+%endif
+%endif
+# rhel && !eln
 %endif
 
-# released_kernel
-%else
-
-Source10: redhatsecurebootca4.cer
-Source11: redhatsecurebootca2.cer
-Source12: redhatsecureboot401.cer
-Source13: redhatsecureboot003.cer
-
-%define secureboot_ca_0 %{SOURCE10}
-%define secureboot_ca_1 %{SOURCE11}
-%define secureboot_key_0 %{SOURCE12}
-%define pesign_name_0 redhatsecureboot401
-%define secureboot_key_1 %{SOURCE13}
-%define pesign_name_1 redhatsecureboot003
-
-# released_kernel
+# signkernel
 %endif
 
 Source20: mod-denylist.sh
@@ -1901,9 +1896,11 @@ openssl x509 -inform der -in %{SOURCE100} -out rheldup3.pem
 openssl x509 -inform der -in %{SOURCE101} -out rhelkpatch1.pem
 openssl x509 -inform der -in %{SOURCE102} -out nvidiagpuoot001.pem
 cat rheldup3.pem rhelkpatch1.pem nvidiagpuoot001.pem > ../certs/rhel.pem
+%if %{signkernel}
 %ifarch s390x ppc64le
 openssl x509 -inform der -in %{secureboot_ca_0} -out secureboot.pem
 cat secureboot.pem >> ../certs/rhel.pem
+%endif
 %endif
 for i in *.config; do
   sed -i 's@CONFIG_SYSTEM_TRUSTED_KEYS=""@CONFIG_SYSTEM_TRUSTED_KEYS="certs/rhel.pem"@' $i
@@ -2148,14 +2145,12 @@ BuildKernel() {
 
     %ifarch x86_64 aarch64
     %{log_msg "Sign kernel image"}
-    %pesign -s -i $SignImage -o vmlinuz.tmp -a %{secureboot_ca_0} -c %{secureboot_key_0} -n %{pesign_name_0}
-    %pesign -s -i vmlinuz.tmp -o vmlinuz.signed -a %{secureboot_ca_1} -c %{secureboot_key_1} -n %{pesign_name_1}
-    rm vmlinuz.tmp
+    %pesign -s -i $SignImage -o vmlinuz.signed -a %{secureboot_ca_0} -c %{secureboot_key_0} -n %{pesign_name_0}
     %endif
     %ifarch s390x ppc64le
     if [ -x /usr/bin/rpm-sign ]; then
 	rpm-sign --key "%{pesign_name_0}" --lkmsign $SignImage --output vmlinuz.signed
-    elif [ $DoModules -eq 1 ]; then
+    elif [ "$DoModules" == "1" -a "%{signmodules}" == "1" ]; then
 	chmod +x scripts/sign-file
 	./scripts/sign-file -p sha256 certs/signing_key.pem certs/signing_key.x509 $SignImage vmlinuz.signed
     else
@@ -2556,9 +2551,7 @@ BuildKernel() {
 
 %if %{signkernel}
 	%{log_msg "Sign the EFI UKI kernel"}
-	%pesign -s -i $KernelUnifiedImage -o $KernelUnifiedImage.tmp -a %{secureboot_ca_0} -c %{secureboot_key_0} -n %{pesign_name_0}
-    	%pesign -s -i $KernelUnifiedImage.tmp -o $KernelUnifiedImage.signed -a %{secureboot_ca_1} -c %{secureboot_key_1} -n %{pesign_name_1}
-    	rm -f $KernelUnifiedImage.tmp
+	%pesign -s -i $KernelUnifiedImage -o $KernelUnifiedImage.signed -a %{secureboot_ca_0} -c %{secureboot_key_0} -n %{pesign_name_0}
 
     	if [ ! -s $KernelUnifiedImage.signed ]; then
 	   %{log_msg "pesigning failed"}
@@ -2680,15 +2673,6 @@ BuildKernel() {
     %{log_msg "Remove depmod files"}
     remove_depmod_files
 
-%if %{signmodules}
-    if [ $DoModules -eq 1 ]; then
-	%{log_msg "Save the signing keys for modules"}
-	# Save the signing keys so we can sign the modules in __modsign_install_post
-	cp certs/signing_key.pem certs/signing_key.pem.sign${Variant:++${Variant}}
-	cp certs/signing_key.x509 certs/signing_key.x509.sign${Variant:++${Variant}}
-    fi
-%endif
-
     # Move the devel headers out of the root file system
     %{log_msg "Move the devel headers to RPM_BUILD_ROOT"}
     mkdir -p $RPM_BUILD_ROOT/usr/src/kernels
@@ -2721,24 +2705,29 @@ BuildKernel() {
     # Red Hat UEFI Secure Boot CA cert, which can be used to authenticate the kernel
     %{log_msg "Install certs"}
     mkdir -p $RPM_BUILD_ROOT%{_datadir}/doc/kernel-keys/$KernelVer
-    %ifarch x86_64 aarch64
-       install -m 0644 %{secureboot_ca_0} $RPM_BUILD_ROOT%{_datadir}/doc/kernel-keys/$KernelVer/kernel-signing-ca-20200609.cer
-       install -m 0644 %{secureboot_ca_1} $RPM_BUILD_ROOT%{_datadir}/doc/kernel-keys/$KernelVer/kernel-signing-ca-20140212.cer
-       ln -s kernel-signing-ca-20200609.cer $RPM_BUILD_ROOT%{_datadir}/doc/kernel-keys/$KernelVer/kernel-signing-ca.cer
-    %else
-       install -m 0644 %{secureboot_ca_0} $RPM_BUILD_ROOT%{_datadir}/doc/kernel-keys/$KernelVer/kernel-signing-ca.cer
-    %endif
+%if %{signkernel}
+    install -m 0644 %{secureboot_ca_0} $RPM_BUILD_ROOT%{_datadir}/doc/kernel-keys/$KernelVer/kernel-signing-ca.cer
     %ifarch s390x ppc64le
-    if [ $DoModules -eq 1 ]; then
-	if [ -x /usr/bin/rpm-sign ]; then
-	    install -m 0644 %{secureboot_key_0} $RPM_BUILD_ROOT%{_datadir}/doc/kernel-keys/$KernelVer/%{signing_key_filename}
-	else
-	    install -m 0644 certs/signing_key.x509.sign${Variant:++${Variant}} $RPM_BUILD_ROOT%{_datadir}/doc/kernel-keys/$KernelVer/kernel-signing-ca.cer
-	    openssl x509 -in certs/signing_key.pem.sign${Variant:++${Variant}} -outform der -out $RPM_BUILD_ROOT%{_datadir}/doc/kernel-keys/$KernelVer/%{signing_key_filename}
-	    chmod 0644 $RPM_BUILD_ROOT%{_datadir}/doc/kernel-keys/$KernelVer/%{signing_key_filename}
-	fi
+    if [ -x /usr/bin/rpm-sign ]; then
+        install -m 0644 %{secureboot_key_0} $RPM_BUILD_ROOT%{_datadir}/doc/kernel-keys/$KernelVer/%{signing_key_filename}
     fi
     %endif
+%endif
+
+%if %{signmodules}
+    if [ $DoModules -eq 1 ]; then
+        # Save the signing keys so we can sign the modules in __modsign_install_post
+        cp certs/signing_key.pem certs/signing_key.pem.sign${Variant:++${Variant}}
+        cp certs/signing_key.x509 certs/signing_key.x509.sign${Variant:++${Variant}}
+        %ifarch s390x ppc64le
+        if [ ! -x /usr/bin/rpm-sign ]; then
+            install -m 0644 certs/signing_key.x509.sign${Variant:++${Variant}} $RPM_BUILD_ROOT%{_datadir}/doc/kernel-keys/$KernelVer/kernel-signing-ca.cer
+            openssl x509 -in certs/signing_key.pem.sign${Variant:++${Variant}} -outform der -out $RPM_BUILD_ROOT%{_datadir}/doc/kernel-keys/$KernelVer/%{signing_key_filename}
+            chmod 0644 $RPM_BUILD_ROOT%{_datadir}/doc/kernel-keys/$KernelVer/%{signing_key_filename}
+        fi
+        %endif
+    fi
+%endif
 
 %if %{with_ipaclones}
     %{log_msg "install IPA clones"}
@@ -2812,6 +2801,11 @@ BuildKernel %make_target %kernel_image %{_use_vdso}
 # and some variables so that the various userspace tools can be built.
 %{log_msg "Initialize userspace tools build environment"}
 InitBuildVars
+# Some tests build also modules, and need Module.symvers
+if ! [[ -e Module.symvers ]] && [[ -f $DevelDir/Module.symvers ]]; then
+    %{log_msg "Found Module.symvers in DevelDir, copying to ."}
+    cp "$DevelDir/Module.symvers" .
+fi
 %endif
 %endif
 
@@ -2944,7 +2938,14 @@ pushd tools/testing/selftests
 %endif
 
 %{log_msg "main selftests compile"}
-%{make} %{?_smp_mflags} ARCH=$Arch V=1 TARGETS="bpf mm livepatch net net/forwarding net/mptcp netfilter tc-testing memfd drivers/net/bonding" SKIP_TARGETS="" $force_targets INSTALL_PATH=%{buildroot}%{_libexecdir}/kselftests VMLINUX_H="${RPM_VMLINUX_H}" install
+%{make} %{?_smp_mflags} ARCH=$Arch V=1 TARGETS="bpf mm net net/forwarding net/mptcp netfilter tc-testing memfd drivers/net/bonding" SKIP_TARGETS="" $force_targets INSTALL_PATH=%{buildroot}%{_libexecdir}/kselftests VMLINUX_H="${RPM_VMLINUX_H}" install
+
+%ifarch %{klptestarches}
+	# kernel livepatching selftest test_modules will build against
+	# /lib/modules/$(shell uname -r)/build tree unless KDIR is set
+	export KDIR=$(realpath $(pwd)/../../..)
+	%{make} %{?_smp_mflags} ARCH=$Arch V=1 TARGETS="livepatch" SKIP_TARGETS="" $force_targets INSTALL_PATH=%{buildroot}%{_libexecdir}/kselftests VMLINUX_H="${RPM_VMLINUX_H}" install || true
+%endif
 
 # 'make install' for bpf is broken and upstream refuses to fix it.
 # Install the needed files manually.
@@ -3937,6 +3938,274 @@ fi\
 #
 #
 %changelog
+* Tue May 07 2024 Jan Stancek <jstancek@redhat.com> [6.9.0-0.rc7.5.el10]
+- Linux 6.9-rc7 (Linus Torvalds)
+- epoll: be better about file lifetimes (Linus Torvalds)
+- EDAC/versal: Do not log total error counts (Shubhrajyoti Datta)
+- EDAC/versal: Check user-supplied data before injecting an error (Shubhrajyoti Datta)
+- EDAC/versal: Do not register for NOC errors (Shubhrajyoti Datta)
+- powerpc/pseries/iommu: LPAR panics during boot up with a frozen PE (Gaurav Batra)
+- powerpc/pseries: make max polling consistent for longer H_CALLs (Nayna Jain)
+- x86/mm: Remove broken vsyscall emulation code from the page fault code (Linus Torvalds)
+- x86/apic: Don't access the APIC when disabling x2APIC (Thomas Gleixner)
+- x86/sev: Add callback to apply RMP table fixups for kexec (Ashish Kalra)
+- x86/e820: Add a new e820 table update helper (Ashish Kalra)
+- softirq: Fix suspicious RCU usage in __do_softirq() (Zqiang)
+- slimbus: qcom-ngd-ctrl: Add timeout for wait operation (Viken Dadhaniya)
+- dyndbg: fix old BUG_ON in >control parser (Jim Cromie)
+- fpga: dfl-pci: add PCI subdevice ID for Intel D5005 card (Peter Colberg)
+- misc/pvpanic-pci: register attributes via pci_driver (Thomas Weißschuh)
+- mei: me: add lunar lake point M DID (Alexander Usyskin)
+- mei: pxp: match against PCI_CLASS_DISPLAY_OTHER (Daniele Ceraolo Spurio)
+- iio:imu: adis16475: Fix sync mode setting (Ramona Gradinariu)
+- iio: accel: mxc4005: Reset chip on probe() and resume() (Hans de Goede)
+- iio: accel: mxc4005: Interrupt handling fixes (Hans de Goede)
+- dt-bindings: iio: health: maxim,max30102: fix compatible check (Javier Carrasco)
+- iio: pressure: Fixes SPI support for BMP3xx devices (Vasileios Amoiridis)
+- iio: pressure: Fixes BME280 SPI driver data (Vasileios Amoiridis)
+- usb: typec: tcpm: Check for port partner validity before consuming it (Badhri Jagan Sridharan)
+- usb: typec: tcpm: enforce ready state when queueing alt mode vdm (RD Babiera)
+- usb: typec: tcpm: unregister existing source caps before re-registration (Amit Sunil Dhamne)
+- usb: typec: tcpm: clear pd_event queue in PORT_RESET (RD Babiera)
+- usb: typec: tcpm: queue correct sop type in tcpm_queue_vdm_unlocked (RD Babiera)
+- usb: Fix regression caused by invalid ep0 maxpacket in virtual SuperSpeed device (Alan Stern)
+- usb: ohci: Prevent missed ohci interrupts (Guenter Roeck)
+- usb: typec: qcom-pmic: fix pdphy start() error handling (Johan Hovold)
+- usb: typec: qcom-pmic: fix use-after-free on late probe errors (Johan Hovold)
+- usb: gadget: f_fs: Fix a race condition when processing setup packets. (Chris Wulff)
+- USB: core: Fix access violation during port device removal (Alan Stern)
+- usb: dwc3: core: Prevent phy suspend during init (Thinh Nguyen)
+- usb: xhci-plat: Don't include xhci.h (Thinh Nguyen)
+- usb: gadget: uvc: use correct buffer size when parsing configfs lists (Ivan Avdeev)
+- usb: gadget: composite: fix OS descriptors w_value logic (Peter Korsgaard)
+- usb: gadget: f_fs: Fix race between aio_cancel() and AIO request complete (Wesley Cheng)
+- Input: amimouse - mark driver struct with __refdata to prevent section mismatch (Uwe Kleine-König)
+- Input: xpad - add support for ASUS ROG RAIKIRI (Vicki Pfau)
+- tracing/probes: Fix memory leak in traceprobe_parse_probe_arg_body() (LuMingYin)
+- eventfs: Have "events" directory get permissions from its parent (Steven Rostedt (Google))
+- eventfs: Do not treat events directory different than other directories (Steven Rostedt (Google))
+- eventfs: Do not differentiate the toplevel events directory (Steven Rostedt (Google))
+- tracefs: Still use mount point as default permissions for instances (Steven Rostedt (Google))
+- tracefs: Reset permissions on remount if permissions are options (Steven Rostedt (Google))
+- eventfs: Free all of the eventfs_inode after RCU (Steven Rostedt (Google))
+- eventfs/tracing: Add callback for release of an eventfs_inode (Steven Rostedt (Google))
+- swiotlb: initialise restricted pool list_head when SWIOTLB_DYNAMIC=y (Will Deacon)
+- clk: samsung: Revert "clk: Use device_get_match_data()" (Marek Szyprowski)
+- clk: sunxi-ng: a64: Set minimum and maximum rate for PLL-MIPI (Frank Oltmanns)
+- clk: sunxi-ng: common: Support minimum and maximum rate (Frank Oltmanns)
+- clk: sunxi-ng: h6: Reparent CPUX during PLL CPUX rate change (Jernej Skrabec)
+- clk: qcom: smd-rpm: Restore msm8976 num_clk (Adam Skladowski)
+- clk: qcom: gdsc: treat optional supplies as optional (Johan Hovold)
+- v6.9-rc6-rt4 (Sebastian Andrzej Siewior)
+- printk: Update the printk queue. (Sebastian Andrzej Siewior)
+- cxl: Fix cxl_endpoint_get_perf_coordinate() support for RCH (Dave Jiang)
+- x86/xen: return a sane initial apic id when running as PV guest (Juergen Gross)
+- x86/xen/smp_pv: Register the boot CPU APIC properly (Thomas Gleixner)
+- efi/unaccepted: touch soft lockup during memory accept (Chen Yu)
+- nvme-tcp: strict pdu pacing to avoid send stalls on TLS (Hannes Reinecke)
+- nvmet: fix nvme status code when namespace is disabled (Sagi Grimberg)
+- nvmet-tcp: fix possible memory leak when tearing down a controller (Sagi Grimberg)
+- nvme: cancel pending I/O if nvme controller is in terminal state (Nilay Shroff)
+- nvmet-auth: replace pr_debug() with pr_err() to report an error. (Maurizio Lombardi)
+- nvmet-auth: return the error code to the nvmet_auth_host_hash() callers (Maurizio Lombardi)
+- nvme: find numa distance only if controller has valid numa id (Nilay Shroff)
+- nvme: fix warn output about shared namespaces without CONFIG_NVME_MULTIPATH (Yi Zhang)
+- ublk: remove segment count and size limits (Uday Shankar)
+- ALSA: hda/realtek: Fix build error without CONFIG_PM (Takashi Iwai)
+- ASoC: meson: axg-tdm: add continuous clock support (Jerome Brunet)
+- ASoC: meson: axg-tdm-interface: manage formatters in trigger (Jerome Brunet)
+- ASoC: meson: axg-card: make links nonatomic (Jerome Brunet)
+- ASoC: meson: axg-fifo: use threaded irq to check periods (Jerome Brunet)
+- ASoC: cs35l56: fix usages of device_get_named_child_node() (Pierre-Louis Bossart)
+- ASoC: da7219-aad: fix usage of device_get_named_child_node() (Pierre-Louis Bossart)
+- ASoC: meson: cards: select SND_DYNAMIC_MINORS (Jerome Brunet)
+- ASoC: rt715-sdca: volume step modification (Jack Yu)
+- ASoC: cs35l56: Avoid static analysis warning of uninitialised variable (Simon Trimmer)
+- ASoC: codecs: wsa881x: set clk_stop_mode1 flag (Srinivas Kandagatla)
+- ASoC: ti: davinci-mcasp: Fix race condition during probe (Joao Paulo Goncalves)
+- ASoC: Intel: avs: Set name of control as in topology (Amadeusz Sławiński)
+- ASoC: SOF: Core: Handle error returned by sof_select_ipc_and_paths (Peter Ujfalusi)
+- ASoC: rt715: add vendor clear control register (Jack Yu)
+- ASoC: cs35l41: Update DSP1RX5/6 Sources for DSP config (Stefan Binding)
+- ASoC: cs35l56: Prevent overwriting firmware ASP config (Richard Fitzgerald)
+- ASoC: cs35l56: Fix unintended bus access while resetting amp (Richard Fitzgerald)
+- ALSA: hda: cs35l56: Exit cache-only after cs35l56_wait_for_firmware_boot() (Richard Fitzgerald)
+- regmap: Add regmap_read_bypassed() (Richard Fitzgerald)
+- ASoC: SOF: ipc4-pcm: Do not reset the ChainDMA if it has not been allocated (Peter Ujfalusi)
+- ASoC: SOF: ipc4-pcm: Introduce generic sof_ipc4_pcm_stream_priv (Peter Ujfalusi)
+- ASoC: SOF: ipc4-pcm: Use consistent name for sof_ipc4_timestamp_info pointer (Peter Ujfalusi)
+- ASoC: SOF: ipc4-pcm: Use consistent name for snd_sof_pcm_stream pointer (Peter Ujfalusi)
+- ASoC: SOF: debug: show firmware/topology prefix/names (Pierre-Louis Bossart)
+- ASoC: SOF: pcm: Restrict DSP D0i3 during S0ix to IPC3 (Ranjani Sridharan)
+- ASoC: SOF: Intel: add default firmware library path for LNL (Pierre-Louis Bossart)
+- ASoC: rt722-sdca: add headset microphone vrefo setting (Jack Yu)
+- ASoC: rt722-sdca: modify channel number to support 4 channels (Jack Yu)
+- ASoC: dt-bindings: rt5645: add cbj sleeve gpio property (Derek Fang)
+- ASoC: rt5645: Fix the electric noise due to the CBJ contacts floating (Derek Fang)
+- ASoC: acp: Support microphone from device Acer 315-24p (end.to.start)
+- ASoC: Intel: bytcr_rt5640: Apply Asus T100TA quirk to Asus T100TAM too (Hans de Goede)
+- ASoC: tegra: Fix DSPK 16-bit playback (Sameer Pujar)
+- ASoC: Intel: avs: Fix debug window description (Cezary Rojewski)
+- ALSA: hda/realtek: Fix conflicting PCI SSID 17aa:386f for Lenovo Legion models (Takashi Iwai)
+- ALSA: hda/realtek - Set GPIO3 to default at S4 state for Thinkpad with ALC1318 (Kailang Yang)
+- ALSA: hda: intel-sdw-acpi: fix usage of device_get_named_child_node() (Pierre-Louis Bossart)
+- ALSA: hda: intel-dsp-config: harden I2C/I2S codec detection (Pierre-Louis Bossart)
+- ALSA: hda/realtek: Fix mute led of HP Laptop 15-da3001TU (Aman Dhoot)
+- ALSA: emu10k1: make E-MU FPGA writes potentially more reliable (Oswald Buddenhagen)
+- ALSA: emu10k1: fix E-MU dock initialization (Oswald Buddenhagen)
+- ALSA: emu10k1: use mutex for E-MU FPGA access locking (Oswald Buddenhagen)
+- ALSA: emu10k1: move the whole GPIO event handling to the workqueue (Oswald Buddenhagen)
+- ALSA: emu10k1: factor out snd_emu1010_load_dock_firmware() (Oswald Buddenhagen)
+- ALSA: emu10k1: fix E-MU card dock presence monitoring (Oswald Buddenhagen)
+- drm/panel: ili9341: Use predefined error codes (Andy Shevchenko)
+- drm/panel: ili9341: Respect deferred probe (Andy Shevchenko)
+- drm/panel: ili9341: Correct use of device property APIs (Andy Shevchenko)
+- drm/vmwgfx: Fix invalid reads in fence signaled events (Zack Rusin)
+- drm/nouveau/gsp: Use the sg allocator for level 2 of radix3 (Lyude Paul)
+- drm/nouveau/firmware: Fix SG_DEBUG error with nvkm_firmware_ctor() (Lyude Paul)
+- drm/imagination: Ensure PVR_MIPS_PT_PAGE_COUNT is never zero (Matt Coster)
+- drm/ttm: Print the memory decryption status just once (Zack Rusin)
+- drm/vmwgfx: Fix Legacy Display Unit (Ian Forbes)
+- drm/xe/display: Fix ADL-N detection (Lucas De Marchi)
+- drm/xe/vm: prevent UAF in rebind_work_func() (Matthew Auld)
+- drm/amd/display: Disable panel replay by default for now (Mario Limonciello)
+- drm/amdgpu: fix doorbell regression (Shashank Sharma)
+- drm/amdkfd: Flush the process wq before creating a kfd_process (Lancelot SIX)
+- drm/amd/display: Disable seamless boot on 128b/132b encoding (Sung Joon Kim)
+- drm/amd/display: Fix DC mode screen flickering on DCN321 (Leo Ma)
+- drm/amd/display: Add VCO speed parameter for DCN31 FPU (Rodrigo Siqueira)
+- drm/amdgpu: once more fix the call oder in amdgpu_ttm_move() v2 (Christian König)
+- drm/amd/display: Allocate zero bw after bw alloc enable (Meenakshikumar Somasundaram)
+- drm/amd/display: Fix incorrect DSC instance for MST (Hersen Wu)
+- drm/amd/display: Atom Integrated System Info v2_2 for DCN35 (Gabe Teeger)
+- drm/amd/display: Add dtbclk access to dcn315 (Swapnil Patel)
+- drm/amd/display: Ensure that dmcub support flag is set for DCN20 (Rodrigo Siqueira)
+- drm/amd/display: Handle Y carry-over in VCP X.Y calculation (George Shen)
+- drm/amdgpu: Fix VRAM memory accounting (Mukul Joshi)
+- spi: fix null pointer dereference within spi_sync (Mans Rullgard)
+- spi: hisi-kunpeng: Delete the dump interface of data registers in debugfs (Devyn Liu)
+- spi: axi-spi-engine: fix version format string (David Lechner)
+- Set DEBUG_INFO_BTF_MODULES for Fedora (Justin M. Forbes)
+- btrfs: set correct ram_bytes when splitting ordered extent (Qu Wenruo)
+- btrfs: take the cleaner_mutex earlier in qgroup disable (Josef Bacik)
+- btrfs: add missing mutex_unlock in btrfs_relocate_sys_chunks() (Dominique Martinet)
+- s390/paes: Reestablish retry loop in paes (Harald Freudenberger)
+- s390/zcrypt: Use EBUSY to indicate temp unavailability (Harald Freudenberger)
+- s390/zcrypt: Handle ep11 cprb return code (Harald Freudenberger)
+- s390/zcrypt: Fix wrong format string in debug feature printout (Harald Freudenberger)
+- s390/cio: Ensure the copied buf is NUL terminated (Bui Quang Minh)
+- s390/vdso: Add CFI for RA register to asm macro vdso_func (Jens Remus)
+- s390/3270: Fix buffer assignment (Sven Schnelle)
+- s390/mm: Fix clearing storage keys for huge pages (Claudio Imbrenda)
+- s390/mm: Fix storage key clearing for guest huge pages (Claudio Imbrenda)
+- xtensa: remove redundant flush_dcache_page and ARCH_IMPLEMENTS_FLUSH_DCACHE_PAGE macros (Barry Song)
+- tty: xtensa/iss: Use min() to fix Coccinelle warning (Thorsten Blum)
+- xtensa: fix MAKE_PC_FROM_RA second argument (Max Filippov)
+- firewire: ohci: fulfill timestamp for some local asynchronous transaction (Takashi Sakamoto)
+- firewire: nosy: ensure user_length is taken into account when fetching packet contents (Thanassis Avgerinos)
+- thermal/debugfs: Prevent use-after-free from occurring after cdev removal (Rafael J. Wysocki)
+- thermal/debugfs: Fix two locking issues with thermal zone debug (Rafael J. Wysocki)
+- thermal/debugfs: Free all thermal zone debug memory on zone removal (Rafael J. Wysocki)
+- MAINTAINERS: mark MYRICOM MYRI-10G as Orphan (Jakub Kicinski)
+- MAINTAINERS: remove Ariel Elior (Jakub Kicinski)
+- net: gro: add flush check in udp_gro_receive_segment (Richard Gobert)
+- net: gro: fix udp bad offset in socket lookup by adding {inner_}network_offset to napi_gro_cb (Richard Gobert)
+- ipv4: Fix uninit-value access in __ip_make_skb() (Shigeru Yoshida)
+- s390/qeth: Fix kernel panic after setting hsuid (Alexandra Winter)
+- vxlan: Pull inner IP header in vxlan_rcv(). (Guillaume Nault)
+- tipc: fix a possible memleak in tipc_buf_append (Xin Long)
+- tipc: fix UAF in error path (Paolo Abeni)
+- rxrpc: Clients must accept conn from any address (Jeffrey Altman)
+- net: core: reject skb_copy(_expand) for fraglist GSO skbs (Felix Fietkau)
+- net: bridge: fix multicast-to-unicast with fraglist GSO (Felix Fietkau)
+- mptcp: ensure snd_nxt is properly initialized on connect (Paolo Abeni)
+- e1000e: change usleep_range to udelay in PHY mdic access (Vitaly Lifshits)
+- net: dsa: mv88e6xxx: Fix number of databases for 88E6141 / 88E6341 (Marek Behún)
+- cxgb4: Properly lock TX queue for the selftest. (Sebastian Andrzej Siewior)
+- rxrpc: Fix using alignmask being zero for __page_frag_alloc_align() (Yunsheng Lin)
+- vxlan: Add missing VNI filter counter update in arp_reduce(). (Guillaume Nault)
+- vxlan: Fix racy device stats updates. (Guillaume Nault)
+- net: qede: use return from qede_parse_actions() (Asbjørn Sloth Tønnesen)
+- net: qede: use return from qede_parse_flow_attr() for flow_spec (Asbjørn Sloth Tønnesen)
+- net: qede: use return from qede_parse_flow_attr() for flower (Asbjørn Sloth Tønnesen)
+- net: qede: sanitize 'rc' in qede_add_tc_flower_fltr() (Asbjørn Sloth Tønnesen)
+- MAINTAINERS: add an explicit entry for YNL (Jakub Kicinski)
+- net: bcmgenet: synchronize UMAC_CMD access (Doug Berger)
+- net: bcmgenet: synchronize use of bcmgenet_set_rx_mode() (Doug Berger)
+- net: bcmgenet: synchronize EXT_RGMII_OOB_CTRL access (Doug Berger)
+- selftests/bpf: Test PROBE_MEM of VSYSCALL_ADDR on x86-64 (Puranjay Mohan)
+- bpf, x86: Fix PROBE_MEM runtime load check (Puranjay Mohan)
+- bpf: verifier: prevent userspace memory access (Puranjay Mohan)
+- xdp: use flags field to disambiguate broadcast redirect (Toke Høiland-Jørgensen)
+- arm32, bpf: Reimplement sign-extension mov instruction (Puranjay Mohan)
+- riscv, bpf: Fix incorrect runtime stats (Xu Kuohai)
+- bpf, arm64: Fix incorrect runtime stats (Xu Kuohai)
+- bpf: Fix a verifier verbose message (Anton Protopopov)
+- bpf, skmsg: Fix NULL pointer dereference in sk_psock_skb_ingress_enqueue (Jason Xing)
+- MAINTAINERS: bpf: Add Lehui and Puranjay as riscv64 reviewers (Björn Töpel)
+- MAINTAINERS: Update email address for Puranjay Mohan (Puranjay Mohan)
+- bpf, kconfig: Fix DEBUG_INFO_BTF_MODULES Kconfig definition (Andrii Nakryiko)
+- Fix a potential infinite loop in extract_user_to_sg() (David Howells)
+- net l2tp: drop flow hash on forward (David Bauer)
+- nsh: Restore skb->{protocol,data,mac_header} for outer header in nsh_gso_segment(). (Kuniyuki Iwashima)
+- octeontx2-af: avoid off-by-one read from userspace (Bui Quang Minh)
+- bna: ensure the copied buf is NUL terminated (Bui Quang Minh)
+- ice: ensure the copied buf is NUL terminated (Bui Quang Minh)
+- redhat: Use redhatsecureboot701 for ppc64le (Jan Stancek)
+- redhat: switch the kernel package to use certs from system-sb-certs (Jan Stancek)
+- redhat: replace redhatsecureboot303 signing key with redhatsecureboot601 (Jan Stancek)
+- redhat: drop certificates that were deprecated after GRUB's BootHole flaw (Jan Stancek)
+- redhat: correct file name of redhatsecurebootca1 (Jan Stancek)
+- redhat: align file names with names of signing keys for ppc and s390 (Jan Stancek)
+- regulator: change devm_regulator_get_enable_optional() stub to return Ok (Matti Vaittinen)
+- regulator: change stubbed devm_regulator_get_enable to return Ok (Matti Vaittinen)
+- regulator: vqmmc-ipq4019: fix module autoloading (Krzysztof Kozlowski)
+- regulator: qcom-refgen: fix module autoloading (Krzysztof Kozlowski)
+- regulator: mt6360: De-capitalize devicetree regulator subnodes (AngeloGioacchino Del Regno)
+- regulator: irq_helpers: duplicate IRQ name (Matti Vaittinen)
+- KVM: selftests: Add test for uaccesses to non-existent vgic-v2 CPUIF (Oliver Upton)
+- KVM: arm64: vgic-v2: Check for non-NULL vCPU in vgic_v2_parse_attr() (Oliver Upton)
+- power: supply: mt6360_charger: Fix of_match for usb-otg-vbus regulator (AngeloGioacchino Del Regno)
+- power: rt9455: hide unused rt9455_boost_voltage_values (Arnd Bergmann)
+- platform/x86: ISST: Add Grand Ridge to HPM CPU list (Srinivas Pandruvada)
+- pinctrl: baytrail: Add pinconf group for uart3 (Hans de Goede)
+- pinctrl: baytrail: Fix selecting gpio pinctrl state (Hans de Goede)
+- pinctrl: renesas: rzg2l: Configure the interrupt type on resume (Claudiu Beznea)
+- pinctrl: renesas: rzg2l: Execute atomically the interrupt configuration (Claudiu Beznea)
+- dt-bindings: pinctrl: renesas,rzg2l-pinctrl: Allow 'input' and 'output-enable' properties (Lad Prabhakar)
+- pinctrl: devicetree: fix refcount leak in pinctrl_dt_to_map() (Zeng Heng)
+- pinctrl: mediatek: paris: Rework support for PIN_CONFIG_{INPUT,OUTPUT}_ENABLE (Chen-Yu Tsai)
+- pinctrl: mediatek: paris: Fix PIN_CONFIG_INPUT_SCHMITT_ENABLE readback (Chen-Yu Tsai)
+- pinctrl: core: delete incorrect free in pinctrl_enable() (Dan Carpenter)
+- pinctrl/meson: fix typo in PDM's pin name (Jan Dakinevich)
+- pinctrl: pinctrl-aspeed-g6: Fix register offset for pinconf of GPIOR-T (Billy Tsai)
+- redhat/configs: Enable CONFIG_DM_VDO in RHEL (Benjamin Marzinski)
+- redhat/configs: Enable DRM_NOUVEAU_GSP_DEFAULT everywhere (Neal Gompa)
+- v6.9-rc6-rt3 (Sebastian Andrzej Siewior)
+- cxgb4: Properly lock TX queue for the selftest. (Sebastian Andrzej Siewior)
+- i915: Disable tracepoints (again). (Sebastian Andrzej Siewior)
+- v6.9-rc6-rt2 (Sebastian Andrzej Siewior)
+- workqueue: Fix divide error in wq_update_node_max_active() (Lai Jiangshan)
+- workqueue: The default node_nr_active should have its max set to max_active (Tejun Heo)
+- workqueue: Fix selection of wake_cpu in kick_pool() (Sven Schnelle)
+- docs/zh_CN: core-api: Update translation of workqueue.rst to 6.9-rc1 (Xingyou Chen)
+- Documentation/core-api: Update events_freezable_power references. (Audra Mitchell)
+- scsi: sd: Only print updates to permanent stream count (John Garry)
+- NFSD: Fix nfsd4_encode_fattr4() crasher (Chuck Lever)
+- nfs: Handle error of rpc_proc_register() in nfs_net_init(). (Kuniyuki Iwashima)
+- SUNRPC: add a missing rpc_stat for TCP TLS (Olga Kornievskaia)
+- bcachefs: fix integer conversion bug (Kent Overstreet)
+- bcachefs: btree node scan now fills in sectors_written (Kent Overstreet)
+- bcachefs: Remove accidental debug assert (Kent Overstreet)
+- erofs: reliably distinguish block based and fscache mode (Christian Brauner)
+- erofs: get rid of erofs_fs_context (Baokun Li)
+- erofs: modify the error message when prepare_ondemand_read failed (Hongbo Li)
+- bounds: Use the right number of bits for power-of-two CONFIG_NR_CPUS (Matthew Wilcox (Oracle))
+- kernel.spec: adjust for livepatching kselftests (Joe Lawrence)
+- redhat/configs: remove CONFIG_TEST_LIVEPATCH (Joe Lawrence)
+- Turn on CONFIG_RANDOM_KMALLOC_CACHES for Fedora (Justin M. Forbes)
+- Set Fedora configs for 6.9 (Justin M. Forbes)
+
 * Tue Apr 30 2024 Jan Stancek <jstancek@redhat.com> [6.9.0-0.rc6.4.el10]
 - Linux 6.9-rc6 (Linus Torvalds)
 - sched/isolation: Fix boot crash when maxcpus < first housekeeping CPU (Oleg Nesterov)
