@@ -2587,6 +2587,17 @@ Resolves:
 - Linux v6.9.0-0.rc0.855684c7d938
 Resolves: rhbz#1471185, rhbz#1495307, rhbz#1509329, rhbz#1518076, rhbz#1518874, rhbz#1519554, rhbz#1546831, rhbz#1559877, rhbz#1561171, rhbz#1563590, rhbz#1565704, rhbz#1565717, rhbz#1572321, rhbz#1574502, rhbz#1590829, rhbz#1595918, rhbz#1598366, rhbz#1602033, rhbz#1609604, rhbz#1610493, rhbz#1613522, rhbz#1638087, rhbz#1652256, rhbz#1652266, rhbz#1663728, rhbz#1670017, rhbz#1722136, rhbz#1730649, rhbz#1802694, rhbz#1810301, rhbz#1821565, rhbz#1831065, rhbz#1855161, rhbz#1856174, rhbz#1856176, rhbz#1858592, rhbz#1858594, rhbz#1858596, rhbz#1858599, rhbz#1869674, rhbz#1871130, rhbz#1876435, rhbz#1876436, rhbz#1876977, rhbz#1877192, rhbz#1880486, rhbz#1890304, rhbz#1903201, rhbz#1915073, rhbz#1915290, rhbz#1930649, rhbz#1939095, rhbz#1940075, rhbz#1940794, rhbz#1943423, rhbz#1945002, rhbz#1945179, rhbz#1945477, rhbz#1947240, rhbz#1948340, rhbz#1952426, rhbz#1952863, rhbz#1953486, rhbz#1956988, rhbz#1957210, rhbz#1957219, rhbz#1957305, rhbz#1957636, rhbz#1957819, rhbz#1961178, rhbz#1962936, rhbz#1964537, rhbz#1967640, rhbz#1972795, rhbz#1976270, rhbz#1976835, rhbz#1976877, rhbz#1976884, rhbz#1977056, rhbz#1977529, rhbz#1978539, rhbz#1979379, rhbz#1981406, rhbz#1983298, rhbz#1986223, rhbz#1988254, rhbz#1988384, rhbz#1990040, rhbz#1993393, rhbz#1994858, rhbz#1998953, rhbz#2000835, rhbz#2002344, rhbz#2004233, rhbz#2004821, rhbz#2006813, rhbz#2007430, rhbz#2012226, rhbz#2014492, rhbz#2019377, rhbz#2020132, rhbz#2022578, rhbz#2023782, rhbz#2024595, rhbz#2025985, rhbz#2026319, rhbz#2027506, rhbz#2031547, rhbz#2032758, rhbz#2034670, rhbz#2038999, rhbz#2040643, rhbz#2041184, rhbz#2041186, rhbz#2041365, rhbz#2041990, rhbz#2042240, rhbz#2042241, rhbz#2043141, rhbz#2044155, rhbz#2053836, rhbz#2054579, rhbz#2062054, rhbz#2062909, rhbz#2071969, rhbz#2089765, rhbz#2115876, rhbz#2120968, rhbz#2122595, rhbz#2140017, rhbz#2142658, rhbz#2149273, rhbz#2153073, rhbz#2166911, rhbz#2188441, rhbz#2208834, rhbz#2216678, rhbz#2227793, rhbz#2231407, rhbz#2233269
 
+* Mon May 20 2024 Jan Stancek <jstancek@redhat.com> [6.9.0-7.el10]
+- v6.9-rt5 (Sebastian Andrzej Siewior)
+- configs: move CONFIG_BLK_DEV_UBLK into rhel/configs/generic (Ming Lei)
+- configs: move CONFIG_BLK_SED_OPAL into redhat/configs/common/generic (Ming Lei)
+- RHEL-21097: rhel: aarch64 stop blocking a number of HW sensors (Peter Robinson)
+- redhat/configs: enable RTL8822BU for rhel (Jose Ignacio Tornos Martinez)
+- redhat/configs: remove CONFIG_DMA_PERNUMA_CMA and switch CONFIG_DMA_NUMA_CMA off (Jerry Snitselaar)
+- redhat: add IMA certificates (Jan Stancek)
+- redhat/kernel.spec: fix typo in move_kmod_list() variable (Jan Stancek)
+Resolves: 
+
 * Tue May 14 2024 Jan Stancek <jstancek@redhat.com> [6.9.0-6.el10]
 - Linux 6.9 (Linus Torvalds)
 - selftests/harness: Handle TEST_F()'s explicit exit codes (Mickaël Salaün)
@@ -2762,7 +2773,7 @@ Resolves: rhbz#1471185, rhbz#1495307, rhbz#1509329, rhbz#1518076, rhbz#1518874, 
 - redhat: move amd-pstate-ut.ko to modules-internal (Jan Stancek)
 - redhat/configs: enable CONFIG_LEDS_TRIGGER_NETDEV also for RHEL (Michal Schmidt) [RHEL-32110]
 - redhat/configs: Remove CONFIG_AMD_IOMMU_V2 (Jerry Snitselaar)
-Resolves: RHEL-23931, RHEL-32110
+Resolves: RHEL-29722 
 
 * Tue May 07 2024 Jan Stancek <jstancek@redhat.com> [6.9.0-0.rc7.5.el10]
 - Linux 6.9-rc7 (Linus Torvalds)
@@ -4301,6 +4312,17 @@ Resolves: RHEL-29722
 - net: Remove conditional threaded-NAPI wakeup based on task state. (Sebastian Andrzej Siewior)
 - Linux v6.9.0-0.rc2
 Resolves: RHEL-29722
+
+* Mon May 20 2024 Jan Stancek <jstancek@redhat.com> [6.9.0-7.el10]
+- v6.9-rt5 (Sebastian Andrzej Siewior)
+- configs: move CONFIG_BLK_DEV_UBLK into rhel/configs/generic (Ming Lei)
+- configs: move CONFIG_BLK_SED_OPAL into redhat/configs/common/generic (Ming Lei)
+- RHEL-21097: rhel: aarch64 stop blocking a number of HW sensors (Peter Robinson)
+- redhat/configs: enable RTL8822BU for rhel (Jose Ignacio Tornos Martinez)
+- redhat/configs: remove CONFIG_DMA_PERNUMA_CMA and switch CONFIG_DMA_NUMA_CMA off (Jerry Snitselaar)
+- redhat: add IMA certificates (Jan Stancek)
+- redhat/kernel.spec: fix typo in move_kmod_list() variable (Jan Stancek)
+Resolves: RHEL-29722 
 
 * Tue May 14 2024 Jan Stancek <jstancek@redhat.com> [6.9.0-6.el10]
 - Linux 6.9 (Linus Torvalds)

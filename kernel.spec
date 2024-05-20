@@ -163,15 +163,15 @@ Summary: The Linux kernel
 %define specrpmversion 6.9.0
 %define specversion 6.9.0
 %define patchversion 6.9
-%define pkgrelease 6
+%define pkgrelease 7
 %define kversion 6
-%define tarfile_release 6.9.0-6.el10
+%define tarfile_release 6.9.0-7.el10
 # This is needed to do merge window version magic
 %define patchlevel 9
 # This allows pkg_release to have configurable %%{?dist} tag
-%define specrelease 6%{?buildid}%{?dist}
+%define specrelease 7%{?buildid}%{?dist}
 # This defines the kabi tarball version
-%define kabiversion 6.9.0-6.el10
+%define kabiversion 6.9.0-7.el10
 
 # If this variable is set to 1, a bpf selftests build failure will cause a
 # fatal kernel package build error
@@ -920,6 +920,17 @@ Source87: flavors
 Source100: rheldup3.x509
 Source101: rhelkpatch1.x509
 Source102: nvidiagpuoot001.x509
+Source103: rhelimaca1.x509
+Source104: rhelima.x509
+Source105: rhelima_centos.x509
+
+%if 0%{?centos}
+%define ima_signing_cert %{SOURCE105}
+%else
+%define ima_signing_cert %{SOURCE104}
+%endif
+
+%define ima_cert_name ima.cer
 
 Source200: check-kabi
 
@@ -1895,7 +1906,8 @@ done
 openssl x509 -inform der -in %{SOURCE100} -out rheldup3.pem
 openssl x509 -inform der -in %{SOURCE101} -out rhelkpatch1.pem
 openssl x509 -inform der -in %{SOURCE102} -out nvidiagpuoot001.pem
-cat rheldup3.pem rhelkpatch1.pem nvidiagpuoot001.pem > ../certs/rhel.pem
+openssl x509 -inform der -in %{SOURCE103} -out rhelimaca1.pem
+cat rheldup3.pem rhelkpatch1.pem nvidiagpuoot001.pem rhelimaca1.pem > ../certs/rhel.pem
 %if %{signkernel}
 %ifarch s390x ppc64le
 openssl x509 -inform der -in %{secureboot_ca_0} -out secureboot.pem
@@ -2577,7 +2589,7 @@ BuildKernel() {
         local module_list="$1"
         local subdir_name="$2"
 
-        mkdir -p "$RPM_BUILD_ROOT/lib/modules/$KernelVer/$subdirname"
+        mkdir -p "$RPM_BUILD_ROOT/lib/modules/$KernelVer/$subdir_name"
 
         set +x
         while read -r kmod; do
@@ -2716,6 +2728,11 @@ BuildKernel() {
         install -m 0644 %{secureboot_key_0} $RPM_BUILD_ROOT%{_datadir}/doc/kernel-keys/$KernelVer/%{signing_key_filename}
     fi
     %endif
+%endif
+
+%if 0%{?rhel}
+    # Red Hat IMA code-signing cert, which is used to authenticate package files
+    install -m 0644 %{ima_signing_cert} $RPM_BUILD_ROOT%{_datadir}/doc/kernel-keys/$KernelVer/%{ima_cert_name}
 %endif
 
 %if %{signmodules}
@@ -3942,6 +3959,16 @@ fi\
 #
 #
 %changelog
+* Mon May 20 2024 Jan Stancek <jstancek@redhat.com> [6.9.0-7.el10]
+- v6.9-rt5 (Sebastian Andrzej Siewior)
+- configs: move CONFIG_BLK_DEV_UBLK into rhel/configs/generic (Ming Lei)
+- configs: move CONFIG_BLK_SED_OPAL into redhat/configs/common/generic (Ming Lei)
+- RHEL-21097: rhel: aarch64 stop blocking a number of HW sensors (Peter Robinson)
+- redhat/configs: enable RTL8822BU for rhel (Jose Ignacio Tornos Martinez)
+- redhat/configs: remove CONFIG_DMA_PERNUMA_CMA and switch CONFIG_DMA_NUMA_CMA off (Jerry Snitselaar)
+- redhat: add IMA certificates (Jan Stancek)
+- redhat/kernel.spec: fix typo in move_kmod_list() variable (Jan Stancek)
+
 * Tue May 14 2024 Jan Stancek <jstancek@redhat.com> [6.9.0-6.el10]
 - Linux 6.9 (Linus Torvalds)
 - selftests/harness: Handle TEST_F()'s explicit exit codes (Mickaël Salaün)
