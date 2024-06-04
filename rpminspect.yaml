@@ -29,7 +29,7 @@ emptyrpm:
 patches:
     ignore_list:
         - linux-kernel-test.patch
-        - patch-6.9-redhat.patch
+        - patch-6.10-redhat.patch
         - patch-%{patchversion}-redhat.patch
 
 runpath:
@@ -44,5 +44,10 @@ debuginfo:
 
 elf:
     ignore:
+        - /usr/libexec/kselftests/*
         - /usr/libexec/perf-core/tests/shell/coresight/*
         - /usr/lib/debug/usr/libexec/perf-core/tests/shell/coresight/*
+
+annocheck:
+    ignore:
+        - /usr/libexec/kselftests/*
