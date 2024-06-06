@@ -163,15 +163,15 @@ Summary: The Linux kernel
 %define specrpmversion 6.10.0
 %define specversion 6.10.0
 %define patchversion 6.10
-%define pkgrelease 0.rc2.8
+%define pkgrelease 0.rc2.9
 %define kversion 6
-%define tarfile_release 6.10.0-0.rc2.8.el10
+%define tarfile_release 6.10.0-0.rc2.9.el10
 # This is needed to do merge window version magic
 %define patchlevel 10
 # This allows pkg_release to have configurable %%{?dist} tag
-%define specrelease 0.rc2.8%{?buildid}%{?dist}
+%define specrelease 0.rc2.9%{?buildid}%{?dist}
 # This defines the kabi tarball version
-%define kabiversion 6.10.0-0.rc2.8.el10
+%define kabiversion 6.10.0-0.rc2.9.el10
 
 # If this variable is set to 1, a bpf selftests build failure will cause a
 # fatal kernel package build error
@@ -2611,6 +2611,7 @@ BuildKernel() {
 %else
         UKI_secureboot_name=redhatsecureboot504
 %endif
+        UKI_secureboot_cert=%{_datadir}/pki/sb-certs/secureboot-uki-virt-%{_arch}.cer
 
         %pesign -s -i $KernelUnifiedImage -o $KernelUnifiedImage.signed -a %{secureboot_ca_0} -c $UKI_secureboot_cert -n $UKI_secureboot_name
 # 0%{?fedora}%{?eln}
@@ -2713,7 +2714,7 @@ BuildKernel() {
         create_module_file_list "kernel" ../modules-core.list ../kernel${Variant:+-${Variant}}-modules-core.list 1
         create_module_file_list "kernel" ../modules.list ../kernel${Variant:+-${Variant}}-modules.list 0
         create_module_file_list "internal" ../modules-internal.list ../kernel${Variant:+-${Variant}}-modules-internal.list 0
-        create_module_file_list "extra" ../modules-extra.list ../kernel${Variant:+-${Variant}}-modules-extra.list 0
+        create_module_file_list "kernel" ../modules-extra.list ../kernel${Variant:+-${Variant}}-modules-extra.list 0
         if [[ "$Variant" == "rt" || "$Variant" == "rt-debug" ]]; then
             create_module_file_list "kvm" ../modules-rt-kvm.list ../kernel${Variant:+-${Variant}}-modules-rt-kvm.list 0
         fi
@@ -4019,6 +4020,111 @@ fi\
 #
 #
 %changelog
+* Thu Jun 06 2024 Patrick Talbert <ptalbert@redhat.com> [6.10.0-0.rc2.9.el10]
+- v6.10-rc2-rt3 (Sebastian Andrzej Siewior)
+- printk: Update the printk series. (Sebastian Andrzej Siewior)
+- tcp: move inet_twsk_schedule helper out of header (Florian Westphal)
+- net: tcp: un-pin the tw_timer (Florian Westphal)
+- net: tcp/dccp: prepare for tw_timer un-pinning (Valentin Schneider)
+- net: Move per-CPU flush-lists to bpf_net_context on PREEMPT_RT. (Sebastian Andrzej Siewior)
+- net: Reference bpf_redirect_info via task_struct on PREEMPT_RT. (Sebastian Andrzej Siewior)
+- net: Use nested-BH locking for bpf_scratchpad. (Sebastian Andrzej Siewior)
+- seg6: Use nested-BH locking for seg6_bpf_srh_states. (Sebastian Andrzej Siewior)
+- lwt: Don't disable migration prio invoking BPF. (Sebastian Andrzej Siewior)
+- dev: Use nested-BH locking for softnet_data.process_queue. (Sebastian Andrzej Siewior)
+- dev: Remove PREEMPT_RT ifdefs from backlog_lock.*(). (Sebastian Andrzej Siewior)
+- net: softnet_data: Make xmit.recursion per task. (Sebastian Andrzej Siewior)
+- netfilter: br_netfilter: Use nested-BH locking for brnf_frag_data_storage. (Sebastian Andrzej Siewior)
+- net/ipv4: Use nested-BH locking for ipv4_tcp_sk. (Sebastian Andrzej Siewior)
+- net/tcp_sigpool: Use nested-BH locking for sigpool_scratch. (Sebastian Andrzej Siewior)
+- net: Use nested-BH locking for napi_alloc_cache. (Sebastian Andrzej Siewior)
+- net: Use __napi_alloc_frag_align() instead of open coding it. (Sebastian Andrzej Siewior)
+- locking/local_lock: Add local nested BH locking infrastructure. (Sebastian Andrzej Siewior)
+- locking/local_lock: Introduce guard definition for local_lock. (Sebastian Andrzej Siewior)
+- thermal: trip: Trigger trip down notifications when trips involved in mitigation become invalid (Rafael J. Wysocki)
+- thermal: core: Introduce thermal_trip_crossed() (Rafael J. Wysocki)
+- thermal/debugfs: Allow tze_seq_show() to print statistics for invalid trips (Rafael J. Wysocki)
+- thermal/debugfs: Print initial trip temperature and hysteresis in tze_seq_show() (Rafael J. Wysocki)
+- PNP: Hide pnp_bus_type from the non-PNP code (Andy Shevchenko)
+- PNP: Make dev_is_pnp() to be a function and export it for modules (Andy Shevchenko)
+- ACPI: APEI: EINJ: Fix einj_dev release leak (Dan Williams)
+- ACPI: EC: Avoid returning AE_OK on errors in address space handler (Armin Wolf)
+- ACPI: EC: Abort address space access upon error (Armin Wolf)
+- ACPI: AC: Properly notify powermanagement core about changes (Thomas Weißschuh)
+- cpufreq: intel_pstate: Fix unchecked HWP MSR access (Srinivas Pandruvada)
+- cpufreq: amd-pstate: Fix the inconsistency in max frequency units (Dhananjay Ugwekar)
+- cpufreq: amd-pstate: remove global header file (Arnd Bergmann)
+- tools/power/cpupower: Fix Pstate frequency reporting on AMD Family 1Ah CPUs (Dhananjay Ugwekar)
+- btrfs: ensure fast fsync waits for ordered extents after a write failure (Filipe Manana)
+- bcachefs: Fix trans->locked assert (Kent Overstreet)
+- bcachefs: Rereplicate now moves data off of durability=0 devices (Kent Overstreet)
+- bcachefs: Fix GFP_KERNEL allocation in break_cycle() (Kent Overstreet)
+- i2c: Remove I2C_CLASS_SPD (Heiner Kallweit)
+- i2c: synquacer: Remove a clk reference from struct synquacer_i2c (Christophe JAILLET)
+- tpm: Switch to new Intel CPU model defines (Tony Luck)
+- tpm_tis: Do *not* flush uninitialized work (Jan Beulich)
+- KVM: x86/mmu: Don't save mmu_invalidate_seq after checking private attr (Tao Su)
+- KVM: arm64: Ensure that SME controls are disabled in protected mode (Fuad Tabba)
+- KVM: arm64: Refactor CPACR trap bit setting/clearing to use ELx format (Fuad Tabba)
+- KVM: arm64: Consolidate initializing the host data's fpsimd_state/sve in pKVM (Fuad Tabba)
+- KVM: arm64: Eagerly restore host fpsimd/sve state in pKVM (Fuad Tabba)
+- KVM: arm64: Allocate memory mapped at hyp for host sve state in pKVM (Fuad Tabba)
+- KVM: arm64: Specialize handling of host fpsimd state on trap (Fuad Tabba)
+- KVM: arm64: Abstract set/clear of CPTR_EL2 bits behind helper (Fuad Tabba)
+- KVM: arm64: Fix prototype for __sve_save_state/__sve_restore_state (Fuad Tabba)
+- KVM: arm64: Reintroduce __sve_save_state (Fuad Tabba)
+- KVM: arm64: nv: Expose BTI and CSV_frac to a guest hypervisor (Marc Zyngier)
+- KVM: arm64: nv: Fix relative priorities of exceptions generated by ERETAx (Marc Zyngier)
+- KVM: arm64: AArch32: Fix spurious trapping of conditional instructions (Marc Zyngier)
+- KVM: arm64: Allow AArch32 PSTATE.M to be restored as System mode (Marc Zyngier)
+- KVM: arm64: Fix AArch32 register narrowing on userspace write (Marc Zyngier)
+- RISC-V: KVM: Fix incorrect reg_subtype labels in kvm_riscv_vcpu_set_reg_isa_ext function (Quan Zhou)
+- RISC-V: KVM: No need to use mask when hart-index-bit is 0 (Yong-Xuan Wang)
+- KVM: x86: Drop support for hand tuning APIC timer advancement from userspace (Sean Christopherson)
+- KVM: SEV-ES: Delegate LBR virtualization to the processor (Ravi Bangoria)
+- KVM: SEV-ES: Disallow SEV-ES guests when X86_FEATURE_LBRV is absent (Ravi Bangoria)
+- KVM: SEV-ES: Prevent MSR access post VMSA encryption (Nikunj A Dadhania)
+- KVM: SVM: WARN on vNMI + NMI window iff NMIs are outright masked (Sean Christopherson)
+- KVM: x86: Force KVM_WERROR if the global WERROR is enabled (Sean Christopherson)
+- KVM: x86: Disable KVM_INTEL_PROVE_VE by default (Sean Christopherson)
+- KVM: VMX: Enumerate EPT Violation #VE support in /proc/cpuinfo (Sean Christopherson)
+- KVM: x86/mmu: Print SPTEs on unexpected #VE (Sean Christopherson)
+- KVM: VMX: Dump VMCS on unexpected #VE (Sean Christopherson)
+- KVM: x86/mmu: Add sanity checks that KVM doesn't create EPT #VE SPTEs (Sean Christopherson)
+- KVM: nVMX: Always handle #VEs in L0 (never forward #VEs from L2 to L1) (Sean Christopherson)
+- KVM: nVMX: Initialize #VE info page for vmcs02 when proving #VE support (Sean Christopherson)
+- KVM: VMX: Don't kill the VM on an unexpected #VE (Sean Christopherson)
+- KVM: x86/mmu: Use SHADOW_NONPRESENT_VALUE for atomic zap in TDP MMU (Isaku Yamahata)
+- of: property: Fix fw_devlink handling of interrupt-map (Marc Zyngier)
+- of/irq: Factor out parsing of interrupt-map parent phandle+args from of_irq_parse_raw() (Rob Herring (Arm))
+- dt-bindings: arm: stm32: st,mlahb: Drop spurious "reg" property from example (Rob Herring (Arm))
+- dt-bindings: arm: sunxi: Fix incorrect '-' usage (Rob Herring (Arm))
+- of: of_test: add MODULE_DESCRIPTION() (Jeff Johnson)
+- redhat: add missing UKI_secureboot_cert hunk (Patrick Talbert)
+- v6.10-rc2-rt2 (Sebastian Andrzej Siewior)
+- selftests/futex: don't pass a const char* to asprintf(3) (John Hubbard)
+- selftests/futex: don't redefine .PHONY targets (all, clean) (John Hubbard)
+- selftests/tracing: Fix event filter test to retry up to 10 times (Masami Hiramatsu (Google))
+- selftests/futex: pass _GNU_SOURCE without a value to the compiler (John Hubbard)
+- selftests/overlayfs: Fix build error on ppc64 (Michael Ellerman)
+- selftests/openat2: Fix build warnings on ppc64 (Michael Ellerman)
+- selftests: cachestat: Fix build warnings on ppc64 (Michael Ellerman)
+- tracing/selftests: Fix kprobe event name test for .isra. functions (Steven Rostedt (Google))
+- selftests/ftrace: Update required config (Masami Hiramatsu (Google))
+- selftests/ftrace: Fix to check required event file (Masami Hiramatsu (Google))
+- kselftest/alsa: Ensure _GNU_SOURCE is defined (Mark Brown)
+- redhat/kernel.spec: keep extra modules in original directories (Jan Stancek)
+- cxl/region: Fix memregion leaks in devm_cxl_add_region() (Li Zhijian)
+- cxl/test: Add missing vmalloc.h for tools/testing/cxl/test/mem.c (Dave Jiang)
+- LoongArch: Fix GMAC's phy-mode definitions in dts (Huacai Chen)
+- LoongArch: Override higher address bits in JUMP_VIRT_ADDR (Jiaxun Yang)
+- LoongArch: Fix entry point in kernel image header (Jiaxun Yang)
+- LoongArch: Add all CPUs enabled by fdt to NUMA node 0 (Jiaxun Yang)
+- LoongArch: Fix built-in DTB detection (Jiaxun Yang)
+- LoongArch: Remove CONFIG_ACPI_TABLE_UPGRADE in platform_init() (Tiezhu Yang)
+- redhat/configs: Move CONFIG_BLK_CGROUP_IOCOST=y to common/generic (Waiman Long)
+- Linux v6.10.0-0.rc2
+
 * Tue Jun 04 2024 Jan Stancek <jstancek@redhat.com> [6.10.0-0.rc2.8.el10]
 - redhat: regenerate test-data (Jan Stancek) [RHEL-29722]
 - redhat: rpminspect.yaml: more tests to ignore selftests (Jan Stancek)
