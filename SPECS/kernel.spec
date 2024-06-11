@@ -37,7 +37,7 @@
 Name: kernel
 License: GPLv2
 Version: 4.19.19
-Release: %{?xsrel}.1%{?dist}
+Release: %{?xsrel}.2%{?dist}
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
@@ -668,6 +668,10 @@ Patch582: 0011-Documentation-auxiliary_bus-Clarify-the-release-of-d.patch
 Patch583: 0012-Documentation-auxiliary_bus-Move-the-text-into-the-c.patch
 Patch584: 0013-CP-41018-Make-CONFIG_AUXILIARY_BUS-y-work.patch
 Patch585: abi-version.patch
+
+# XCP-ng patches
+Patch1000: ceph.patch
+
 %if %{do_kabichk}
 Source3: check-kabi
 Source4: Module.kabi
@@ -996,6 +1000,9 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Thu Jun 06 2024 Petr Bena <benapetr@gmail.com> - 4.19.19-8.0.33.2
+- Integrated ceph code from kernel 4.19.295
+
 * Tue Apr 09 2024 Samuel Verschelde <stormi-xcp@ylix.fr> - 4.19.19-8.0.33.1
 - Sync with 4.19.19-8.0.33
 - *** Upstream changelog ***
