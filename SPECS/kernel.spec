@@ -37,7 +37,7 @@
 Name: kernel
 License: GPLv2
 Version: 4.19.19
-Release: %{?xsrel}.1%{?dist}
+Release: %{?xsrel}.2%{?dist}
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
@@ -678,6 +678,7 @@ Source5: prepare-build
 
 # XCP-ng patches
 Patch1000: ceph.patch
+Patch1001: tg3-v4.19.315.patch
 
 %description
 The kernel package contains the Linux kernel (vmlinuz), the core of any
@@ -1001,6 +1002,9 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Mon Jun 24 2024 Thierry Escande <thierry.escande@vates.tech> - 4.19.19-8.0.34.2
+- Backport tg3 driver code from kernel 4.19.315
+
 * Tue Jun 18 2024 Samuel Verschelde <stormi-xcp@ylix.fr> - 4.19.19-8.0.34.1
 - Rebase on 4.19.19-8.0.34
 - *** Upstream changelog ***
