@@ -1,0 +1,82 @@
+From a892b12393afb74c397dc752eaba1e96e2702303 Mon Sep 17 00:00:00 2001
+From: Andreas Gruenbacher <agruenba@redhat.com>
+Date: Wed, 2 Feb 2022 11:00:48 +0100
+Subject: [PATCH 1/1] gfs2: Expect -EBUSY after canceling dlm locking requests
+
+Due to the asynchronous nature of the dlm api, when we request a pending
+locking request to be canceled with dlm_unlock(DLM_LKF_CANCEL), the
+locking request will either complete before it could be canceled, or the
+cancellation will succeed.  In either case, gdlm_ast will be called once
+and the status will indicate the outcome of the locking request, with
+-DLM_ECANCEL indicating a canceled request.
+
+Inside dlm, when a locking request completes before its cancel request
+could be processed, gdlm_ast will be called, but the lock will still be
+considered busy until a DLM_MSG_CANCEL_REPLY message completes the
+cancel request.  During that time, successive dlm_lock() or dlm_unlock()
+requests for that lock will return -EBUSY.  In other words, waiting for
+the gdlm_ast call before issuing the next locking request is not enough.
+There is no way of waiting for a cancel request to actually complete,
+either.
+
+We rarely cancel locking requests, but when we do, we don't know when
+the next locking request for that lock will occur.  This means that any
+dlm_lock() or dlm_unlock() call can potentially return -EBUSY.  When
+that happens, this patch simply repeats the request after a short pause.
+
+This workaround could be improved upon by tracking for which dlm locks
+cancel requests have been issued, but that isn't strictly necessary and
+it would complicate the code.  We haven't seen -EBUSY errors from dlm
+without cancel requests.
+
+Signed-off-by: Andreas Gruenbacher <agruenba@redhat.com>
+---
+ fs/gfs2/lock_dlm.c | 15 ++++++++++++++-
+ 1 file changed, 14 insertions(+), 1 deletion(-)
+
+diff --git a/fs/gfs2/lock_dlm.c b/fs/gfs2/lock_dlm.c
+index 50578f881e6d..2559a79cf14b 100644
+--- a/fs/gfs2/lock_dlm.c
++++ b/fs/gfs2/lock_dlm.c
+@@ -261,6 +261,7 @@ static int gdlm_lock(struct gfs2_glock *gl, unsigned int req_state,
+ 	int req;
+ 	u32 lkf;
+ 	char strname[GDLM_STRNAME_BYTES] = "";
++	int error;
+ 
+ 	req = make_mode(gl->gl_name.ln_sbd, req_state);
+ 	lkf = make_flags(gl, flags, req);
+@@ -279,8 +280,14 @@ static int gdlm_lock(struct gfs2_glock *gl, unsigned int req_state,
+ 	 * Submit the actual lock request.
+ 	 */
+ 
+-	return dlm_lock(ls->ls_dlm, req, &gl->gl_lksb, lkf, strname,
++again:
++	error = dlm_lock(ls->ls_dlm, req, &gl->gl_lksb, lkf, strname,
+ 			GDLM_STRNAME_BYTES - 1, 0, gdlm_ast, gl, gdlm_bast);
++	if (error == -EBUSY) {
++		msleep(20);
++		goto again;
++	}
++	return error;
+ }
+ 
+ static void gdlm_put_lock(struct gfs2_glock *gl)
+@@ -312,8 +319,14 @@ static void gdlm_put_lock(struct gfs2_glock *gl)
+ 		return;
+ 	}
+ 
++again:
+ 	error = dlm_unlock(ls->ls_dlm, gl->gl_lksb.sb_lkid, DLM_LKF_VALBLK,
+ 			   NULL, gl);
++	if (error == -EBUSY) {
++		msleep(20);
++		goto again;
++	}
++
+ 	if (error) {
+ 		fs_err(sdp, "gdlm_unlock %x,%llx err=%d\n",
+ 		       gl->gl_name.ln_type,
+-- 
+2.34.1
+
