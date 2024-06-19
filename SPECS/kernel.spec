@@ -1001,7 +1001,7 @@ fi
 %{?_cov_results_package}
 
 %changelog
-* Tue Jun 18 Samuel Verschelde <stormi-xcp@ylix.fr> - 4.19.19-8.0.34.1
+* Tue Jun 18 2024 Samuel Verschelde <stormi-xcp@ylix.fr> - 4.19.19-8.0.34.1
 - Rebase on 4.19.19-8.0.34
 - *** Upstream changelog ***
 - * Thu Feb 29 2024 Chunjie Zhu <chunjie.zhu@cloud.com> - 4.19.19-8.0.34
