@@ -163,15 +163,15 @@ Summary: The Linux kernel
 %define specrpmversion 6.10.0
 %define specversion 6.10.0
 %define patchversion 6.10
-%define pkgrelease 0.rc5.12
+%define pkgrelease 0.rc6.13
 %define kversion 6
-%define tarfile_release 6.10.0-0.rc5.12.el10
+%define tarfile_release 6.10.0-0.rc6.13.el10
 # This is needed to do merge window version magic
 %define patchlevel 10
 # This allows pkg_release to have configurable %%{?dist} tag
-%define specrelease 0.rc5.12%{?buildid}%{?dist}
+%define specrelease 0.rc6.13%{?buildid}%{?dist}
 # This defines the kabi tarball version
-%define kabiversion 6.10.0-0.rc5.12.el10
+%define kabiversion 6.10.0-0.rc6.13.el10
 
 # If this variable is set to 1, a bpf selftests build failure will cause a
 # fatal kernel package build error
@@ -2149,6 +2149,19 @@ BuildKernel() {
     rm -f vmlinux.o .tmp_vmlinux.btf
 
     %{log_msg "Install files to RPM_BUILD_ROOT"}
+
+    # Comment out specific config settings that may use resources not available
+    # to the end user so that the packaged config file can be easily reused with
+    # upstream make targets
+    %if %{signkernel}%{signmodules}
+      sed -i -e '/^CONFIG_SYSTEM_TRUSTED_KEYS/{
+        i\# The kernel was built with
+        s/^/# /
+        a\# We are resetting this value to facilitate local builds
+        a\CONFIG_SYSTEM_TRUSTED_KEYS=""
+        }' .config
+    %endif
+
     # Start installing the results
     install -m 644 .config $RPM_BUILD_ROOT/boot/config-$KernelVer
     install -m 644 .config $RPM_BUILD_ROOT/lib/modules/$KernelVer/config
@@ -2664,25 +2677,28 @@ BuildKernel() {
         local absolute_file_list="$3"
         # if 1, this adds also all kmod directories to absolute_file_list
         local add_all_dirs="$4"
+        local run_mod_deny="$5"
 
-        if [ "$module_subdir" == "kernel" ]; then
-            # make kmod paths absolute
-            sed -e 's|^kernel/|/lib/modules/'$KernelVer'/kernel/|' %{?zipsed} $relative_kmod_list > $absolute_file_list
-        else
+        if [ "$module_subdir" != "kernel" ]; then
             # move kmods into subdirs if needed (internal, partner, extra,..)
             move_kmod_list $relative_kmod_list $module_subdir
-            # make kmod paths absolute
-            sed -e 's|^kernel/|/lib/modules/'$KernelVer'/'$module_subdir'/|' $relative_kmod_list > $absolute_file_list
+        fi
+
+        # make kmod paths absolute
+        sed -e 's|^kernel/|/lib/modules/'$KernelVer'/'$module_subdir'/|' $relative_kmod_list > $absolute_file_list
+
+	if [ "$run_mod_deny" -eq 1 ]; then
             # run deny-mod script, this adds blacklist-* files to absolute_file_list
             %{SOURCE20} "$RPM_BUILD_ROOT" lib/modules/$KernelVer $absolute_file_list
+	fi
+
 %if %{zipmodules}
-            # deny-mod script works with kmods as they are now (not compressed),
-            # but if they will be we need to add compext to all
-            sed -i %{?zipsed} $absolute_file_list
+        # deny-mod script works with kmods as they are now (not compressed),
+        # but if they will be we need to add compext to all
+        sed -i %{?zipsed} $absolute_file_list
 %endif
-            # add also dir for the case when there are no kmods
-            echo "%dir /lib/modules/$KernelVer/$module_subdir" >> $absolute_file_list
-        fi
+        # add also dir for the case when there are no kmods
+        echo "%dir /lib/modules/$KernelVer/$module_subdir" >> $absolute_file_list
 
         if [ "$add_all_dirs" -eq 1 ]; then
             (cd $RPM_BUILD_ROOT; find lib/modules/$KernelVer/kernel -mindepth 1 -type d | sort -n) > ../module-dirs.list
@@ -2701,8 +2717,9 @@ BuildKernel() {
         fi
         # this creates ../modules-*.list output, where each kmod path is as it
         # appears in modules.dep (relative to lib/modules/$KernelVer)
-        %{SOURCE22} -l "../filtermods-$KernelVer.log" sort -d $RPM_BUILD_ROOT/lib/modules/$KernelVer/modules.dep -c configs/def_variants.yaml $variants_param -o ..
-        if [ $? -ne 0 ]; then
+        ret=0
+        %{SOURCE22} -l "../filtermods-$KernelVer.log" sort -d $RPM_BUILD_ROOT/lib/modules/$KernelVer/modules.dep -c configs/def_variants.yaml $variants_param -o .. || ret=$?
+        if [ $ret -ne 0 ]; then
             echo "8< --- filtermods-$KernelVer.log ---"
             cat "../filtermods-$KernelVer.log"
             echo "--- filtermods-$KernelVer.log --- >8"
@@ -2713,15 +2730,15 @@ BuildKernel() {
             exit 1
         fi
 
-        create_module_file_list "kernel" ../modules-core.list ../kernel${Variant:+-${Variant}}-modules-core.list 1
-        create_module_file_list "kernel" ../modules.list ../kernel${Variant:+-${Variant}}-modules.list 0
-        create_module_file_list "internal" ../modules-internal.list ../kernel${Variant:+-${Variant}}-modules-internal.list 0
-        create_module_file_list "kernel" ../modules-extra.list ../kernel${Variant:+-${Variant}}-modules-extra.list 0
+        create_module_file_list "kernel" ../modules-core.list ../kernel${Variant:+-${Variant}}-modules-core.list 1 0
+        create_module_file_list "kernel" ../modules.list ../kernel${Variant:+-${Variant}}-modules.list 0 0
+        create_module_file_list "internal" ../modules-internal.list ../kernel${Variant:+-${Variant}}-modules-internal.list 0 1
+        create_module_file_list "kernel" ../modules-extra.list ../kernel${Variant:+-${Variant}}-modules-extra.list 0 1
         if [[ "$Variant" == "rt" || "$Variant" == "rt-debug" ]]; then
-            create_module_file_list "kvm" ../modules-rt-kvm.list ../kernel${Variant:+-${Variant}}-modules-rt-kvm.list 0
+            create_module_file_list "kvm" ../modules-rt-kvm.list ../kernel${Variant:+-${Variant}}-modules-rt-kvm.list 0 1
         fi
 %if 0%{!?fedora:1}
-        create_module_file_list "partner" ../modules-partner.list ../kernel${Variant:+-${Variant}}-modules-partner.list 1 0
+        create_module_file_list "partner" ../modules-partner.list ../kernel${Variant:+-${Variant}}-modules-partner.list 1 1
 %endif
     fi # $DoModules -eq 1
 
@@ -3013,7 +3030,7 @@ pushd tools/testing/selftests
 %endif
 
 %{log_msg "main selftests compile"}
-%{make} %{?_smp_mflags} ARCH=$Arch V=1 TARGETS="bpf mm net net/forwarding net/mptcp netfilter tc-testing memfd drivers/net/bonding iommu" SKIP_TARGETS="" $force_targets INSTALL_PATH=%{buildroot}%{_libexecdir}/kselftests VMLINUX_H="${RPM_VMLINUX_H}" install
+%{make} %{?_smp_mflags} ARCH=$Arch V=1 TARGETS="bpf cgroup mm net net/forwarding net/mptcp netfilter tc-testing memfd drivers/net/bonding iommu" SKIP_TARGETS="" $force_targets INSTALL_PATH=%{buildroot}%{_libexecdir}/kselftests VMLINUX_H="${RPM_VMLINUX_H}" install
 
 %ifarch %{klptestarches}
 	# kernel livepatching selftest test_modules will build against
@@ -3322,6 +3339,12 @@ pushd tools/testing/selftests/mm
 find -type d -exec install -d %{buildroot}%{_libexecdir}/kselftests/mm/{} \;
 find -type f -executable -exec install -D -m755 {} %{buildroot}%{_libexecdir}/kselftests/mm/{} \;
 find -type f ! -executable -exec install -D -m644 {} %{buildroot}%{_libexecdir}/kselftests/mm/{} \;
+popd
+# install cgroup selftests
+pushd tools/testing/selftests/cgroup
+find -type d -exec install -d %{buildroot}%{_libexecdir}/kselftests/cgroup/{} \;
+find -type f -executable -exec install -D -m755 {} %{buildroot}%{_libexecdir}/kselftests/cgroup/{} \;
+find -type f ! -executable -exec install -D -m644 {} %{buildroot}%{_libexecdir}/kselftests/cgroup/{} \;
 popd
 # install drivers/net/mlxsw selftests
 pushd tools/testing/selftests/drivers/net/mlxsw
@@ -4022,6 +4045,383 @@ fi\
 #
 #
 %changelog
+* Tue Jul 02 2024 Patrick Talbert <ptalbert@redhat.com> [6.10.0-0.rc6.13.el10]
+- scsi: libsas: Fix exp-attached device scan after probe failure scanned in again after probe failed (Xingui Yang)
+- scsi: scsi_debug: Fix create target debugfs failure (Ming Lei)
+- cxl: documentation: add missing files to cxl driver-api (Yao Xingtao)
+- cxl/region: check interleave capability (Yao Xingtao)
+- cxl/region: Avoid null pointer dereference in region lookup (Alison Schofield)
+- cxl/mem: Fix no cxl_nvd during pmem region auto-assembling (Li Ming)
+- btrfs: fix adding block group to a reclaim list and the unused list during reclaim (Naohiro Aota)
+- syscalls: fix sys_fanotify_mark prototype (Arnd Bergmann)
+- arm64: dts: rockchip: Add sound-dai-cells for RK3368 (Alex Bee)
+- arm64: dts: rockchip: Fix the i2c address of es8316 on Cool Pi 4B (Andy Yan)
+- arm64: dts: rockchip: fix PMIC interrupt pin on ROCK Pi E (FUKAUMI Naoki)
+- arm64: dts: rockchip: make poweroff(8) work on Radxa ROCK 5A (FUKAUMI Naoki)
+- Revert "arm64: dts: rockchip: remove redundant cd-gpios from rk3588 sdmmc nodes" (FUKAUMI Naoki)
+- ARM: dts: rockchip: rk3066a: add #sound-dai-cells to hdmi node (Johan Jonker)
+- arm64: dts: rockchip: Fix the value of `dlg,jack-det-rate` mismatch on rk3399-gru (Hsin-Te Yuan)
+- arm64: dts: rockchip: set correct pwm0 pinctrl on rk3588-tiger (Heiko Stuebner)
+- arm64: dts: rockchip: Rename LED related pinctrl nodes on rk3308-rock-pi-s (Jonas Karlman)
+- arm64: dts: rockchip: Fix SD NAND and eMMC init on rk3308-rock-pi-s (Jonas Karlman)
+- arm64: dts: rockchip: Fix rk3308 codec@ff560000 reset-names (Jonas Karlman)
+- arm64: dts: rockchip: Fix the DCDC_REG2 minimum voltage on Quartz64 Model B (Dragan Simic)
+- tee: optee: ffa: Fix missing-field-initializers warning (Mark-PK Tsai)
+- drivers/soc/litex: drop obsolete dependency on COMPILE_TEST (Jean Delvare)
+- reset: hisilicon: hi6220: add missing MODULE_DESCRIPTION() macro (Jeff Johnson)
+- reset: gpio: Fix missing gpiolib dependency for GPIO reset controller (Mark Brown)
+- MAINTAINERS: thead: update Maintainer (Jisheng Zhang)
+- riscv: dts: starfive: Set EMMC vqmmc maximum voltage to 3.3V on JH7110 boards (Shengyu Qu)
+- riscv: dts: canaan: Disable I/O devices unless used (Geert Uytterhoeven)
+- riscv: dts: canaan: Clean up serial aliases (Geert Uytterhoeven)
+- mtd: rawnand: rockchip: ensure NVDDR timings are rejected (Val Packett)
+- mtd: rawnand: Bypass a couple of sanity checks during NAND identification (Miquel Raynal)
+- mtd: rawnand: Fix the nand_read_data_op() early check (Miquel Raynal)
+- mtd: rawnand: Ensure ECC configuration is propagated to upper layers (Miquel Raynal)
+- netfs: Fix netfs_page_mkwrite() to flush conflicting data, not wait (David Howells)
+- netfs: Fix netfs_page_mkwrite() to check folio->mapping is valid (David Howells)
+- netfs: Delete some xarray-wangling functions that aren't used (David Howells)
+- netfs: Fix early issue of write op on partial write to folio tail (David Howells)
+- netfs: Fix io_uring based write-through (David Howells)
+- vfs: generate FS_CREATE before FS_OPEN when ->atomic_open used. (NeilBrown)
+- fsnotify: Do not generate events for O_PATH file descriptors (Jan Kara)
+- fs: don't misleadingly warn during thaw operations (Christian Brauner)
+- redhat: Add cgroup kselftests to kernel-selftests-internal (Waiman Long) [RHEL-43556]
+- Revert "redhat/configs: Disable CONFIG_INFINIBAND_HFI1 and CONFIG_INFINIBAND_RDMAVT" (Kamal Heib)
+- Remove new for GITLAB_TOKEN (Don Zickus)
+- Set Fedora configs for 6.10 (Justin M. Forbes)
+- Fedora: minor driver updates (Peter Robinson)
+- v6.10-rc6-rt10 (Sebastian Andrzej Siewior)
+- Linux 6.10-rc6 (Linus Torvalds)
+- ata: ahci: Clean up sysfs file on error (Niklas Cassel)
+- ata: libata-core: Fix double free on error (Niklas Cassel)
+- ata,scsi: libata-core: Do not leak memory for ata_port struct members (Niklas Cassel)
+- ata: libata-core: Fix null pointer dereference on error (Niklas Cassel)
+- ata: libata-core: Add ATA_HORKAGE_NOLPM for all Crucial BX SSD1 models (Niklas Cassel)
+- kbuild: scripts/gdb: bring the "abspath" back (Joel Granados)
+- kbuild: Use $(obj)/%%.cc to fix host C++ module builds (Nicolas Schier)
+- kbuild: rpm-pkg: fix build error with CONFIG_MODULES=n (Masahiro Yamada)
+- kbuild: Fix build target deb-pkg: ln: failed to create hard link (Thayne Harbaugh)
+- kbuild: doc: Update default INSTALL_MOD_DIR from extra to updates (Mark-PK Tsai)
+- kbuild: Install dtb files as 0644 in Makefile.dtbinst (Dragan Simic)
+- x86-32: fix cmpxchg8b_emu build error with clang (Linus Torvalds)
+- counter: ti-eqep: enable clock at probe (David Lechner)
+- iio: chemical: bme680: Fix sensor data read operation (Vasileios Amoiridis)
+- iio: chemical: bme680: Fix overflows in compensate() functions (Vasileios Amoiridis)
+- iio: chemical: bme680: Fix calibration data variable (Vasileios Amoiridis)
+- iio: chemical: bme680: Fix pressure value output (Vasileios Amoiridis)
+- iio: humidity: hdc3020: fix hysteresis representation (Dimitri Fedrau)
+- iio: dac: fix ad9739a random config compile error (Ke Sun)
+- iio: accel: fxls8962af: select IIO_BUFFER & IIO_KFIFO_BUF (Alexander Sverdlin)
+- iio: adc: ad7266: Fix variable checking bug (Fernando Yang)
+- iio: xilinx-ams: Don't include ams_ctrl_channels in scan_mask (Sean Anderson)
+- staging: vchiq_debugfs: Fix build if CONFIG_DEBUG_FS is not set (Bernhard Rosenkränzer)
+- staging: vc04_services: vchiq_arm: Fix initialisation check (Kieran Bingham)
+- Revert "printk: Save console options for add_preferred_console_match()" (Greg Kroah-Hartman)
+- Revert "printk: Don't try to parse DEVNAME:0.0 console options" (Greg Kroah-Hartman)
+- Revert "printk: Flag register_console() if console is set on command line" (Greg Kroah-Hartman)
+- Revert "serial: core: Add support for DEVNAME:0.0 style naming for kernel console" (Greg Kroah-Hartman)
+- Revert "serial: core: Handle serial console options" (Greg Kroah-Hartman)
+- Revert "serial: 8250: Add preferred console in serial8250_isa_init_ports()" (Greg Kroah-Hartman)
+- Revert "Documentation: kernel-parameters: Add DEVNAME:0.0 format for serial ports" (Greg Kroah-Hartman)
+- Revert "serial: 8250: Fix add preferred console for serial8250_isa_init_ports()" (Greg Kroah-Hartman)
+- Revert "serial: core: Fix ifdef for serial base console functions" (Greg Kroah-Hartman)
+- serial: bcm63xx-uart: fix tx after conversion to uart_port_tx_limited() (Jonas Gorski)
+- serial: core: introduce uart_port_tx_limited_flags() (Jonas Gorski)
+- Revert "serial: core: only stop transmit when HW fifo is empty" (Doug Brown)
+- serial: imx: set receiver level before starting uart (Stefan Eichenberger)
+- tty: mcf: MCF54418 has 10 UARTS (Jean-Michel Hautbois)
+- serial: 8250_omap: Implementation of Errata i2310 (Udit Kumar)
+- tty: serial: 8250: Fix port count mismatch with the device (Crescent Hsieh)
+- usb: dwc3: core: Workaround for CSR read timeout (Jos Wang)
+- Revert "usb: gadget: u_ether: Replace netif_stop_queue with netif_device_detach" (Ferry Toth)
+- Revert "usb: gadget: u_ether: Re-attach netif device to mirror detachment" (Ferry Toth)
+- usb: gadget: aspeed_udc: fix device address configuration (Jeremy Kerr)
+- usb: dwc3: core: remove lock of otg mode during gadget suspend/resume to avoid deadlock (Meng Li)
+- usb: typec: ucsi: glink: fix child node release in probe function (Javier Carrasco)
+- usb: musb: da8xx: fix a resource leak in probe() (Dan Carpenter)
+- usb: typec: ucsi_acpi: Add LG Gram quirk (Diogo Ivo)
+- usb: ucsi: stm32: fix command completion handling (Fabrice Gasnier)
+- usb: atm: cxacru: fix endpoint checking in cxacru_bind() (Nikita Zhandarovich)
+- usb: gadget: printer: fix races against disable (Oliver Neukum)
+- usb: gadget: printer: SS+ support (Oliver Neukum)
+- cpu: Fix broken cmdline "nosmp" and "maxcpus=0" (Huacai Chen)
+- cpu/hotplug: Fix dynstate assignment in __cpuhp_setup_state_cpuslocked() (Yuntao Wang)
+- PCI/MSI: Fix UAF in msi_capability_init (Mostafa Saleh)
+- irqchip/loongson-liointc: Set different ISRs for different cores (Huacai Chen)
+- irqchip/loongson-eiointc: Use early_cpu_to_node() instead of cpu_to_node() (Huacai Chen)
+- hrtimer: Prevent queuing of hrtimer without a function callback (Phil Chang)
+- watchdog: add missing MODULE_DESCRIPTION() macros (Jeff Johnson)
+- watchdog: lenovo_se10_wdt: add HAS_IOPORT dependency (Arnd Bergmann)
+- redhat/configs: Remove obsolete x86 CPU mitigations config files (Waiman Long)
+- redhat/configs: increase CONFIG_DEFAULT_MMAP_MIN_ADDR from 32K to 64K for aarch64 (Brian Masney)
+- redhat/configs: Re-enable CONFIG_KEXEC for Fedora (Philipp Rudo)
+- media: ipu-bridge: Add HIDs from out of tree IPU6 driver ipu-bridge copy (Hans de Goede)
+- media: ipu-bridge: Sort ipu_supported_sensors[] array by ACPI HID (Hans de Goede)
+- disable LR_WPAN for RHEL10 (Chris von Recklinghausen) [RHEL-40251]
+- SUNRPC: Fix backchannel reply, again (Chuck Lever)
+- xfs: honor init_xattrs in xfs_init_new_inode for !ATTR fs (Darrick J. Wong)
+- xfs: fix direction in XFS_IOC_EXCHANGE_RANGE (Darrick J. Wong)
+- xfs: allow unlinked symlinks and dirs with zero size (Darrick J. Wong)
+- xfs: restrict when we try to align cow fork delalloc to cowextsz hints (Darrick J. Wong)
+- xfs: fix freeing speculative preallocations for preallocated files (Christoph Hellwig)
+- i2c: testunit: discard write requests while old command is running (Wolfram Sang)
+- i2c: testunit: don't erase registers after STOP (Wolfram Sang)
+- i2c: viai2c: turn common code into a proper module (Arnd Bergmann)
+- platform/x86: add missing MODULE_DESCRIPTION() macros (Jeff Johnson)
+- platform/x86/intel: add missing MODULE_DESCRIPTION() macros (Jeff Johnson)
+- platform/x86/siemens: add missing MODULE_DESCRIPTION() macros (Jeff Johnson)
+- platform/x86: lg-laptop: Use ACPI device handle when evaluating WMAB/WMBB (Armin Wolf)
+- platform/x86: lg-laptop: Change ACPI device id (Armin Wolf)
+- platform/x86: lg-laptop: Remove LGEX0815 hotkey handling (Armin Wolf)
+- platform/x86: wireless-hotkey: Add support for LG Airplane Button (Armin Wolf)
+- platform/mellanox: nvsw-sn2201: Add check for platform_device_add_resources (Chen Ni)
+- mmc: sdhci: Do not lock spinlock around mmc_gpio_get_ro() (Adrian Hunter)
+- mmc: sdhci: Do not invert write-protect twice (Adrian Hunter)
+- Revert "mmc: moxart-mmc: Use sg_miter for PIO" (Linus Walleij)
+- mmc: sdhci-brcmstb: check R1_STATUS for erase/trim/discard (Kamal Dasu)
+- mmc: sdhci-pci-o2micro: Convert PCIBIOS_* return codes to errnos (Ilpo Järvinen)
+- mmc: sdhci-pci: Convert PCIBIOS_* return codes to errnos (Ilpo Järvinen)
+- riscv: stacktrace: convert arch_stack_walk() to noinstr (Andy Chiu)
+- riscv: patch: Flush the icache right after patching to avoid illegal insns (Alexandre Ghiti)
+- RISC-V: fix vector insn load/store width mask (Jesse Taube)
+- tty: mxser: Remove __counted_by from mxser_board.ports[] (Nathan Chancellor)
+- randomize_kstack: Remove non-functional per-arch entropy filtering (Kees Cook)
+- string: kunit: add missing MODULE_DESCRIPTION() macros (Jeff Johnson)
+- x86: stop playing stack games in profile_pc() (Linus Torvalds)
+- Revert "nfsd: fix oops when reading pool_stats before server is started" (NeilBrown)
+- nfsd: initialise nfsd_info.mutex early. (NeilBrown)
+- bcachefs: Fix kmalloc bug in __snapshot_t_mut (Pei Li)
+- bcachefs: Discard, invalidate workers are now per device (Kent Overstreet)
+- bcachefs: Fix shift-out-of-bounds in bch2_blacklist_entries_gc (Pei Li)
+- bcachefs: slab-use-after-free Read in bch2_sb_errors_from_cpu (Pei Li)
+- bcachefs: Add missing bch2_journal_do_writes() call (Kent Overstreet)
+- bcachefs: Fix null ptr deref in journal_pins_to_text() (Kent Overstreet)
+- bcachefs: Add missing recalc_capacity() call (Kent Overstreet)
+- bcachefs: Fix btree_trans list ordering (Kent Overstreet)
+- bcachefs: Fix race between trans_put() and btree_transactions_read() (Kent Overstreet)
+- closures: closure_get_not_zero(), closure_return_sync() (Kent Overstreet)
+- bcachefs: Make btree_deadlock_to_text() clearer (Kent Overstreet)
+- bcachefs: fix seqmutex_relock() (Kent Overstreet)
+- bcachefs: Fix freeing of error pointers (Kent Overstreet)
+- nvmet-fc: Remove __counted_by from nvmet_fc_tgt_queue.fod[] (Nathan Chancellor)
+- nvmet: make 'tsas' attribute idempotent for RDMA (Hannes Reinecke)
+- nvme: fixup comment for nvme RDMA Provider Type (Hannes Reinecke)
+- nvme-apple: add missing MODULE_DESCRIPTION() (Jeff Johnson)
+- nvmet: do not return 'reserved' for empty TSAS values (Hannes Reinecke)
+- nvme: fix NVME_NS_DEAC may incorrectly identifying the disk as EXT_LBA. (Boyang Yu)
+- MAINTAINERS: Update IOMMU tree location (Joerg Roedel)
+- iommu/amd: Fix GT feature enablement again (Vasant Hegde)
+- iommu/vt-d: Fix missed device TLB cache tag (Lu Baolu)
+- iommu/amd: Invalidate cache before removing device from domain list (Vasant Hegde)
+- gpiolib: cdev: Ignore reconfiguration without direction (Kent Gibson)
+- gpiolib: cdev: Disallow reconfiguration without direction (uAPI v1) (Kent Gibson)
+- gpio: graniterapids: Add missing raw_spinlock_init() (Aapo Vienamo)
+- gpio: davinci: Validate the obtained number of IRQs (Aleksandr Mishin)
+- gpio: pca953x: fix pca953x_irq_bus_sync_unlock race (Ian Ray)
+- arm64: Clear the initial ID map correctly before remapping (Zenghui Yu)
+- arm64: mm: Permit PTE SW bits to change in live mappings (Ryan Roberts)
+- tools/power turbostat: Add local build_bug.h header for snapshot target (Patryk Wlazlyn)
+- tools/power turbostat: Fix unc freq columns not showing with '-q' or '-l' (Adam Hawley)
+- tools/power turbostat: option '-n' is ambiguous (David Arcari)
+- Turn on USB_SERIAL_F81232 for Fedora (Justin M. Forbes)
+- crypto: qat - fix linking errors when PCI_IOV is disabled (Xin Zeng)
+- drm/drm_file: Fix pid refcounting race (Jann Horn)
+- drm/i915/gt: Fix potential UAF by revoke of fence registers (Janusz Krzysztofik)
+- drm/amdgpu: Don't show false warning for reg list (Lijo Lazar)
+- drm/amdgpu: avoid using null object of framebuffer (Julia Zhang)
+- drm/amd/display: Send DP_TOTAL_LTTPR_CNT during detection if LTTPR is present (Michael Strauss)
+- drm/amdgpu: Fix pci state save during mode-1 reset (Lijo Lazar)
+- drm/amdgpu/atomfirmware: fix parsing of vram_info (Alex Deucher)
+- drm/amd/swsmu: add MALL init support workaround for smu_v14_0_1 (Li Ma)
+- drm/nouveau/dispnv04: fix null pointer dereference in nv17_tv_get_ld_modes (Ma Ke)
+- drm/nouveau/dispnv04: fix null pointer dereference in nv17_tv_get_hd_modes (Ma Ke)
+- drm/panel: simple: Add missing display timing flags for KOE TX26D202VM0BWA (Liu Ying)
+- drm/fbdev-dma: Only set smem_start is enable per module option (Thomas Zimmermann)
+- cpufreq: intel_pstate: Use HWP to initialize ITMT if CPPC is missing (Rafael J. Wysocki)
+- thermal: gov_step_wise: Go straight to instance->lower when mitigation is over (Rafael J. Wysocki)
+- io_uring: signal SQPOLL task_work with TWA_SIGNAL_NO_IPI (Jens Axboe)
+- io_uring: remove dead struct io_submit_state member (Jens Axboe)
+- s390/boot: Do not adjust GOT entries for undef weak sym (Jens Remus)
+- s390/sclp: Fix sclp_init() cleanup on failure (Heiko Carstens)
+- s390/virtio_ccw: Fix config change notifications (Halil Pasic)
+- s390/pci: Add missing virt_to_phys() for directed DIBV (Niklas Schnelle)
+- kallsyms: rework symbol lookup return codes (Arnd Bergmann)
+- linux/syscalls.h: add missing __user annotations (Arnd Bergmann)
+- syscalls: mmap(): use unsigned offset type consistently (Arnd Bergmann)
+- s390: remove native mmap2() syscall (Arnd Bergmann)
+- hexagon: fix fadvise64_64 calling conventions (Arnd Bergmann)
+- csky, hexagon: fix broken sys_sync_file_range (Arnd Bergmann)
+- sh: rework sync_file_range ABI (Arnd Bergmann)
+- powerpc: restore some missing spu syscalls (Arnd Bergmann)
+- parisc: use generic sys_fanotify_mark implementation (Arnd Bergmann)
+- parisc: use correct compat recv/recvfrom syscalls (Arnd Bergmann)
+- sparc: fix compat recv/recvfrom syscalls (Arnd Bergmann)
+- sparc: fix old compat_sys_select() (Arnd Bergmann)
+- syscalls: fix compat_sys_io_pgetevents_time64 usage (Arnd Bergmann)
+- ftruncate: pass a signed offset (Arnd Bergmann)
+- btrfs: qgroup: fix quota root leak after quota disable failure (Filipe Manana)
+- btrfs: scrub: handle RST lookup error correctly (Qu Wenruo)
+- btrfs: zoned: fix initial free space detection (Naohiro Aota)
+- btrfs: use NOFS context when getting inodes during logging and log replay (Filipe Manana)
+- netfilter: nf_tables: fully validate NFT_DATA_VALUE on store to data registers (Pablo Neira Ayuso)
+- netfilter: fix undefined reference to 'netfilter_lwtunnel_*' when CONFIG_SYSCTL=n (Jianguo Wu)
+- net: mana: Fix possible double free in error handling path (Ma Ke)
+- selftest: af_unix: Check SIOCATMARK after every send()/recv() in msg_oob.c. (Kuniyuki Iwashima)
+- af_unix: Fix wrong ioctl(SIOCATMARK) when consumed OOB skb is at the head. (Kuniyuki Iwashima)
+- selftest: af_unix: Check EPOLLPRI after every send()/recv() in msg_oob.c (Kuniyuki Iwashima)
+- selftest: af_unix: Check SIGURG after every send() in msg_oob.c (Kuniyuki Iwashima)
+- selftest: af_unix: Add SO_OOBINLINE test cases in msg_oob.c (Kuniyuki Iwashima)
+- af_unix: Don't stop recv() at consumed ex-OOB skb. (Kuniyuki Iwashima)
+- selftest: af_unix: Add non-TCP-compliant test cases in msg_oob.c. (Kuniyuki Iwashima)
+- af_unix: Don't stop recv(MSG_DONTWAIT) if consumed OOB skb is at the head. (Kuniyuki Iwashima)
+- af_unix: Stop recv(MSG_PEEK) at consumed OOB skb. (Kuniyuki Iwashima)
+- selftest: af_unix: Add msg_oob.c. (Kuniyuki Iwashima)
+- selftest: af_unix: Remove test_unix_oob.c. (Kuniyuki Iwashima)
+- tracing/net_sched: NULL pointer dereference in perf_trace_qdisc_reset() (Yunseong Kim)
+- net: usb: qmi_wwan: add Telit FN912 compositions (Daniele Palmas)
+- tcp: fix tcp_rcv_fastopen_synack() to enter TCP_CA_Loss for failed TFO (Neal Cardwell)
+- ionic: use dev_consume_skb_any outside of napi (Shannon Nelson)
+- net: dsa: microchip: fix wrong register write when masking interrupt (Tristram Ha)
+- Fix race for duplicate reqsk on identical SYN (luoxuanqiang)
+- ibmvnic: Add tx check to prevent skb leak (Nick Child)
+- xdp: Remove WARN() from __xdp_reg_mem_model() (Daniil Dulov)
+- selftests/bpf: Add tests for may_goto with negative offset. (Alexei Starovoitov)
+- bpf: Fix may_goto with negative offset. (Alexei Starovoitov)
+- selftests/bpf: Add more ring buffer test coverage (Daniel Borkmann)
+- bpf: Fix overrunning reservations in ringbuf (Daniel Borkmann)
+- selftests/bpf: Tests with may_goto and jumps to the 1st insn (Alexei Starovoitov)
+- bpf: Fix the corner case with may_goto and jump to the 1st insn. (Alexei Starovoitov)
+- bpf: Update BPF LSM maintainer list (Matt Bobrowski)
+- bpf: Fix remap of arena. (Alexei Starovoitov)
+- selftests/bpf: Add a few tests to cover (Yonghong Song)
+- bpf: Add missed var_off setting in coerce_subreg_to_size_sx() (Yonghong Song)
+- bpf: Add missed var_off setting in set_sext32_default_val() (Yonghong Song)
+- net: usb: ax88179_178a: improve link status logs (Jose Ignacio Tornos Martinez)
+- octeontx2-pf: Fix coverity and klockwork issues in octeon PF driver (Ratheesh Kannoth)
+- ice: Rebuild TC queues on VSI queue reconfiguration (Jan Sokolowski)
+- dt-bindings: net: fman: remove ptp-timer from required list (Frank Li)
+- net: dsa: microchip: monitor potential faults in half-duplex mode (Enguerrand de Ribaucourt)
+- net: dsa: microchip: use collision based back pressure mode (Enguerrand de Ribaucourt)
+- net: phy: micrel: add Microchip KSZ 9477 to the device table (Enguerrand de Ribaucourt)
+- netlink: specs: Fix pse-set command attributes (Kory Maincent)
+- ibmvnic: Free any outstanding tx skbs during scrq reset (Nick Child)
+- Revert "batman-adv: prefer kfree_rcu() over call_rcu() with free-only callbacks" (Linus Lüssing)
+- batman-adv: Don't accept TT entries for out-of-spec VIDs (Sven Eckelmann)
+- can: mcp251xfd: fix infinite loop when xmit fails (Vitor Soares)
+- can: kvaser_usb: fix return value for hif_usb_send_regout (Chen Ni)
+- net: can: j1939: recover socket queue on CAN bus error during BAM transmission (Oleksij Rempel)
+- net: can: j1939: Initialize unused data in j1939_send_one() (Shigeru Yoshida)
+- net: can: j1939: enhanced error handling for tightly received RTS messages in xtp_rx_rts_session_new (Oleksij Rempel)
+- vxlan: Pull inner IP header in vxlan_xmit_one(). (Guillaume Nault)
+- mlxsw: spectrum_buffers: Fix memory corruptions on Spectrum-4 systems (Ido Schimmel)
+- mlxsw: pci: Fix driver initialization with Spectrum-4 (Ido Schimmel)
+- selftest: af_unix: Add Kconfig file. (Kuniyuki Iwashima)
+- net: remove drivers@pensando.io from MAINTAINERS (Shannon Nelson)
+- net: add softirq safety to netdev_rename_lock (Eric Dumazet)
+- ionic: fix kernel panic due to multi-buffer handling (Taehee Yoo)
+- net: pse-pd: Kconfig: Fix missing firmware loader config select (Kory Maincent)
+- bonding: fix incorrect software timestamping report (Hangbin Liu)
+- net: mvpp2: fill-in dev_port attribute (Aryan Srivastava)
+- openvswitch: get related ct labels from its master if it is not confirmed (Xin Long)
+- net: dsa: microchip: fix initial port flush problem (Tristram Ha)
+- ASoC: rt5645: fix issue of random interrupt from push-button (Jack Yu)
+- ASoC: amd: yc: Fix non-functional mic on ASUS M5602RA (Vyacheslav Frantsishko)
+- ASoC: mediatek: mt8195: Add platform entry for ETDM1_OUT_BE dai link (Chen-Yu Tsai)
+- ASoC: fsl-asoc-card: set priv->pdev before using it (Elinor Montmasson)
+- ASoC: amd: acp: move chip->flag variable assignment (Vijendar Mukunda)
+- ASoC: amd: acp: remove i2s configuration check in acp_i2s_probe() (Vijendar Mukunda)
+- ASoC: amd: acp: add a null check for chip_pdev structure (Vijendar Mukunda)
+- ASoC: Intel: soc-acpi: mtl: fix speaker no sound on Dell SKU 0C64 (Shuming Fan)
+- ASoC: q6apm-lpass-dai: close graph on prepare errors (Srinivas Kandagatla)
+- ASoC: cs35l56: Disconnect ASP1 TX sources when ASP1 DAI is hooked up (Richard Fitzgerald)
+- ASoC: topology: Fix route memory corruption (Amadeusz Sławiński)
+- ASoC: rt722-sdca-sdw: add debounce time for type detection (Jack Yu)
+- ASoC: SOF: sof-audio: Skip unprepare for in-use widgets on error rollback (Peter Ujfalusi)
+- ASoC: ti: davinci-mcasp: Set min period size using FIFO config (Jai Luthra)
+- ALSA: dmaengine: Synchronize dma channel after drop() (Jai Luthra)
+- ASoC: ti: omap-hdmi: Fix too long driver name (Primoz Fiser)
+- ASoC: topology: Clean up route loading (Amadeusz Sławiński)
+- ASoC: topology: Do not assign fields that are already set (Amadeusz Sławiński)
+- ASoC: Intel: avs: Fix route override (Amadeusz Sławiński)
+- ASoC: topology: Fix references to freed memory (Amadeusz Sławiński)
+- bytcr_rt5640 : inverse jack detect for Archos 101 cesium (Thomas GENTY)
+- ASoC: atmel: atmel-classd: Re-add dai_link->platform to fix card init (Andrei Simion)
+- ASoC: mediatek: mt8183-da7219-max98357: Fix kcontrol name collision (Hsin-Te Yuan)
+- ASoC: rockchip: i2s-tdm: Fix trcm mode by setting clock on right mclk (Alibek Omarov)
+- ASoC: SOF: Intel: hda-dai: remove skip_tlv label (Bard Liao)
+- ASoC: SOF: Intel: hda-dai: skip tlv for dspless mode (Bard Liao)
+- ASoC: codecs: ES8326: Solve headphone detection issue (Zhang Yi)
+- ASoC: cs42l43: Increase default type detect time and button delay (Maciej Strozek)
+- ASoC: qcom: add missing MODULE_DESCRIPTION() macro (Jeff Johnson)
+- ASoC: rt722-sdca-sdw: add silence detection register as volatile (Jack Yu)
+- ASoC: fsl: add missing MODULE_DESCRIPTION() macro (Jeff Johnson)
+- ASoC: mxs: add missing MODULE_DESCRIPTION() macro (Jeff Johnson)
+- MAINTAINERS: copy linux-arm-msm for sound/qcom changes (Dmitry Baryshkov)
+- ALSA: seq: Fix missing MSB in MIDI2 SPP conversion (Takashi Iwai)
+- ALSA: hda/realtek: fix mute/micmute LEDs don't work for EliteBook 645/665 G11. (Dirk Su)
+- ALSA: hda/realtek: Fix conflicting quirk for PCI SSID 17aa:3820 (Takashi Iwai)
+- ALSA: dmaengine_pcm: terminate dmaengine before synchronize (Shengjiu Wang)
+- ALSA: hda/relatek: Enable Mute LED on HP Laptop 15-gw0xxx (Aivaz Latypov)
+- ALSA: PCM: Allow resume only for suspended streams (Takashi Iwai)
+- ALSA: seq: Fix missing channel at encoding RPN/NRPN MIDI2 messages (Takashi Iwai)
+- mm/memory: don't require head page for do_set_pmd() (Andrew Bresticker)
+- mm/page_alloc: Separate THP PCP into movable and non-movable categories (yangge)
+- nfs: drop the incorrect assertion in nfs_swap_rw() (Christoph Hellwig)
+- mm/migrate: make migrate_pages_batch() stats consistent (Zi Yan)
+- MAINTAINERS: TPM DEVICE DRIVER: update the W-tag (Jarkko Sakkinen)
+- selftests/mm:fix test_prctl_fork_exec return failure (aigourensheng)
+- mm: convert page type macros to enum (Stephen Brennan)
+- ocfs2: fix DIO failure due to insufficient transaction credits (Jan Kara)
+- kasan: fix bad call to unpoison_slab_object (Andrey Konovalov)
+- mm: handle profiling for fake memory allocations during compaction (Suren Baghdasaryan)
+- mm/slab: fix 'variable obj_exts set but not used' warning (Suren Baghdasaryan)
+- /proc/pid/smaps: add mseal info for vma (Jeff Xu)
+- mm: fix incorrect vbq reference in purge_fragmented_block (Zhaoyang Huang)
+- redhat/scripts/filtermods.py: show all parent/child kmods in report (Jan Stancek)
+- redhat/kernel.spec: capture filtermods.py return code (Jan Stancek)
+- redhat/kernel.spec: fix run of mod-denylist (Jan Stancek)
+- gitlab-ci: remove unused RHMAINTAINERS variable (Michael Hofmann)
+- gitlab-ci: use environments for jobs that need access to push/gitlab secrets (Michael Hofmann)
+- gitlab-ci: default to os-build for all maintenance jobs (Michael Hofmann)
+- gitlab-ci: use the common git repo setup cki-gating as well (Michael Hofmann)
+- gitlab-ci: help maintenance jobs to cope with missing private key (Michael Hofmann)
+- gitlab-ci: use a common git repo setup for all maintenance jobs (Michael Hofmann)
+- gitlab-ci: move repo setup script into script template holder (Michael Hofmann)
+- gitlab-ci: move maintenance job DIST variable into common template (Michael Hofmann)
+- gitlab-ci: move maintenance job rules into common template (Michael Hofmann)
+- gitlab-ci: move maintenance job retry field into common template (Michael Hofmann)
+- gitlab-ci: provide common non-secret schedule trigger variables (Michael Hofmann)
+- gitlab-ci: rename .scheduled_setup to .git_setup (Michael Hofmann)
+- gitlab-ci: move script snippets into separate template (Michael Hofmann)
+- gitlab-ci: rename maintenance jobs (Michael Hofmann)
+- gitlab-ci: introduce job template for maintenance jobs (Michael Hofmann)
+- v6.10-rc5-rt9 (Sebastian Andrzej Siewior)
+- perf: Update the perf series (Sebastian Andrzej Siewior)
+- net: Update the BH series to v9. (Sebastian Andrzej Siewior)
+- zram: Update the series. (Sebastian Andrzej Siewior)
+- prinkt/nbcon: Add a scheduling point to nbcon_kthread_func(). (Sebastian Andrzej Siewior)
+- v6.10-rc5-rt8 (Sebastian Andrzej Siewior)
+- workqueue: Increase worker desc's length to 32 (Wenchao Hao)
+- workqueue: Refactor worker ID formatting and make wq_worker_comm() use full ID string (Tejun Heo)
+- Input: ads7846 - use spi_device_id table (Alexander Stein)
+- Input: xpad - add support for ASUS ROG RAIKIRI PRO (Luke D. Jones)
+- Input: ili210x - fix ili251x_read_touch_data() return value (John Keeping)
+- Input: i8042 - add Ayaneo Kun to i8042 quirk table (Tobias Jakobi)
+- Input: elantech - fix touchpad state on resume for Lenovo N24 (Jonathan Denose)
+- pinctrl: rockchip: fix pinmux reset in rockchip_pmx_set (Huang-Huang Bao)
+- pinctrl: rockchip: use dedicated pinctrl type for RK3328 (Huang-Huang Bao)
+- pinctrl: rockchip: fix pinmux bits for RK3328 GPIO3-B pins (Huang-Huang Bao)
+- pinctrl: rockchip: fix pinmux bits for RK3328 GPIO2-B pins (Huang-Huang Bao)
+- pinctrl: fix deadlock in create_pinctrl() when handling -EPROBE_DEFER (Hagar Hemdan)
+- pinctrl: bcm2835: Fix permissions of persist_gpio_outputs (Stefan Wahren)
+- pinctrl: tps6594: add missing support for LP8764 PMIC (Thomas Richard)
+- dt-bindings: pinctrl: qcom,pmic-gpio: drop pm8008 (Johan Hovold)
+- pinctrl: qcom: spmi-gpio: drop broken pm8008 support (Johan Hovold)
+- pinctrl: renesas: rzg2l: Use spin_{lock,unlock}_irq{save,restore} (Claudiu Beznea)
+- Turn on KASAN_HW_TAGS for Fedora aarch64 debug kernels (Justin M. Forbes)
+- Linux v6.10.0-0.rc6
+
 * Tue Jun 25 2024 Jan Stancek <jstancek@redhat.com> [6.10.0-0.rc5.12.el10]
 - redhat: kernel.spec: add missing sound/soc/sof/sof-audio.h to kernel-devel package (Jaroslav Kysela)
 - Linux 6.10-rc5 (Linus Torvalds)
