@@ -1,3 +1,37 @@
+* Wed Jul 10 2024 Fedora Kernel Team <kernel-team@fedoraproject.org> [6.10.0-0.rc7.34afb82a3c67.59]
+- not upstream: drop openssl ENGINE API usage (Jan Stancek)
+- Linux v6.10.0-0.rc7.34afb82a3c67
+Resolves: 
+
+* Mon Jul 08 2024 Fedora Kernel Team <kernel-team@fedoraproject.org> [6.10.0-0.rc7.4376e966ecb7.58]
+- Also remove the zfcpdump BASE_SMALL config (Justin M. Forbes)
+- Linux v6.10.0-0.rc7.4376e966ecb7
+Resolves: 
+
+* Mon Jul 08 2024 Fedora Kernel Team <kernel-team@fedoraproject.org> [6.10.0-0.rc7.57]
+- Linux v6.10.0-0.rc7
+Resolves: 
+
+* Sun Jul 07 2024 Fedora Kernel Team <kernel-team@fedoraproject.org> [6.10.0-0.rc6.c6653f49e4fd.56]
+- Linux v6.10.0-0.rc6.c6653f49e4fd
+Resolves: 
+
+* Sat Jul 06 2024 Fedora Kernel Team <kernel-team@fedoraproject.org> [6.10.0-0.rc6.1dd28064d416.55]
+- Linux v6.10.0-0.rc6.1dd28064d416
+Resolves: 
+
+* Fri Jul 05 2024 Fedora Kernel Team <kernel-team@fedoraproject.org> [6.10.0-0.rc6.661e504db04c.54]
+- Linux v6.10.0-0.rc6.661e504db04c
+Resolves: 
+
+* Thu Jul 04 2024 Fedora Kernel Team <kernel-team@fedoraproject.org> [6.10.0-0.rc6.795c58e4c7fc.53]
+- Linux v6.10.0-0.rc6.795c58e4c7fc
+Resolves: 
+
+* Wed Jul 03 2024 Fedora Kernel Team <kernel-team@fedoraproject.org> [6.10.0-0.rc6.e9d22f7a6655.52]
+- Linux v6.10.0-0.rc6.e9d22f7a6655
+Resolves: 
+
 * Tue Jul 02 2024 Fedora Kernel Team <kernel-team@fedoraproject.org> [6.10.0-0.rc6.1dfe225e9af5.51]
 - redhat: Add cgroup kselftests to kernel-selftests-internal (Waiman Long) [RHEL-43556]
 - Revert "redhat/configs: Disable CONFIG_INFINIBAND_HFI1 and CONFIG_INFINIBAND_RDMAVT" (Kamal Heib)
@@ -2622,6 +2656,168 @@ Resolves:
 - [initial commit] Add Makefiles (Laura Abbott)
 - Linux v6.10.0-0.rc0.a5131c3fdf26
 Resolves: RHEL-23931, RHEL-32110, rhbz#1471185, rhbz#1495307, rhbz#1509329, rhbz#1518076, rhbz#1518874, rhbz#1519554, rhbz#1546831, rhbz#1559877, rhbz#1561171, rhbz#1563590, rhbz#1565704, rhbz#1565717, rhbz#1572321, rhbz#1574502, rhbz#1590829, rhbz#1595918, rhbz#1598366, rhbz#1602033, rhbz#1609604, rhbz#1610493, rhbz#1613522, rhbz#1638087, rhbz#1652256, rhbz#1652266, rhbz#1663728, rhbz#1670017, rhbz#1722136, rhbz#1730649, rhbz#1802694, rhbz#1810301, rhbz#1821565, rhbz#1831065, rhbz#1855161, rhbz#1856174, rhbz#1856176, rhbz#1858592, rhbz#1858594, rhbz#1858596, rhbz#1858599, rhbz#1869674, rhbz#1871130, rhbz#1876435, rhbz#1876436, rhbz#1876977, rhbz#1877192, rhbz#1880486, rhbz#1890304, rhbz#1903201, rhbz#1915073, rhbz#1915290, rhbz#1930649, rhbz#1939095, rhbz#1940075, rhbz#1940794, rhbz#1943423, rhbz#1945002, rhbz#1945179, rhbz#1945477, rhbz#1947240, rhbz#1948340, rhbz#1952426, rhbz#1952863, rhbz#1953486, rhbz#1956988, rhbz#1957210, rhbz#1957219, rhbz#1957305, rhbz#1957636, rhbz#1957819, rhbz#1961178, rhbz#1962936, rhbz#1964537, rhbz#1967640, rhbz#1972795, rhbz#1976270, rhbz#1976835, rhbz#1976877, rhbz#1976884, rhbz#1977056, rhbz#1977529, rhbz#1978539, rhbz#1979379, rhbz#1981406, rhbz#1983298, rhbz#1986223, rhbz#1988254, rhbz#1988384, rhbz#1990040, rhbz#1993393, rhbz#1994858, rhbz#1998953, rhbz#2000835, rhbz#2002344, rhbz#2004233, rhbz#2004821, rhbz#2006813, rhbz#2007430, rhbz#2012226, rhbz#2014492, rhbz#2019377, rhbz#2020132, rhbz#2022578, rhbz#2023782, rhbz#2024595, rhbz#2025985, rhbz#2026319, rhbz#2027506, rhbz#2031547, rhbz#2032758, rhbz#2034670, rhbz#2038999, rhbz#2040643, rhbz#2041184, rhbz#2041186, rhbz#2041365, rhbz#2041990, rhbz#2042240, rhbz#2042241, rhbz#2043141, rhbz#2044155, rhbz#2053836, rhbz#2054579, rhbz#2062054, rhbz#2062909, rhbz#2071969, rhbz#2089765, rhbz#2115876, rhbz#2120968, rhbz#2122595, rhbz#2140017, rhbz#2142658, rhbz#2149273, rhbz#2153073, rhbz#2166911, rhbz#2188441, rhbz#2208834, rhbz#2216678, rhbz#2227793, rhbz#2231407, rhbz#2233269
+* Wed Jul 10 2024 Patrick Talbert <ptalbert@redhat.com> [6.10.0-0.rc7.14.el10]
+- ksmbd: discard write access to the directory open (Hobin Woo)
+- ksmbd: return FILE_DEVICE_DISK instead of super magic (Namjae Jeon)
+- selftests/vDSO: remove duplicate compiler invocations from Makefile (John Hubbard)
+- selftests/vDSO: remove partially duplicated "all:" target in Makefile (John Hubbard)
+- selftests/vDSO: fix clang build errors and warnings (John Hubbard)
+- selftest/timerns: fix clang build failures for abs() calls (John Hubbard)
+- s390/mm: Add NULL pointer check to crst_table_free() base_crst_free() (Heiko Carstens)
+- not upstream: drop openssl ENGINE API usage (Jan Stancek)
+- perf dsos: When adding a dso into sorted dsos maintain the sort order (Ian Rogers)
+- perf comm str: Avoid sort during insert (Ian Rogers)
+- Also remove the zfcpdump BASE_SMALL config (Justin M. Forbes)
+- Linux 6.10-rc7 (Linus Torvalds)
+- clk: qcom: gcc-ipq9574: Add BRANCH_HALT_VOTED flag (Md Sadre Alam)
+- clk: qcom: apss-ipq-pll: remove 'config_ctl_hi_val' from Stromer pll configs (Gabor Juhos)
+- clk: qcom: clk-alpha-pll: set ALPHA_EN bit for Stromer Plus PLLs (Gabor Juhos)
+- clk: qcom: gcc-sm6350: Fix gpll6* & gpll7 parents (Luca Weiss)
+- clk: mediatek: mt8183: Only enable runtime PM on mt8183-mfgcfg (Pin-yen Lin)
+- clk: sunxi-ng: common: Don't call hw_to_ccu_common on hw without common (Frank Oltmanns)
+- selftests/powerpc: Fix build with USERCFLAGS set (Michael Ellerman)
+- powerpc/pseries: Fix scv instruction crash with kexec (Nicholas Piggin)
+- powerpc/eeh: avoid possible crash when edev->pdev changes (Ganesh Goudar)
+- powerpc/pseries: Whitelist dtl slub object for copying to userspace (Anjali K)
+- powerpc/64s: Fix unnecessary copy to 0 when kernel is booted at address 0 (Jinglin Wen)
+- cifs: Fix read-performance regression by dropping readahead expansion (David Howells)
+- i2c: pnx: Fix potential deadlock warning from del_timer_sync() call in isr (Piotr Wojtaszczyk)
+- v6.10-rc6-rt11 (Sebastian Andrzej Siewior)
+- perf: Update the perf series (Sebastian Andrzej Siewior)
+- seg6: Ensure that seg6_bpf_srh_states can only be accessed from input_action_end_bpf() (Sebastian Andrzej Siewior)
+- tun: Assign missing bpf_net_context. (Sebastian Andrzej Siewior)
+- net: Move flush list retrieval to where it is used. (Sebastian Andrzej Siewior)
+- net: Optimize xdp_do_flush() with bpf_net_context infos. (Sebastian Andrzej Siewior)
+- net: Remove task_struct::bpf_net_context init on fork. (Sebastian Andrzej Siewior)
+- ima: fix wrong zero-assignment during securityfs dentry remove (Enrico Bravi)
+- CREDITS: Add Synopsys DesignWare eDMA driver for Gustavo Pimentel (Bjorn Helgaas)
+- MAINTAINERS: Orphan Synopsys DesignWare xData traffic generator (Bjorn Helgaas)
+- riscv: kexec: Avoid deadlock in kexec crash path (Song Shuai)
+- riscv: stacktrace: fix usage of ftrace_graph_ret_addr() (Puranjay Mohan)
+- riscv: selftests: Fix vsetivli args for clang (Charlie Jenkins)
+- perf: RISC-V: Check standard event availability (Samuel Holland)
+- drivers/perf: riscv: Reset the counter to hpmevent mapping while starting cpus (Samuel Holland)
+- drivers/perf: riscv: Do not update the event data if uptodate (Atish Patra)
+- documentation: Fix riscv cmodx example (Charlie Jenkins)
+- drm/amdgpu/atomfirmware: silence UBSAN warning (Alex Deucher)
+- drm/radeon: check bo_va->bo is non-NULL before using it (Pierre-Eric Pelloux-Prayer)
+- drm/amd/display: Fix array-index-out-of-bounds in dml2/FCLKChangeSupport (Roman Li)
+- drm/amd/display: Update efficiency bandwidth for dcn351 (Fangzhi Zuo)
+- drm/amd/display: Fix refresh rate range for some panel (Tom Chung)
+- drm/amd/display: Account for cursor prefetch BW in DML1 mode support (Alvin Lee)
+- drm/amd/display: Add refresh rate range check (Tom Chung)
+- drm/amd/display: Reset freesync config before update new state (Tom Chung)
+- drm/ttm: Always take the bo delayed cleanup path for imported bos (Thomas Hellström)
+- drm/fbdev-generic: Fix framebuffer on big endian devices (Thomas Huth)
+- drm/panthor: Fix sync-only jobs (Boris Brezillon)
+- drm/panthor: Don't check the array stride on empty uobj arrays (Boris Brezillon)
+- drm: panel-orientation-quirks: Add labels for both Valve Steam Deck revisions (Matthew Schwartz)
+- drm: panel-orientation-quirks: Add quirk for Valve Galileo (John Schoenick)
+- drm/nouveau: fix null pointer dereference in nouveau_connector_get_modes (Ma Ke)
+- firmware: sysfb: Fix reference count of sysfb parent device (Thomas Zimmermann)
+- drm/xe/mcr: Avoid clobbering DSS steering (Matt Roper)
+- drm/xe: fix error handling in xe_migrate_update_pgtables (Matthew Auld)
+- drm/i915/display: For MTL+ platforms skip mg dp programming (Imre Deak)
+- gpiolib: of: add polarity quirk for TSC2005 (Dmitry Torokhov)
+- gpio: mmio: do not calculate bgpio_bits via "ngpios" (Shiji Yang)
+- gpiolib: of: fix lookup quirk for MIPS Lantiq (Dmitry Torokhov)
+- tpm: Address !chip->auth in tpm_buf_append_hmac_session*() (Jarkko Sakkinen)
+- tpm: Address !chip->auth in tpm_buf_append_name() (Jarkko Sakkinen)
+- tpm: Address !chip->auth in tpm2_*_auth_session() (Jarkko Sakkinen)
+- KVM: s390: fix LPSWEY handling (Christian Borntraeger)
+- btrfs: fix folio refcount in __alloc_dummy_extent_buffer() (Boris Burkov)
+- btrfs: fix folio refcount in btrfs_do_encoded_write() (Boris Burkov)
+- btrfs: fix uninitialized return value in the ref-verify tool (Filipe Manana)
+- btrfs: always do the basic checks for btrfs_qgroup_inherit structure (Qu Wenruo)
+- btrfs: zoned: fix calc_available_free_space() for zoned mode (Naohiro Aota)
+- bnxt_en: Fix the resource check condition for RSS contexts (Pavan Chebbi)
+- mlxsw: core_linecards: Fix double memory deallocation in case of invalid INI file (Aleksandr Mishin)
+- wifi: iwlwifi: mvm: check vif for NULL/ERR_PTR before dereference (Miri Korenblit)
+- wifi: iwlwifi: mvm: avoid link lookup in statistics (Johannes Berg)
+- wifi: iwlwifi: mvm: don't wake up rx_sync_waitq upon RFKILL (Emmanuel Grumbach)
+- wifi: iwlwifi: properly set WIPHY_FLAG_SUPPORTS_EXT_KEK_KCK (Daniel Gabay)
+- wifi: wilc1000: fix ies_len type in connect path (Jozef Hopko)
+- wifi: mac80211: fix BSS_CHANGED_UNSOL_BCAST_PROBE_RESP (Johannes Berg)
+- netfilter: nf_tables: unconditionally flush pending work before notifier (Florian Westphal)
+- inet_diag: Initialize pad field in struct inet_diag_req_v2 (Shigeru Yoshida)
+- tcp: Don't flag tcp_sk(sk)->rx_opt.saw_unknown for TCP AO. (Kuniyuki Iwashima)
+- selftests: make order checking verbose in msg_zerocopy selftest (Zijian Zhang)
+- selftests: fix OOM in msg_zerocopy selftest (Zijian Zhang)
+- ice: use proper macro for testing bit (Petr Oros)
+- ice: Reject pin requests with unsupported flags (Jacob Keller)
+- ice: Don't process extts if PTP is disabled (Jacob Keller)
+- ice: Fix improper extts handling (Milena Olech)
+- selftest: af_unix: Add test case for backtrack after finalising SCC. (Kuniyuki Iwashima)
+- af_unix: Fix uninit-value in __unix_walk_scc() (Shigeru Yoshida)
+- bonding: Fix out-of-bounds read in bond_option_arp_ip_targets_set() (Sam Sun)
+- net: rswitch: Avoid use-after-free in rswitch_poll() (Radu Rendec)
+- net: stmmac: enable HW-accelerated VLAN stripping for gmac4 only (Furong Xu)
+- net: ntb_netdev: Move ntb_netdev_rx_handler() to call netif_rx() from __netif_rx() (Dave Jiang)
+- net: phy: aquantia: add missing include guards (Bartosz Golaszewski)
+- net: txgbe: free isb resources at the right time (Jiawen Wu)
+- net: txgbe: add extra handle for MSI/INTx into thread irq handle (Jiawen Wu)
+- net: txgbe: remove separate irq request for MSI and INTx (Jiawen Wu)
+- net: txgbe: initialize num_q_vectors for MSI/INTx interrupts (Jiawen Wu)
+- net: stmmac: dwmac-qcom-ethqos: fix error array size (Yijie Yang)
+- net: allow skb_datagram_iter to be called from any context (Sagi Grimberg)
+- e1000e: Fix S0ix residency on corporate systems (Dima Ruinskiy)
+- can: kvaser_usb: Explicitly initialize family in leafimx driver_info struct (Jimmy Assarsson)
+- Bluetooth: L2CAP: Fix deadlock (Luiz Augusto von Dentz)
+- bluetooth/hci: disallow setting handle bigger than HCI_CONN_HANDLE_MAX (Pavel Skripkin)
+- Bluetooth: ISO: Check socket flag instead of hcon (Iulia Tanasescu)
+- bluetooth/l2cap: sync sock recv cb and release (Edward Adam Davis)
+- Bluetooth: Ignore too large handle values in BIG (Edward Adam Davis)
+- Bluetooth: btnxpuart: Enable Power Save feature on startup (Neeraj Sanjay Kale)
+- Bluetooth: hci_core: cancel all works upon hci_unregister_dev() (Tetsuo Handa)
+- Bluetooth: qca: Fix BT enable failure again for QCA6390 after warm reboot (Zijun Hu)
+- Bluetooth: hci_event: Fix setting of unicast qos interval (Luiz Augusto von Dentz)
+- Bluetooth: btintel_pcie: Fix REVERSE_INULL issue reported by coverity (Vijay Satija)
+- Bluetooth: hci_bcm4377: Fix msgid release (Hector Martin)
+- Bluetooth: Add quirk to ignore reserved PHY bits in LE Extended Adv Report (Sven Peter)
+- tcp_metrics: validate source addr length (Jakub Kicinski)
+- bnx2x: Fix multiple UBSAN array-index-out-of-bounds (Ghadi Elie Rahme)
+- net: mac802154: Fix racy device stats updates by DEV_STATS_INC() and DEV_STATS_ADD() (Yunshui Jiang)
+- mac802154: fix time calculation in ieee802154_configure_durations() (Dmitry Antipov)
+- net/mlx5e: Approximate IPsec per-SA payload data bytes count (Leon Romanovsky)
+- net/mlx5e: Present succeeded IPsec SA bytes and packet (Leon Romanovsky)
+- net/mlx5e: Add mqprio_rl cleanup and free in mlx5e_priv_cleanup() (Jianbo Liu)
+- net/mlx5: E-switch, Create ingress ACL when needed (Chris Mi)
+- net/mlx5: Use max_num_eqs_24b when setting max_io_eqs (Daniel Jurgens)
+- net/mlx5: Use max_num_eqs_24b capability if set (Daniel Jurgens)
+- net/mlx5: IFC updates for changing max EQs (Daniel Jurgens)
+- UPSTREAM: tcp: fix DSACK undo in fast recovery to call tcp_try_to_open() (Neal Cardwell)
+- net: phy: phy_device: Fix PHY LED blinking code comment (Marek Vasut)
+- MAINTAINERS: wifi: update ath.git location (Kalle Valo)
+- MAINTAINERS: Remembering Larry Finger (Kalle Valo)
+- wifi: mac80211: disable softirqs for queued frame handling (Johannes Berg)
+- wifi: cfg80211: restrict NL80211_ATTR_TXQ_QUANTUM values (Eric Dumazet)
+- wifi: wlcore: fix wlcore AP mode (Russell King (Oracle))
+- s390/dasd: Fix invalid dereferencing of indirect CCW data pointer (Stefan Haberland)
+- s390/vfio_ccw: Fix target addresses of TIC CCWs (Eric Farman)
+- s390: Update defconfigs (Heiko Carstens)
+- platform/x86: toshiba_acpi: Fix quickstart quirk handling (Armin Wolf)
+- selftests/harness: Fix tests timeout and race condition (Mickaël Salaün)
+- nilfs2: fix incorrect inode allocation from reserved inodes (Ryusuke Konishi)
+- nilfs2: add missing check for inode numbers on directory entries (Ryusuke Konishi)
+- nilfs2: fix inode number range checks (Ryusuke Konishi)
+- mm: avoid overflows in dirty throttling logic (Jan Kara)
+- Revert "mm/writeback: fix possible divide-by-zero in wb_dirty_limits(), again" (Jan Kara)
+- mm: optimize the redundant loop of mm_update_owner_next() (Jinliang Zheng)
+- tracing: Have memmapped ring buffer use ioctl of "R" range 0x20-2F (Steven Rostedt (Google))
+- io_uring/net: don't clear msg_inq before io_recv_buf_select() needs it (Jens Axboe)
+- media: ivsc: Depend on IPU_BRIDGE or not IPU_BRIDGE (Sakari Ailus)
+- media: intel/ipu6: Fix a null pointer dereference in ipu6_isys_query_stream_by_source (Hao Ge)
+- media: ipu6: Use the ISYS auxdev device as the V4L2 device's device (Sakari Ailus)
+- selftests/resctrl: Fix non-contiguous CBM for AMD (Babu Moger)
+- afs: Convert comma to semicolon (Chen Ni)
+- fs: better handle deep ancestor chains in is_subdir() (Christian Brauner)
+- filelock: Remove locks reliably when fcntl/close race is detected (Jann Horn)
+- erofs: ensure m_llen is reset to 0 if metadata is invalid (Gao Xiang)
+- erofs: convert to use super_set_uuid to support for FS_IOC_GETFSUUID (Huang Xiaojia)
+- erofs: fix possible memory leak in z_erofs_gbuf_exit() (Sandeep Dhavale)
+- Linux v6.10.0-0.rc7
+Resolves: RHEL-29722
+
 * Tue Jul 02 2024 Patrick Talbert <ptalbert@redhat.com> [6.10.0-0.rc6.13.el10]
 - scsi: libsas: Fix exp-attached device scan after probe failure scanned in again after probe failed (Xingui Yang)
 - scsi: scsi_debug: Fix create target debugfs failure (Ming Lei)
