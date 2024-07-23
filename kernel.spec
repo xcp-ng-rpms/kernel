@@ -520,6 +520,12 @@ Summary: The Linux kernel
 %define kernel_image arch/x86/boot/bzImage
 %endif
 
+%ifarch x86_64_v2
+%define hdrarch x86_64
+%define asmarch x86
+%define kernel_image arch/x86/boot/bzImage
+%endif
+
 %ifarch ppc64le
 %define asmarch powerpc
 %define hdrarch powerpc
@@ -647,7 +653,7 @@ Release: %{pkg_release}
 %if 0%{?fedora}
 ExclusiveArch: noarch x86_64 s390x aarch64 ppc64le
 %else
-ExclusiveArch: noarch i386 i686 x86_64 s390x aarch64 ppc64le
+ExclusiveArch: noarch i386 i686 x86_64 s390x aarch64 ppc64le x86_64_v2
 %endif
 ExclusiveOS: Linux
 %ifnarch %{nobuildarches}
@@ -886,6 +892,9 @@ Source33: %{name}-x86_64-debug-rhel.config
 
 Source34: def_variants.yaml.rhel
 
+Source35: %{name}-x86_64_v2-rhel.config
+Source36: %{name}-x86_64_v2-debug-rhel.config
+
 Source41: x509.genkey.centos
 # ARM64 64K page-size kernel config
 Source42: %{name}-aarch64-64k-rhel.config
@@ -956,11 +965,13 @@ Source201: Module.kabi_aarch64
 Source202: Module.kabi_ppc64le
 Source203: Module.kabi_s390x
 Source204: Module.kabi_x86_64
+Source205: Module.kabi_x86_64_v2
 
 Source210: Module.kabi_dup_aarch64
 Source211: Module.kabi_dup_ppc64le
 Source212: Module.kabi_dup_s390x
 Source213: Module.kabi_dup_x86_64
+Source214: Module.kabi_dup_x86_64_v2
 
 Source300: kernel-abi-stablelists-%{kabiversion}.tar.xz
 Source301: kernel-kabi-dw-%{kabiversion}.tar.xz
@@ -971,6 +982,8 @@ Source474: %{name}-aarch64-rt-rhel.config
 Source475: %{name}-aarch64-rt-debug-rhel.config
 Source476: %{name}-x86_64-rt-rhel.config
 Source477: %{name}-x86_64-rt-debug-rhel.config
+Source478: %{name}-x86_64_v2-rt-rhel.config
+Source479: %{name}-x86_64_v2-rt-debug-rhel.config
 %endif
 
 # Sources for kernel-tools
