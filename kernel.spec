@@ -1019,7 +1019,7 @@ Patch2006: 0006-Bring-back-deprecated-pci-ids-to-qla4xxx-driver.patch
 Patch2007: 0007-Bring-back-deprecated-pci-ids-to-be2iscsi-driver.patch
 Patch2008: 0008-Bring-back-deprecated-pci-ids-to-megaraid_sas-driver.patch
 Patch2009: 0009-Bring-back-deprecated-pci-ids-to-mpt3sas-driver.patch
-Patch2010: 0010-Bring-back-deprecated-pci-ids-to-aacraid-driver.patch 
+Patch2010: 0010-Bring-back-deprecated-pci-ids-to-aacraid-driver.patch
 
 # empty final patch to facilitate testing of kernel patches
 Patch999999: linux-kernel-test.patch
