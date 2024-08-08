@@ -996,6 +996,18 @@ Source4002: gating.yaml
 Patch1: patch-%{patchversion}-redhat.patch
 %endif
 
+# Bring back deprecated PCI ids #CFHack #CFHack2024
+Patch2001: 0001-Enable-all-disabled-pci-devices-by-moving-to-unmaint.patch
+Patch2002: 0002-Bring-back-deprecated-pci-ids-to-mptsas-mptspi-drive.patch
+Patch2003: 0003-Bring-back-deprecated-pci-ids-to-hpsa-driver.patch
+Patch2004: 0004-Bring-back-deprecated-pci-ids-to-qla2xxx-driver.patch
+Patch2005: 0005-Bring-back-deprecated-pci-ids-to-lpfc-driver.patch
+Patch2006: 0006-Bring-back-deprecated-pci-ids-to-qla4xxx-driver.patch
+Patch2007: 0007-Bring-back-deprecated-pci-ids-to-be2iscsi-driver.patch
+Patch2008: 0008-Bring-back-deprecated-pci-ids-to-megaraid_sas-driver.patch
+Patch2009: 0009-Bring-back-deprecated-pci-ids-to-mpt3sas-driver.patch
+Patch2010: 0010-Bring-back-deprecated-pci-ids-to-aacraid-driver.patch 
+
 # empty final patch to facilitate testing of kernel patches
 Patch999999: linux-kernel-test.patch
 
@@ -1812,6 +1824,17 @@ cp -a %{SOURCE1} .
 
 %{log_msg "Start of patch applications"}
 %if !%{nopatches}
+
+ApplyPatch 0001-Enable-all-disabled-pci-devices-by-moving-to-unmaint.patch
+ApplyPatch 0002-Bring-back-deprecated-pci-ids-to-mptsas-mptspi-drive.patch
+ApplyPatch 0003-Bring-back-deprecated-pci-ids-to-hpsa-driver.patch
+ApplyPatch 0004-Bring-back-deprecated-pci-ids-to-qla2xxx-driver.patch
+ApplyPatch 0005-Bring-back-deprecated-pci-ids-to-lpfc-driver.patch
+ApplyPatch 0006-Bring-back-deprecated-pci-ids-to-qla4xxx-driver.patch
+ApplyPatch 0007-Bring-back-deprecated-pci-ids-to-be2iscsi-driver.patch
+ApplyPatch 0008-Bring-back-deprecated-pci-ids-to-megaraid_sas-driver.patch
+ApplyPatch 0009-Bring-back-deprecated-pci-ids-to-mpt3sas-driver.patch
+ApplyPatch 0010-Bring-back-deprecated-pci-ids-to-aacraid-driver.patch
 
 ApplyOptionalPatch patch-%{patchversion}-redhat.patch
 %endif

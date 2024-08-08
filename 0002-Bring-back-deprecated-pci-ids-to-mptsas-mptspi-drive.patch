@@ -1,0 +1,39 @@
+From 0437ffb56aa745a623adce7232efca23c6788d62 Mon Sep 17 00:00:00 2001
+From: Andrew Lukoshko <alukoshko@almalinux.org>
+Date: Thu, 8 Aug 2024 16:38:01 +0000
+Subject: [PATCH 02/10] Bring back deprecated pci ids to mptsas-mptspi driver
+
+---
+ drivers/message/fusion/mptsas.c | 2 +-
+ drivers/message/fusion/mptspi.c | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/message/fusion/mptsas.c b/drivers/message/fusion/mptsas.c
+index d5f52a128..5f10cbd35 100644
+--- a/drivers/message/fusion/mptsas.c
++++ b/drivers/message/fusion/mptsas.c
+@@ -5380,7 +5380,7 @@ static void mptsas_remove(struct pci_dev *pdev)
+ }
+ 
+ static struct pci_device_id mptsas_pci_table[] = {
+-#ifdef CONFIG_RHEL_DIFFERENCES
++#ifdef CONFIG_ALMALINUX_DIFFERENCES
+ 	{ PCI_VENDOR_ID_LSI_LOGIC, MPI_MANUFACTPAGE_DEVID_SAS1068,
+ 		PCI_VENDOR_ID_VMWARE, PCI_ANY_ID },
+ #else
+diff --git a/drivers/message/fusion/mptspi.c b/drivers/message/fusion/mptspi.c
+index 5a8b2ea73..b1cff4289 100644
+--- a/drivers/message/fusion/mptspi.c
++++ b/drivers/message/fusion/mptspi.c
+@@ -1239,7 +1239,7 @@ static struct spi_function_template mptspi_transport_functions = {
+  */
+ 
+ static struct pci_device_id mptspi_pci_table[] = {
+-#ifdef CONFIG_RHEL_DIFFERENCES
++#ifdef CONFIG_ALMALINUX_DIFFERENCES
+ 	{ PCI_VENDOR_ID_LSI_LOGIC, MPI_MANUFACTPAGE_DEVID_53C1030,
+ 	PCI_VENDOR_ID_VMWARE, PCI_ANY_ID },
+ #else
+-- 
+2.43.5
+

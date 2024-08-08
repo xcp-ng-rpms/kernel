@@ -1,0 +1,68 @@
+From 4ad65faf019bfae8aec7b4e24d41c62184266ba1 Mon Sep 17 00:00:00 2001
+From: Andrew Lukoshko <alukoshko@almalinux.org>
+Date: Thu, 8 Aug 2024 16:42:21 +0000
+Subject: [PATCH 05/10] Bring back deprecated pci ids to lpfc driver
+
+---
+ drivers/scsi/lpfc/lpfc_ids.h | 12 ++++++------
+ 1 file changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/scsi/lpfc/lpfc_ids.h b/drivers/scsi/lpfc/lpfc_ids.h
+index 85fc52038..83dc9f4c7 100644
+--- a/drivers/scsi/lpfc/lpfc_ids.h
++++ b/drivers/scsi/lpfc/lpfc_ids.h
+@@ -24,7 +24,7 @@
+ #include <linux/pci.h>
+ 
+ const struct pci_device_id lpfc_id_table[] = {
+-#ifndef CONFIG_RHEL_DIFFERENCES
++#ifndef CONFIG_ALMALINUX_DIFFERENCES
+ 	{PCI_VENDOR_ID_EMULEX, PCI_DEVICE_ID_VIPER,
+ 		PCI_ANY_ID, PCI_ANY_ID, },
+ 	{PCI_VENDOR_ID_EMULEX, PCI_DEVICE_ID_FIREFLY,
+@@ -58,7 +58,7 @@ const struct pci_device_id lpfc_id_table[] = {
+ #endif
+ 	{PCI_VENDOR_ID_EMULEX, PCI_DEVICE_ID_BMID,
+ 		PCI_ANY_ID, PCI_ANY_ID, },
+-#ifndef CONFIG_RHEL_DIFFERENCES
++#ifndef CONFIG_ALMALINUX_DIFFERENCES
+ 	{PCI_VENDOR_ID_EMULEX, PCI_DEVICE_ID_BSMB,
+ 		PCI_ANY_ID, PCI_ANY_ID, },
+ #endif
+@@ -72,7 +72,7 @@ const struct pci_device_id lpfc_id_table[] = {
+ 		PCI_ANY_ID, PCI_ANY_ID, },
+ 	{PCI_VENDOR_ID_EMULEX, PCI_DEVICE_ID_ZSMB,
+ 		PCI_ANY_ID, PCI_ANY_ID, },
+-#ifndef CONFIG_RHEL_DIFFERENCES
++#ifndef CONFIG_ALMALINUX_DIFFERENCES
+ 	{PCI_VENDOR_ID_EMULEX, PCI_DEVICE_ID_TFLY,
+ 		PCI_ANY_ID, PCI_ANY_ID, },
+ 	{PCI_VENDOR_ID_EMULEX, PCI_DEVICE_ID_LP101,
+@@ -96,7 +96,7 @@ const struct pci_device_id lpfc_id_table[] = {
+ 		PCI_ANY_ID, PCI_ANY_ID, },
+ 	{PCI_VENDOR_ID_EMULEX, PCI_DEVICE_ID_SAT_S,
+ 		PCI_ANY_ID, PCI_ANY_ID, },
+-#ifndef CONFIG_RHEL_DIFFERENCES
++#ifndef CONFIG_ALMALINUX_DIFFERENCES
+ 	{PCI_VENDOR_ID_EMULEX, PCI_DEVICE_ID_PROTEUS_VF,
+ 		PCI_ANY_ID, PCI_ANY_ID, },
+ 	{PCI_VENDOR_ID_EMULEX, PCI_DEVICE_ID_PROTEUS_PF,
+@@ -110,13 +110,13 @@ const struct pci_device_id lpfc_id_table[] = {
+ #endif
+ 	{PCI_VENDOR_ID_EMULEX, PCI_DEVICE_ID_FALCON,
+ 		PCI_ANY_ID, PCI_ANY_ID, },
+-#ifndef CONFIG_RHEL_DIFFERENCES
++#ifndef CONFIG_ALMALINUX_DIFFERENCES
+ 	{PCI_VENDOR_ID_EMULEX, PCI_DEVICE_ID_BALIUS,
+ 		PCI_ANY_ID, PCI_ANY_ID, },
+ #endif
+ 	{PCI_VENDOR_ID_EMULEX, PCI_DEVICE_ID_LANCER_FC,
+ 		PCI_ANY_ID, PCI_ANY_ID, },
+-#ifndef CONFIG_RHEL_DIFFERENCES
++#ifndef CONFIG_ALMALINUX_DIFFERENCES
+ 	{PCI_VENDOR_ID_EMULEX, PCI_DEVICE_ID_LANCER_FCOE,
+ 		PCI_ANY_ID, PCI_ANY_ID, },
+ 	{PCI_VENDOR_ID_EMULEX, PCI_DEVICE_ID_LANCER_FC_VF,
+-- 
+2.43.5
+
