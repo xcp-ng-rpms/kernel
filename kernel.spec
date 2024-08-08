@@ -451,14 +451,14 @@ Summary: The Linux kernel
 %define with_selftests 0
 %endif
 
-%ifnarch noarch
+%ifnarch aarch64
 %define with_kernel_abi_stablelists 0
 %endif
 
 # Overrides for generic default options
 
 # only package docs noarch
-%ifnarch noarch
+%ifnarch aarch64
 %define with_doc 0
 %define doc_build_fail true
 %endif
@@ -925,13 +925,13 @@ Source86: dracut-virt.conf
 
 Source87: flavors
 
-Source100: rheldup3.x509
-Source101: rhelkpatch1.x509
+Source100: almalinuxdup1.x509
+Source101: almalinuxkpatch1.x509
 Source102: nvidiagpuoot001.x509
-Source103: rhelimaca1.x509
-Source104: rhelima.x509
-Source105: rhelima_centos.x509
-Source106: fedoraimaca.x509
+Source103: almalinuximaca1.x509
+Source104: almalinuxima.x509
+Source105: almalinuxima.x509
+Source106: almalinuxima.x509
 
 %if 0%{?fedora}%{?eln}
 %define ima_ca_cert %{SOURCE106}
@@ -1303,11 +1303,12 @@ Summary: gcov graph and source files for coverage data collection.\
 %{nil}
 
 %package -n %{package_name}-abi-stablelists
-Summary: The Red Hat Enterprise Linux kernel ABI symbol stablelists
+Summary: The AlmaLinux kernel ABI symbol stablelists
+BuildArch: noarch
 AutoReqProv: no
 %description -n %{package_name}-abi-stablelists
-The kABI package contains information pertaining to the Red Hat Enterprise
-Linux kernel ABI, including lists of kernel symbols that are needed by
+The kABI package contains information pertaining to the AlmaLinux
+kernel ABI, including lists of kernel symbols that are needed by
 external Linux kernel modules, and a yum plugin to aid enforcement.
 
 %if %{with_kabidw_base}
@@ -1316,8 +1317,8 @@ Summary: The baseline dataset for kABI verification using DWARF data
 Group: System Environment/Kernel
 AutoReqProv: no
 %description kernel-kabidw-base-internal
-The package contains data describing the current ABI of the Red Hat Enterprise
-Linux kernel, suitable for the kabi-dw tool.
+The package contains data describing the current ABI of the AlmaLinux
+kernel, suitable for the kabi-dw tool.
 %endif
 
 #
@@ -1416,7 +1417,7 @@ Requires: kernel%{?1:-%{1}}-modules-core-uname-r = %{KVERREL}%{uname_suffix %{?1
 AutoReq: no\
 AutoProv: yes\
 %description %{?1:%{1}-}modules-internal\
-This package provides kernel modules for the %{?2:%{2} }kernel package for Red Hat internal usage.\
+This package provides kernel modules for the %{?2:%{2} }kernel package for AlmaLinux internal usage.\
 %{nil}
 
 #
@@ -1592,7 +1593,7 @@ Requires: kernel%{?1:-%{1}}-modules-core-uname-r = %{KVERREL}%{uname_suffix %{?1
 AutoReq: no\
 AutoProv: yes\
 %description %{?1:%{1}-}modules-partner\
-This package provides kernel modules for the %{?2:%{2} }kernel package for Red Hat partners usage.\
+This package provides kernel modules for the %{?2:%{2} }kernel package for AlmaLinux partners usage.\
 %{nil}
 
 # Now, each variant package.
@@ -1948,7 +1949,7 @@ done
 %if 0%{?rhel}
 %{log_msg "Adjust FIPS module name for RHEL"}
 for i in *.config; do
-  sed -i 's/CONFIG_CRYPTO_FIPS_NAME=.*/CONFIG_CRYPTO_FIPS_NAME="Red Hat Enterprise Linux %{rhel} - Kernel Cryptographic API"/' $i
+  sed -i 's/CONFIG_CRYPTO_FIPS_NAME=.*/CONFIG_CRYPTO_FIPS_NAME="AlmaLinux %{rhel} - Kernel Cryptographic API"/' $i
 done
 %endif
 
@@ -2586,14 +2587,17 @@ BuildKernel() {
 
         # RHEL/CentOS specific .SBAT entries
 %if 0%{?centos}
-        SBATsuffix="centos"
+        SBATsuffix="rhel"
 %else
         SBATsuffix="rhel"
 %endif
         SBAT=$(cat <<- EOF
 	linux,1,Red Hat,linux,$KernelVer,mailto:secalert@redhat.com
+	linux,1,AlmaLinux,linux,$KernelVer,mailto:security@almalinux.org
 	linux.$SBATsuffix,1,Red Hat,linux,$KernelVer,mailto:secalert@redhat.com
+	linux.almalinux,1,AlmaLinux,linux,$KernelVer,mailto:security@almalinux.org
 	kernel-uki-virt.$SBATsuffix,1,Red Hat,kernel-uki-virt,$KernelVer,mailto:secalert@redhat.com
+	kernel-uki-virt,almalinux,1,AlmaLinux,kernel-uki-virt,$KernelVer,mailto:security@almalinux.org
 	EOF
 	)
 
