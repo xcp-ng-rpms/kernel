@@ -1062,6 +1062,7 @@ AutoProv: yes\
 
 %package doc
 Summary: Various documentation bits found in the kernel source
+BuildArch: noarch
 Group: Documentation
 %description doc
 This package contains documentation files from the kernel
