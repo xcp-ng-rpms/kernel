@@ -1,3 +1,31 @@
+* Fri Aug 09 2024 Jan Stancek <jstancek@redhat.com> [6.11.0-0.rc2.17.el10]
+- btrfs: avoid using fixed char array size for tree names (Qu Wenruo)
+- btrfs: fix double inode unlock for direct IO sync writes (Filipe Manana)
+- btrfs: emit a warning about space cache v1 being deprecated (Josef Bacik)
+- btrfs: fix qgroup reserve leaks in cow_file_range (Boris Burkov)
+- btrfs: implement launder_folio for clearing dirty page reserve (Boris Burkov)
+- btrfs: scrub: update last_physical after scrubbing one stripe (Qu Wenruo)
+- btrfs: factor out stripe length calculation into a helper (Qu Wenruo)
+- power: supply: qcom_battmgr: Ignore extra __le32 in info payload (Stephan Gerhold)
+- power: supply: qcom_battmgr: return EAGAIN when firmware service is not up (Neil Armstrong)
+- power: supply: axp288_charger: Round constant_charge_voltage writes down (Hans de Goede)
+- power: supply: axp288_charger: Fix constant_charge_voltage writes (Hans de Goede)
+- power: supply: rt5033: Bring back i2c_set_clientdata (Nikita Travkin)
+- vhost-vdpa: switch to use vmf_insert_pfn() in the fault handler (Jason Wang)
+- platform/x86/intel/ifs: Initialize union ifs_status to zero (Kuppuswamy Sathyanarayanan)
+- platform/x86: msi-wmi-platform: Fix spelling mistakes (Luis Felipe Hernandez)
+- platform/x86/amd/pmf: Add new ACPI ID AMDI0107 (Shyam Sundar S K)
+- platform/x86/amd/pmc: Send OS_HINT command for new AMD platform (Shyam Sundar S K)
+- platform/x86/amd: pmf: Add quirk for ROG Ally X (Luke D. Jones)
+- platform/x86: intel-vbtn: Protect ACPI notify handler against recursion (Hans de Goede)
+- selftests: ksft: Fix finished() helper exit code on skipped tests (Laura Nao)
+- mm, slub: do not call do_slab_free for kfence object (Rik van Riel)
+- redhat/configs: Disable gfs2 in rhel configs (Andrew Price)
+- redhat/uki_addons/virt: add common FIPS addon (Emanuele Giuseppe Esposito)
+- redhat/kernel.spec: add uki_addons to create UKI kernel cmdline addons (Emanuele Giuseppe Esposito)
+- Linux v6.11.0-0.rc2
+Resolves: RHEL-29722 
+
 * Tue Aug 06 2024 Jan Stancek <jstancek@redhat.com> [6.11.0-0.rc2.16.el10]
 - Linux 6.11-rc2 (Linus Torvalds)
 - profiling: remove profile=sleep support (Tetsuo Handa)
@@ -156,6 +184,34 @@
 - task_work: make TWA_NMI_CURRENT handling conditional on IRQ_WORK (Linus Torvalds)
 Resolves: RHEL-29722
 
+* Fri Aug 09 2024 Jan Stancek <jstancek@redhat.com> [6.11.0-0.rc2.17.el10]
+- btrfs: avoid using fixed char array size for tree names (Qu Wenruo)
+- btrfs: fix double inode unlock for direct IO sync writes (Filipe Manana)
+- btrfs: emit a warning about space cache v1 being deprecated (Josef Bacik)
+- btrfs: fix qgroup reserve leaks in cow_file_range (Boris Burkov)
+- btrfs: implement launder_folio for clearing dirty page reserve (Boris Burkov)
+- btrfs: scrub: update last_physical after scrubbing one stripe (Qu Wenruo)
+- btrfs: factor out stripe length calculation into a helper (Qu Wenruo)
+- power: supply: qcom_battmgr: Ignore extra __le32 in info payload (Stephan Gerhold)
+- power: supply: qcom_battmgr: return EAGAIN when firmware service is not up (Neil Armstrong)
+- power: supply: axp288_charger: Round constant_charge_voltage writes down (Hans de Goede)
+- power: supply: axp288_charger: Fix constant_charge_voltage writes (Hans de Goede)
+- power: supply: rt5033: Bring back i2c_set_clientdata (Nikita Travkin)
+- vhost-vdpa: switch to use vmf_insert_pfn() in the fault handler (Jason Wang)
+- platform/x86/intel/ifs: Initialize union ifs_status to zero (Kuppuswamy Sathyanarayanan)
+- platform/x86: msi-wmi-platform: Fix spelling mistakes (Luis Felipe Hernandez)
+- platform/x86/amd/pmf: Add new ACPI ID AMDI0107 (Shyam Sundar S K)
+- platform/x86/amd/pmc: Send OS_HINT command for new AMD platform (Shyam Sundar S K)
+- platform/x86/amd: pmf: Add quirk for ROG Ally X (Luke D. Jones)
+- platform/x86: intel-vbtn: Protect ACPI notify handler against recursion (Hans de Goede)
+- selftests: ksft: Fix finished() helper exit code on skipped tests (Laura Nao)
+- mm, slub: do not call do_slab_free for kfence object (Rik van Riel)
+- redhat/configs: Disable gfs2 in rhel configs (Andrew Price)
+- redhat/uki_addons/virt: add common FIPS addon (Emanuele Giuseppe Esposito)
+- redhat/kernel.spec: add uki_addons to create UKI kernel cmdline addons (Emanuele Giuseppe Esposito)
+- Linux v6.11.0-0.rc2
+Resolves: 
+
 * Tue Aug 06 2024 Jan Stancek <jstancek@redhat.com> [6.11.0-0.rc2.16.el10]
 - Linux 6.11-rc2 (Linus Torvalds)
 - profiling: remove profile=sleep support (Tetsuo Handa)
@@ -312,7 +368,22 @@ Resolves: RHEL-29722
 - printk: Add notation to console_srcu locking (John Ogness)
 - crypto: x86/aes-gcm: Disable FPU around skcipher_walk_done(). (Sebastian Andrzej Siewior)
 - task_work: make TWA_NMI_CURRENT handling conditional on IRQ_WORK (Linus Torvalds)
-Resolves: RHEL-29722, RHEL-52629
+Resolves: RHEL-29722
+
+* Thu Aug 08 2024 Fedora Kernel Team <kernel-team@fedoraproject.org> [6.11.0-0.rc2.6a0e38264012.25]
+- Linux v6.11.0-0.rc2.6a0e38264012
+Resolves: 
+
+* Wed Aug 07 2024 Fedora Kernel Team <kernel-team@fedoraproject.org> [6.11.0-0.rc2.d4560686726f.24]
+- Linux v6.11.0-0.rc2.d4560686726f
+Resolves: 
+
+* Tue Aug 06 2024 Fedora Kernel Team <kernel-team@fedoraproject.org> [6.11.0-0.rc2.b446a2dae984.23]
+- redhat/configs: Disable gfs2 in rhel configs (Andrew Price)
+- redhat/uki_addons/virt: add common FIPS addon (Emanuele Giuseppe Esposito)
+- redhat/kernel.spec: add uki_addons to create UKI kernel cmdline addons (Emanuele Giuseppe Esposito)
+- Linux v6.11.0-0.rc2.b446a2dae984
+Resolves: 
 
 * Mon Aug 05 2024 Fedora Kernel Team <kernel-team@fedoraproject.org> [6.11.0-0.rc2.22]
 - rh_flags: fix failed when register_sysctl_sz rh_flags_table to kernel (Ricardo Robaina) [RHEL-52629]

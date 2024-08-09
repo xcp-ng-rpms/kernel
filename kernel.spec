@@ -163,15 +163,15 @@ Summary: The Linux kernel
 %define specrpmversion 6.11.0
 %define specversion 6.11.0
 %define patchversion 6.11
-%define pkgrelease 0.rc2.16
+%define pkgrelease 0.rc2.17
 %define kversion 6
-%define tarfile_release 6.11.0-0.rc2.16.el10
+%define tarfile_release 6.11.0-0.rc2.17.el10
 # This is needed to do merge window version magic
 %define patchlevel 11
 # This allows pkg_release to have configurable %%{?dist} tag
-%define specrelease 0.rc2.16%{?buildid}%{?dist}
+%define specrelease 0.rc2.17%{?buildid}%{?dist}
 # This defines the kabi tarball version
-%define kabiversion 6.11.0-0.rc2.16.el10
+%define kabiversion 6.11.0-0.rc2.17.el10
 
 # If this variable is set to 1, a bpf selftests build failure will cause a
 # fatal kernel package build error
@@ -797,6 +797,8 @@ BuildRequires: lvm2
 BuildRequires: systemd-boot-unsigned
 # For systemd-stub and systemd-pcrphase
 BuildRequires: systemd-udev >= 252-1
+# For UKI kernel cmdline addons
+BuildRequires: systemd-ukify
 # For TPM operations in UKI initramfs
 BuildRequires: tpm2-tools
 # For UKI sb cert
@@ -924,6 +926,9 @@ Source81: process_configs.sh
 Source86: dracut-virt.conf
 
 Source87: flavors
+
+Source151: uki_create_addons.py
+Source152: uki_addons.json
 
 Source100: rheldup3.x509
 Source101: rhelkpatch1.x509
@@ -1566,6 +1571,11 @@ Provides: kernel-%{?1:%{1}-}uname-r = %{KVERREL}%{uname_suffix %{?1:+%{1}}}\
 Requires: kernel%{?1:-%{1}}-modules-core-uname-r = %{KVERREL}%{uname_suffix %{?1:+%{1}}}\
 Requires(pre): %{kernel_prereq}\
 Requires(pre): systemd >= 254-1\
+%package %{?1:%{1}-}uki-virt-addons\
+Summary: %{variant_summary} unified kernel image addons for virtual machines\
+Provides: installonlypkg(kernel)\
+Requires: kernel%{?1:-%{1}}-uki-virt = %{specrpmversion}-%{release}\
+Requires(pre): systemd >= 254-1\
 %endif\
 %endif\
 %if %{with_gcov}\
@@ -1705,31 +1715,49 @@ input and output, etc.
 %if %{with_up} && %{with_debug} && %{with_efiuki}
 %description debug-uki-virt
 Prebuilt debug unified kernel image for virtual machines.
+
+%description debug-uki-virt-addons
+Prebuilt debug unified kernel image addons for virtual machines.
 %endif
 
 %if %{with_up_base} && %{with_efiuki}
 %description uki-virt
 Prebuilt default unified kernel image for virtual machines.
+
+%description uki-virt-addons
+Prebuilt default unified kernel image addons for virtual machines.
 %endif
 
 %if %{with_arm64_16k} && %{with_debug} && %{with_efiuki}
 %description 16k-debug-uki-virt
 Prebuilt 16k debug unified kernel image for virtual machines.
+
+%description 16k-debug-uki-virt-addons
+Prebuilt 16k debug unified kernel image addons for virtual machines.
 %endif
 
 %if %{with_arm64_16k_base} && %{with_efiuki}
 %description 16k-uki-virt
 Prebuilt 16k unified kernel image for virtual machines.
+
+%description 16k-uki-virt-addons
+Prebuilt 16k unified kernel image addons for virtual machines.
 %endif
 
 %if %{with_arm64_64k} && %{with_debug} && %{with_efiuki}
 %description 64k-debug-uki-virt
 Prebuilt 64k debug unified kernel image for virtual machines.
+
+%description 64k-debug-uki-virt-addons
+Prebuilt 64k debug unified kernel image addons for virtual machines.
 %endif
 
 %if %{with_arm64_64k_base} && %{with_efiuki}
 %description 64k-uki-virt
 Prebuilt 64k unified kernel image for virtual machines.
+
+%description 64k-uki-virt-addons
+Prebuilt 64k unified kernel image addons for virtual machines.
 %endif
 
 %if %{with_ipaclones}
@@ -2616,6 +2644,10 @@ BuildKernel() {
            --kernel-cmdline 'console=tty0 console=ttyS0' \
 	   $KernelUnifiedImage
 
+  KernelAddonsDirOut="$KernelUnifiedImage.extra.d"
+  mkdir -p $KernelAddonsDirOut
+  python3 %{SOURCE151} %{SOURCE152} $KernelAddonsDirOut virt %{primary_target} %{_target_cpu}
+
 %if %{signkernel}
 	%{log_msg "Sign the EFI UKI kernel"}
 %if 0%{?fedora}%{?eln}
@@ -2636,6 +2668,12 @@ BuildKernel() {
             exit 1
         fi
         mv $KernelUnifiedImage.signed $KernelUnifiedImage
+
+      for addon in "$KernelAddonsDirOut"/*; do
+        %pesign -s -i $addon -o $addon.signed -a %{secureboot_ca_0} -c %{secureboot_key_0} -n %{pesign_name_0}
+        rm -f $addon
+        mv $addon.signed $addon
+      done
 
 # signkernel
 %endif
@@ -3974,6 +4012,9 @@ fi\
 /lib/modules/%{KVERREL}%{?3:+%{3}}/modules.builtin*\
 %attr(0644, root, root) /lib/modules/%{KVERREL}%{?3:+%{3}}/%{?-k:%{-k*}}%{!?-k:vmlinuz}-virt.efi\
 %ghost /%{image_install_path}/efi/EFI/Linux/%{?-k:%{-k*}}%{!?-k:*}-%{KVERREL}%{?3:+%{3}}.efi\
+%{expand:%%files %{?3:%{3}-}uki-virt-addons}\
+/lib/modules/%{KVERREL}%{?3:+%{3}}/%{?-k:%{-k*}}%{!?-k:vmlinuz}-virt.efi.extra.d/ \
+/lib/modules/%{KVERREL}%{?3:+%{3}}/%{?-k:%{-k*}}%{!?-k:vmlinuz}-virt.efi.extra.d/*.addon.efi\
 %endif\
 %endif\
 %if %{?3:1} %{!?3:0}\
@@ -4048,6 +4089,33 @@ fi\
 #
 #
 %changelog
+* Fri Aug 09 2024 Jan Stancek <jstancek@redhat.com> [6.11.0-0.rc2.17.el10]
+- btrfs: avoid using fixed char array size for tree names (Qu Wenruo)
+- btrfs: fix double inode unlock for direct IO sync writes (Filipe Manana)
+- btrfs: emit a warning about space cache v1 being deprecated (Josef Bacik)
+- btrfs: fix qgroup reserve leaks in cow_file_range (Boris Burkov)
+- btrfs: implement launder_folio for clearing dirty page reserve (Boris Burkov)
+- btrfs: scrub: update last_physical after scrubbing one stripe (Qu Wenruo)
+- btrfs: factor out stripe length calculation into a helper (Qu Wenruo)
+- power: supply: qcom_battmgr: Ignore extra __le32 in info payload (Stephan Gerhold)
+- power: supply: qcom_battmgr: return EAGAIN when firmware service is not up (Neil Armstrong)
+- power: supply: axp288_charger: Round constant_charge_voltage writes down (Hans de Goede)
+- power: supply: axp288_charger: Fix constant_charge_voltage writes (Hans de Goede)
+- power: supply: rt5033: Bring back i2c_set_clientdata (Nikita Travkin)
+- vhost-vdpa: switch to use vmf_insert_pfn() in the fault handler (Jason Wang)
+- platform/x86/intel/ifs: Initialize union ifs_status to zero (Kuppuswamy Sathyanarayanan)
+- platform/x86: msi-wmi-platform: Fix spelling mistakes (Luis Felipe Hernandez)
+- platform/x86/amd/pmf: Add new ACPI ID AMDI0107 (Shyam Sundar S K)
+- platform/x86/amd/pmc: Send OS_HINT command for new AMD platform (Shyam Sundar S K)
+- platform/x86/amd: pmf: Add quirk for ROG Ally X (Luke D. Jones)
+- platform/x86: intel-vbtn: Protect ACPI notify handler against recursion (Hans de Goede)
+- selftests: ksft: Fix finished() helper exit code on skipped tests (Laura Nao)
+- mm, slub: do not call do_slab_free for kfence object (Rik van Riel)
+- redhat/configs: Disable gfs2 in rhel configs (Andrew Price)
+- redhat/uki_addons/virt: add common FIPS addon (Emanuele Giuseppe Esposito)
+- redhat/kernel.spec: add uki_addons to create UKI kernel cmdline addons (Emanuele Giuseppe Esposito)
+- Linux v6.11.0-0.rc2
+
 * Tue Aug 06 2024 Jan Stancek <jstancek@redhat.com> [6.11.0-0.rc2.16.el10]
 - Linux 6.11-rc2 (Linus Torvalds)
 - profiling: remove profile=sleep support (Tetsuo Handa)
