@@ -1,6 +1,6 @@
-%global package_speccommit f9176c9e57fbfb249d1e4f2de03febf88f08070e
+%global package_speccommit ff81ac9561b5ec20a9d9dd0440073ab569060f83
 %global usver 4.19.19
-%global xsver 8.0.34
+%global xsver 8.0.36
 %global xsrel %{xsver}%{?xscount}%{?xshash}
 %global package_srccommit refs/tags/v4.19.19
 %define uname 4.19.0+1
@@ -42,6 +42,7 @@ ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
 BuildRequires: kmod
+BuildRequires: dwarves
 
 # These build dependencies are needed for building the main kernel and
 # modules as well live patches.
@@ -463,213 +464,214 @@ Patch377: 0098-fs-dlm-move-receive-loop-into-receive-handler.patch
 Patch378: 0099-fs-dlm-implement-delayed-ack-handling.patch
 Patch379: 0100-fs-dlm-fix-return-EINTR-on-recovery-stopped.patch
 Patch380: 0101-fs-dlm-avoid-comms-shutdown-delay-in-release_lockspa.patch
-Patch381: 0001-bpf-Do-not-use-ax-register-in-interpreter-on-div-mod.patch
-Patch382: 0002-bpf-Fix-32-bit-src-register-truncation-on-div-mod.patch
-Patch383: 0003-bpf-Fix-truncation-handling-for-mod32-dst-reg-wrt-ze.patch
-Patch384: 0001-x86-timer-Skip-PIT-initialization-on-modern-chipsets.patch
-Patch385: 0001-x86-timer-Force-PIT-initialization-when-X86_FEATURE_.patch
-Patch386: 0001-x86-timer-Don-t-skip-PIT-setup-when-APIC-is-disabled.patch
-Patch387: 0001-nbd-Fix-use-after-free-in-pid_show.patch
-Patch388: 0001-fs-dlm-remove-check-SCTP-is-loaded-message.patch
-Patch389: 0001-fs-dlm-let-handle-callback-data-as-void.patch
-Patch390: 0001-fs-dlm-remove-double-list_first_entry-call.patch
-Patch391: 0001-fs-dlm-don-t-call-kernel_getpeername-in-error_report.patch
-Patch392: 0001-fs-dlm-replace-use-of-socket-sk_callback_lock-with-s.patch
-Patch393: 0001-fs-dlm-fix-build-with-CONFIG_IPV6-disabled.patch
-Patch394: 0001-fs-dlm-check-for-pending-users-filling-buffers.patch
-Patch395: 0001-fs-dlm-remove-wq_alloc-mutex.patch
-Patch396: 0001-fs-dlm-memory-cache-for-writequeue_entry.patch
-Patch397: 0001-fs-dlm-memory-cache-for-lowcomms-hotpath.patch
-Patch398: 0001-fs-dlm-print-cluster-addr-if-non-cluster-node-connec.patch
-Patch399: 0001-xen-x86-obtain-upper-32-bits-of-video-frame-buffer-a.patch
-Patch400: 0001-xen-x86-obtain-full-video-frame-buffer-address-for-D.patch
-Patch401: 0001-dlm-uninitialized-variable-on-error-in-dlm_listen_fo.patch
-Patch402: 0001-dlm-add-__CHECKER__-for-false-positives.patch
-Patch403: 0001-fs-dlm-fix-grammar-in-lowcomms-output.patch
-Patch404: 0001-fs-dlm-fix-race-in-lowcomms.patch
-Patch405: 0001-fs-dlm-relax-sending-to-allow-receiving.patch
-Patch406: 0001-fs-dlm-fix-sock-release-if-listen-fails.patch
-Patch407: 0002-fs-dlm-retry-accept-until-EAGAIN-or-error-returns.patch
-Patch408: 0003-fs-dlm-remove-send-repeat-remove-handling.patch
-Patch409: 0001-xen-pvh-set-xen_domain_type-to-HVM-in-xen_pvh_init.patch
-Patch410: 0001-xen-pvh-correctly-setup-the-PV-EFI-interface-for-dom.patch
-Patch411: 0001-nvme_fc-add-nvme_discovery-sysfs-attribute-to-fc-tra.patch
-Patch412: 0001-ACPI-processor-Fix-evaluating-_PDC-method-when-runni.patch
-Patch413: 0001-SUNRPC-Always-drop-the-XPRT_LOCK-on-XPRT_CLOSE_WAIT.patch
-Patch414: 0001-xen-netback-use-default-TX-queue-size-for-vifs.patch
-Patch415: 0001-gfs2-Expect-EBUSY-after-canceling-dlm-locking-reques.patch
-Patch416: 0002-fs-dlm-fix-race-between-test_bit-and-queue_work.patch
-Patch417: 0001-nvme-fabrics-reject-I-O-to-offline-device.patch
-Patch418: 0001-Add-shadow-variables-support-from-kpatch.patch
-Patch419: 0002-xen-xenbus-Allow-watches-discard-events-before-queue.patch
-Patch420: 0003-xen-xenbus-Add-will_handle-callback-support-in-xenbu.patch
-Patch421: 0004-xen-xenbus-xen_bus_type-Support-will_handle-watch-ca.patch
-Patch422: 0005-xen-xenbus-Count-pending-messages-for-each-watch.patch
-Patch423: 0006-xenbus-xenbus_backend-Disallow-pending-watch-message.patch
-Patch424: 0001-xen-xenbus-Fix-granting-of-vmalloc-d-memory.patch
-Patch425: 0001-xen-blkfront-switch-kcalloc-to-kvcalloc-for-large-ar.patch
-Patch426: 0002-xen-blkfront-Adjust-indentation-in-xlvbd_alloc_gendi.patch
-Patch427: 0003-xen-blkfront-fix-memory-allocation-flags-in-blkfront.patch
-Patch428: 0004-xen-blkfront-allow-discard-nodes-to-be-optional.patch
-Patch429: 0001-xen-sync-include-xen-interface-io-ring.h-with-Xen-s-.patch
-Patch430: 0005-xen-blkfront-read-response-from-backend-only-once.patch
-Patch431: 0006-xen-blkfront-don-t-take-local-copy-of-a-request-from.patch
-Patch432: 0007-xen-blkfront-don-t-trust-the-backend-response-data-b.patch
-Patch433: 0008-xen-blkfront-harden-blkfront-against-event-channel-s.patch
-Patch434: 0001-xen-netfront-do-not-assume-sk_buff_head-list-is-empt.patch
-Patch435: 0002-xen-netfront-do-not-use-0U-as-error-return-value-for.patch
-Patch436: 0003-xen-netfront-fix-potential-deadlock-in-xennet_remove.patch
-Patch437: 0004-xen-netfront-stop-tx-queues-during-live-migration.patch
-Patch438: 0005-xen-netfront-read-response-from-backend-only-once.patch
-Patch439: 0006-xen-netfront-don-t-read-data-from-request-on-the-rin.patch
-Patch440: 0007-xen-netfront-disentangle-tx_skb_freelist.patch
-Patch441: 0008-xen-netfront-don-t-trust-the-backend-response-data-b.patch
-Patch442: 0009-xen-netfront-harden-netfront-against-event-channel-s.patch
-Patch443: 0010-xen-netfront-destroy-queues-before-real_num_tx_queue.patch
-Patch444: 0001-pvcalls-front-read-all-data-before-closing-the-conne.patch
-Patch445: 0002-pvcalls-front-don-t-try-to-free-unallocated-rings.patch
-Patch446: 0003-pvcalls-front-properly-allocate-sk.patch
-Patch447: 0004-pvcalls-front-Avoid-get_free_pages-GFP_KERNEL-under-.patch
-Patch448: 0005-pvcalls-front-fix-potential-null-dereference.patch
-Patch449: 0006-xen-pvcalls-Remove-set-but-not-used-variable.patch
-Patch450: 0007-pvcalls-front-don-t-return-error-when-the-ring-is-fu.patch
-Patch451: 0001-xen-xenbus-don-t-let-xenbus_grant_ring-remove-grants.patch
-Patch452: 0002-xen-grant-table-add-gnttab_try_end_foreign_access.patch
-Patch453: 0003-xen-blkfront-don-t-use-gnttab_query_foreign_access-f.patch
-Patch454: 0004-xen-netfront-don-t-use-gnttab_query_foreign_access-f.patch
-Patch455: 0005-xen-scsifront-don-t-use-gnttab_query_foreign_access-.patch
-Patch456: 0006-xen-gntalloc-don-t-use-gnttab_query_foreign_access.patch
-Patch457: 0007-xen-remove-gnttab_query_foreign_access.patch
-Patch458: 0008-xen-9p-use-alloc-free_pages_exact.patch
-Patch459: 0009-xen-pvcalls-use-alloc-free_pages_exact.patch
-Patch460: 0010-xen-gnttab-fix-gnttab_end_foreign_access-without-pag.patch
-Patch461: 0011-xen-netfront-react-properly-to-failing-gnttab_end_fo.patch
-Patch462: 0001-xen-blkfront-fix-leaking-data-in-shared-pages.patch
-Patch463: 0002-xen-netfront-fix-leaking-data-in-shared-pages.patch
-Patch464: 0003-xen-netfront-force-data-bouncing-when-backend-is-unt.patch
-Patch465: 0004-xen-blkfront-force-data-bouncing-when-backend-is-unt.patch
-Patch466: xsa423-linux.patch
-Patch467: xsa424-linux.patch
-Patch468: 0002-xen-netback-remove-unused-variables-pending_idx-and-.patch
-Patch469: 0003-xen-netback-don-t-do-grant-copy-across-page-boundary.patch
-Patch470: 0004-xen-netback-remove-not-needed-test-in-xenvif_tx_buil.patch
-Patch471: 0005-xen-netback-use-same-error-messages-for-same-errors.patch
-Patch472: xsa432-linux.patch
-Patch473: xsa441-linux.patch
-Patch474: xsa448-linux.patch
-Patch475: kbuild-AFTER_LINK.patch
-Patch476: expose-xsversion.patch
-Patch477: blktap2.patch
-Patch478: blkback-kthread-pid.patch
-Patch479: tg3-alloc-repeat.patch
-Patch480: disable-EFI-Properties-table-for-Xen.patch
-Patch481: net-Do-not-scrub-ignore_df-within-the-same-name-spac.patch
-Patch482: enable-fragmention-gre-packets.patch
-Patch483: CA-285778-emulex-nic-ip-hdr-len.patch
-Patch484: cifs-Change-the-default-value-SecFlags-to-0x83.patch
-Patch485: call-kexec-before-offlining-noncrashing-cpus.patch
-Patch486: hide-hung-task-for-idle-class.patch
-Patch487: xfs-async-wait.patch
-Patch488: 0002-scsi-libfc-drop-extra-rport-reference-in-fc_rport_cr.patch
-Patch489: 0001-dma-add-dma_get_required_mask_from_max_pfn.patch
-Patch490: 0002-x86-xen-correct-dma_get_required_mask-for-Xen-PV-gue.patch
-Patch491: map-1MiB-1-1.patch
-Patch492: hide-nr_cpus-warning.patch
-Patch493: disable-pm-timer.patch
-Patch494: increase-nr-irqs.patch
-Patch495: xen-balloon-hotplug-select-HOLES_IN_ZONE.patch
-Patch496: 0001-pci-export-pci_probe_reset_function.patch
-Patch497: 0002-xen-pciback-provide-a-reset-sysfs-file-to-try-harder.patch
-Patch498: pciback-disable-root-port-aer.patch
-Patch499: pciback-mask-root-port-comp-timeout.patch
-Patch500: no-flr-quirk.patch
-Patch501: revert-PCI-Probe-for-device-reset-support-during-enumeration.patch
-Patch502: CA-135938-nfs-disconnect-on-rpc-retry.patch
-Patch503: sunrpc-force-disconnect-on-connection-timeout.patch
-Patch504: nfs-avoid-double-timeout.patch
-Patch505: bonding-balance-slb.patch
-Patch506: bridge-lock-fdb-after-garp.patch
-Patch507: CP-13181-net-openvswitch-add-dropping-of-fip-and-lldp.patch
-Patch508: xen-ioemu-inject-msi.patch
-Patch509: pv-iommu-support.patch
-Patch510: kexec-reserve-crashkernel-region.patch
-Patch511: 0001-xen-swiotlb-rework-early-repeat-code.patch
-Patch512: 0001-arch-x86-xen-add-infrastruction-in-xen-to-support-gv.patch
-Patch513: 0002-drm-i915-gvt-write-guest-ppgtt-entry-for-xengt-suppo.patch
-Patch514: 0003-drm-i915-xengt-xengt-moudule-initial-files.patch
-Patch515: 0004-drm-i915-xengt-check-on_destroy-on-pfn_to_mfn.patch
-Patch516: 0005-arch-x86-xen-Import-x4.9-interface-for-ioreq.patch
-Patch517: 0006-i915-gvt-xengt.c-Use-new-dm_op-instead-of-hvm_op.patch
-Patch518: 0007-i915-gvt-xengt.c-New-interface-to-write-protect-PPGT.patch
-Patch519: 0008-i915-gvt-xengt.c-Select-vgpu-type-according-to-low_g.patch
-Patch520: 0009-drm-i915-gvt-Don-t-output-error-message-when-DomU-ma.patch
-Patch521: 0010-drm-i915-gvt-xengt-Correctly-get-low-mem-max-gfn.patch
-Patch522: 0011-drm-i915-gvt-Fix-dom0-call-trace-at-shutdown-or-rebo.patch
-Patch523: 0012-hvm-dm_op.h-Sync-dm_op-interface-to-xen-4.9-release.patch
-Patch524: 0013-drm-i915-gvt-Apply-g2h-adjust-for-GTT-mmio-access.patch
-Patch525: 0014-drm-i915-gvt-Apply-g2h-adjustment-during-fence-mmio-.patch
-Patch526: 0015-drm-i915-gvt-Patch-the-gma-in-gpu-commands-during-co.patch
-Patch527: 0016-drm-i915-gvt-Retrieve-the-guest-gm-base-address-from.patch
-Patch528: 0017-drm-i915-gvt-Align-the-guest-gm-aperture-start-offse.patch
-Patch529: 0018-drm-i915-gvt-Add-support-to-new-VFIO-subregion-VFIO_.patch
-Patch530: 0019-drm-i915-gvt-Implement-vGPU-status-save-and-restore-.patch
-Patch531: 0020-vfio-Implement-new-Ioctl-VFIO_IOMMU_GET_DIRTY_BITMAP.patch
-Patch532: 0021-drm-i915-gvt-Add-dev-node-for-vGPU-state-save-restor.patch
-Patch533: 0022-drm-i915-gvt-Add-interface-to-control-the-vGPU-runni.patch
-Patch534: 0023-drm-i915-gvt-Modify-the-vGPU-save-restore-logic-for-.patch
-Patch535: 0024-drm-i915-gvt-Add-log-dirty-support-for-XENGT-migrati.patch
-Patch536: 0025-drm-i915-gvt-xengt-Add-iosrv_enabled-to-track-iosrv-.patch
-Patch537: 0026-drm-i915-gvt-Add-xengt-ppgtt-write-handler.patch
-Patch538: 0027-drm-i915-gvt-xengt-Impliment-mpt-dma_map-unmap_guest.patch
-Patch539: 0028-drm-i915-gvt-introduce-a-new-VFIO-region-for-vfio-de.patch
-Patch540: 0029-drm-i915-gvt-change-the-return-value-of-opregion-acc.patch
-Patch541: 0030-drm-i915-gvt-Rebase-the-code-to-gvt-staging-for-live.patch
-Patch542: 0031-drm-i915-gvt-Apply-g2h-adjustment-to-buffer-start-gm.patch
-Patch543: 0032-drm-i915-gvt-Fix-xengt-opregion-handling-in-migratio.patch
-Patch544: 0033-drm-i915-gvt-XenGT-migration-optimize.patch
-Patch545: 0034-drm-i915-gvt-Add-vgpu-execlist-info-into-migration-d.patch
-Patch546: 0035-drm-i915-gvt-Emulate-ring-mode-register-restore-for-.patch
-Patch547: 0036-drm-i915-gvt-Use-copy_to_user-to-return-opregion.patch
-Patch548: 0037-drm-i915-gvt-Expose-opregion-in-vgpu-open.patch
-Patch549: 0038-drm-i915-gvt-xengt-Don-t-shutdown-vm-at-ioreq-failur.patch
-Patch550: 0039-drm-i915-gvt-Emulate-hw-status-page-address-register.patch
-Patch551: 0040-drm-i915-gvt-migration-copy-vregs-on-vreg-load.patch
-Patch552: 0041-drm-i915-gvt-Fix-a-command-corruption-caused-by-live.patch
-Patch553: 0042-drm-i915-gvt-update-force-to-nonpriv-register-whitel.patch
-Patch554: 0043-drm-i915-gvt-xengt-Fix-xengt-instance-destroy-error.patch
-Patch555: 0044-drm-i915-gvt-invalidate-old-ggtt-page-when-update-gg.patch
-Patch556: 0045-drm-i915-gvt-support-inconsecutive-partial-gtt-entry.patch
-Patch557: set-XENMEM_get_mfn_from_pfn-hypercall-number.patch
-Patch558: gvt-enforce-primary-class-id.patch
-Patch559: gvt-use-xs-vgpu-type.patch
-Patch560: xengt-pviommu-basic.patch
-Patch561: xengt-pviommu-unmap.patch
-Patch562: get_domctl_interface_version.patch
-Patch563: xengt-fix-shutdown-failures.patch
-Patch564: xengt-i915-gem-vgtbuffer.patch
-Patch565: xengt-gtt-2m-alignment.patch
-Patch566: net-core__order-3_frag_allocator_causes_swiotlb_bouncing_under_xen.patch
-Patch567: idle_cpu-return-0-during-softirq.patch
-Patch568: default-xen-swiotlb-size-128MiB.patch
-Patch569: dlm__increase_socket_backlog_to_avoid_hangs_with_16_nodes.patch
-Patch570: gfs2-add-skippiness.patch
-Patch571: GFS2__Avoid_recently_demoted_rgrps
-Patch572: gfs2-debug-rgrp-sweep
-Patch573: gfs2-restore-kabi.patch
-Patch574: 0001-Add-auxiliary-bus-support.patch
-Patch575: 0002-driver-core-auxiliary-bus-move-slab.h-from-include-f.patch
-Patch576: 0003-driver-core-auxiliary-bus-make-remove-function-retur.patch
-Patch577: 0004-driver-core-auxiliary-bus-minor-coding-style-tweaks.patch
-Patch578: 0005-driver-core-auxiliary-bus-Fix-auxiliary-bus-shutdown.patch
-Patch579: 0006-driver-core-auxiliary-bus-Fix-calling-stage-for-auxi.patch
-Patch580: 0007-driver-core-auxiliary-bus-Remove-unneeded-module-bit.patch
-Patch581: 0008-driver-core-auxiliary-bus-Fix-memory-leak-when-drive.patch
-Patch582: 0009-Documentation-auxiliary_bus-Clarify-auxiliary_device.patch
-Patch583: 0010-Documentation-auxiliary_bus-Clarify-__auxiliary_driv.patch
-Patch584: 0011-Documentation-auxiliary_bus-Clarify-the-release-of-d.patch
-Patch585: 0012-Documentation-auxiliary_bus-Move-the-text-into-the-c.patch
-Patch586: 0013-CP-41018-Make-CONFIG_AUXILIARY_BUS-y-work.patch
-Patch587: abi-version.patch
+Patch381: 0001-iommu-vt-d-Fix-agaw-for-a-supported-48-bit-guest-add.patch
+Patch382: 0001-bpf-Do-not-use-ax-register-in-interpreter-on-div-mod.patch
+Patch383: 0002-bpf-Fix-32-bit-src-register-truncation-on-div-mod.patch
+Patch384: 0003-bpf-Fix-truncation-handling-for-mod32-dst-reg-wrt-ze.patch
+Patch385: 0001-x86-timer-Skip-PIT-initialization-on-modern-chipsets.patch
+Patch386: 0001-x86-timer-Force-PIT-initialization-when-X86_FEATURE_.patch
+Patch387: 0001-x86-timer-Don-t-skip-PIT-setup-when-APIC-is-disabled.patch
+Patch388: 0001-nbd-Fix-use-after-free-in-pid_show.patch
+Patch389: 0001-fs-dlm-remove-check-SCTP-is-loaded-message.patch
+Patch390: 0001-fs-dlm-let-handle-callback-data-as-void.patch
+Patch391: 0001-fs-dlm-remove-double-list_first_entry-call.patch
+Patch392: 0001-fs-dlm-don-t-call-kernel_getpeername-in-error_report.patch
+Patch393: 0001-fs-dlm-replace-use-of-socket-sk_callback_lock-with-s.patch
+Patch394: 0001-fs-dlm-fix-build-with-CONFIG_IPV6-disabled.patch
+Patch395: 0001-fs-dlm-check-for-pending-users-filling-buffers.patch
+Patch396: 0001-fs-dlm-remove-wq_alloc-mutex.patch
+Patch397: 0001-fs-dlm-memory-cache-for-writequeue_entry.patch
+Patch398: 0001-fs-dlm-memory-cache-for-lowcomms-hotpath.patch
+Patch399: 0001-fs-dlm-print-cluster-addr-if-non-cluster-node-connec.patch
+Patch400: 0001-xen-x86-obtain-upper-32-bits-of-video-frame-buffer-a.patch
+Patch401: 0001-xen-x86-obtain-full-video-frame-buffer-address-for-D.patch
+Patch402: 0001-dlm-uninitialized-variable-on-error-in-dlm_listen_fo.patch
+Patch403: 0001-dlm-add-__CHECKER__-for-false-positives.patch
+Patch404: 0001-fs-dlm-fix-grammar-in-lowcomms-output.patch
+Patch405: 0001-fs-dlm-fix-race-in-lowcomms.patch
+Patch406: 0001-fs-dlm-relax-sending-to-allow-receiving.patch
+Patch407: 0001-fs-dlm-fix-sock-release-if-listen-fails.patch
+Patch408: 0002-fs-dlm-retry-accept-until-EAGAIN-or-error-returns.patch
+Patch409: 0003-fs-dlm-remove-send-repeat-remove-handling.patch
+Patch410: 0001-xen-pvh-set-xen_domain_type-to-HVM-in-xen_pvh_init.patch
+Patch411: 0001-xen-pvh-correctly-setup-the-PV-EFI-interface-for-dom.patch
+Patch412: 0001-nvme_fc-add-nvme_discovery-sysfs-attribute-to-fc-tra.patch
+Patch413: 0001-ACPI-processor-Fix-evaluating-_PDC-method-when-runni.patch
+Patch414: 0001-SUNRPC-Always-drop-the-XPRT_LOCK-on-XPRT_CLOSE_WAIT.patch
+Patch415: 0001-xen-netback-use-default-TX-queue-size-for-vifs.patch
+Patch416: 0001-gfs2-Expect-EBUSY-after-canceling-dlm-locking-reques.patch
+Patch417: 0002-fs-dlm-fix-race-between-test_bit-and-queue_work.patch
+Patch418: 0001-nvme-fabrics-reject-I-O-to-offline-device.patch
+Patch419: 0001-Add-shadow-variables-support-from-kpatch.patch
+Patch420: 0002-xen-xenbus-Allow-watches-discard-events-before-queue.patch
+Patch421: 0003-xen-xenbus-Add-will_handle-callback-support-in-xenbu.patch
+Patch422: 0004-xen-xenbus-xen_bus_type-Support-will_handle-watch-ca.patch
+Patch423: 0005-xen-xenbus-Count-pending-messages-for-each-watch.patch
+Patch424: 0006-xenbus-xenbus_backend-Disallow-pending-watch-message.patch
+Patch425: 0001-xen-xenbus-Fix-granting-of-vmalloc-d-memory.patch
+Patch426: 0001-xen-blkfront-switch-kcalloc-to-kvcalloc-for-large-ar.patch
+Patch427: 0002-xen-blkfront-Adjust-indentation-in-xlvbd_alloc_gendi.patch
+Patch428: 0003-xen-blkfront-fix-memory-allocation-flags-in-blkfront.patch
+Patch429: 0004-xen-blkfront-allow-discard-nodes-to-be-optional.patch
+Patch430: 0001-xen-sync-include-xen-interface-io-ring.h-with-Xen-s-.patch
+Patch431: 0005-xen-blkfront-read-response-from-backend-only-once.patch
+Patch432: 0006-xen-blkfront-don-t-take-local-copy-of-a-request-from.patch
+Patch433: 0007-xen-blkfront-don-t-trust-the-backend-response-data-b.patch
+Patch434: 0008-xen-blkfront-harden-blkfront-against-event-channel-s.patch
+Patch435: 0001-xen-netfront-do-not-assume-sk_buff_head-list-is-empt.patch
+Patch436: 0002-xen-netfront-do-not-use-0U-as-error-return-value-for.patch
+Patch437: 0003-xen-netfront-fix-potential-deadlock-in-xennet_remove.patch
+Patch438: 0004-xen-netfront-stop-tx-queues-during-live-migration.patch
+Patch439: 0005-xen-netfront-read-response-from-backend-only-once.patch
+Patch440: 0006-xen-netfront-don-t-read-data-from-request-on-the-rin.patch
+Patch441: 0007-xen-netfront-disentangle-tx_skb_freelist.patch
+Patch442: 0008-xen-netfront-don-t-trust-the-backend-response-data-b.patch
+Patch443: 0009-xen-netfront-harden-netfront-against-event-channel-s.patch
+Patch444: 0010-xen-netfront-destroy-queues-before-real_num_tx_queue.patch
+Patch445: 0001-pvcalls-front-read-all-data-before-closing-the-conne.patch
+Patch446: 0002-pvcalls-front-don-t-try-to-free-unallocated-rings.patch
+Patch447: 0003-pvcalls-front-properly-allocate-sk.patch
+Patch448: 0004-pvcalls-front-Avoid-get_free_pages-GFP_KERNEL-under-.patch
+Patch449: 0005-pvcalls-front-fix-potential-null-dereference.patch
+Patch450: 0006-xen-pvcalls-Remove-set-but-not-used-variable.patch
+Patch451: 0007-pvcalls-front-don-t-return-error-when-the-ring-is-fu.patch
+Patch452: 0001-xen-xenbus-don-t-let-xenbus_grant_ring-remove-grants.patch
+Patch453: 0002-xen-grant-table-add-gnttab_try_end_foreign_access.patch
+Patch454: 0003-xen-blkfront-don-t-use-gnttab_query_foreign_access-f.patch
+Patch455: 0004-xen-netfront-don-t-use-gnttab_query_foreign_access-f.patch
+Patch456: 0005-xen-scsifront-don-t-use-gnttab_query_foreign_access-.patch
+Patch457: 0006-xen-gntalloc-don-t-use-gnttab_query_foreign_access.patch
+Patch458: 0007-xen-remove-gnttab_query_foreign_access.patch
+Patch459: 0008-xen-9p-use-alloc-free_pages_exact.patch
+Patch460: 0009-xen-pvcalls-use-alloc-free_pages_exact.patch
+Patch461: 0010-xen-gnttab-fix-gnttab_end_foreign_access-without-pag.patch
+Patch462: 0011-xen-netfront-react-properly-to-failing-gnttab_end_fo.patch
+Patch463: 0001-xen-blkfront-fix-leaking-data-in-shared-pages.patch
+Patch464: 0002-xen-netfront-fix-leaking-data-in-shared-pages.patch
+Patch465: 0003-xen-netfront-force-data-bouncing-when-backend-is-unt.patch
+Patch466: 0004-xen-blkfront-force-data-bouncing-when-backend-is-unt.patch
+Patch467: xsa423-linux.patch
+Patch468: xsa424-linux.patch
+Patch469: 0002-xen-netback-remove-unused-variables-pending_idx-and-.patch
+Patch470: 0003-xen-netback-don-t-do-grant-copy-across-page-boundary.patch
+Patch471: 0004-xen-netback-remove-not-needed-test-in-xenvif_tx_buil.patch
+Patch472: 0005-xen-netback-use-same-error-messages-for-same-errors.patch
+Patch473: xsa432-linux.patch
+Patch474: xsa441-linux.patch
+Patch475: xsa448-linux.patch
+Patch476: kbuild-AFTER_LINK.patch
+Patch477: expose-xsversion.patch
+Patch478: blktap2.patch
+Patch479: blkback-kthread-pid.patch
+Patch480: tg3-alloc-repeat.patch
+Patch481: disable-EFI-Properties-table-for-Xen.patch
+Patch482: net-Do-not-scrub-ignore_df-within-the-same-name-spac.patch
+Patch483: enable-fragmention-gre-packets.patch
+Patch484: CA-285778-emulex-nic-ip-hdr-len.patch
+Patch485: cifs-Change-the-default-value-SecFlags-to-0x83.patch
+Patch486: call-kexec-before-offlining-noncrashing-cpus.patch
+Patch487: hide-hung-task-for-idle-class.patch
+Patch488: xfs-async-wait.patch
+Patch489: 0002-scsi-libfc-drop-extra-rport-reference-in-fc_rport_cr.patch
+Patch490: 0001-dma-add-dma_get_required_mask_from_max_pfn.patch
+Patch491: 0002-x86-xen-correct-dma_get_required_mask-for-Xen-PV-gue.patch
+Patch492: map-1MiB-1-1.patch
+Patch493: hide-nr_cpus-warning.patch
+Patch494: disable-pm-timer.patch
+Patch495: increase-nr-irqs.patch
+Patch496: xen-balloon-hotplug-select-HOLES_IN_ZONE.patch
+Patch497: 0001-pci-export-pci_probe_reset_function.patch
+Patch498: 0002-xen-pciback-provide-a-reset-sysfs-file-to-try-harder.patch
+Patch499: pciback-disable-root-port-aer.patch
+Patch500: pciback-mask-root-port-comp-timeout.patch
+Patch501: no-flr-quirk.patch
+Patch502: revert-PCI-Probe-for-device-reset-support-during-enumeration.patch
+Patch503: CA-135938-nfs-disconnect-on-rpc-retry.patch
+Patch504: sunrpc-force-disconnect-on-connection-timeout.patch
+Patch505: nfs-avoid-double-timeout.patch
+Patch506: bonding-balance-slb.patch
+Patch507: bridge-lock-fdb-after-garp.patch
+Patch508: CP-13181-net-openvswitch-add-dropping-of-fip-and-lldp.patch
+Patch509: xen-ioemu-inject-msi.patch
+Patch510: pv-iommu-support.patch
+Patch511: kexec-reserve-crashkernel-region.patch
+Patch512: 0001-xen-swiotlb-rework-early-repeat-code.patch
+Patch513: 0001-arch-x86-xen-add-infrastruction-in-xen-to-support-gv.patch
+Patch514: 0002-drm-i915-gvt-write-guest-ppgtt-entry-for-xengt-suppo.patch
+Patch515: 0003-drm-i915-xengt-xengt-moudule-initial-files.patch
+Patch516: 0004-drm-i915-xengt-check-on_destroy-on-pfn_to_mfn.patch
+Patch517: 0005-arch-x86-xen-Import-x4.9-interface-for-ioreq.patch
+Patch518: 0006-i915-gvt-xengt.c-Use-new-dm_op-instead-of-hvm_op.patch
+Patch519: 0007-i915-gvt-xengt.c-New-interface-to-write-protect-PPGT.patch
+Patch520: 0008-i915-gvt-xengt.c-Select-vgpu-type-according-to-low_g.patch
+Patch521: 0009-drm-i915-gvt-Don-t-output-error-message-when-DomU-ma.patch
+Patch522: 0010-drm-i915-gvt-xengt-Correctly-get-low-mem-max-gfn.patch
+Patch523: 0011-drm-i915-gvt-Fix-dom0-call-trace-at-shutdown-or-rebo.patch
+Patch524: 0012-hvm-dm_op.h-Sync-dm_op-interface-to-xen-4.9-release.patch
+Patch525: 0013-drm-i915-gvt-Apply-g2h-adjust-for-GTT-mmio-access.patch
+Patch526: 0014-drm-i915-gvt-Apply-g2h-adjustment-during-fence-mmio-.patch
+Patch527: 0015-drm-i915-gvt-Patch-the-gma-in-gpu-commands-during-co.patch
+Patch528: 0016-drm-i915-gvt-Retrieve-the-guest-gm-base-address-from.patch
+Patch529: 0017-drm-i915-gvt-Align-the-guest-gm-aperture-start-offse.patch
+Patch530: 0018-drm-i915-gvt-Add-support-to-new-VFIO-subregion-VFIO_.patch
+Patch531: 0019-drm-i915-gvt-Implement-vGPU-status-save-and-restore-.patch
+Patch532: 0020-vfio-Implement-new-Ioctl-VFIO_IOMMU_GET_DIRTY_BITMAP.patch
+Patch533: 0021-drm-i915-gvt-Add-dev-node-for-vGPU-state-save-restor.patch
+Patch534: 0022-drm-i915-gvt-Add-interface-to-control-the-vGPU-runni.patch
+Patch535: 0023-drm-i915-gvt-Modify-the-vGPU-save-restore-logic-for-.patch
+Patch536: 0024-drm-i915-gvt-Add-log-dirty-support-for-XENGT-migrati.patch
+Patch537: 0025-drm-i915-gvt-xengt-Add-iosrv_enabled-to-track-iosrv-.patch
+Patch538: 0026-drm-i915-gvt-Add-xengt-ppgtt-write-handler.patch
+Patch539: 0027-drm-i915-gvt-xengt-Impliment-mpt-dma_map-unmap_guest.patch
+Patch540: 0028-drm-i915-gvt-introduce-a-new-VFIO-region-for-vfio-de.patch
+Patch541: 0029-drm-i915-gvt-change-the-return-value-of-opregion-acc.patch
+Patch542: 0030-drm-i915-gvt-Rebase-the-code-to-gvt-staging-for-live.patch
+Patch543: 0031-drm-i915-gvt-Apply-g2h-adjustment-to-buffer-start-gm.patch
+Patch544: 0032-drm-i915-gvt-Fix-xengt-opregion-handling-in-migratio.patch
+Patch545: 0033-drm-i915-gvt-XenGT-migration-optimize.patch
+Patch546: 0034-drm-i915-gvt-Add-vgpu-execlist-info-into-migration-d.patch
+Patch547: 0035-drm-i915-gvt-Emulate-ring-mode-register-restore-for-.patch
+Patch548: 0036-drm-i915-gvt-Use-copy_to_user-to-return-opregion.patch
+Patch549: 0037-drm-i915-gvt-Expose-opregion-in-vgpu-open.patch
+Patch550: 0038-drm-i915-gvt-xengt-Don-t-shutdown-vm-at-ioreq-failur.patch
+Patch551: 0039-drm-i915-gvt-Emulate-hw-status-page-address-register.patch
+Patch552: 0040-drm-i915-gvt-migration-copy-vregs-on-vreg-load.patch
+Patch553: 0041-drm-i915-gvt-Fix-a-command-corruption-caused-by-live.patch
+Patch554: 0042-drm-i915-gvt-update-force-to-nonpriv-register-whitel.patch
+Patch555: 0043-drm-i915-gvt-xengt-Fix-xengt-instance-destroy-error.patch
+Patch556: 0044-drm-i915-gvt-invalidate-old-ggtt-page-when-update-gg.patch
+Patch557: 0045-drm-i915-gvt-support-inconsecutive-partial-gtt-entry.patch
+Patch558: set-XENMEM_get_mfn_from_pfn-hypercall-number.patch
+Patch559: gvt-enforce-primary-class-id.patch
+Patch560: gvt-use-xs-vgpu-type.patch
+Patch561: xengt-pviommu-basic.patch
+Patch562: xengt-pviommu-unmap.patch
+Patch563: get_domctl_interface_version.patch
+Patch564: xengt-fix-shutdown-failures.patch
+Patch565: xengt-i915-gem-vgtbuffer.patch
+Patch566: xengt-gtt-2m-alignment.patch
+Patch567: net-core__order-3_frag_allocator_causes_swiotlb_bouncing_under_xen.patch
+Patch568: idle_cpu-return-0-during-softirq.patch
+Patch569: default-xen-swiotlb-size-128MiB.patch
+Patch570: dlm__increase_socket_backlog_to_avoid_hangs_with_16_nodes.patch
+Patch571: gfs2-add-skippiness.patch
+Patch572: GFS2__Avoid_recently_demoted_rgrps
+Patch573: gfs2-debug-rgrp-sweep
+Patch574: gfs2-restore-kabi.patch
+Patch575: 0001-Add-auxiliary-bus-support.patch
+Patch576: 0002-driver-core-auxiliary-bus-move-slab.h-from-include-f.patch
+Patch577: 0003-driver-core-auxiliary-bus-make-remove-function-retur.patch
+Patch578: 0004-driver-core-auxiliary-bus-minor-coding-style-tweaks.patch
+Patch579: 0005-driver-core-auxiliary-bus-Fix-auxiliary-bus-shutdown.patch
+Patch580: 0006-driver-core-auxiliary-bus-Fix-calling-stage-for-auxi.patch
+Patch581: 0007-driver-core-auxiliary-bus-Remove-unneeded-module-bit.patch
+Patch582: 0008-driver-core-auxiliary-bus-Fix-memory-leak-when-drive.patch
+Patch583: 0009-Documentation-auxiliary_bus-Clarify-auxiliary_device.patch
+Patch584: 0010-Documentation-auxiliary_bus-Clarify-__auxiliary_driv.patch
+Patch585: 0011-Documentation-auxiliary_bus-Clarify-the-release-of-d.patch
+Patch586: 0012-Documentation-auxiliary_bus-Move-the-text-into-the-c.patch
+Patch587: 0013-CP-41018-Make-CONFIG_AUXILIARY_BUS-y-work.patch
+Patch588: abi-version.patch
 %if %{do_kabichk}
 Source3: check-kabi
 Source4: Module.kabi
@@ -758,7 +760,9 @@ cp -f %{SOURCE1} .config
 echo XS_VERSION=%{version}-%{release} > .xsversion
 echo XS_BASE_COMMIT=%{package_srccommit} >> .xsversion
 echo XS_PQ_COMMIT=%{package_speccommit} >> .xsversion
-%{?_cov_wrap} make silentoldconfig
+# make sure configuration is up to date
+%{?_cov_wrap} make olddefconfig
+bash -c 'diff -u <(grep -v "^#" .config) <(grep -v "^#" %{SOURCE1})'
 
 cp -r `pwd` ../prepared-source
 install -m 644 %{SOURCE5} ../prepared-source
@@ -811,6 +815,13 @@ chmod +x tools/perf/check-headers.sh
 pushd tools/perf/Documentation/
 make %{?_smp_mflags} man
 popd
+
+# eBPF support: pahole encodes the type infos into a small (3MB) .BTF section:
+cp vmlinux                                     tmp-vmlinux-with-btf
+LLVM_OBJCOPY=objcopy pahole %{?_smp_mflags} -J tmp-vmlinux-with-btf
+# Copy the BTF section into a new BTF file which eBPF tools to get kernel types:
+objcopy --only-section .BTF                    tmp-vmlinux-with-btf vmlinux.btf
+rm                                             tmp-vmlinux-with-btf
 
 %install
 # Install kernel
@@ -923,6 +934,28 @@ find %{buildroot} -name '.*.cmd' -type f -delete
 mv ../prepared-source %{buildroot}%{lp_devel_dir}
 install -m 644 vmlinux %{buildroot}%{lp_devel_dir}
 
+# eBPF support: Install the BTF file to /usr/src/kernels for kernel-devel
+# /usr/src/kernels is also used by `perf` to look for vmlinux files with
+# DWARF debuginfo, but because the BTF file only contains the BTF section,
+# `perf` ignores it while searching for the vmlinux file if kernel-debuginfo:
+#
+# strace -e file perf probe -v -L icmp_rcv
+# Looking at the vmlinux_path (8 entries long)
+# open("/boot/vmlinux", O_RDONLY)         = ENOENT
+# open("/boot/vmlinux-4.19.0+1", O_RDONLY) = ENOENT
+# open("/usr/lib/debug/boot/vmlinux-4.19.0+1", O_RDONLY) = ENOENT
+# open("/lib/modules/4.19.0+1/build/vmlinux", O_RDONLY) = 3 <= BTF file is ignored
+# open("/usr/lib/debug/lib/modules/4.19.0+1/vmlinux", O_RDONLY) = 3
+# Using /usr/lib/debug/lib/modules/4.19.0+1/vmlinux for symbols (file from kernel-debuginfo)
+# Open Debuginfo file: /usr/lib/debug/lib/modules/4.19.0+1/vmlinux
+
+# Thus, we can install it here (/lib/.../build is an absolute symlink to this path)
+install -m 644 vmlinux.btf %{buildroot}/usr/src/kernels/%{uname}-%{_arch}/vmlinux
+
+%check
+# Check that the .BTF section is present at the start of the file:
+objdump -h %{buildroot}/usr/src/kernels/%{uname}-%{_arch}/vmlinux|grep " 0 .BTF"
+
 %post
 > %{_localstatedir}/lib/rpm-state/regenerate-initrd-%{uname}
 
@@ -998,6 +1031,15 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Mon Jul 15 2024 Fouad Hilly <fouad.hilly@cloud.com> - 4.19.19-8.0.36
+- New tag due to a wrong build for 4.19.19-8.0.35
+
+* Wed Jul 10 2024 Fouad Hilly <fouad.hilly@cloud.com> - 4.19.19-8.0.35
+- CA-394994  backport fix agaw for a supported 48 bit guest address width
+- Make sure the kernel configuration is up to date
+- CP-40289: kernel-devel: Add a BPF Type Format (BTF) info file for libbpf
+- CP-48280: Disable Intel Powerclamp driver
+
 * Thu Feb 29 2024 Chunjie Zhu <chunjie.zhu@cloud.com> - 4.19.19-8.0.34
 - CA-387199: Fix for XSI-1566
 
