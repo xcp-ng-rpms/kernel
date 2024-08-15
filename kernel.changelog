@@ -1,3 +1,20 @@
+* Thu Aug 15 2024 Jan Stancek <jstancek@redhat.com> [6.11.0-0.rc3.19.el10]
+- exec: Fix ToCToU between perm check and set-uid/gid usage (Kees Cook)
+- binfmt_flat: Fix corruption when not offsetting data start (Kees Cook)
+- ksmbd: override fsids for smb2_query_info() (Namjae Jeon)
+- ksmbd: override fsids for share path check (Namjae Jeon)
+- fedora: Enable AF8133J Magnetometer driver (Peter Robinson)
+- platform/x86: ideapad-laptop: add a mutex to synchronize VPC commands (Gergo Koteles)
+- platform/x86: ideapad-laptop: move ymc_trigger_ec from lenovo-ymc (Gergo Koteles)
+- platform/x86: ideapad-laptop: introduce a generic notification chain (Gergo Koteles)
+- platform/x86/amd/pmf: Fix to Update HPD Data When ALS is Disabled (Shyam Sundar S K)
+- fix bitmap corruption on close_range() with CLOSE_RANGE_UNSHARE (Al Viro)
+- redhat: spec: add cachestat kselftest (Eric Chanudet)
+- redhat: hmac sign the UKI for FIPS (Vitaly Kuznetsov)
+- not upstream: Disable vdso getrandom when FIPS is enabled (Herbert Xu)
+- Linux v6.11.0-0.rc3
+Resolves: RHEL-29722 
+
 * Tue Aug 13 2024 Jan Stancek <jstancek@redhat.com> [6.11.0-0.rc3.18.el10]
 - Linux 6.11-rc3 (Linus Torvalds)
 - x86/mtrr: Check if fixed MTRRs exist before saving them (Andi Kleen)
@@ -435,6 +452,23 @@ Resolves: RHEL-29722
 - task_work: make TWA_NMI_CURRENT handling conditional on IRQ_WORK (Linus Torvalds)
 Resolves: RHEL-29722
 
+* Thu Aug 15 2024 Jan Stancek <jstancek@redhat.com> [6.11.0-0.rc3.19.el10]
+- exec: Fix ToCToU between perm check and set-uid/gid usage (Kees Cook)
+- binfmt_flat: Fix corruption when not offsetting data start (Kees Cook)
+- ksmbd: override fsids for smb2_query_info() (Namjae Jeon)
+- ksmbd: override fsids for share path check (Namjae Jeon)
+- fedora: Enable AF8133J Magnetometer driver (Peter Robinson)
+- platform/x86: ideapad-laptop: add a mutex to synchronize VPC commands (Gergo Koteles)
+- platform/x86: ideapad-laptop: move ymc_trigger_ec from lenovo-ymc (Gergo Koteles)
+- platform/x86: ideapad-laptop: introduce a generic notification chain (Gergo Koteles)
+- platform/x86/amd/pmf: Fix to Update HPD Data When ALS is Disabled (Shyam Sundar S K)
+- fix bitmap corruption on close_range() with CLOSE_RANGE_UNSHARE (Al Viro)
+- redhat: spec: add cachestat kselftest (Eric Chanudet)
+- redhat: hmac sign the UKI for FIPS (Vitaly Kuznetsov)
+- not upstream: Disable vdso getrandom when FIPS is enabled (Herbert Xu)
+- Linux v6.11.0-0.rc3
+Resolves: 
+
 * Tue Aug 13 2024 Jan Stancek <jstancek@redhat.com> [6.11.0-0.rc3.18.el10]
 - Linux 6.11-rc3 (Linus Torvalds)
 - x86/mtrr: Check if fixed MTRRs exist before saving them (Andi Kleen)
@@ -684,7 +718,7 @@ Resolves: RHEL-29722
 - new configs in drivers/phy (Izabela Bakollari)
 - Add support to rh_waived cmdline boot parameter (Ricardo Robaina) [RHEL-26170]
 - Linux v6.11.0-0.rc3
-Resolves: RHEL-26170
+Resolves: RHEL-29722
 
 * Fri Aug 09 2024 Jan Stancek <jstancek@redhat.com> [6.11.0-0.rc2.17.el10]
 - btrfs: avoid using fixed char array size for tree names (Qu Wenruo)
@@ -871,6 +905,18 @@ Resolves: RHEL-29722
 - crypto: x86/aes-gcm: Disable FPU around skcipher_walk_done(). (Sebastian Andrzej Siewior)
 - task_work: make TWA_NMI_CURRENT handling conditional on IRQ_WORK (Linus Torvalds)
 Resolves: RHEL-29722
+
+* Wed Aug 14 2024 Fedora Kernel Team <kernel-team@fedoraproject.org> [6.11.0-0.rc3.6b0f8db921ab.31]
+- fedora: Enable AF8133J Magnetometer driver (Peter Robinson)
+- Linux v6.11.0-0.rc3.6b0f8db921ab
+Resolves: 
+
+* Tue Aug 13 2024 Fedora Kernel Team <kernel-team@fedoraproject.org> [6.11.0-0.rc3.d74da846046a.30]
+- redhat: spec: add cachestat kselftest (Eric Chanudet)
+- redhat: hmac sign the UKI for FIPS (Vitaly Kuznetsov)
+- not upstream: Disable vdso getrandom when FIPS is enabled (Herbert Xu)
+- Linux v6.11.0-0.rc3.d74da846046a
+Resolves: 
 
 * Mon Aug 12 2024 Fedora Kernel Team <kernel-team@fedoraproject.org> [6.11.0-0.rc3.29]
 - Linux v6.11.0-0.rc3

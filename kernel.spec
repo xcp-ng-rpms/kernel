@@ -163,15 +163,15 @@ Summary: The Linux kernel
 %define specrpmversion 6.11.0
 %define specversion 6.11.0
 %define patchversion 6.11
-%define pkgrelease 0.rc3.18
+%define pkgrelease 0.rc3.19
 %define kversion 6
-%define tarfile_release 6.11.0-0.rc3.18.el10
+%define tarfile_release 6.11.0-0.rc3.19.el10
 # This is needed to do merge window version magic
 %define patchlevel 11
 # This allows pkg_release to have configurable %%{?dist} tag
-%define specrelease 0.rc3.18%{?buildid}%{?dist}
+%define specrelease 0.rc3.19%{?buildid}%{?dist}
 # This defines the kabi tarball version
-%define kabiversion 6.11.0-0.rc3.18.el10
+%define kabiversion 6.11.0-0.rc3.19.el10
 
 # If this variable is set to 1, a bpf selftests build failure will cause a
 # fatal kernel package build error
@@ -2678,6 +2678,11 @@ BuildKernel() {
 # signkernel
 %endif
 
+    # hmac sign the UKI for FIPS
+    KernelUnifiedImageHMAC="$KernelUnifiedImageDir/.$InstallName-virt.efi.hmac"
+    %{log_msg "hmac sign the UKI for FIPS"}
+    %{log_msg "Creating hmac file: $KernelUnifiedImageHMAC"}
+    (cd $KernelUnifiedImageDir && sha512hmac $InstallName-virt.efi) > $KernelUnifiedImageHMAC;
 
 # with_efiuki
 %endif
@@ -3071,7 +3076,7 @@ pushd tools/testing/selftests
 %endif
 
 %{log_msg "main selftests compile"}
-%{make} %{?_smp_mflags} ARCH=$Arch V=1 TARGETS="bpf cgroup mm net net/forwarding net/mptcp netfilter tc-testing memfd drivers/net/bonding iommu" SKIP_TARGETS="" $force_targets INSTALL_PATH=%{buildroot}%{_libexecdir}/kselftests VMLINUX_H="${RPM_VMLINUX_H}" install
+%{make} %{?_smp_mflags} ARCH=$Arch V=1 TARGETS="bpf cgroup mm net net/forwarding net/mptcp netfilter tc-testing memfd drivers/net/bonding iommu cachestat" SKIP_TARGETS="" $force_targets INSTALL_PATH=%{buildroot}%{_libexecdir}/kselftests VMLINUX_H="${RPM_VMLINUX_H}" install
 
 %ifarch %{klptestarches}
 	# kernel livepatching selftest test_modules will build against
@@ -4015,6 +4020,7 @@ fi\
 /lib/modules/%{KVERREL}%{?3:+%{3}}/config\
 /lib/modules/%{KVERREL}%{?3:+%{3}}/modules.builtin*\
 %attr(0644, root, root) /lib/modules/%{KVERREL}%{?3:+%{3}}/%{?-k:%{-k*}}%{!?-k:vmlinuz}-virt.efi\
+%attr(0644, root, root) /lib/modules/%{KVERREL}%{?3:+%{3}}/.%{?-k:%{-k*}}%{!?-k:vmlinuz}-virt.efi.hmac\
 %ghost /%{image_install_path}/efi/EFI/Linux/%{?-k:%{-k*}}%{!?-k:*}-%{KVERREL}%{?3:+%{3}}.efi\
 %{expand:%%files %{?3:%{3}-}uki-virt-addons}\
 /lib/modules/%{KVERREL}%{?3:+%{3}}/%{?-k:%{-k*}}%{!?-k:vmlinuz}-virt.efi.extra.d/ \
@@ -4093,6 +4099,22 @@ fi\
 #
 #
 %changelog
+* Thu Aug 15 2024 Jan Stancek <jstancek@redhat.com> [6.11.0-0.rc3.19.el10]
+- exec: Fix ToCToU between perm check and set-uid/gid usage (Kees Cook)
+- binfmt_flat: Fix corruption when not offsetting data start (Kees Cook)
+- ksmbd: override fsids for smb2_query_info() (Namjae Jeon)
+- ksmbd: override fsids for share path check (Namjae Jeon)
+- fedora: Enable AF8133J Magnetometer driver (Peter Robinson)
+- platform/x86: ideapad-laptop: add a mutex to synchronize VPC commands (Gergo Koteles)
+- platform/x86: ideapad-laptop: move ymc_trigger_ec from lenovo-ymc (Gergo Koteles)
+- platform/x86: ideapad-laptop: introduce a generic notification chain (Gergo Koteles)
+- platform/x86/amd/pmf: Fix to Update HPD Data When ALS is Disabled (Shyam Sundar S K)
+- fix bitmap corruption on close_range() with CLOSE_RANGE_UNSHARE (Al Viro)
+- redhat: spec: add cachestat kselftest (Eric Chanudet)
+- redhat: hmac sign the UKI for FIPS (Vitaly Kuznetsov)
+- not upstream: Disable vdso getrandom when FIPS is enabled (Herbert Xu)
+- Linux v6.11.0-0.rc3
+
 * Tue Aug 13 2024 Jan Stancek <jstancek@redhat.com> [6.11.0-0.rc3.18.el10]
 - Linux 6.11-rc3 (Linus Torvalds)
 - x86/mtrr: Check if fixed MTRRs exist before saving them (Andi Kleen)
