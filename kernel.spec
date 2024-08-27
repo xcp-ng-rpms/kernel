@@ -163,15 +163,15 @@ Summary: The Linux kernel
 %define specrpmversion 6.11.0
 %define specversion 6.11.0
 %define patchversion 6.11
-%define pkgrelease 0.rc5.21
+%define pkgrelease 0.rc5.22
 %define kversion 6
-%define tarfile_release 6.11.0-0.rc5.21.el10
+%define tarfile_release 6.11.0-0.rc5.22.el10
 # This is needed to do merge window version magic
 %define patchlevel 11
 # This allows pkg_release to have configurable %%{?dist} tag
-%define specrelease 0.rc5.21%{?buildid}%{?dist}
+%define specrelease 0.rc5.22%{?buildid}%{?dist}
 # This defines the kabi tarball version
-%define kabiversion 6.11.0-0.rc5.21.el10
+%define kabiversion 6.11.0-0.rc5.22.el10
 
 # If this variable is set to 1, a bpf selftests build failure will cause a
 # fatal kernel package build error
@@ -2795,7 +2795,7 @@ BuildKernel() {
             # in case below list needs to be extended, remember to add a
             # matching ghost entry in the files section as well
             rm -f modules.{alias,alias.bin,builtin.alias.bin,builtin.bin} \
-                  modules.{dep,dep.bin,devname,softdep,symbols,symbols.bin}
+                  modules.{dep,dep.bin,devname,softdep,symbols,symbols.bin,weakdep}
         popd
     }
 
@@ -3993,6 +3993,7 @@ fi\
 %ghost %attr(0644, root, root) /lib/modules/%{KVERREL}%{?3:+%{3}}/modules.softdep\
 %ghost %attr(0644, root, root) /lib/modules/%{KVERREL}%{?3:+%{3}}/modules.symbols\
 %ghost %attr(0644, root, root) /lib/modules/%{KVERREL}%{?3:+%{3}}/modules.symbols.bin\
+%ghost %attr(0644, root, root) /lib/modules/%{KVERREL}%{?3:+%{3}}/modules.weakdep\
 %{expand:%%files -f kernel-%{?3:%{3}-}modules.list %{?3:%{3}-}modules}\
 %{expand:%%files %{?3:%{3}-}devel}\
 %defverify(not mtime)\
@@ -4099,6 +4100,29 @@ fi\
 #
 #
 %changelog
+* Tue Aug 27 2024 Jan Stancek <jstancek@redhat.com> [6.11.0-0.rc5.22.el10]
+- netfs: Fix interaction of streaming writes with zero-point tracker (David Howells)
+- netfs: Fix missing iterator reset on retry of short read (David Howells)
+- netfs: Fix trimming of streaming-write folios in netfs_inval_folio() (David Howells)
+- netfs: Fix netfs_release_folio() to say no if folio dirty (David Howells)
+- afs: Fix post-setattr file edit to do truncation correctly (David Howells)
+- mm: Fix missing folio invalidation calls during truncation (David Howells)
+- ovl: ovl_parse_param_lowerdir: Add missed '\n' for pr_err (Zhihao Cheng)
+- ovl: fix wrong lowerdir number check for parameter Opt_lowerdir (Zhihao Cheng)
+- ovl: pass string to ovl_parse_layer() (Christian Brauner)
+- backing-file: convert to using fops->splice_write (Ed Tsai)
+- Revert "pidfd: prevent creation of pidfds for kthreads" (Christian Brauner)
+- romfs: fix romfs_read_folio() (Christian Brauner)
+- netfs, ceph: Partially revert "netfs: Replace PG_fscache by setting folio->private and marking dirty" (David Howells)
+- Add weakdep support to the kernel spec (Justin M. Forbes)
+- redhat: configs: disable PF_KEY in RHEL (Sabrina Dubroca)
+- crypto: akcipher - Disable signing and decryption (Vladis Dronov) [RHEL-54183] {CVE-2023-6240}
+- crypto: dh - implement FIPS PCT (Vladis Dronov) [RHEL-54183]
+- crypto: ecdh - disallow plain "ecdh" usage in FIPS mode (Vladis Dronov) [RHEL-54183]
+- crypto: seqiv - flag instantiations as FIPS compliant (Vladis Dronov) [RHEL-54183]
+- [kernel] bpf: set default value for bpf_jit_harden (Artem Savkov) [RHEL-51896]
+- Linux v6.11.0-0.rc5
+
 * Mon Aug 26 2024 Jan Stancek <jstancek@redhat.com> [6.11.0-0.rc5.21.el10]
 - Linux 6.11-rc5 (Linus Torvalds)
 - bcachefs: Fix rebalance_work accounting (Kent Overstreet)
