@@ -163,15 +163,15 @@ Summary: The Linux kernel
 %define specrpmversion 6.11.0
 %define specversion 6.11.0
 %define patchversion 6.11
-%define pkgrelease 0.rc7.24
+%define pkgrelease 25
 %define kversion 6
-%define tarfile_release 6.11.0-0.rc7.24.el10
+%define tarfile_release 6.11.0-25.el10
 # This is needed to do merge window version magic
 %define patchlevel 11
 # This allows pkg_release to have configurable %%{?dist} tag
-%define specrelease 0.rc7.24%{?buildid}%{?dist}
+%define specrelease 25%{?buildid}%{?dist}
 # This defines the kabi tarball version
-%define kabiversion 6.11.0-0.rc7.24.el10
+%define kabiversion 6.11.0-25.el10
 
 # If this variable is set to 1, a bpf selftests build failure will cause a
 # fatal kernel package build error
@@ -289,7 +289,7 @@ Summary: The Linux kernel
 
 # special purpose variants
 
-%ifarch x86_64 aarch64
+%ifarch x86_64 aarch64 riscv64
 %define with_efiuki %{?_without_efiuki: 0} %{?!_without_efiuki: 1}
 %else
 %define with_efiuki 0
@@ -451,6 +451,11 @@ Summary: The Linux kernel
 %define with_selftests 0
 %endif
 
+# bpftool needs debuginfo to work
+%if %{with_debuginfo} == 0
+%define with_bpftool 0
+%endif
+
 %ifnarch noarch
 %define with_kernel_abi_stablelists 0
 %endif
@@ -541,6 +546,13 @@ Summary: The Linux kernel
 %define hdrarch arm64
 %define make_target vmlinuz.efi
 %define kernel_image arch/arm64/boot/vmlinuz.efi
+%endif
+
+%ifarch riscv64
+%define asmarch riscv
+%define hdrarch riscv
+%define make_target vmlinuz.efi
+%define kernel_image arch/riscv/boot/vmlinuz.efi
 %endif
 
 # Should make listnewconfig fail if there's config options
@@ -645,7 +657,7 @@ Release: %{pkg_release}
 # DO NOT CHANGE THE 'ExclusiveArch' LINE TO TEMPORARILY EXCLUDE AN ARCHITECTURE BUILD.
 # SET %%nobuildarches (ABOVE) INSTEAD
 %if 0%{?fedora}
-ExclusiveArch: noarch x86_64 s390x aarch64 ppc64le
+ExclusiveArch: noarch x86_64 s390x aarch64 ppc64le riscv64
 %else
 ExclusiveArch: noarch i386 i686 x86_64 s390x aarch64 ppc64le
 %endif
@@ -664,6 +676,9 @@ Provides: installonlypkg(kernel)
 BuildRequires: kmod, bash, coreutils, tar, git-core, which
 BuildRequires: bzip2, xz, findutils, m4, perl-interpreter, perl-Carp, perl-devel, perl-generators, make, diffutils, gawk, %compression
 BuildRequires: gcc, binutils, redhat-rpm-config, hmaccalc, bison, flex, gcc-c++
+%if 0%{?fedora}
+BuildRequires: rust, rust-src, bindgen
+%endif
 BuildRequires: net-tools, hostname, bc, elfutils-devel
 BuildRequires: dwarves
 BuildRequires: python3
@@ -721,7 +736,7 @@ BuildRequires: zlib-devel binutils-devel llvm-devel
 %endif
 %if %{with_selftests}
 BuildRequires: clang llvm-devel fuse-devel
-%ifarch x86_64
+%ifarch x86_64 riscv64
 BuildRequires: lld
 %endif
 BuildRequires: libcap-devel libcap-ng-devel rsync libmnl-devel
@@ -758,7 +773,7 @@ BuildRequires: openssl
 %if 0%{?rhel}%{?centos} && !0%{?eln}
 BuildRequires: system-sb-certs
 %endif
-%ifarch x86_64 aarch64
+%ifarch x86_64 aarch64 riscv64
 BuildRequires: nss-tools
 BuildRequires: pesign >= 0.10-4
 %endif
@@ -908,6 +923,8 @@ Source58: %{name}-s390x-fedora.config
 Source59: %{name}-s390x-debug-fedora.config
 Source60: %{name}-x86_64-fedora.config
 Source61: %{name}-x86_64-debug-fedora.config
+Source700: %{name}-riscv64-fedora.config
+Source701: %{name}-riscv64-debug-fedora.config
 
 Source62: def_variants.yaml.fedora
 %endif
@@ -961,11 +978,13 @@ Source201: Module.kabi_aarch64
 Source202: Module.kabi_ppc64le
 Source203: Module.kabi_s390x
 Source204: Module.kabi_x86_64
+Source205: Module.kabi_riscv64
 
 Source210: Module.kabi_dup_aarch64
 Source211: Module.kabi_dup_ppc64le
 Source212: Module.kabi_dup_s390x
 Source213: Module.kabi_dup_x86_64
+Source214: Module.kabi_dup_riscv64
 
 Source300: kernel-abi-stablelists-%{kabiversion}.tar.xz
 Source301: kernel-kabi-dw-%{kabiversion}.tar.xz
@@ -1916,6 +1935,7 @@ GetArch()
   *ppc64le*) echo "ppc64le" ;;
   *s390x*) echo "s390x" ;;
   *x86_64*) echo "x86_64" ;;
+  *riscv64*) echo "riscv64" ;;
   # no arch, apply everywhere
   *) echo "" ;;
   esac
@@ -2094,6 +2114,10 @@ InitBuildVars() {
     cp configs/x509.genkey certs/.
     %endif
 
+%if %{with_debuginfo} == 0
+    sed -i 's/^\(CONFIG_DEBUG_INFO.*\)=y/# \1 is not set/' .config
+%endif
+
     Arch=`head -1 .config | cut -b 3-`
     %{log_msg "InitBuildVars: USING ARCH=$Arch"}
 
@@ -2163,7 +2187,7 @@ BuildKernel() {
     mkdir -p $RPM_BUILD_ROOT%{debuginfodir}/%{image_install_path}
 %endif
 
-%ifarch aarch64
+%ifarch aarch64 riscv64
     %{log_msg "Build dtb kernel"}
     %{make} ARCH=$Arch dtbs INSTALL_DTBS_PATH=$RPM_BUILD_ROOT/%{image_install_path}/dtb-$KernelVer
     %{make} ARCH=$Arch dtbs_install INSTALL_DTBS_PATH=$RPM_BUILD_ROOT/%{image_install_path}/dtb-$KernelVer
@@ -2825,6 +2849,7 @@ BuildKernel() {
     # the F17 UsrMove feature.
     ln -sf $DevelDir $RPM_BUILD_ROOT/lib/modules/$KernelVer/build
 
+%if %{with_debuginfo}
     # Generate vmlinux.h and put it to kernel-devel path
     # zfcpdump build does not have btf anymore
     if [ "$Variant" != "zfcpdump" ]; then
@@ -2836,6 +2861,7 @@ BuildKernel() {
 
         tools/bpf/bpftool/bootstrap/bpftool btf dump file vmlinux format c > $RPM_BUILD_ROOT/$DevelDir/vmlinux.h
     fi
+%endif
 
     %{log_msg "Cleanup kernel-devel and kernel-debuginfo files"}
     # prune junk from kernel-devel
@@ -3231,7 +3257,7 @@ find $RPM_BUILD_ROOT/usr/include \
 %endif
 
 %if %{with_cross_headers}
-HDR_ARCH_LIST='arm64 powerpc s390 x86'
+HDR_ARCH_LIST='arm64 powerpc s390 x86 riscv'
 mkdir -p $RPM_BUILD_ROOT/usr/tmp-headers
 
 for arch in $HDR_ARCH_LIST; do
@@ -3757,7 +3783,7 @@ fi\
 %endif
 
 %if %{with_kabidw_base}
-%ifarch x86_64 s390x ppc64 ppc64le aarch64
+%ifarch x86_64 s390x ppc64 ppc64le aarch64 riscv64
 %files kernel-kabidw-base-internal
 %defattr(-,root,root)
 /kabidw-base/%{_target_cpu}/*
@@ -3964,7 +3990,7 @@ fi\
 %ghost /%{image_install_path}/%{?-k:%{-k*}}%{!?-k:vmlinuz}-%{KVERREL}%{?3:+%{3}}\
 /lib/modules/%{KVERREL}%{?3:+%{3}}/.vmlinuz.hmac \
 %ghost /%{image_install_path}/.vmlinuz-%{KVERREL}%{?3:+%{3}}.hmac \
-%ifarch aarch64\
+%ifarch aarch64 riscv64\
 /lib/modules/%{KVERREL}%{?3:+%{3}}/dtb \
 %ghost /%{image_install_path}/dtb-%{KVERREL}%{?3:+%{3}} \
 %endif\
@@ -4113,6 +4139,149 @@ fi\
 #
 #
 %changelog
+* Mon Sep 16 2024 Jan Stancek <jstancek@redhat.com> [6.11.0-25.el10]
+- Linux 6.11 (Linus Torvalds)
+- Revert "KVM: VMX: Always honor guest PAT on CPUs that support self-snoop" (Paolo Bonzini)
+- pinctrl: pinctrl-cy8c95x0: Fix regcache (Patrick Rudolph)
+- pinctrl: meteorlake: Add Arrow Lake-H/U ACPI ID (Mika Westerberg)
+- ASoC: meson: axg-card: fix 'use-after-free' (Arseniy Krasnov)
+- ASoC: codecs: avoid possible garbage value in peb2466_reg_read() (Su Hui)
+- MAINTAINERS: update Pierre Bossart's email and role (Pierre-Louis Bossart)
+- ASoC: tas2781: fix to save the dsp bin file name into the correct array in case name_prefix is not NULL (Shenghao Ding)
+- ASoC: Intel: soc-acpi-intel-mtl-match: add missing empty item (Bard Liao)
+- ASoC: Intel: soc-acpi-intel-lnl-match: add missing empty item (Bard Liao)
+- cifs: Fix signature miscalculation (David Howells)
+- PCI: Fix potential deadlock in pcim_intx() (Philipp Stanner)
+- spi: nxp-fspi: fix the KASAN report out-of-bounds bug (Han Xu)
+- spi: geni-qcom: Fix incorrect free_irq() sequence (Jinjie Ruan)
+- spi: geni-qcom: Undo runtime PM changes at driver exit time (Jinjie Ruan)
+- soundwire: stream: Revert "soundwire: stream: fix programming slave ports for non-continous port maps" (Krzysztof Kozlowski)
+- drm/xe/client: add missing bo locking in show_meminfo() (Matthew Auld)
+- drm/xe/client: fix deadlock in show_meminfo() (Matthew Auld)
+- drm/xe/oa: Enable Xe2+ PES disaggregation (Ashutosh Dixit)
+- drm/xe/display: fix compat IS_DISPLAY_STEP() range end (Jani Nikula)
+- drm/xe: Fix access_ok check in user_fence_create (Nirmoy Das)
+- drm/xe: Fix possible UAF in guc_exec_queue_process_msg (Matthew Brost)
+- drm/xe: Remove fence check from send_tlb_invalidation (Matthew Brost)
+- drm/xe/gt: Remove double include (Lucas De Marchi)
+- drm/tegra: Use iommu_paging_domain_alloc() (Lu Baolu)
+- drm/rockchip: Use iommu_paging_domain_alloc() (Lu Baolu)
+- drm/syncobj: Fix syncobj leak in drm_syncobj_eventfd_ioctl (T.J. Mercier)
+- drm/stm: add COMMON_CLK dependency (Arnd Bergmann)
+- drm/nouveau/fb: restore init() for ramgp102 (Ben Skeggs)
+- dma-buf: heaps: Fix off-by-one in CMA heap fault handler (T.J. Mercier)
+- drm/i915/guc: prevent a possible int overflow in wq offsets (Nikita Zhandarovich)
+- drm/amd/display: Add all planes on CRTC to state for overlay cursor (Leo Li)
+- drm/amdgpu/atomfirmware: Silence UBSAN warning (Alex Deucher)
+- drm/amd/amdgpu: apply command submission parser for JPEG v1 (David (Ming Qiang) Wu)
+- drm/amd/amdgpu: apply command submission parser for JPEG v2+ (David (Ming Qiang) Wu)
+- drm/amd/pm: fix the pp_dpm_pcie issue on smu v14.0.2/3 (Kenneth Feng)
+- drm/amd/pm: update the features set on smu v14.0.2/3 (Kenneth Feng)
+- drm/amd/display: Do not reset planes based on crtc zpos_changed (Leo Li)
+- drm/amd/display: Avoid race between dcn35_set_drr() and dc_state_destruct() (Tobias Jakobi)
+- drm/amd/display: Avoid race between dcn10_set_drr() and dc_state_destruct() (Tobias Jakobi)
+- drm/amdkfd: Add cache line size info (David Belanger)
+- Consolidate configs into common for 6.11 kernels (Justin M. Forbes)
+- uki-virt: add systemd-cryptsetup module (Vitaly Kuznetsov)
+- redhat/docs: fix command to install missing build dependencies (Davide Cavalca)
+- clk: qcom: clk-alpha-pll: Simplify the zonda_pll_adjust_l_val() (Satya Priya Kakitapalli)
+- block: Prevent deadlocks when switching elevators (Damien Le Moal)
+- hwmon: (pmbus) Conditionally clear individual status bits for pmbus rev >= 1.2 (Patryk Biel)
+- workqueue: Clear worker->pool in the worker thread context (Lai Jiangshan)
+- riscv: Disable preemption while handling PR_RISCV_CTX_SW_FENCEI_OFF (Charlie Jenkins)
+- drivers: perf: Fix smp_processor_id() use in preemptible code (Alexandre Ghiti)
+- net: netfilter: move nf flowtable bpf initialization in nf_flow_table_module_init() (Lorenzo Bianconi)
+- netfilter: nft_socket: make cgroupsv2 matching work with namespaces (Florian Westphal)
+- netfilter: nft_socket: fix sk refcount leaks (Florian Westphal)
+- net: tighten bad gso csum offset check in virtio_net_hdr (Willem de Bruijn)
+- netlink: specs: mptcp: fix port endianness (Asbjørn Sloth Tønnesen)
+- net: dpaa: Pad packets to ETH_ZLEN (Sean Anderson)
+- mptcp: pm: Fix uaf in __timer_delete_sync (Edward Adam Davis)
+- net: libwx: fix number of Rx and Tx descriptors (Jiawen Wu)
+- net: dsa: felix: ignore pending status of TAS module when it's disabled (Xiaoliang Yang)
+- net: hsr: prevent NULL pointer dereference in hsr_proxy_announce() (Jeongjun Park)
+- selftests: mptcp: include net_helper.sh file (Matthieu Baerts (NGI0))
+- selftests: mptcp: include lib.sh file (Matthieu Baerts (NGI0))
+- selftests: mptcp: join: restrict fullmesh endp on 1st sf (Matthieu Baerts (NGI0))
+- igb: Always call igb_xdp_ring_update_tail() under Tx lock (Sriram Yagnaraman)
+- ice: fix VSI lists confusion when adding VLANs (Michal Schmidt)
+- ice: stop calling pci_disable_device() as we use pcim (Przemek Kitszel)
+- ice: fix accounting for filters shared by multiple VSIs (Jacob Keller)
+- ice: Fix lldp packets dropping after changing the number of channels (Martyna Szapar-Mudlaw)
+- net/mlx5: Fix bridge mode operations when there are no VFs (Benjamin Poirier)
+- net/mlx5: Verify support for scheduling element and TSAR type (Carolina Jubran)
+- net/mlx5: Add missing masks and QoS bit masks for scheduling elements (Carolina Jubran)
+- net/mlx5: Explicitly set scheduling element and TSAR type (Carolina Jubran)
+- net/mlx5e: Add missing link mode to ptys2ext_ethtool_map (Shahar Shitrit)
+- net/mlx5e: Add missing link modes to ptys2ethtool_map (Shahar Shitrit)
+- net/mlx5: Update the list of the PCI supported devices (Maher Sanalla)
+- MAINTAINERS: Add ethtool pse-pd to PSE NETWORK DRIVER (Kory Maincent)
+- dt-bindings: net: tja11xx: fix the broken binding (Wei Fang)
+- selftests: net: csum: Fix checksums for packets with non-zero padding (Sean Anderson)
+- net: phy: dp83822: Fix NULL pointer dereference on DP83825 devices (Tomas Paukrt)
+- virtio_net: disable premapped mode by default (Xuan Zhuo)
+- Revert "virtio_net: big mode skip the unmap check" (Xuan Zhuo)
+- Revert "virtio_net: rx remove premapped failover code" (Xuan Zhuo)
+- net: ftgmac100: Enable TX interrupt to avoid TX timeout (Jacky Chou)
+- octeontx2-af: Modify SMQ flush sequence to drop packets (Naveen Mamindlapalli)
+- fou: fix initialization of grc (Muhammad Usama Anjum)
+- net: hsr: remove seqnr_lock (Eric Dumazet)
+- platform/x86: asus-wmi: Disable OOBE experience on Zenbook S 16 (Bas Nieuwenhuizen)
+- platform/x86: panasonic-laptop: Allocate 1 entry extra in the sinf array (Hans de Goede)
+- platform/x86: panasonic-laptop: Fix SINF array out of bounds accesses (Hans de Goede)
+- mm: avoid leaving partial pfn mappings around in error case (Linus Torvalds)
+- spec: Respect rpmbuild --without debuginfo (Orgad Shaneh)
+- fedora/configs: enable GPIO expander drivers (Rupinderjit Singh)
+- redhat/configs: Switch to the Rust implementation of AX88796B_PHY driver for Fedora (Neal Gompa)
+- redhat: Turn on support for Rust code in Fedora (Neal Gompa)
+- Turn off RUST for risc-v (Justin M. Forbes)
+- riscv: dts: starfive: jh7110-common: Fix lower rate of CPUfreq by setting PLL0 rate to 1.5GHz (Xingyu Wu)
+- platform: cznic: turris-omnia-mcu: fix HW_RANDOM dependency (Arnd Bergmann)
+- arm64: dts: rockchip: Fix compatibles for RK3588 VO{0,1}_GRF (Cristian Ciocaltea)
+- dt-bindings: soc: rockchip: Fix compatibles for RK3588 VO{0,1}_GRF (Cristian Ciocaltea)
+- arm64: dts: rockchip: override BIOS_DISABLE signal via GPIO hog on RK3399 Puma (Quentin Schulz)
+- arm64: dts: rockchip: fix eMMC/SPI corruption when audio has been used on RK3399 Puma (Quentin Schulz)
+- arm64: dts: rockchip: fix PMIC interrupt pin in pinctrl for ROCK Pi E (FUKAUMI Naoki)
+- arm64: dts: rockchip: Remove broken tsadc pinctrl binding for rk356x (Alexander Shiyan)
+- firmware: qcom: uefisecapp: Fix deadlock in qcuefi_acquire() (Dan Carpenter)
+- dm-integrity: fix a race condition when accessing recalc_sector (Mikulas Patocka)
+- printk: Export match_devname_and_update_preferred_console() (Yu Liao)
+- minmax: reduce min/max macro expansion in atomisp driver (Lorenzo Stoakes)
+- gitlab-ci: allow failure of clang LTO pipelines (Michael Hofmann)
+- redhat/configs: Consolidate the CONFIG_KVM_BOOK3S_HV_P*_TIMING switches (Thomas Huth)
+- redhat/configs: Consolidate the CONFIG_KVM_SW_PROTECTED_VM switch (Thomas Huth)
+- redhat/configs: Consolidate the CONFIG_KVM_HYPERV switch (Thomas Huth)
+- redhat/configs: Consolidate the CONFIG_KVM_AMD_SEV switch (Thomas Huth)
+- tracing: Drop unused helper function to fix the build (Andy Shevchenko)
+- tracing/osnoise: Fix build when timerlat is not enabled (Steven Rostedt)
+- Cleanup some riscv CONFIG locations (Justin M. Forbes)
+- Fix up pending riscv Fedora configs post merge (Justin M. Forbes)
+- bcachefs: Don't delete open files in online fsck (Kent Overstreet)
+- bcachefs: fix btree_key_cache sysfs knob (Kent Overstreet)
+- bcachefs: More BCH_SB_MEMBER_INVALID support (Kent Overstreet)
+- bcachefs: Simplify bch2_bkey_drop_ptrs() (Kent Overstreet)
+- bcachefs: Add a cond_resched() to __journal_keys_sort() (Kent Overstreet)
+- bcachefs: Fix ca->io_ref usage (Kent Overstreet)
+- hv: vmbus: Constify struct kobj_type and struct attribute_group (Hongbo Li)
+- tools: hv: rm .*.cmd when make clean (zhang jiao)
+- x86/hyperv: fix kexec crash due to VP assist page corruption (Anirudh Rayabharam (Microsoft))
+- Drivers: hv: vmbus: Fix the misplaced function description (Roman Kisel)
+- tools: hv: lsvmbus: change shebang to use python3 (Anthony Nandaa)
+- x86/hyperv: Set X86_FEATURE_TSC_KNOWN_FREQ when Hyper-V provides frequency (Michael Kelley)
+- Documentation: hyperv: Add overview of Confidential Computing VM support (Michael Kelley)
+- clocksource: hyper-v: Use lapic timer in a TDX VM without paravisor (Dexuan Cui)
+- Drivers: hv: Remove deprecated hv_fcopy declarations (Rachel Menge)
+- fedora/configs: Enable SCMI configuration (Rupinderjit Singh)
+- Remove S390 special config for PHYLIB (Justin M. Forbes)
+- Disable ELN for riscv64 (Isaiah Stapleton)
+- redhat: add checks to ensure only building riscv64 on fedora (Isaiah Stapleton)
+- redhat: Add missing riscv fedora configs (Isaiah Stapleton)
+- Add riscv64 to the CI pipelines (Isaiah Stapleton)
+- redhat: Regenerate dist-self-test-data for riscv64 (Isaiah Stapleton)
+- redhat: Add riscv config changes for fedora (David Abdurachmanov)
+- redhat: Add support for riscv (David Abdurachmanov)
+- Linux v6.11.0
+
 * Tue Sep 10 2024 Jan Stancek <jstancek@redhat.com> [6.11.0-0.rc7.24.el10]
 - redhat: Do not include UKI addons twice (Vitaly Kuznetsov)
 - redhat: update gating.yml (Michael Hofmann)
