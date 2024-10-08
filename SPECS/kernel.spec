@@ -37,7 +37,7 @@
 Name: kernel
 License: GPLv2
 Version: 4.19.19
-Release: %{?xsrel}%{?dist}
+Release: %{?xsrel}.1%{?dist}
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
@@ -680,6 +680,10 @@ Source4: Module.kabi
 %endif
 Source5: prepare-build
 
+# XCP-ng patches
+Patch1000: ceph.patch
+Patch1001: tg3-v4.19.315.patch
+
 %description
 The kernel package contains the Linux kernel (vmlinuz), the core of any
 Linux operating system. The kernel handles the basic functions of the operating
@@ -1033,67 +1037,91 @@ fi
 %{?_cov_results_package}
 
 %changelog
-* Thu Aug 08 2024 Ross Lagerwall <ross.lagerwall@citrix.com> - 4.19.19-8.0.37
-- CA-365333: Fix initrd decompression bug
-- CA-395816: Enable config option to fix incorrect firmware fan control
+* Tue Oct 08 2024 Thierry Escande <thierry.escande@vates.tech> - 4.19.19-8.0.37.1
+- Sync with 4.19.19-8.0.37
+- *** Upstream changelog ***
+- * Thu Aug 08 2024 Ross Lagerwall <ross.lagerwall@citrix.com> - 4.19.19-8.0.37
+- - CA-365333: Fix initrd decompression bug
+- - CA-395816: Enable config option to fix incorrect firmware fan control
 
-* Mon Jul 15 2024 Fouad Hilly <fouad.hilly@cloud.com> - 4.19.19-8.0.36
-- New tag due to a wrong build for 4.19.19-8.0.35
+* Mon Aug 12 2024 Samuel Verschelde <stormi-xcp@ylix.fr> - 4.19.19-8.0.36.1
+- Sync with 4.19.19-8.0.36
+- *** Upstream changelog ***
+- * Mon Jul 15 2024 Fouad Hilly <fouad.hilly@cloud.com> - 4.19.19-8.0.36
+- - New tag due to a wrong build for 4.19.19-8.0.35
+- * Wed Jul 10 2024 Fouad Hilly <fouad.hilly@cloud.com> - 4.19.19-8.0.35
+- - CA-394994  backport fix agaw for a supported 48 bit guest address width
+- - Make sure the kernel configuration is up to date
+- - CP-40289: kernel-devel: Add a BPF Type Format (BTF) info file for libbpf
+- - CP-48280: Disable Intel Powerclamp driver
 
-* Wed Jul 10 2024 Fouad Hilly <fouad.hilly@cloud.com> - 4.19.19-8.0.35
-- CA-394994  backport fix agaw for a supported 48 bit guest address width
-- Make sure the kernel configuration is up to date
-- CP-40289: kernel-devel: Add a BPF Type Format (BTF) info file for libbpf
-- CP-48280: Disable Intel Powerclamp driver
+* Mon Jun 24 2024 Thierry Escande <thierry.escande@vates.tech> - 4.19.19-8.0.34.2
+- Backport tg3 driver code from kernel 4.19.315
 
-* Thu Feb 29 2024 Chunjie Zhu <chunjie.zhu@cloud.com> - 4.19.19-8.0.34
-- CA-387199: Fix for XSI-1566
+* Tue Jun 18 2024 Samuel Verschelde <stormi-xcp@ylix.fr> - 4.19.19-8.0.34.1
+- Sync with 4.19.19-8.0.34
+- *** Upstream changelog ***
+- * Thu Feb 29 2024 Chunjie Zhu <chunjie.zhu@cloud.com> - 4.19.19-8.0.34
+- - CA-387199: Fix for XSI-1566
 
-* Thu Jan 11 2024 Alejandro Vallejo <alejandro.vallejo@cloud.com> - 4.19.19-8.0.33
-- CA-387401: Fix for XSA-448
+* Thu Jun 06 2024 Petr Bena <benapetr@gmail.com> - 4.19.19-8.0.33.2
+- Integrated ceph code from kernel 4.19.295
 
-* Wed Oct 18 2023 Ross Lagerwall <ross.lagerwall@citrix.com> - 4.19.19-8.0.32
-- CA-384066: fix netback vifs queue length
-- Declare setup and dependencies for building live patches
+* Tue Apr 09 2024 Samuel Verschelde <stormi-xcp@ylix.fr> - 4.19.19-8.0.33.1
+- Sync with 4.19.19-8.0.33
+- *** Upstream changelog ***
+- * Thu Jan 11 2024 Alejandro Vallejo <alejandro.vallejo@cloud.com> - 4.19.19-8.0.33
+- - CA-387401: Fix for XSA-448
 
-* Fri Sep 29 2023 Ross Lagerwall <ross.lagerwall@citrix.com> - 4.19.19-8.0.31
-- CA-383077 / XSI-1502: Backport SUNRPC-Always-drop-the-XPRT_LOCK-on-XPRT_CLOSE_WAIT
-- CA-383484: Backport fix for XSA-441
+* Mon Jan 22 2024 Samuel Verschelde <stormi-xcp@ylix.fr> - 4.19.19-8.0.32.1
+- Update to 4.19.19-8.0.32
+- *** Upstream changelog ***
+- * Wed Oct 18 2023 Ross Lagerwall <ross.lagerwall@citrix.com> - 4.19.19-8.0.32
+- - CA-384066: fix netback vifs queue length
+- - Declare setup and dependencies for building live patches
+- * Fri Sep 29 2023 Ross Lagerwall <ross.lagerwall@citrix.com> - 4.19.19-8.0.31
+- - CA-383077 / XSI-1502: Backport SUNRPC-Always-drop-the-XPRT_LOCK-on-XPRT_CLOSE_WAIT
+- - CA-383484: Backport fix for XSA-441
+- * Thu Sep 07 2023 Ross Lagerwall <ross.lagerwall@citrix.com> - 4.19.19-8.0.30
+- - CA-381221: Make NFS timeouts more consistent
 
-* Thu Sep 07 2023 Ross Lagerwall <ross.lagerwall@citrix.com> - 4.19.19-8.0.30
-- CA-381221: Make NFS timeouts more consistent
+* Fri Dec 15 2023 Thierry Escande <thierry.escande@vates.tech> - 4.19.19-8.0.29.2
+- Disable i40iw driver in kernel config
 
-* Fri Aug 11 2023 Stephen Cheng <stephen.cheng@citrix.com> - 4.19.19-8.0.29
-- CP-41018: Backport auxiliary bus support
+* Fri Sep 15 2023 Samuel Verschelde <stormi-xcp@ylix.fr> - 4.19.19-8.0.29.1
+- Update to 4.19.19-8.0.29
+- *** Upstream changelog ***
+- * Fri Aug 11 2023 Stephen Cheng <stephen.cheng@citrix.com> - 4.19.19-8.0.29
+- - CP-41018: Backport auxiliary bus support
+- * Wed Aug 09 2023 Ross Lagerwall <ross.lagerwall@citrix.com> - 4.19.19-8.0.28
+- - CP-43107: backport NVMe/FC patches
+- * Mon Jul 31 2023 Ross Lagerwall <ross.lagerwall@citrix.com> - 4.19.19-8.0.27
+- - CA-379289: Add a fix for XSA-432
+- * Thu Apr 13 2023 Ross Lagerwall <ross.lagerwall@citrix.com> - 4.19.19-8.0.26
+- - CA-371727: Fix evaluation of _PDC ACPI method on dom0
+- - CA-376418: Backport fixes to XSA-423
+- * Thu Mar 16 2023 Ross Lagerwall <ross.lagerwall@citrix.com> - 4.19.19-8.0.25
+- - CP-42067: add an ELFNOTE about PV-IOMMU support
+- * Mon Mar 06 2023 Ross Lagerwall <ross.lagerwall@citrix.com> - 4.19.19-8.0.24
+- - CA-375558: Fix nbd ref counting bug
+- - CA-375244: Ensure DLM reconnects after network outage
+- * Mon Feb 13 2023 Ross Lagerwall <ross.lagerwall@citrix.com> - 4.19.19-8.0.23
+- - CP-41370: Remove Citrix logo
+- - Strip stale config.ini metadata
 
-* Wed Aug 09 2023 Ross Lagerwall <ross.lagerwall@citrix.com> - 4.19.19-8.0.28
-- CP-43107: backport NVMe/FC patches
+* Tue Dec 20 2022 Samuel Verschelde <stormi-xcp@ylix.fr> - 4.19.19-8.0.22.1
+- Update to 4.19.19-8.0.22
+- *** Upstream changelog ***
+- * Fri Dec 09 2022 Ross Lagerwall <ross.lagerwall@citrix.com> - 4.19.19-8.0.22
+- - Fix booting PVH dom0 with UEFI
+- - Fix nvmefc-boot-connections.service.
+- - CA-364458 / XSA-396: PV frontends vulnerable to attack by backends
+- - CA-368126 / XSA-403: Linux disk/nic frontends data leaks
+- - CA-369758 / XSA-423: Guest triggerable NIC reset/abort/crash via netback
+- - CA-373544 / XSA-424: Guests can trigger deadlock in netback
 
-* Mon Jul 31 2023 Ross Lagerwall <ross.lagerwall@citrix.com> - 4.19.19-8.0.27
-- CA-379289: Add a fix for XSA-432
-
-* Thu Apr 13 2023 Ross Lagerwall <ross.lagerwall@citrix.com> - 4.19.19-8.0.26
-- CA-371727: Fix evaluation of _PDC ACPI method on dom0
-- CA-376418: Backport fixes to XSA-423
-
-* Thu Mar 16 2023 Ross Lagerwall <ross.lagerwall@citrix.com> - 4.19.19-8.0.25
-- CP-42067: add an ELFNOTE about PV-IOMMU support
-
-* Mon Mar 06 2023 Ross Lagerwall <ross.lagerwall@citrix.com> - 4.19.19-8.0.24
-- CA-375558: Fix nbd ref counting bug
-- CA-375244: Ensure DLM reconnects after network outage
-
-* Mon Feb 13 2023 Ross Lagerwall <ross.lagerwall@citrix.com> - 4.19.19-8.0.23
-- CP-41370: Remove Citrix logo
-- Strip stale config.ini metadata
-
-* Fri Dec 09 2022 Ross Lagerwall <ross.lagerwall@citrix.com> - 4.19.19-8.0.22
-- Fix booting PVH dom0 with UEFI
-- Fix nvmefc-boot-connections.service.
-- CA-364458 / XSA-396: PV frontends vulnerable to attack by backends
-- CA-368126 / XSA-403: Linux disk/nic frontends data leaks
-- CA-369758 / XSA-423: Guest triggerable NIC reset/abort/crash via netback
-- CA-373544 / XSA-424: Guests can trigger deadlock in netback
+* Wed Aug 31 2022 Samuel Verschelde <stormi-xcp@ylix.fr> - 4.19.19-8.0.21.1
+- Rebase on CH 8.Cloud Preview (8.3)
 
 * Fri Apr 29 2022 Ross Lagerwall <ross.lagerwall@citrix.com> - 4.19.19-8.0.21
 - CA-366138: Backport a patch to fix a CIFS oops
