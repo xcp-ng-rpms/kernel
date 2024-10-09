@@ -27,7 +27,7 @@
 Name: kernel
 License: GPLv2
 Version: 4.19.19
-Release: %{?xsrel}.1%{?dist}
+Release: %{?xsrel}.2%{?dist}
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
@@ -624,6 +624,9 @@ Source3: check-kabi
 Source4: Module.kabi
 %endif
 
+# XCP-ng patches
+Patch1000: dont-select-pinctrl.patch
+
 %description
 The kernel package contains the Linux kernel (vmlinuz), the core of any
 Linux operating system.  The kernel handles the basic functions of the
@@ -923,6 +926,9 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Wed Oct 09 2024 Thierry Escande <thierry.escande@vates.tech> - 4.19.19-7.0.23.2
+- Backport Lenovo fan speed control fix from XCP-ng 8.3
+
 * Tue Jan 23 2024 Samuel Verschelde <stormi-xcp@ylix.fr> - 4.19.19-7.0.23.1
 - Security fix, synced with hotfix XS82ECU1059
 - *** Upstream changelog ***
