@@ -171,7 +171,7 @@ Summary: The Linux kernel
 # This is needed to do merge window version magic
 %define patchlevel 11
 # This allows pkg_release to have configurable %%{?dist} tag
-%define specrelease 25%{?buildid}%{?dist}
+%define specrelease 25.1%{?buildid}%{?dist}
 # This defines the kabi tarball version
 %define kabiversion 6.11.0-25.el10
 
@@ -4182,6 +4182,9 @@ fi\
 #
 #
 %changelog
+* Mon Sep 16 2024 Yann Dirson <yann.dirson@vates.tech> [6.11.0-25.1.xcpng8.99]
+- HACK: Revert to old pre-Stream layout so we can build
+
 * Mon Sep 16 2024 Jan Stancek <jstancek@redhat.com> [6.11.0-25.el10]
 - Linux 6.11 (Linus Torvalds)
 - Revert "KVM: VMX: Always honor guest PAT on CPUs that support self-snoop" (Paolo Bonzini)
