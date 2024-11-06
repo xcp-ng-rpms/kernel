@@ -4182,8 +4182,9 @@ fi\
 #
 #
 %changelog
-* Mon Sep 16 2024 Yann Dirson <yann.dirson@vates.tech> [6.11.0-25.1.xcpng8.99]
+* Wed Nov 06 2024 Yann Dirson <yann.dirson@vates.tech> [6.11.0-25.1.xcpng8.99]
 - HACK: Revert to old pre-Stream layout so we can build
+- WIP: Enable Xen Dom0 support
 
 * Mon Sep 16 2024 Jan Stancek <jstancek@redhat.com> [6.11.0-25.el10]
 - Linux 6.11 (Linus Torvalds)
