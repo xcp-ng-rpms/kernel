@@ -14,3 +14,4 @@ kernel-tools/
 # used at runtime.
 filter-*.sh
 x509.genkey
+/BUILD/
