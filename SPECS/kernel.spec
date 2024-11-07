@@ -171,9 +171,9 @@ Summary: The Linux kernel
 # This is needed to do merge window version magic
 %define patchlevel 11
 # This allows pkg_release to have configurable %%{?dist} tag
-%define specrelease 25.1%{?buildid}%{?dist}
+%define specrelease 25.2%{?buildid}%{?dist}
 # This defines the kabi tarball version
-%define kabiversion 6.11.0-25.el10
+%define kabiversion 6.11.0-25.2.xcpng8.99
 
 # If this variable is set to 1, a bpf selftests build failure will cause a
 # fatal kernel package build error
@@ -4182,6 +4182,9 @@ fi\
 #
 #
 %changelog
+* Thu Nov 07 2024 Yann Dirson <yann.dirson@vates.tech> [6.11.0-25.2.xcpng8.99]
+- Use dom0 kernel config from QubesOS
+
 * Wed Nov 06 2024 Yann Dirson <yann.dirson@vates.tech> [6.11.0-25.1.xcpng8.99]
 - HACK: Revert to old pre-Stream layout so we can build
 - WIP: Enable Xen Dom0 support
