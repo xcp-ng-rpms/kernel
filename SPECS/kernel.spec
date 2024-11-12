@@ -27,7 +27,7 @@
 Name: kernel
 License: GPLv2
 Version: 4.19.19
-Release: %{?xsrel}.2%{?dist}
+Release: %{?xsrel}.3%{?dist}
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
@@ -626,6 +626,7 @@ Source4: Module.kabi
 
 # XCP-ng patches
 Patch1000: dont-select-pinctrl.patch
+Patch1001: linux_kernel-4.19.19-CVE-2024-36905.patch
 
 %description
 The kernel package contains the Linux kernel (vmlinuz), the core of any
@@ -926,6 +927,9 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Tue Nov 12 2024 Lucas Ravagnier <lucas.ravagnier@vates.tech> - 4.19.19-7.0.23.3
+- Fix CVE-2024-36905
+
 * Wed Oct 09 2024 Thierry Escande <thierry.escande@vates.tech> - 4.19.19-7.0.23.2
 - Backport Lenovo fan speed control fix from XCP-ng 8.3
 
