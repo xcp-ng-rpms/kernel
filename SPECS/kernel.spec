@@ -171,9 +171,9 @@ Summary: The Linux kernel
 # This is needed to do merge window version magic
 %define patchlevel 11
 # This allows pkg_release to have configurable %%{?dist} tag
-%define specrelease 25.2%{?buildid}%{?dist}
+%define specrelease 25.3%{?buildid}%{?dist}
 # This defines the kabi tarball version
-%define kabiversion 6.11.0-25.2.xcpng8.99
+%define kabiversion 6.11.0-25.3.xcpng8.99
 
 # If this variable is set to 1, a bpf selftests build failure will cause a
 # fatal kernel package build error
@@ -2242,6 +2242,10 @@ BuildKernel() {
 
     %{log_msg "Install files to RPM_BUILD_ROOT"}
 
+    install -d -m 755 $RPM_BUILD_ROOT%{_rpmconfigdir}/macros.d
+    install -m 644 %{SOURCE2} $RPM_BUILD_ROOT%{_rpmconfigdir}/macros.d
+    echo '%%kernel_version %{KVERREL}%{uname_suffix %{?1:+%{1}}}' >> $RPM_BUILD_ROOT%{_rpmconfigdir}/macros.d/macros.kernel
+
     # Comment out specific config settings that may use resources not available
     # to the end user so that the packaged config file can be easily reused with
     # upstream make targets
@@ -4080,6 +4084,7 @@ fi\
 %{expand:%%files %{?3:%{3}-}devel}\
 %defverify(not mtime)\
 /usr/src/kernels/%{KVERREL}%{?3:+%{3}}\
+{_rpmconfigdir}/macros.d/macros.kernel\
 %{expand:%%files %{?3:%{3}-}devel-matched}\
 %{expand:%%files -f kernel-%{?3:%{3}-}modules-extra.list %{?3:%{3}-}modules-extra}\
 %{expand:%%files -f kernel-%{?3:%{3}-}modules-internal.list %{?3:%{3}-}modules-internal}\
@@ -4182,6 +4187,9 @@ fi\
 #
 #
 %changelog
+* Thu Nov 14 2024 Yann Dirson <yann.dirson@vates.tech> [6.11.0-25.3.xcpng8.99]
+- take kernel macros from XS RPM to keep the same way to build out of tree module packages
+
 * Thu Nov 07 2024 Yann Dirson <yann.dirson@vates.tech> [6.11.0-25.2.xcpng8.99]
 - Use dom0 kernel config from QubesOS
 
