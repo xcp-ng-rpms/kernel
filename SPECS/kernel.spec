@@ -37,7 +37,7 @@
 Name: kernel
 License: GPLv2
 Version: 4.19.19
-Release: %{?xsrel}.1%{?dist}
+Release: %{?xsrel}.1.0.1%{?dist}
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
@@ -70,7 +70,7 @@ BuildRequires: python
 
 BuildRequires: xz-devel
 BuildRequires: libunwind-devel
-BuildRequires: python2-devel
+BuildRequires: python3-devel
 BuildRequires: asciidoc xmlto
 %{?_cov_buildrequires}
 AutoReqProv: no
@@ -741,10 +741,10 @@ of the Linux kernel.
 written in the Python programming language to use the interface \
 to manipulate perf events.
 
-%package -n python2-perf
+%package -n python3-perf
 Summary: %{pythonperfsum}
-Provides: python2-perf
-%description -n python2-perf
+Provides: python3-perf
+%description -n python3-perf
 %{pythonperfdesc}
 
 %prep
@@ -812,11 +812,11 @@ install -m 644 %{SOURCE5} ../prepared-source
 # make perf
 %global perf_make \
   %{?_cov_wrap} make EXTRA_CFLAGS="${RPM_OPT_FLAGS}" LDFLAGS="%{__global_ldflags}" %{?cross_opts} V=1 NO_PERF_READ_VDSO32=1 NO_PERF_READ_VDSOX32=1 WERROR=0 HAVE_CPLUS_DEMANGLE=1 NO_GTK2=1 NO_STRLCPY=1 NO_BIONIC=1 NO_JVMTI=1 prefix=%{_prefix}
-%global perf_python2 -C tools/perf PYTHON=%{__python2}
+%global perf_python3 -C tools/perf PYTHON=%{__python3}
 # perf
 # make sure check-headers.sh is executable
 chmod +x tools/perf/check-headers.sh
-%{perf_make} %{perf_python2} all
+%{perf_make} %{perf_python3} all
 
 pushd tools/perf/Documentation/
 make %{?_smp_mflags} man
@@ -861,7 +861,7 @@ install -m 755 vmlinux %{buildroot}/usr/lib/debug/lib/modules/%{uname}
 make INSTALL_HDR_PATH=%{buildroot}/usr headers_install
 
 # perf tool binary and supporting scripts/binaries
-%{perf_make} %{perf_python2} DESTDIR=%{buildroot} lib=%{_lib} install-bin install-traceevent-plugins
+%{perf_make} %{perf_python3} DESTDIR=%{buildroot} lib=%{_lib} install-bin install-traceevent-plugins
 # remove the 'trace' symlink.
 rm -f %{buildroot}%{_bindir}/trace
 # remove the perf-tips
@@ -877,7 +877,7 @@ rm -rf %{buildroot}/usr/lib/perf/examples
 rm -rf %{buildroot}/usr/lib/perf/include/bpf/
 
 # python-perf extension
-%{perf_make} %{perf_python2} DESTDIR=%{buildroot} install-python_ext
+%{perf_make} %{perf_python3} DESTDIR=%{buildroot} install-python_ext
 
 # perf man pages (note: implicit rpm magic compresses them later)
 install -d %{buildroot}/%{_mandir}/man1
@@ -1027,9 +1027,9 @@ fi
 %doc tools/perf/Documentation/examples.txt
 %license COPYING
 
-%files -n python2-perf
+%files -n python3-perf
 %license COPYING
-%{python2_sitearch}/*
+%{python3_sitearch}/*
 
 %files lp-devel_%{version}_%{release}
 %{lp_devel_dir}
@@ -1037,6 +1037,9 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Thu Nov 21 2024 Yann Dirson <yann.dirson@vates.tech> - 4.19.19-8.0.37.1.0.1
+- Switch to full python3
+
 * Mon Oct 07 2024 Thierry Escande <thierry.escande@vates.tech> - 4.19.19-8.0.37.1
 - Sync with 4.19.19-8.0.37
 - *** Upstream changelog ***
