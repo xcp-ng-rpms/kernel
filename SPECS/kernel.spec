@@ -1039,6 +1039,7 @@ fi
 %changelog
 * Thu Nov 21 2024 Yann Dirson <yann.dirson@vates.tech> - 4.19.19-8.0.37.1.0.1
 - Switch to full python3
+- Adjust config for Alma10 build
 
 * Mon Oct 07 2024 Thierry Escande <thierry.escande@vates.tech> - 4.19.19-8.0.37.1
 - Sync with 4.19.19-8.0.37
