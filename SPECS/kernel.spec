@@ -1401,24 +1401,24 @@ mv COPYING COPYING-%{version}
 # This Prevents scripts/setlocalversion from mucking with our version numbers.
 touch .scmversion
 
-# Mangle /usr/bin/python shebangs to /usr/bin/python3
-# Mangle all Python shebangs to be Python 3 explicitly
-# -p preserves timestamps
-# -n prevents creating ~backup files
-# -i specifies the interpreter for the shebang
-# This fixes errors such as
-# *** ERROR: ambiguous python shebang in /usr/bin/kvm_stat: #!/usr/bin/python. Change it to python3 (or python2) explicitly.
-# We patch all sources below for which we got a report/error.
-pathfix.py -i "%{__python3} %{py3_shbang_opts}" -p -n \
-	tools/kvm/kvm_stat/kvm_stat \
-	scripts/show_delta \
-	scripts/diffconfig \
-	scripts/bloat-o-meter \
-	tools/perf/tests/attr.py \
-	tools/perf/scripts/python/stat-cpi.py \
-	tools/perf/scripts/python/sched-migration.py \
-	Documentation \
-	scripts/gen_compile_commands.py
+# # Mangle /usr/bin/python shebangs to /usr/bin/python3
+# # Mangle all Python shebangs to be Python 3 explicitly
+# # -p preserves timestamps
+# # -n prevents creating ~backup files
+# # -i specifies the interpreter for the shebang
+# # This fixes errors such as
+# # *** ERROR: ambiguous python shebang in /usr/bin/kvm_stat: #!/usr/bin/python. Change it to python3 (or python2) explicitly.
+# # We patch all sources below for which we got a report/error.
+# pathfix.py -i "%{__python3} %{py3_shbang_opts}" -p -n \
+# 	tools/kvm/kvm_stat/kvm_stat \
+# 	scripts/show_delta \
+# 	scripts/diffconfig \
+# 	scripts/bloat-o-meter \
+# 	tools/perf/tests/attr.py \
+# 	tools/perf/scripts/python/stat-cpi.py \
+# 	tools/perf/scripts/python/sched-migration.py \
+# 	Documentation \
+# 	scripts/gen_compile_commands.py
 
 # only deal with configs if we are going to build for the arch
 %ifnarch %nobuildarches
@@ -2550,6 +2550,7 @@ fi
 %changelog
 * Fri Dec 20 2024 Yann Dirson <yann.dirson@vates.tech> - 5.4.0-1.0.2
 - Rename rpmversion to specversion
+- Disable call to nonexistent pathfix.py
 
 * Mon Nov 25 2019 Jeremy Cline <jcline@redhat.com> - 5.4.0-1
 - Linux v5.4.0
