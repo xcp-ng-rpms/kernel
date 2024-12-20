@@ -27,10 +27,10 @@ done
 
 rm kernel-*-$SECONDARY.config
 
-if [ $DEBUGBUILDSENABLED -eq 0 ]; then
-	for i in kernel-*debug*.config; do
-		base=`echo $i | sed -r s/-?debug//g`
-		NEW=kernel-`echo $base | cut -d - -f2-`
-		mv $i $NEW
-	done
-fi
+# if [ $DEBUGBUILDSENABLED -eq 0 ]; then
+# 	for i in kernel-*debug*.config; do
+# 		base=`echo $i | sed -r s/-?debug//g`
+# 		NEW=kernel-`echo $base | cut -d - -f2-`
+# 		mv $i $NEW
+# 	done
+# fi

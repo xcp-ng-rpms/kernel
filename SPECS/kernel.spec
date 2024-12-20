@@ -2552,6 +2552,7 @@ fi
 - Rename rpmversion to specversion
 - Disable call to nonexistent pathfix.py
 - force debugbuildsenabled to 0
+- disable the forced-use of debug config when debugbuildsenabled is 0
 - Use config-base from qubes-linux-kernel v5.4.16-1-latest
 
 * Mon Nov 25 2019 Jeremy Cline <jcline@redhat.com> - 5.4.0-1
