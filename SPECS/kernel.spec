@@ -191,7 +191,7 @@ Summary: The Linux kernel
 # Set debugbuildsenabled to 1 for production (build separate debug kernels)
 #  and 0 for rawhide (all kernels are debug kernels).
 # See also 'make debug' and 'make release'.
-%define debugbuildsenabled 1
+%define debugbuildsenabled 0
 
 %if 0%{?fedora}
 # Kernel headers are being split out into a separate package
@@ -2551,6 +2551,7 @@ fi
 * Fri Dec 20 2024 Yann Dirson <yann.dirson@vates.tech> - 5.4.0-1.0.2
 - Rename rpmversion to specversion
 - Disable call to nonexistent pathfix.py
+- force debugbuildsenabled to 0
 
 * Mon Nov 25 2019 Jeremy Cline <jcline@redhat.com> - 5.4.0-1
 - Linux v5.4.0
