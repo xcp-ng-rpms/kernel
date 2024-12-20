@@ -532,7 +532,7 @@ BuildRequires: xmlto, asciidoc, python3-sphinx
 BuildRequires: sparse
 %endif
 %if %{with_selftests}
-%if 0%{?fedora}
+%if 1%{?fedora}
 BuildRequires: clang llvm
 %else
 BuildRequires: llvm-toolset
@@ -2554,6 +2554,7 @@ fi
 - force debugbuildsenabled to 0
 - disable the forced-use of debug config when debugbuildsenabled is 0
 - Use config-base from qubes-linux-kernel v5.4.16-1-latest
+- build on c7: adjust build deps
 
 * Mon Nov 25 2019 Jeremy Cline <jcline@redhat.com> - 5.4.0-1
 - Linux v5.4.0
