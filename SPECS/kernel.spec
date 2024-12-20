@@ -78,7 +78,7 @@ Summary: The Linux kernel
 # gitX tags, so a 3 here would become part of release "0.rcX.gitX.3"
 #
 %global baserelease 1
-%global fedora_build %{baserelease}
+%global fedora_build %{baserelease}.0.1
 
 # base_sublevel is the kernel version we're starting with and patching
 # on top of -- for example, 3.1-rc7-git1 starts with a 3.0 base,
@@ -2552,6 +2552,7 @@ fi
 - Rename rpmversion to specversion
 - Disable call to nonexistent pathfix.py
 - force debugbuildsenabled to 0
+- Use config-base from qubes-linux-kernel v5.4.16-1-latest
 
 * Mon Nov 25 2019 Jeremy Cline <jcline@redhat.com> - 5.4.0-1
 - Linux v5.4.0
