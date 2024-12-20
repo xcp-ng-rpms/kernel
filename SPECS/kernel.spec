@@ -95,7 +95,7 @@ Summary: The Linux kernel
 %define stablerev %{stable_update}
 %define stable_base %{stable_update}
 %endif
-%define rpmversion 5.%{base_sublevel}.%{stable_update}
+%define specversion 5.%{base_sublevel}.%{stable_update}
 
 ## The not-released-kernel case ##
 %else
@@ -106,7 +106,7 @@ Summary: The Linux kernel
 # The git snapshot level
 %define gitrev 1
 # Set rpm version accordingly
-%define rpmversion 5.%{upstream_sublevel}.0
+%define specversion 5.%{upstream_sublevel}.0
 %endif
 # Nb: The above rcrev and gitrev values automagically define Patch00 and Patch01 below.
 
@@ -494,7 +494,7 @@ Summary: The Linux kernel
 Name: kernel%{?variant}
 License: GPLv2 and Redistributable, no modification permitted
 URL: https://www.kernel.org/
-Version: %{rpmversion}
+Version: %{specversion}
 Release: %{pkg_release}
 # DO NOT CHANGE THE 'ExclusiveArch' LINE TO TEMPORARILY EXCLUDE AN ARCHITECTURE BUILD.
 # SET %%nobuildarches (ABOVE) INSTEAD
@@ -696,8 +696,8 @@ Source211: Module.kabi_dup_ppc64le
 Source212: Module.kabi_dup_s390x
 Source213: Module.kabi_dup_x86_64
 
-# Source300: kernel-abi-whitelists-%{rpmversion}-%{distro_build}.tar.bz2
-# Source301: kernel-kabi-dw-%{rpmversion}-%{distro_build}.tar.bz2
+# Source300: kernel-abi-whitelists-%{specversion}-%{distro_build}.tar.bz2
+# Source301: kernel-kabi-dw-%{specversion}-%{distro_build}.tar.bz2
 
 # Sources for kernel-tools
 Source2000: cpupower.service
@@ -705,7 +705,7 @@ Source2001: cpupower.config
 
 ## Patches needed for building this package
 
-# Patch1: patch-%{rpmversion}-redhat.patch
+# Patch1: patch-%{specversion}-redhat.patch
 
 # empty final patch to facilitate testing of kernel patches
 # Patch999999: linux-kernel-test.patch
@@ -865,8 +865,8 @@ The kernel meta package
 # macros defined above.
 #
 %define kernel_reqprovconf \
-Provides: kernel = %{rpmversion}-%{pkg_release}\
-Provides: kernel-%{_target_cpu} = %{rpmversion}-%{pkg_release}%{?1:+%{1}}\
+Provides: kernel = %{specversion}-%{pkg_release}\
+Provides: kernel-%{_target_cpu} = %{specversion}-%{pkg_release}%{?1:+%{1}}\
 Provides: kernel-drm-nouveau = 16\
 Provides: kernel-uname-r = %{KVERREL}%{?variant}%{?1:+%{1}}\
 Requires(pre): %{kernel_prereq}\
@@ -903,8 +903,8 @@ Summary: Header files for the Linux kernel for use by glibc
 Obsoletes: glibc-kernheaders < 3.0-46
 Provides: glibc-kernheaders = 3.0-46
 %if "0%{?variant}"
-Obsoletes: kernel-headers < %{rpmversion}-%{pkg_release}
-Provides: kernel-headers = %{rpmversion}-%{pkg_release}
+Obsoletes: kernel-headers < %{specversion}-%{pkg_release}
+Provides: kernel-headers = %{specversion}-%{pkg_release}
 %endif
 %description headers
 Kernel-headers includes the C header files that specify the interface
@@ -1465,7 +1465,7 @@ OPTS=""
 %if %{with_configchecks}
 	OPTS="$OPTS -w -n -c"
 %endif
-./process_configs.sh $OPTS kernel %{rpmversion}
+./process_configs.sh $OPTS kernel %{specversion}
 
 cp %{SOURCE56} .
 RPM_SOURCE_DIR=$RPM_SOURCE_DIR ./update_scripts.sh %{primary_target}
@@ -2177,7 +2177,7 @@ find Documentation -type d | xargs chmod u+w
 cd linux-%{KVERREL}
 
 %if %{with_doc}
-docdir=$RPM_BUILD_ROOT%{_datadir}/doc/kernel-doc-%{rpmversion}
+docdir=$RPM_BUILD_ROOT%{_datadir}/doc/kernel-doc-%{specversion}
 
 # copy the source over
 mkdir -p $docdir
@@ -2433,9 +2433,9 @@ fi
 %if %{with_doc}
 %files doc
 %defattr(-,root,root)
-%{_datadir}/doc/kernel-doc-%{rpmversion}/Documentation/*
-%dir %{_datadir}/doc/kernel-doc-%{rpmversion}/Documentation
-%dir %{_datadir}/doc/kernel-doc-%{rpmversion}
+%{_datadir}/doc/kernel-doc-%{specversion}/Documentation/*
+%dir %{_datadir}/doc/kernel-doc-%{specversion}/Documentation
+%dir %{_datadir}/doc/kernel-doc-%{specversion}
 %endif
 
 %if %{with_selftests}
@@ -2548,6 +2548,9 @@ fi
 #
 #
 %changelog
+* Fri Dec 20 2024 Yann Dirson <yann.dirson@vates.tech> - 5.4.0-1.0.2
+- Rename rpmversion to specversion
+
 * Mon Nov 25 2019 Jeremy Cline <jcline@redhat.com> - 5.4.0-1
 - Linux v5.4.0
 
