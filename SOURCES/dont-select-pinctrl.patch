@@ -1,0 +1,20 @@
+Don't select PINCTRL
+
+Selecting PINCTRL breaks the kABI due to the inclusion of a new member
+in struct device. CONFIG_X86_AMD_PLATFORM_DEVICE is enabled to expose a clock
+to the i2c-designware device and doesn't need explicit control of pins,
+therefore ensure that it remains disabled.
+
+Signed-off-by: Ross Lagerwall <ross.lagerwall@citrix.com>
+diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
+index 44c6a82b7ce5..dac7c62a5e00 100644
+--- a/arch/x86/Kconfig
++++ b/arch/x86/Kconfig
+@@ -619,7 +619,6 @@ config X86_AMD_PLATFORM_DEVICE
+ 	bool "AMD ACPI2Platform devices support"
+ 	depends on ACPI
+ 	select COMMON_CLK
+-	select PINCTRL
+ 	---help---
+ 	  Select to interpret AMD specific ACPI device to platform device
+ 	  such as I2C, UART, GPIO found on AMD Carrizo and later chipsets.
