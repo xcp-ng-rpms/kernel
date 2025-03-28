@@ -1,0 +1,33 @@
+From ad162488bbd359abda99c9819f5cbe9172f40935 Mon Sep 17 00:00:00 2001
+From: Frediano Ziglio <frediano.ziglio@cloud.com>
+Date: Wed, 19 Jun 2024 11:40:15 +0100
+Subject: [PATCH] x86/xen/time: Reduce Xen timer tick
+
+Current timer tick is causing some deadline to fail.
+The current high value constant was probably due to an old
+bug in the Xen timer implementation causing errors if the
+deadline was in the future.
+
+This was fixed in Xen commit:
+19c6cbd90965 xen/vcpu: ignore VCPU_SSHOTTMR_future
+
+Usage of VCPU_SSHOTTMR_future in Linux kernel was removed by:
+c06b6d70feb3 xen/x86: don't lose event interrupts
+
+Signed-off-by: Frediano Ziglio <frediano.ziglio@cloud.com>
+Reviewed-by: Juergen Gross <jgross@suse.com>
+Link: https://lore.kernel.org/r/20240619104015.30477-1-frediano.ziglio@cloud.com
+Signed-off-by: Juergen Gross <jgross@suse.com>
+diff --git a/arch/x86/xen/time.c b/arch/x86/xen/time.c
+index 01dcccf9185f..8f2149e600c7 100644
+--- a/arch/x86/xen/time.c
++++ b/arch/x86/xen/time.c
+@@ -29,7 +29,7 @@
+ #include "xen-ops.h"
+ 
+ /* Xen may fire a timer up to this many ns early */
+-#define TIMER_SLOP	100000
++#define TIMER_SLOP	1
+ 
+ static u64 xen_sched_clock_offset __read_mostly;
+ 
