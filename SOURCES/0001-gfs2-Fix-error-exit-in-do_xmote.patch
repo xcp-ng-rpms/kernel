@@ -16,23 +16,16 @@ Thanks to Wu Bo <wubo40@huawei.com> for reporting this problem.
 
 Signed-off-by: Bob Peterson <rpeterso@redhat.com>
 Signed-off-by: Andreas Gruenbacher <agruenba@redhat.com>
----
- fs/gfs2/glock.c | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
-
 diff --git a/fs/gfs2/glock.c b/fs/gfs2/glock.c
-index 29f9b6684b74..a1c5f245553f 100644
+index be5b0a5f59dd..c6d4c196e177 100644
 --- a/fs/gfs2/glock.c
 +++ b/fs/gfs2/glock.c
-@@ -613,7 +613,7 @@ __acquires(&gl->gl_lockref.lock)
+@@ -616,7 +616,7 @@ __acquires(&gl->gl_lockref.lock)
  				fs_err(sdp, "Error %d syncing glock \n", ret);
  				gfs2_dump_glock(NULL, gl, true);
  			}
--			return;
+-			goto skip_inval;
 +			goto out;
  		}
  	}
  	if (test_bit(GLF_INVALIDATE_IN_PROGRESS, &gl->gl_flags)) {
--- 
-2.21.1
-
