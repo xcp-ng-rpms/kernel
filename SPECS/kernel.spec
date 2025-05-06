@@ -37,7 +37,7 @@
 Name: kernel
 License: GPLv2
 Version: 4.19.19
-Release: %{?xsrel}.1%{?dist}
+Release: %{?xsrel}.2%{?dist}
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
@@ -690,6 +690,7 @@ Source5: prepare-build
 # XCP-ng patches
 Patch1000: ceph.patch
 Patch1001: tg3-v4.19.315.patch
+Patch1002: 0001-perf-probe-Fix-getting-the-kernel-map.patch
 
 %description
 The kernel package contains the Linux kernel (vmlinuz), the core of any
@@ -1044,6 +1045,9 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Sun Apr 06 2025 Anthoine Bourgeois <anthoine.bourgeois@vates.tech> - 4.19.19-8.0.38.2
+- Backport perf dynamic tracepoints fixes
+
 * Fri Mar 28 2025 Samuel Verschelde <stormi-xcp@ylix.fr> - 4.19.19-8.0.38.1
 - Sync with 4.19.19-8.0.38
 - *** Upstream changelog ***
