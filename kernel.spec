@@ -4,9 +4,7 @@
 # here before the %%install macro is pre-built.
 
 # Disable frame pointers
-%if 0%{?almalinux} < 10
 %undefine _include_frame_pointers
-%endif
 
 # Disable LTO in userspace packages.
 %global _lto_cflags %{nil}
