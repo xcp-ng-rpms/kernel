@@ -1,7 +1,7 @@
 fedoraimaca.x509
-kernel-abi-stablelists-6.12.0-55.7.1.el10_0.tar.xz
-kernel-kabi-dw-6.12.0-55.7.1.el10_0.tar.xz
-linux-6.12.0-55.7.1.el10_0.tar.xz
+kernel-abi-stablelists-6.12.0-55.9.1.el10_0.tar.xz
+kernel-kabi-dw-6.12.0-55.9.1.el10_0.tar.xz
+linux-6.12.0-55.9.1.el10_0.tar.xz
 nvidiagpuoot001.x509
 redhatsecureboot501.cer
 redhatsecurebootca5.cer
