@@ -1,0 +1,25 @@
+From c4966c5288bd0cfc3c25526364c6332914131596 Mon Sep 17 00:00:00 2001
+From: Andrew Lukoshko <alukoshko@almalinux.org>
+Date: Thu, 8 Aug 2024 16:43:41 +0000
+Subject: [PATCH 07/10] Bring back deprecated pci ids to be2iscsi driver
+
+---
+ drivers/scsi/be2iscsi/be_main.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/scsi/be2iscsi/be_main.c b/drivers/scsi/be2iscsi/be_main.c
+index a54ea7cf7..46833f122 100644
+--- a/drivers/scsi/be2iscsi/be_main.c
++++ b/drivers/scsi/be2iscsi/be_main.c
+@@ -387,7 +387,7 @@ static int beiscsi_eh_device_reset(struct scsi_cmnd *sc)
+ 
+ /*------------------- PCI Driver operations and data ----------------- */
+ static const struct pci_device_id beiscsi_pci_id_table[] = {
+-#ifndef CONFIG_RHEL_DIFFERENCES
++#ifndef CONFIG_ALMALINUX_DIFFERENCES
+ 	{ PCI_DEVICE(BE_VENDOR_ID, BE_DEVICE_ID1) },
+ 	{ PCI_DEVICE(BE_VENDOR_ID, BE_DEVICE_ID2) },
+ 	{ PCI_DEVICE(BE_VENDOR_ID, OC_DEVICE_ID1) },
+-- 
+2.43.5
+

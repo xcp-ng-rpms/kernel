@@ -1,0 +1,93 @@
+From 4af075404ae842c878034b9c8030c9e96f459f30 Mon Sep 17 00:00:00 2001
+From: Andrew Lukoshko <alukoshko@almalinux.org>
+Date: Wed, 5 Feb 2025 16:39:01 +0000
+Subject: [PATCH] Enable all disabled pci devices by moving to unmaintained
+ list
+
+---
+ kernel/rh_messages.h | 64 ++++++++++++++++++++++----------------------
+ 1 file changed, 32 insertions(+), 32 deletions(-)
+
+diff --git a/kernel/rh_messages.h b/kernel/rh_messages.h
+index 647d7b9a4fe9..2f9d607d5f0c 100644
+--- a/kernel/rh_messages.h
++++ b/kernel/rh_messages.h
+@@ -123,6 +123,38 @@ static const struct pci_device_id rh_deprecated_pci_devices[] = {
+ };
+ 
+ static const struct pci_device_id rh_disabled_pci_devices[] = {
++	{0}     /* Terminating entry */
++};
++
++static const struct pci_device_id rh_unmaintained_pci_devices[] = {
++	{ 0x10df, 0xe220, PCI_ANY_ID, PCI_ANY_ID },
++	{ 0x10df, 0x0724, PCI_ANY_ID, PCI_ANY_ID },
++	{ 0x10df, 0xe200, PCI_ANY_ID, PCI_ANY_ID },
++	{ 0x10df, 0xf011, PCI_ANY_ID, PCI_ANY_ID },
++	{ 0x10df, 0xf015, PCI_ANY_ID, PCI_ANY_ID },
++	{ 0x10df, 0xf100, PCI_ANY_ID, PCI_ANY_ID },
++	{ 0x10df, 0xfc40, PCI_ANY_ID, PCI_ANY_ID },
++	{ 0x1000, 0x005b, PCI_ANY_ID, PCI_ANY_ID },
++	{ 0x1000, 0x0071, PCI_ANY_ID, PCI_ANY_ID },
++	{ 0x1000, 0x0073, PCI_ANY_ID, PCI_ANY_ID },
++	{ 0x1000, 0x0079, PCI_ANY_ID, PCI_ANY_ID },
++	{ 0x1000, 0x006E, PCI_ANY_ID, PCI_ANY_ID },
++	{ 0x1000, 0x0080, PCI_ANY_ID, PCI_ANY_ID },
++	{ 0x1000, 0x0081, PCI_ANY_ID, PCI_ANY_ID },
++	{ 0x1000, 0x0082, PCI_ANY_ID, PCI_ANY_ID },
++	{ 0x1000, 0x0083, PCI_ANY_ID, PCI_ANY_ID },
++	{ 0x1000, 0x0084, PCI_ANY_ID, PCI_ANY_ID },
++	{ 0x1000, 0x0085, PCI_ANY_ID, PCI_ANY_ID },
++	{ 0x1000, 0x0086, PCI_ANY_ID, PCI_ANY_ID },
++	{ 0x1000, 0x0087, PCI_ANY_ID, PCI_ANY_ID },
++	{ 0x177d, 0xa01e, PCI_ANY_ID, PCI_ANY_ID },
++	{ 0x177d, 0xa034, PCI_ANY_ID, PCI_ANY_ID },
++	{ 0x177d, 0x0011, PCI_ANY_ID, PCI_ANY_ID },
++	{ 0x1077, 0x2031, PCI_ANY_ID, PCI_ANY_ID },
++	{ 0x1077, 0x2532, PCI_ANY_ID, PCI_ANY_ID },
++	{ 0x1077, 0x8031, PCI_ANY_ID, PCI_ANY_ID },
++	{ 0x1924, 0x0803, PCI_ANY_ID, PCI_ANY_ID },
++	{ 0x1924, 0x0813, PCI_ANY_ID, PCI_ANY_ID },
+ 	{ 0x1011, 0x0046, 0x103c, 0x10c2 },
+ 	{ 0x1011, 0x0046, 0x9005, 0x0364 },
+ 	{ 0x1011, 0x0046, 0x9005, 0x0365 },
+@@ -291,36 +323,4 @@ static const struct pci_device_id rh_disabled_pci_devices[] = {
+ 	{0}     /* Terminating entry */
+ };
+ 
+-static const struct pci_device_id rh_unmaintained_pci_devices[] = {
+-	{ 0x10df, 0xe220, PCI_ANY_ID, PCI_ANY_ID },
+-	{ 0x10df, 0x0724, PCI_ANY_ID, PCI_ANY_ID },
+-	{ 0x10df, 0xe200, PCI_ANY_ID, PCI_ANY_ID },
+-	{ 0x10df, 0xf011, PCI_ANY_ID, PCI_ANY_ID },
+-	{ 0x10df, 0xf015, PCI_ANY_ID, PCI_ANY_ID },
+-	{ 0x10df, 0xf100, PCI_ANY_ID, PCI_ANY_ID },
+-	{ 0x10df, 0xfc40, PCI_ANY_ID, PCI_ANY_ID },
+-	{ 0x1000, 0x005b, PCI_ANY_ID, PCI_ANY_ID },
+-	{ 0x1000, 0x0071, PCI_ANY_ID, PCI_ANY_ID },
+-	{ 0x1000, 0x0073, PCI_ANY_ID, PCI_ANY_ID },
+-	{ 0x1000, 0x0079, PCI_ANY_ID, PCI_ANY_ID },
+-	{ 0x1000, 0x006E, PCI_ANY_ID, PCI_ANY_ID },
+-	{ 0x1000, 0x0080, PCI_ANY_ID, PCI_ANY_ID },
+-	{ 0x1000, 0x0081, PCI_ANY_ID, PCI_ANY_ID },
+-	{ 0x1000, 0x0082, PCI_ANY_ID, PCI_ANY_ID },
+-	{ 0x1000, 0x0083, PCI_ANY_ID, PCI_ANY_ID },
+-	{ 0x1000, 0x0084, PCI_ANY_ID, PCI_ANY_ID },
+-	{ 0x1000, 0x0085, PCI_ANY_ID, PCI_ANY_ID },
+-	{ 0x1000, 0x0086, PCI_ANY_ID, PCI_ANY_ID },
+-	{ 0x1000, 0x0087, PCI_ANY_ID, PCI_ANY_ID },
+-	{ 0x177d, 0xa01e, PCI_ANY_ID, PCI_ANY_ID },
+-	{ 0x177d, 0xa034, PCI_ANY_ID, PCI_ANY_ID },
+-	{ 0x177d, 0x0011, PCI_ANY_ID, PCI_ANY_ID },
+-	{ 0x1077, 0x2031, PCI_ANY_ID, PCI_ANY_ID },
+-	{ 0x1077, 0x2532, PCI_ANY_ID, PCI_ANY_ID },
+-	{ 0x1077, 0x8031, PCI_ANY_ID, PCI_ANY_ID },
+-	{ 0x1924, 0x0803, PCI_ANY_ID, PCI_ANY_ID },
+-	{ 0x1924, 0x0813, PCI_ANY_ID, PCI_ANY_ID },
+-	{0}     /* Terminating entry */
+-};
+-
+ #endif /* __RH_MESSAGES_H */
+-- 
+2.43.5
+

@@ -1,0 +1,25 @@
+From 03c58c504f05b1682b29686a5783338a4bb1e9ad Mon Sep 17 00:00:00 2001
+From: Andrew Lukoshko <alukoshko@almalinux.org>
+Date: Thu, 8 Aug 2024 16:43:03 +0000
+Subject: [PATCH 06/10] Bring back deprecated pci ids to qla4xxx driver
+
+---
+ drivers/scsi/qla4xxx/ql4_os.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/scsi/qla4xxx/ql4_os.c b/drivers/scsi/qla4xxx/ql4_os.c
+index 7f0cef737..3b6005f55 100644
+--- a/drivers/scsi/qla4xxx/ql4_os.c
++++ b/drivers/scsi/qla4xxx/ql4_os.c
+@@ -9865,7 +9865,7 @@ static struct pci_device_id qla4xxx_pci_tbl[] = {
+ 		.subvendor	= PCI_ANY_ID,
+ 		.subdevice	= PCI_ANY_ID,
+ 	},
+-#ifndef CONFIG_RHEL_DIFFERENCES
++#ifndef CONFIG_ALMALINUX_DIFFERENCES
+ 	{
+ 		.vendor         = PCI_VENDOR_ID_QLOGIC,
+ 		.device         = PCI_DEVICE_ID_QLOGIC_ISP8022,
+-- 
+2.43.5
+

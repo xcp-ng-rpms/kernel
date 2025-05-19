@@ -4,7 +4,9 @@
 # here before the %%install macro is pre-built.
 
 # Disable frame pointers
+%if 0%{?almalinux} < 10
 %undefine _include_frame_pointers
+%endif
 
 # Disable LTO in userspace packages.
 %global _lto_cflags %{nil}
@@ -491,14 +493,14 @@ Summary: The Linux kernel
 %define use_vdso 1
 %endif
 
-%ifnarch noarch
+%ifnarch aarch64
 %define with_kernel_abi_stablelists 0
 %endif
 
 # Overrides for generic default options
 
 # only package docs noarch
-%ifnarch noarch
+%ifnarch aarch64
 %define with_doc 0
 %define doc_build_fail true
 %endif
@@ -557,6 +559,12 @@ Summary: The Linux kernel
 %endif
 
 %ifarch x86_64
+%define asmarch x86
+%define kernel_image arch/x86/boot/bzImage
+%endif
+
+%ifarch x86_64_v2
+%define hdrarch x86_64
 %define asmarch x86
 %define kernel_image arch/x86/boot/bzImage
 %endif
@@ -706,7 +714,7 @@ Release: %{pkg_release}
 %if 0%{?fedora}
 ExclusiveArch: noarch x86_64 s390x aarch64 ppc64le riscv64
 %else
-ExclusiveArch: noarch i386 i686 x86_64 s390x aarch64 ppc64le
+ExclusiveArch: noarch i386 i686 x86_64 s390x aarch64 ppc64le x86_64_v2
 %endif
 ExclusiveOS: Linux
 %ifnarch %{nobuildarches}
@@ -955,6 +963,8 @@ Source30: %{name}-s390x-debug-rhel.config
 Source31: %{name}-s390x-zfcpdump-rhel.config
 Source32: %{name}-x86_64-rhel.config
 Source33: %{name}-x86_64-debug-rhel.config
+Source10001: %{name}-x86_64_v2-rhel.config
+Source10002: %{name}-x86_64_v2-debug-rhel.config
 
 Source34: def_variants.yaml.rhel
 
@@ -1002,13 +1012,7 @@ Source87: flavors
 Source151: uki_create_addons.py
 Source152: uki_addons.json
 
-Source100: rheldup3.x509
-Source101: rhelkpatch1.x509
 Source102: nvidiagpuoot001.x509
-Source103: rhelimaca1.x509
-Source104: rhelima.x509
-Source105: rhelima_centos.x509
-Source106: fedoraimaca.x509
 
 %if 0%{?fedora}%{?eln}
 %define ima_ca_cert %{SOURCE106}
@@ -1034,12 +1038,14 @@ Source202: Module.kabi_ppc64le
 Source203: Module.kabi_s390x
 Source204: Module.kabi_x86_64
 Source205: Module.kabi_riscv64
+Source206: Module.kabi_x86_64_v2
 
 Source210: Module.kabi_dup_aarch64
 Source211: Module.kabi_dup_ppc64le
 Source212: Module.kabi_dup_s390x
 Source213: Module.kabi_dup_x86_64
 Source214: Module.kabi_dup_riscv64
+Source215: Module.kabi_dup_x86_64_v2
 
 Source300: kernel-abi-stablelists-%{kabiversion}.tar.xz
 Source301: kernel-kabi-dw-%{kabiversion}.tar.xz
@@ -1052,6 +1058,8 @@ Source476: %{name}-aarch64-rt-64k-rhel.config
 Source477: %{name}-aarch64-rt-64k-debug-rhel.config
 Source478: %{name}-x86_64-rt-rhel.config
 Source479: %{name}-x86_64-rt-debug-rhel.config
+Source480: %{name}-x86_64_v2-rt-rhel.config
+Source481: %{name}-x86_64_v2-rt-debug-rhel.config
 %endif
 %if 0%{include_fedora}
 Source478: %{name}-aarch64-rt-fedora.config
@@ -1090,6 +1098,14 @@ Source4000: README.rst
 Source4001: rpminspect.yaml
 Source4002: gating.yaml
 
+# AlmaLinux Source
+Source100: almalinuxdup1.x509
+Source101: almalinuxkpatch1.x509
+Source103: almalinuximaca1.x509
+Source104: almalinuxima.x509
+Source105: almalinuxima.x509
+Source106: almalinuxima.x509
+
 ## Patches needed for building this package
 
 %if !%{nopatches}
@@ -1099,6 +1115,18 @@ Patch1: patch-%{patchversion}-redhat.patch
 
 # empty final patch to facilitate testing of kernel patches
 Patch999999: linux-kernel-test.patch
+
+# AlmaLinux Patch
+Patch2001: 0001-Enable-all-disabled-pci-devices-by-moving-to-unmaint.patch
+Patch2002: 0002-Bring-back-deprecated-pci-ids-to-mptsas-mptspi-drive.patch
+Patch2003: 0003-Bring-back-deprecated-pci-ids-to-hpsa-driver.patch
+Patch2004: 0004-Bring-back-deprecated-pci-ids-to-qla2xxx-driver.patch
+Patch2005: 0005-Bring-back-deprecated-pci-ids-to-lpfc-driver.patch
+Patch2006: 0006-Bring-back-deprecated-pci-ids-to-qla4xxx-driver.patch
+Patch2007: 0007-Bring-back-deprecated-pci-ids-to-be2iscsi-driver.patch
+Patch2008: 0008-Bring-back-deprecated-pci-ids-to-megaraid_sas-driver.patch
+Patch2009: 0009-Bring-back-deprecated-pci-ids-to-mpt3sas-driver.patch
+Patch2010: 0010-Bring-back-deprecated-pci-ids-to-aacraid-driver.patch
 
 # END OF PATCH DEFINITIONS
 
@@ -1138,6 +1166,7 @@ AutoProv: yes\
 
 %package doc
 Summary: Various documentation bits found in the kernel source
+BuildArch: noarch
 Group: Documentation
 %description doc
 This package contains documentation files from the kernel
@@ -1371,11 +1400,12 @@ Summary: gcov graph and source files for coverage data collection.\
 %{nil}
 
 %package -n %{package_name}-abi-stablelists
-Summary: The Red Hat Enterprise Linux kernel ABI symbol stablelists
+Summary: The AlmaLinux kernel ABI symbol stablelists
+BuildArch: noarch
 AutoReqProv: no
 %description -n %{package_name}-abi-stablelists
-The kABI package contains information pertaining to the Red Hat Enterprise
-Linux kernel ABI, including lists of kernel symbols that are needed by
+The kABI package contains information pertaining to the AlmaLinux
+kernel ABI, including lists of kernel symbols that are needed by
 external Linux kernel modules, and a yum plugin to aid enforcement.
 
 %if %{with_kabidw_base}
@@ -1384,8 +1414,8 @@ Summary: The baseline dataset for kABI verification using DWARF data
 Group: System Environment/Kernel
 AutoReqProv: no
 %description kernel-kabidw-base-internal
-The package contains data describing the current ABI of the Red Hat Enterprise
-Linux kernel, suitable for the kabi-dw tool.
+The package contains data describing the current ABI of the AlmaLinux
+kernel, suitable for the kabi-dw tool.
 %endif
 
 #
@@ -1484,7 +1514,7 @@ Requires: kernel%{?1:-%{1}}-modules-core-uname-r = %{KVERREL}%{uname_suffix %{?1
 AutoReq: no\
 AutoProv: yes\
 %description %{?1:%{1}-}modules-internal\
-This package provides kernel modules for the %{?2:%{2} }kernel package for Red Hat internal usage.\
+This package provides kernel modules for the %{?2:%{2} }kernel package for AlmaLinux internal usage.\
 %{nil}
 
 #
@@ -1665,7 +1695,7 @@ Requires: kernel%{?1:-%{1}}-modules-core-uname-r = %{KVERREL}%{uname_suffix %{?1
 AutoReq: no\
 AutoProv: yes\
 %description %{?1:%{1}-}modules-partner\
-This package provides kernel modules for the %{?2:%{2} }kernel package for Red Hat partners usage.\
+This package provides kernel modules for the %{?2:%{2} }kernel package for AlmaLinux partners usage.\
 %{nil}
 
 # Now, each variant package.
@@ -1953,6 +1983,18 @@ ApplyOptionalPatch patch-%{patchversion}-redhat.patch
 
 ApplyOptionalPatch linux-kernel-test.patch
 
+# Applying AlmaLinux Patch
+ApplyPatch 0001-Enable-all-disabled-pci-devices-by-moving-to-unmaint.patch
+ApplyPatch 0002-Bring-back-deprecated-pci-ids-to-mptsas-mptspi-drive.patch
+ApplyPatch 0003-Bring-back-deprecated-pci-ids-to-hpsa-driver.patch
+ApplyPatch 0004-Bring-back-deprecated-pci-ids-to-qla2xxx-driver.patch
+ApplyPatch 0005-Bring-back-deprecated-pci-ids-to-lpfc-driver.patch
+ApplyPatch 0006-Bring-back-deprecated-pci-ids-to-qla4xxx-driver.patch
+ApplyPatch 0007-Bring-back-deprecated-pci-ids-to-be2iscsi-driver.patch
+ApplyPatch 0008-Bring-back-deprecated-pci-ids-to-megaraid_sas-driver.patch
+ApplyPatch 0009-Bring-back-deprecated-pci-ids-to-mpt3sas-driver.patch
+ApplyPatch 0010-Bring-back-deprecated-pci-ids-to-aacraid-driver.patch
+
 %{log_msg "End of patch applications"}
 # END OF PATCH APPLICATIONS
 
@@ -2085,7 +2127,7 @@ done
 %if 0%{?rhel}
 %{log_msg "Adjust FIPS module name for RHEL"}
 for i in *.config; do
-  sed -i 's/CONFIG_CRYPTO_FIPS_NAME=.*/CONFIG_CRYPTO_FIPS_NAME="Red Hat Enterprise Linux %{rhel} - Kernel Cryptographic API"/' $i
+  sed -i 's/CONFIG_CRYPTO_FIPS_NAME=.*/CONFIG_CRYPTO_FIPS_NAME="AlmaLinux %{rhel} - Kernel Cryptographic API"/' $i
 done
 %endif
 
@@ -2729,14 +2771,17 @@ BuildKernel() {
 
         # RHEL/CentOS specific .SBAT entries
 %if 0%{?centos}
-        SBATsuffix="centos"
+        SBATsuffix="rhel"
 %else
         SBATsuffix="rhel"
 %endif
         SBAT=$(cat <<- EOF
 	linux,1,Red Hat,linux,$KernelVer,mailto:secalert@redhat.com
+	linux,1,AlmaLinux,linux,$KernelVer,mailto:security@almalinux.org
 	linux.$SBATsuffix,1,Red Hat,linux,$KernelVer,mailto:secalert@redhat.com
+	linux.almalinux,1,AlmaLinux,linux,$KernelVer,mailto:security@almalinux.org
 	kernel-uki-virt.$SBATsuffix,1,Red Hat,kernel-uki-virt,$KernelVer,mailto:secalert@redhat.com
+	kernel-uki-virt,almalinux,1,AlmaLinux,kernel-uki-virt,$KernelVer,mailto:security@almalinux.org
 	EOF
 	)
 
@@ -4312,6 +4357,21 @@ fi\
 #
 #
 %changelog
+* Mon May 19 2025 Andrei Lukoshko <alukoshko@almalinux.org> - 6.12.0-55.9.1
+- hpsa: bring back deprecated PCI ids #CFHack #CFHack2024
+- mptsas: bring back deprecated PCI ids #CFHack #CFHack2024
+- megaraid_sas: bring back deprecated PCI ids #CFHack #CFHack2024
+- qla2xxx: bring back deprecated PCI ids #CFHack #CFHack2024
+- qla4xxx: bring back deprecated PCI ids
+- lpfc: bring back deprecated PCI ids
+- be2iscsi: bring back deprecated PCI ids
+- kernel/rh_messages.h: enable all disabled pci devices by moving to
+  unmaintained
+
+* Mon May 19 2025 Eduard Abdullin <eabdullin@almalinux.org> - 6.12.0-55.9.1
+- Use AlmaLinux OS secure boot cert
+- Debrand for AlmaLinux OS
+
 * Mon May 19 2025 Andrew Lukoshko <alukoshko@almalinux.org> [6.12.0-55.9.1.el10_0]
 - redhat: kabi: update stablelist checksums (Čestmír Kalina) [RHEL-80552]
 - Merge: Add symbols to stablelist and enable check-kabi (Jan Stancek) [RHEL-79881]

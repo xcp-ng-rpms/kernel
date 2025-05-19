@@ -1,0 +1,25 @@
+From c462f778d114958a05afed7f5ba199417fbc7f1a Mon Sep 17 00:00:00 2001
+From: Andrew Lukoshko <alukoshko@almalinux.org>
+Date: Thu, 8 Aug 2024 16:50:33 +0000
+Subject: [PATCH 10/10] Bring back deprecated pci ids to aacraid driver
+
+---
+ drivers/scsi/aacraid/linit.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/scsi/aacraid/linit.c b/drivers/scsi/aacraid/linit.c
+index 90a6070a1..e6d12db09 100644
+--- a/drivers/scsi/aacraid/linit.c
++++ b/drivers/scsi/aacraid/linit.c
+@@ -77,7 +77,7 @@ char aac_driver_version[] = AAC_DRIVER_FULL_VERSION;
+  * Note: The last field is used to index into aac_drivers below.
+  */
+ static const struct pci_device_id aac_pci_tbl[] = {
+-#ifndef CONFIG_RHEL_DIFFERENCES
++#ifndef CONFIG_ALMALINUX_DIFFERENCES
+ 	{ 0x1028, 0x0001, 0x1028, 0x0001, 0, 0, 0 }, /* PERC 2/Si (Iguana/PERC2Si) */
+ 	{ 0x1028, 0x0002, 0x1028, 0x0002, 0, 0, 1 }, /* PERC 3/Di (Opal/PERC3Di) */
+ 	{ 0x1028, 0x0003, 0x1028, 0x0003, 0, 0, 2 }, /* PERC 3/Si (SlimFast/PERC3Si */
+-- 
+2.43.5
+

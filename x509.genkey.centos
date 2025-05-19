@@ -5,9 +5,9 @@ prompt = no
 x509_extensions = myexts
 
 [ req_distinguished_name ]
-O = The CentOS Project
-CN = CentOS Stream kernel signing key
-emailAddress = security@centos.org
+O = AlmaLinux
+CN = AlmaLinux kernel signing key
+emailAddress = security@almalinux.org
 
 [ myexts ]
 basicConstraints=critical,CA:FALSE
