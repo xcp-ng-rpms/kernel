@@ -1103,6 +1103,7 @@ Source103: almalinuximaca1.x509
 Source104: almalinuxima.x509
 Source105: almalinuxima.x509
 Source106: almalinuxima.x509
+Source107: almalinuxnvidia1.x509
 
 ## Patches needed for building this package
 
@@ -2102,7 +2103,8 @@ done
 openssl x509 -inform der -in %{SOURCE100} -out rheldup3.pem
 openssl x509 -inform der -in %{SOURCE101} -out rhelkpatch1.pem
 openssl x509 -inform der -in %{SOURCE102} -out nvidiagpuoot001.pem
-cat rheldup3.pem rhelkpatch1.pem nvidiagpuoot001.pem > ../certs/rhel.pem
+openssl x509 -inform der -in %{SOURCE107} -out almalinuxnvidia.pem
+cat rheldup3.pem rhelkpatch1.pem nvidiagpuoot001.pem almalinuxnvidia.pem > ../certs/rhel.pem
 %if %{signkernel}
 %ifarch s390x ppc64le
 openssl x509 -inform der -in %{secureboot_ca_0} -out secureboot.pem
@@ -4355,7 +4357,7 @@ fi\
 #
 #
 %changelog
-* Mon May 19 2025 Andrei Lukoshko <alukoshko@almalinux.org> - 6.12.0-55.9.1
+* Sat May 24 2025 Andrei Lukoshko <alukoshko@almalinux.org> - 6.12.0-55.9.1
 - hpsa: bring back deprecated PCI ids #CFHack #CFHack2024
 - mptsas: bring back deprecated PCI ids #CFHack #CFHack2024
 - megaraid_sas: bring back deprecated PCI ids #CFHack #CFHack2024
@@ -4366,7 +4368,7 @@ fi\
 - kernel/rh_messages.h: enable all disabled pci devices by moving to
   unmaintained
 
-* Mon May 19 2025 Eduard Abdullin <eabdullin@almalinux.org> - 6.12.0-55.9.1
+* Sat May 24 2025 Eduard Abdullin <eabdullin@almalinux.org> - 6.12.0-55.9.1
 - Use AlmaLinux OS secure boot cert
 - Debrand for AlmaLinux OS
 
