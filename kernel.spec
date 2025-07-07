@@ -162,15 +162,15 @@ Summary: The Linux kernel
 %define specrpmversion 6.12.0
 %define specversion 6.12.0
 %define patchversion 6.12
-%define pkgrelease 55.9.1
+%define pkgrelease 55.19.1
 %define kversion 6
-%define tarfile_release 6.12.0-55.9.1.el10_0
+%define tarfile_release 6.12.0-55.19.1.el10_0
 # This is needed to do merge window version magic
 %define patchlevel 12
 # This allows pkg_release to have configurable %%{?dist} tag
-%define specrelease 55.9.1%{?buildid}%{?dist}
+%define specrelease 55.19.1%{?buildid}%{?dist}
 # This defines the kabi tarball version
-%define kabiversion 6.12.0-55.9.1.el10_0
+%define kabiversion 6.12.0-55.19.1.el10_0
 
 # If this variable is set to 1, a bpf selftests build failure will cause a
 # fatal kernel package build error
@@ -1972,6 +1972,8 @@ ApplyOptionalPatch()
 mv linux-%{tarfile_release} linux-%{KVERREL}
 
 cd linux-%{KVERREL}
+#removal of git history
+rm -rf .git
 cp -a %{SOURCE1} .
 
 %{log_msg "Start of patch applications"}
@@ -4357,7 +4359,7 @@ fi\
 #
 #
 %changelog
-* Sat May 24 2025 Andrei Lukoshko <alukoshko@almalinux.org> - 6.12.0-55.9.1
+* Mon Jul 07 2025 Andrei Lukoshko <alukoshko@almalinux.org> - 6.12.0-55.19.1
 - hpsa: bring back deprecated PCI ids #CFHack #CFHack2024
 - mptsas: bring back deprecated PCI ids #CFHack #CFHack2024
 - megaraid_sas: bring back deprecated PCI ids #CFHack #CFHack2024
@@ -4368,19 +4370,144 @@ fi\
 - kernel/rh_messages.h: enable all disabled pci devices by moving to
   unmaintained
 
-* Sat May 24 2025 Eduard Abdullin <eabdullin@almalinux.org> - 6.12.0-55.9.1
+* Mon Jul 07 2025 Eduard Abdullin <eabdullin@almalinux.org> - 6.12.0-55.19.1
 - Use AlmaLinux OS secure boot cert
 - Debrand for AlmaLinux OS
 
-* Mon May 19 2025 Andrew Lukoshko <alukoshko@almalinux.org> [6.12.0-55.9.1.el10_0]
-- redhat: kabi: update stablelist checksums (Čestmír Kalina) [RHEL-80552]
-- Merge: Add symbols to stablelist and enable check-kabi (Jan Stancek) [RHEL-79881]
-- Merge tag 'kernel-6.12.0-55.9.1.el10_0' into main (Jan Stancek)
-- Merge tag 'kernel-6.12.0-55.7.1.el10_0' into main (Jan Stancek)
-- Merge tag 'kernel-6.12.0-55.4.1.el10_0' into main (Jan Stancek)
-- Merge tag 'kernel-6.12.0-55.3.1.el10_0' into main (Jan Stancek)
-- Merge tag 'kernel-6.12.0-55.2.1.el10_0' into main (Jan Stancek)
-- Merge tag 'kernel-6.12.0-55.1.1.el10_0' into main (Jan Stancek)
+* Tue Jul 01 2025 Alex Burmashev <alexander.burmashev@oracle.com> [6.12.0-55.19.1.el10_0]
+- Clean git history at setup stage
+- Prevent kABI check error for BLK_CGROUP_PUNT_BIO
+- Bump internal version to 55.19.1
+- ibmvnic: Use kernel helpers for hex dumps
+- eth: bnxt: fix truesize for mb-xdp-pass case
+- ice: Avoid setting default Rx VSI twice in switchdev setup
+- ice: Fix deinitializing VF in error path
+- ice: add E830 HW VF mailbox message limit support
+- block/Kconfig: Allow selecting BLK_CGROUP_PUNT_BIO
+
+* Tue Jun 24 2025 Alex Burmashev <alexander.burmashev@oracle.com> [6.12.0-55.18.1.el10_0]
+- Import config changes from Centos Stream kernel kernel-6.12.0-77.el10
+- Bump internal version to 55.18.1
+- drm/i915/dp_mst: Handle error during DSC BW overhead/slice calculation
+- sched/rt: Fix race in push_rt_task MIME-Version: 1.0 Content-Type: text/plain; charset=UTF-8 Content-Transfer-Encoding: 8bit
+- mm/vmalloc: combine all TLB flush operations of KASAN shadow virtual address into one operation - upstream CVE-2024-56559
+- block: make sure ->nr_integrity_segments is cloned in blk_rq_prep_clone
+- proc: fix UAF in proc_get_inode() CVE-2025-21999
+- ext4: ignore xattrs past end CVE-2025-37738
+- nvme-fabrics: handle zero MAXCMD without closing the connection
+- ext4: fix off-by-one error in do_split CVE-2025-23150
+- r8169: disable RTL8126 ZRX-DC timeout
+- r8169: enable RTL8168H/RTL8168EP/RTL8168FP ASPM support
+- vmxnet3: unregister xdp rxq info in the reset path
+- block: fix 'kmem_cache of name 'bio-108' already exists'
+- ice: implement low latency PHY timer updates
+- ice: check low latency PHY timer update firmware capability
+- ice: add lock to protect low latency interface
+- ice: rename TS_LL_READ* macros to REG_LL_PROXY_H_*
+- ice: use read_poll_timeout_atomic in ice_read_phy_tstamp_ll_e810
+- cifs: Fix integer overflow while processing acdirmax mount option CVE-2025-21963
+- smb: client: fix UAF in decryption with multichannel CVE-2025-37750
+- sched/fair: Fix CPU bandwidth limit bypass during CPU hotplug
+- keys: Fix UAF in key_put() CVE-2025-21893
+- ndisc: use RCU protection in ndisc_alloc_skb() CVE-2025-21764
+- ipv6: use RCU protection in ip6_default_advmss() CVE-2025-21765
+- net: add dev_net_rcu() helper CVE-2025-21765
+- vfio/pci: Align huge faults to order
+- Bluetooth: L2CAP: Fix corrupted list in hci_chan_del CVE-2025-21969
+- Bluetooth: L2CAP: Fix slab-use-after-free Read in l2cap_send_cmd CVE-2025-21969
+- cifs: Fix integer overflow while processing closetimeo mount option CVE-2025-21962
+- ovl: fix UAF in ovl_dentry_update_reval by moving dput() in ovl_link_up CVE-2025-21887
+- wifi: cfg80211: init wiphy_work before allocating rfkill fails CVE-2025-21979
+- wifi: cfg80211: cancel wiphy_work before freeing wiphy CVE-2025-21979
+- net: fix geneve_opt length integer overflow CVE-2025-22055
+- vsock/virtio: discard packets if the transport changes CVE-2025-21669
+- net: gso: fix ownership in __udp_gso_segment CVE-2025-21926
+- xsk: fix an integer overflow in xp_create_and_assign_umem() CVE-2025-21997
+- wifi: ath12k: Fix invalid data access in ath12k_dp_rx_h_undecap_nwifi CVE-2025-37943
+- sched/fair: Fix potential memory corruption in child_cfs_rq_on_list CVE-2025-21919
+- drm/i915/display: Use joined pipes in dsc helpers for slices, bpp - upstream
+- drm/i915/display: Use joined pipes in intel_mode_valid_max_plane_size - upstream
+- drm/i915/display: Use joined pipes in intel_dp_joiner_needs_dsc - upstream
+- drm/i915/display: Simplify intel_joiner_num_pipes and it's usage - upstream
+- drm/i915/display: Check whether platform supports joiner - upstream
+- Revert drm/i915/dp_mst: Handle error during DSC BW overhead/slice
+- Revert drm/i915/dp_mst: Don't require DSC hblank quirk for a non-DSC
+- drm/mgag200: Added support for the new device G200eH5 - upstream
+- cifs: Fix integer overflow while processing acregmax mount option CVE-2025-21964
+- ext4: fix OOB read when checking dotdot dir CVE-2025-37785
+- vsock: Orphan socket after transport release CVE-2025-21756
+- vsock: Keep the binding until socket destruction CVE-2025-21756
+- bpf, vsock: Invoke proto::close on close() CVE-2025-21756
+- idpf: call set_real_num_queues in idpf_open
+- media: uvcvideo: Skip parsing frames of type UVC_VS_UNDEFINED in uvc_parse_format CVE-2024-53104
+- redhat: enable CONFIG_WERROR=y
+- redhat: don't enforce WERROR for 3rd-party OOT kmods
+- redhat: make ENABLE_WERROR enable also KVM_WERROR
+- fortify: Hide run-time copy size from value range tracking
+- resolve_btfids: Fix compiler warnings
+- ixgbe: fix media cage present detection for E610 device
+- ixgbe: fix media type detection for E610 device
+- ixgbevf: Add support for Intel(R) E610 device
+- PCI: Add PCI_VDEVICE_SUB helper macro
+- ixgbe: Enable link management in E610 device
+- ixgbe: Clean up the E610 link management related code
+- ixgbe: Add ixgbe_x540 multiple header inclusion protection
+- ixgbe: Add support for EEPROM dump in E610 device
+- ixgbe: Add support for NVM handling in E610 device
+- ixgbe: Add link management support for E610 device
+- ixgbe: Add support for E610 device capabilities detection
+- ixgbe: Add support for E610 FW Admin Command Interface
+- smb: client: don't retry IO on failed negprotos with soft mounts - pick from MR
+- scsi: core: Fix command pass through retry regression - cherry pick from MR
+- dm-flakey: Fix memory corruption in optional corrupt_bio_byte feature CVE-2025-21966
+- ice: stop storing XDP verdict within ice_rx_buf
+- ice: gather page_count()'s of each frag right before XDP prog call
+- ice: put Rx buffers after being done with current frame
+- iscsi_ibft: Fix UBSAN shift-out-of-bounds warning in ibft_attr_show_nic() CVE-2025-21993
+- smb: client: fix regression with guest option
+- pnfs/flexfiles: retry getting layout segment for reads
+- nfs: fix incorrect error handling in LOCALIO
+- nfs: probe for LOCALIO when v3 client reconnects to server
+- nfs: probe for LOCALIO when v4 client reconnects to server
+- nfs/localio: remove redundant code and simplify LOCALIO enablement
+- nfs_common: add nfs_localio trace events
+- nfs_common: track all open nfsd_files per LOCALIO nfs_client
+- nfs_common: rename nfslocalio nfs_uuid_lock to nfs_uuids_lock
+- nfsd: nfsd_file_acquire_local no longer returns GC'd nfsd_file
+- nfsd: rename nfsd_serv_ prefixed methods and variables with nfsd_net_
+- nfsd: update percpu_ref to manage references on nfsd_net
+- nfs: cache all open LOCALIO nfsd_file(s) in client
+- nfs_common: move localio_lock to new lock member of nfs_uuid_t
+- nfs_common: rename functions that invalidate LOCALIO nfs_clients
+- nfsd: add nfsd_file_{get,put} to 'nfs_to' nfsd_localio_operations
+- nfs/localio: add direct IO enablement with sync and async IO support
+- ice: ensure periodic output start time is in the future
+- ice: fix PHY Clock Recovery availability check
+- ice: Drop auxbus use for PTP to finalize ice_adapter move
+- ice: Use ice_adapter for PTP shared data instead of auxdev
+- ice: Initial support for E825C hardware in ice_adapter
+- ice: Add ice_get_ctrl_ptp() wrapper to simplify the code
+- ice: Introduce ice_get_phy_model() wrapper
+- ice: Enable 1PPS out from CGU for E825C products
+- ice: Read SDP section from NVM for pin definitions
+- ice: Disable shared pin on E810 on setfunc
+- ice: Cache perout/extts requests and check flags
+- ice: Align E810T GPIO to other products
+- ice: Add SDPs support for E825C
+- ice: Implement ice_ptp_pin_desc
+- nvme-tcp: fix potential memory corruption in nvme_tcp_recv_pdu() - modified CVE-2025-21927
+- scsi: storvsc: Set correct data length for sending SCSI command without payload
+- smb: client: fix chmod(2) regression with ATTR_READONLY
+- mm/hugetlb: fix hugepage allocation for interleaved memory nodes
+- net: mana: use ethtool string helpers
+- net: mana: cleanup mana struct after debugfs_remove() - upstream
+- net: mana: Cleanup "mana" debugfs dir after cleanup of all children
+- net: mana: Fix irq_contexts memory leak in mana_gd_setup_irqs
+- net: mana: Fix memory leak in mana_gd_setup_irqs
+- net :mana :Request a V2 response version for MANA_QUERY_GF_STAT
+- net: mana: Enable debugfs files for MANA device
+- net: mana: Increase the DEF_RX_BUFFERS_PER_QUEUE to 1024
+- net: mana: Add get_link and get_link_ksettings in ethtool
 
 * Tue Mar 25 2025 Jan Stancek <jstancek@redhat.com> [6.12.0-55.9.1.el10_0]
 - af_packet: fix vlan_get_protocol_dgram() vs MSG_PEEK (Davide Caratti) [RHEL-80306] {CVE-2024-57901}
