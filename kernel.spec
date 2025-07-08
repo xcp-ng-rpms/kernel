@@ -162,15 +162,15 @@ Summary: The Linux kernel
 %define specrpmversion 6.12.0
 %define specversion 6.12.0
 %define patchversion 6.12
-%define pkgrelease 55.19.1
+%define pkgrelease 55.20.1
 %define kversion 6
-%define tarfile_release 6.12.0-55.19.1.el10_0
+%define tarfile_release 6.12.0-55.20.1.el10_0
 # This is needed to do merge window version magic
 %define patchlevel 12
 # This allows pkg_release to have configurable %%{?dist} tag
-%define specrelease 55.19.1%{?buildid}%{?dist}
+%define specrelease 55.20.1%{?buildid}%{?dist}
 # This defines the kabi tarball version
-%define kabiversion 6.12.0-55.19.1.el10_0
+%define kabiversion 6.12.0-55.20.1.el10_0
 
 # If this variable is set to 1, a bpf selftests build failure will cause a
 # fatal kernel package build error
@@ -4359,7 +4359,7 @@ fi\
 #
 #
 %changelog
-* Mon Jul 07 2025 Andrei Lukoshko <alukoshko@almalinux.org> - 6.12.0-55.19.1
+* Tue Jul 08 2025 Andrei Lukoshko <alukoshko@almalinux.org> - 6.12.0-55.20.1
 - hpsa: bring back deprecated PCI ids #CFHack #CFHack2024
 - mptsas: bring back deprecated PCI ids #CFHack #CFHack2024
 - megaraid_sas: bring back deprecated PCI ids #CFHack #CFHack2024
@@ -4370,9 +4370,24 @@ fi\
 - kernel/rh_messages.h: enable all disabled pci devices by moving to
   unmaintained
 
-* Mon Jul 07 2025 Eduard Abdullin <eabdullin@almalinux.org> - 6.12.0-55.19.1
+* Tue Jul 08 2025 Eduard Abdullin <eabdullin@almalinux.org> - 6.12.0-55.20.1
 - Use AlmaLinux OS secure boot cert
 - Debrand for AlmaLinux OS
+
+* Mon Jul 07 2025 Alex Burmashev <alexander.burmashev@oracle.com> [6.12.0-55.20.1.el10_0]
+- Bump internal version to 55.20.1
+- Adjust page_pool: Track DMA-mapped pages and unmap them when destroying the pool
+- Adjust dm mpath: Interface for explicit probing of active paths
+- x86/microcode/AMD: Fix out-of-bounds on systems with CPU-less NUMA nodes - CVE-2025-21991
+- page_pool: Track DMA-mapped pages and unmap them when destroying the pool
+- page_pool: Move pp_magic check into helper functions
+- scsi: storvsc: Explicitly set max_segment_size to UINT_MAX
+- vmxnet3: Fix malformed packet sizing in vmxnet3_process_xdp - CVE-2025-37799
+- dm mpath: replace spin_lock_irqsave with spin_lock_irq
+- dm-mpath: Don't grab work_mutex while probing paths
+- dm mpath: Interface for explicit probing of active paths
+- dm: Allow .prepare_ioctl to handle ioctls directly
+- ipv6: mcast: extend RCU protection in igmp6_send() - CVE-2025-21759
 
 * Tue Jul 01 2025 Alex Burmashev <alexander.burmashev@oracle.com> [6.12.0-55.19.1.el10_0]
 - Clean git history at setup stage

@@ -1,6 +1,7 @@
-kernel-abi-stablelists-6.12.0-55.19.1.el10_0.tar.xz
-kernel-kabi-dw-6.12.0-55.19.1.el10_0.tar.xz
-linux-6.12.0-55.19.1.el10_0.tar.xz
+fedoraimaca.x509
+kernel-abi-stablelists-6.12.0-55.20.1.el10_0.tar.xz
+kernel-kabi-dw-6.12.0-55.20.1.el10_0.tar.xz
+linux-6.12.0-55.20.1.el10_0.tar.xz
 nvidiagpuoot001.x509
 olima1.x509
 olimaca1.x509
