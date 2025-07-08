@@ -98,7 +98,7 @@ Summary: The Linux kernel
 %if 0%{?fedora}
 %define secure_boot_arch x86_64
 %else
-%define secure_boot_arch x86_64 aarch64 s390x ppc64le
+%define secure_boot_arch x86_64 s390x ppc64le
 %endif
 
 # Signing for secure boot authentication
@@ -162,15 +162,15 @@ Summary: The Linux kernel
 %define specrpmversion 6.12.0
 %define specversion 6.12.0
 %define patchversion 6.12
-%define pkgrelease 55.19.1
+%define pkgrelease 55.20.1
 %define kversion 6
-%define tarfile_release 6.12.0-55.19.1.el10_0
+%define tarfile_release 6.12.0-55.20.1.el10_0
 # This is needed to do merge window version magic
 %define patchlevel 12
 # This allows pkg_release to have configurable %%{?dist} tag
-%define specrelease 55.19.1%{?buildid}%{?dist}
+%define specrelease 55.20.1%{?buildid}.0.1%{?dist}
 # This defines the kabi tarball version
-%define kabiversion 6.12.0-55.19.1.el10_0
+%define kabiversion 6.12.0-55.20.1.el10_0
 
 # If this variable is set to 1, a bpf selftests build failure will cause a
 # fatal kernel package build error
@@ -716,6 +716,8 @@ Requires: kernel-modules-core-uname-r = %{KVERREL}
 Provides: installonlypkg(kernel)
 %endif
 
+Provides: oracle(kernel-sig-key) == 202502
+Conflicts: shim-x64 < 15.8-1.0.6
 
 #
 # List the packages used during the kernel build
@@ -875,8 +877,6 @@ BuildRequires: tpm2-tools
 %if 0%{?rhel}%{?centos} && !0%{?eln}
 %if 0%{?centos}
 BuildRequires: centos-sb-certs >= 9.0-23
-%else
-BuildRequires: redhat-sb-certs >= 9.4-0.1
 %endif
 %endif
 %endif
@@ -896,42 +896,11 @@ Source10: redhatsecurebootca5.cer
 Source13: redhatsecureboot501.cer
 
 %if %{signkernel}
-# Name of the packaged file containing signing key
-%ifarch ppc64le
-%define signing_key_filename kernel-signing-ppc.cer
-%endif
-%ifarch s390x
-%define signing_key_filename kernel-signing-s390.cer
-%endif
 
-# Fedora/ELN pesign macro expects to see these cert file names, see:
-# https://github.com/rhboot/pesign/blob/main/src/pesign-rpmbuild-helper.in#L216
-%if 0%{?fedora}%{?eln}
-%define pesign_name_0 redhatsecureboot501
-%define secureboot_ca_0 %{SOURCE10}
-%define secureboot_key_0 %{SOURCE13}
-%endif
-
-# RHEL/centos certs come from system-sb-certs
-%if 0%{?rhel} && !0%{?eln}
 %define secureboot_ca_0 %{_datadir}/pki/sb-certs/secureboot-ca-%{_arch}.cer
 %define secureboot_key_0 %{_datadir}/pki/sb-certs/secureboot-kernel-%{_arch}.cer
 
-%if 0%{?centos}
-%define pesign_name_0 centossecureboot201
-%else
-%ifarch x86_64 aarch64
-%define pesign_name_0 redhatsecureboot501
-%endif
-%ifarch s390x
-%define pesign_name_0 redhatsecureboot302
-%endif
-%ifarch ppc64le
-%define pesign_name_0 redhatsecureboot701
-%endif
-%endif
-# rhel && !eln
-%endif
+%define pesign_name_0 OracleLinuxSecureBootKey3
 
 # signkernel
 %endif
@@ -1008,7 +977,10 @@ Source102: nvidiagpuoot001.x509
 Source103: rhelimaca1.x509
 Source104: rhelima.x509
 Source105: rhelima_centos.x509
-Source106: fedoraimaca.x509
+# Oracle Linux IMA CA certificate
+Source106: olimaca1.x509
+# Oracle Linux IMA signing certificate
+Source107: olima1.x509
 
 %if 0%{?fedora}%{?eln}
 %define ima_ca_cert %{SOURCE106}
@@ -1023,9 +995,11 @@ Source106: fedoraimaca.x509
 %define ima_signing_cert %{SOURCE105}
 %else
 %define ima_signing_cert %{SOURCE104}
+%define ima_signing_cert_ol %{SOURCE107}
 %endif
 
 %define ima_cert_name ima.cer
+%define ima_cert_name_ol ima_ol.cer
 
 Source200: check-kabi
 
@@ -1090,12 +1064,19 @@ Source4000: README.rst
 Source4001: rpminspect.yaml
 Source4002: gating.yaml
 
+# Oracle Linux RHCK Module Signing Key
+Source5001: olkmod_signing_key.pem
+Source5002: olkmod_signing_key1.pem
+
 ## Patches needed for building this package
 
 %if !%{nopatches}
 
 Patch1: patch-%{patchversion}-redhat.patch
 %endif
+
+# Oracle patches
+Patch1001: bug37756650-nvme-pci-remove-two-deallocate-zeroes-quirks.patch
 
 # empty final patch to facilitate testing of kernel patches
 Patch999999: linux-kernel-test.patch
@@ -1953,6 +1934,7 @@ cp -a %{SOURCE1} .
 ApplyOptionalPatch patch-%{patchversion}-redhat.patch
 %endif
 
+ApplyPatch bug37756650-nvme-pci-remove-two-deallocate-zeroes-quirks.patch
 ApplyOptionalPatch linux-kernel-test.patch
 
 %{log_msg "End of patch applications"}
@@ -2065,6 +2047,13 @@ openssl x509 -inform der -in %{SOURCE100} -out rheldup3.pem
 openssl x509 -inform der -in %{SOURCE101} -out rhelkpatch1.pem
 openssl x509 -inform der -in %{SOURCE102} -out nvidiagpuoot001.pem
 cat rheldup3.pem rhelkpatch1.pem nvidiagpuoot001.pem > ../certs/rhel.pem
+# Add Oracle Linux IMA CA certificate to the kernel trusted certificates list
+openssl x509 -inform der -in %{SOURCE106} -out olimaca1.pem
+cat olimaca1.pem >> ../certs/rhel.pem
+# Add olkmod_signing_key.pem to the kernel trusted certificates list
+cat %{SOURCE5001} >> ../certs/rhel.pem
+# Add olkmod_signing_key1.pem to the kernel trusted certificates list
+cat %{SOURCE5002} >> ../certs/rhel.pem
 %if %{signkernel}
 %ifarch s390x ppc64le
 openssl x509 -inform der -in %{secureboot_ca_0} -out secureboot.pem
@@ -2087,7 +2076,7 @@ done
 %if 0%{?rhel}
 %{log_msg "Adjust FIPS module name for RHEL"}
 for i in *.config; do
-  sed -i 's/CONFIG_CRYPTO_FIPS_NAME=.*/CONFIG_CRYPTO_FIPS_NAME="Red Hat Enterprise Linux %{rhel} - Kernel Cryptographic API"/' $i
+  sed -i 's/CONFIG_CRYPTO_FIPS_NAME=.*/CONFIG_CRYPTO_FIPS_NAME="Oracle Linux 10 Kernel Crypto API Cryptographic Module"/' $i
 done
 %endif
 
@@ -2737,8 +2726,11 @@ BuildKernel() {
 %endif
         SBAT=$(cat <<- EOF
 	linux,1,Red Hat,linux,$KernelVer,mailto:secalert@redhat.com
+	linux,1,Oracle Linux,linux,$KernelVer,mailto:secalert_us@oracle.com
 	linux.$SBATsuffix,1,Red Hat,linux,$KernelVer,mailto:secalert@redhat.com
+	linux.ol,1,Oracle Linux,linux,$KernelVer,mailto:secalert_us@oracle.com
 	kernel-uki-virt.$SBATsuffix,1,Red Hat,kernel-uki-virt,$KernelVer,mailto:secalert@redhat.com
+	kernel-uki-virt.ol,1,Oracle Linux,kernel-uki-virt,$KernelVer,mailto:secalert_us@oracle.com
 	EOF
 	)
 
@@ -2766,6 +2758,7 @@ BuildKernel() {
   python3 %{SOURCE151} %{SOURCE152} $KernelAddonsDirOut virt %{primary_target} %{_target_cpu}
 
 %if %{signkernel}
+%if ! %{?oraclelinux}
 	%{log_msg "Sign the EFI UKI kernel"}
 %if 0%{?fedora}%{?eln}
         %pesign -s -i $KernelUnifiedImage -o $KernelUnifiedImage.signed -a %{secureboot_ca_0} -c %{secureboot_key_0} -n %{pesign_name_0}
@@ -2793,6 +2786,7 @@ BuildKernel() {
       done
 
 # signkernel
+%endif
 %endif
 
     # hmac sign the UKI for FIPS
@@ -2968,7 +2962,7 @@ BuildKernel() {
     # prune junk from kernel-debuginfo
     find $RPM_BUILD_ROOT/usr/src/kernels -name "*.mod.c" -delete
 
-    # Red Hat UEFI Secure Boot CA cert, which can be used to authenticate the kernel
+    # UEFI Secure Boot CA cert, which can be used to authenticate the kernel
     %{log_msg "Install certs"}
     mkdir -p $RPM_BUILD_ROOT%{_datadir}/doc/kernel-keys/$KernelVer
 %if %{signkernel}
@@ -2983,6 +2977,8 @@ BuildKernel() {
 %if 0%{?rhel}
     # Red Hat IMA code-signing cert, which is used to authenticate package files
     install -m 0644 %{ima_signing_cert} $RPM_BUILD_ROOT%{_datadir}/doc/kernel-keys/$KernelVer/%{ima_cert_name}
+    # Oracle Linux IMA signing cert
+    install -m 0644 %{ima_signing_cert_ol} $RPM_BUILD_ROOT%{_datadir}/doc/kernel-keys/$KernelVer/%{ima_cert_name_ol}
 %endif
 
 %if %{signmodules}
@@ -4314,6 +4310,34 @@ fi\
 #
 #
 %changelog
+* Mon Jul 07 2025 Alex Burmashev <alexander.burmashev@oracle.com> [6.12.0-55.20.1.0.1.el10_0.OL10]
+- nvme-pci: remove two deallocate zeroes quirks [Orabug: 37756650]
+- Add new Oracle Linux Driver Signing (key 1) certificate [Orabug: 37985782]
+- Disable UKI signing [Orabug: 36571828]
+- Update Oracle Linux certificates (Kevin Lyons)
+- Disable signing for aarch64 (Ilya Okomin)
+- Oracle Linux RHCK Module Signing Key was added to the kernel trusted keys list (olkmod_signing_key.pem) [Orabug: 29539237]
+- Update x509.genkey [Orabug: 24817676]
+- Conflict with shim-ia32 and shim-x64 <= 15.3-1.0.5.el9
+- Remove upstream reference during boot (Kevin Lyons) [Orabug: 34729535]
+- Add Oracle Linux IMA certificates
+- Update module name for cryptographic module [Orabug: 37400433]
+
+* Mon Jul 07 2025 Alex Burmashev <alexander.burmashev@oracle.com> [6.12.0-55.20.1.el10_0]
+- Bump internal version to 55.20.1
+- Adjust page_pool: Track DMA-mapped pages and unmap them when destroying the pool
+- Adjust dm mpath: Interface for explicit probing of active paths
+- x86/microcode/AMD: Fix out-of-bounds on systems with CPU-less NUMA nodes - CVE-2025-21991
+- page_pool: Track DMA-mapped pages and unmap them when destroying the pool
+- page_pool: Move pp_magic check into helper functions
+- scsi: storvsc: Explicitly set max_segment_size to UINT_MAX
+- vmxnet3: Fix malformed packet sizing in vmxnet3_process_xdp - CVE-2025-37799
+- dm mpath: replace spin_lock_irqsave with spin_lock_irq
+- dm-mpath: Don't grab work_mutex while probing paths
+- dm mpath: Interface for explicit probing of active paths
+- dm: Allow .prepare_ioctl to handle ioctls directly
+- ipv6: mcast: extend RCU protection in igmp6_send() - CVE-2025-21759
+ 
 * Tue Jul 01 2025 Alex Burmashev <alexander.burmashev@oracle.com> [6.12.0-55.19.1.el10_0]
 - Clean git history at setup stage
 - Prevent kABI check error for BLK_CGROUP_PUNT_BIO
