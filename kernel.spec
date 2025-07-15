@@ -168,7 +168,7 @@ Summary: The Linux kernel
 # This is needed to do merge window version magic
 %define patchlevel 12
 # This allows pkg_release to have configurable %%{?dist} tag
-%define specrelease 55.20.1.ydi.1%{?buildid}%{?dist}
+%define specrelease 55.20.1.ydi.2%{?buildid}%{?dist}
 # This defines the kabi tarball version
 %define kabiversion 6.12.0-55.20.1.el10_0
 
@@ -2335,6 +2335,10 @@ BuildKernel() {
 
     %{log_msg "Install files to RPM_BUILD_ROOT"}
 
+    install -d -m 755 $RPM_BUILD_ROOT%{_rpmconfigdir}/macros.d
+    install -m 644 %{SOURCE2} $RPM_BUILD_ROOT%{_rpmconfigdir}/macros.d
+    echo '%%kernel_version %{KVERREL}%{uname_suffix %{?1:+%{1}}}' >> $RPM_BUILD_ROOT%{_rpmconfigdir}/macros.d/macros.kernel
+
     # Comment out specific config settings that may use resources not available
     # to the end user so that the packaged config file can be easily reused with
     # upstream make targets
@@ -4245,6 +4249,7 @@ fi\
 %{expand:%%files %{?3:%{3}-}devel}\
 %defverify(not mtime)\
 /usr/src/kernels/%{KVERREL}%{?3:+%{3}}\
+{_rpmconfigdir}/macros.d/macros.kernel\
 %{expand:%%files %{?3:%{3}-}devel-matched}\
 %{expand:%%files -f kernel-%{?3:%{3}-}modules-extra.list %{?3:%{3}-}modules-extra}\
 %{expand:%%files -f kernel-%{?3:%{3}-}modules-internal.list %{?3:%{3}-}modules-internal}\
@@ -4359,6 +4364,9 @@ fi\
 #
 #
 %changelog
+* Mon Jul 15 2025 Yann Dirson <yann.dirson@vates.tech> - 6.12.0-55.20.1.0.ydi.2
+- Take kernel macros from XS RPM to keep the same way to build out of tree module packages
+
 * Wed Jul 09 2025 Yann Dirson <yann.dirson@vates.tech> - 6.12.0-55.20.1.0.ydi.1
 - WIP: Enable Xen Dom0 support
 
