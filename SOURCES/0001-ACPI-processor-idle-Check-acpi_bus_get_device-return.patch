@@ -1,0 +1,34 @@
+From fb3b2d198a1701a7d2806c198963f6cbd3b95e43 Mon Sep 17 00:00:00 2001
+Message-ID: <fb3b2d198a1701a7d2806c198963f6cbd3b95e43.1750668495.git.teddy.astie@vates.tech>
+From: Teddy Astie <teddy.astie@vates.tech>
+Date: Mon, 23 Jun 2025 10:48:10 +0200
+Subject: [PATCH] ACPI: processor: idle: Check acpi_bus_get_device return value
+
+From: Li Zhong <floridsleeves@gmail.com>
+
+Fix a potential NULL pointer dereferences if acpi_bus_get_device happens to fail.
+
+Backported-from: 2437513a814b3 "ACPI: processor: idle: Check acpi_fetch_acpi_dev() return value"
+Signed-off-by: Teddy Astie <teddy.astie@vates.tech>
+---
+ drivers/acpi/processor_idle.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/acpi/processor_idle.c b/drivers/acpi/processor_idle.c
+index abb559cd28d7..e0bfe3450eb6 100644
+--- a/drivers/acpi/processor_idle.c
++++ b/drivers/acpi/processor_idle.c
+@@ -1190,7 +1190,9 @@ static int acpi_processor_get_lpi_info(struct acpi_processor *pr)
+ 
+ 	status = acpi_get_parent(handle, &pr_ahandle);
+ 	while (ACPI_SUCCESS(status)) {
+-		acpi_bus_get_device(pr_ahandle, &d);
++		if (acpi_bus_get_device(pr_ahandle, &d))
++			break;
++
+ 		handle = pr_ahandle;
+ 
+ 		if (strcmp(acpi_device_hid(d), ACPI_PROCESSOR_CONTAINER_HID))
+-- 
+2.50.0
+

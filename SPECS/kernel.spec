@@ -37,7 +37,7 @@
 Name: kernel
 License: GPLv2
 Version: 4.19.19
-Release: %{?xsrel}.2%{?dist}
+Release: %{?xsrel}.3%{?dist}
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
@@ -691,6 +691,7 @@ Source5: prepare-build
 Patch1000: ceph.patch
 Patch1001: tg3-v4.19.315.patch
 Patch1002: 0001-perf-probe-Fix-getting-the-kernel-map.patch
+Patch1003: 0001-ACPI-processor-idle-Check-acpi_bus_get_device-return.patch
 
 %description
 The kernel package contains the Linux kernel (vmlinuz), the core of any
@@ -1045,6 +1046,9 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Mon Jun 23 2025 Teddy Astie <teddy.astie@vates.tech> - 4.19.19-8.0.38.3
+- Backport ACPI NULL dereference fix (Minisforum MS-A2 - Ryzen 9 7945HX kernel panic)
+
 * Sun Apr 06 2025 Anthoine Bourgeois <anthoine.bourgeois@vates.tech> - 4.19.19-8.0.38.2
 - Backport perf dynamic tracepoints fixes
 
