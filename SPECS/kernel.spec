@@ -37,7 +37,7 @@
 Name: kernel
 License: GPLv2
 Version: 4.19.19
-Release: %{?xsrel}.3%{?dist}
+Release: %{?xsrel}.4%{?dist}
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
@@ -692,6 +692,7 @@ Patch1000: ceph.patch
 Patch1001: tg3-v4.19.315.patch
 Patch1002: 0001-perf-probe-Fix-getting-the-kernel-map.patch
 Patch1003: 0001-ACPI-processor-idle-Check-acpi_bus_get_device-return.patch
+Patch1004: 0001-scsi-target-Fix-XCOPY-NAA-identifier-lookup.patch
 
 %description
 The kernel package contains the Linux kernel (vmlinuz), the core of any
@@ -1046,6 +1047,9 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Wed Jul 30 2025 Thierry Escande <thierry.escande@vates.tech> - 4.19.19-8.0.38.4
+- Backport patch for CVE-2020-28374 (scsi: target: Fix XCOPY NAA identifier lookup)
+
 * Mon Jun 23 2025 Teddy Astie <teddy.astie@vates.tech> - 4.19.19-8.0.38.3
 - Backport ACPI NULL dereference fix (Minisforum MS-A2 - Ryzen 9 7945HX kernel panic)
 
