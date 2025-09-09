@@ -1,0 +1,111 @@
+From 1bf6a186c4524e62c4e46d2c9f28a70fb45f9e8b Mon Sep 17 00:00:00 2001
+Message-ID: <1bf6a186c4524e62c4e46d2c9f28a70fb45f9e8b.1752831642.git.gerald.elder-vass@cloud.com>
+From: Hannes Reinecke <hare@suse.de>
+Date: Tue, 23 Feb 2021 17:28:55 +0800
+Subject: [PATCH 1/1] block: genhd: add 'groups' argument to device_add_disk
+
+commit fef912bf860e8e7e48a2bfb978a356bba743a8b7 upstream.
+
+This patch was re-written to introduce device_add_disk_xs for adding
+disk devices which specify groups.
+
+Original commit message:
+Update device_add_disk() to take an 'groups' argument so that
+individual drivers can register a device with additional sysfs
+attributes.
+This avoids race condition the driver would otherwise have if these
+groups were to be created with sysfs_add_groups().
+
+Signed-off-by: Martin Wilck <martin.wilck@suse.com>
+Signed-off-by: Hannes Reinecke <hare@suse.com>
+Reviewed-by: Christoph Hellwig <hch@lst.de>
+Reviewed-by: Bart Van Assche <bvanassche@acm.org>
+Signed-off-by: Jens Axboe <axboe@kernel.dk>
+Signed-off-by: Jeffle Xu <jefflexu@linux.alibaba.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+diff --git a/block/genhd.c b/block/genhd.c
+index be5bab20b2ab..c9b7a6d12c54 100644
+--- a/block/genhd.c
++++ b/block/genhd.c
+@@ -567,7 +567,8 @@ static int exact_lock(dev_t devt, void *data)
+ 	return 0;
+ }
+ 
+-static void register_disk(struct device *parent, struct gendisk *disk)
++static void register_disk(struct device *parent, struct gendisk *disk,
++			  const struct attribute_group **groups)
+ {
+ 	struct device *ddev = disk_to_dev(disk);
+ 	struct block_device *bdev;
+@@ -582,6 +583,10 @@ static void register_disk(struct device *parent, struct gendisk *disk)
+ 	/* delay uevents, until we scanned partition table */
+ 	dev_set_uevent_suppress(ddev, 1);
+ 
++	if (groups) {
++		WARN_ON(ddev->groups);
++		ddev->groups = groups;
++	}
+ 	if (device_add(ddev))
+ 		return;
+ 	if (!sysfs_deprecated) {
+@@ -647,6 +652,7 @@ static void register_disk(struct device *parent, struct gendisk *disk)
+  * __device_add_disk - add disk information to kernel list
+  * @parent: parent device for the disk
+  * @disk: per-device partitioning information
++ * @groups: Additional per-device sysfs groups
+  * @register_queue: register the queue if set to true
+  *
+  * This function registers the partitioning information in @disk
+@@ -655,6 +661,7 @@ static void register_disk(struct device *parent, struct gendisk *disk)
+  * FIXME: error handling
+  */
+ static void __device_add_disk(struct device *parent, struct gendisk *disk,
++			      const struct attribute_group **groups,
+ 			      bool register_queue)
+ {
+ 	dev_t devt;
+@@ -698,7 +705,7 @@ static void __device_add_disk(struct device *parent, struct gendisk *disk,
+ 		blk_register_region(disk_devt(disk), disk->minors, NULL,
+ 				    exact_match, exact_lock, disk);
+ 	}
+-	register_disk(parent, disk);
++	register_disk(parent, disk, groups);
+ 	if (register_queue)
+ 		blk_register_queue(disk);
+ 
+@@ -714,13 +721,20 @@ static void __device_add_disk(struct device *parent, struct gendisk *disk,
+ 
+ void device_add_disk(struct device *parent, struct gendisk *disk)
+ {
+-	__device_add_disk(parent, disk, true);
++	__device_add_disk(parent, disk, NULL, true);
+ }
+ EXPORT_SYMBOL(device_add_disk);
+ 
++void device_add_disk_xs(struct device *parent, struct gendisk *disk,
++		     const struct attribute_group **groups)
++{
++	__device_add_disk(parent, disk, groups, true);
++}
++EXPORT_SYMBOL(device_add_disk_xs);
++
+ void device_add_disk_no_queue_reg(struct device *parent, struct gendisk *disk)
+ {
+-	__device_add_disk(parent, disk, false);
++	__device_add_disk(parent, disk, NULL, false);
+ }
+ EXPORT_SYMBOL(device_add_disk_no_queue_reg);
+ 
+diff --git a/include/linux/genhd.h b/include/linux/genhd.h
+index f767293b00e6..14b9a4f11e60 100644
+--- a/include/linux/genhd.h
++++ b/include/linux/genhd.h
+@@ -403,6 +403,8 @@ extern void part_round_stats(struct request_queue *q, int cpu, struct hd_struct
+ 
+ /* block/genhd.c */
+ extern void device_add_disk(struct device *parent, struct gendisk *disk);
++extern void device_add_disk_xs(struct device *parent, struct gendisk *disk,
++			    const struct attribute_group **groups);
+ static inline void add_disk(struct gendisk *disk)
+ {
+ 	device_add_disk(NULL, disk);
