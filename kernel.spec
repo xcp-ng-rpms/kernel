@@ -1105,6 +1105,9 @@ Source105: almalinuxima.x509
 Source106: almalinuxima.x509
 Source107: almalinuxnvidia1.x509
 
+# from XS/XCP-ng
+Source2000: macros.kernel
+
 ## Patches needed for building this package
 
 %if !%{nopatches}
@@ -2335,8 +2338,9 @@ BuildKernel() {
 
     %{log_msg "Install files to RPM_BUILD_ROOT"}
 
+    # XCP-ng
     install -d -m 755 $RPM_BUILD_ROOT%{_rpmconfigdir}/macros.d
-    install -m 644 %{SOURCE2} $RPM_BUILD_ROOT%{_rpmconfigdir}/macros.d
+    install -m 644 %{SOURCE2000} $RPM_BUILD_ROOT%{_rpmconfigdir}/macros.d
     echo '%%kernel_version %{KVERREL}%{uname_suffix %{?1:+%{1}}}' >> $RPM_BUILD_ROOT%{_rpmconfigdir}/macros.d/macros.kernel
 
     # Comment out specific config settings that may use resources not available
