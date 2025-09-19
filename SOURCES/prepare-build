@@ -1,3 +1,10 @@
 # This file is sourced before the %build and %install phases to do any
 # preparations needed (e.g. set PATH so the correct compiler is used). It is
 # also sourced before building a live patch.
+source /opt/rh/devtoolset-11/enable
+
+# The kernel should use 'pkg-config libelf --cflags --libs' to find out on its own,
+# but instead it assumes that these are found in the standard system includes
+# When using a newer libelf than the system one, but the old GCC then libelf.h wouldn't get found
+export C_INCLUDE_PATH=/opt/rh/devtoolset-11/root/usr/include
+export LIBRARY_PATH=/opt/rh/devtoolset-11/root/usr/lib64

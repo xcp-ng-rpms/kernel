@@ -17,7 +17,7 @@ well.  (This is a much older error.)
 Fixes: 86934198eefa ("gfs2: Clear flags when withdraw prevents xmote")
 Signed-off-by: Andreas Gruenbacher <agruenba@redhat.com>
 diff --git a/fs/gfs2/glock.c b/fs/gfs2/glock.c
-index f17049f27fab..7330d50673e6 100644
+index f17049f27fab..1f168b42c7da 100644
 --- a/fs/gfs2/glock.c
 +++ b/fs/gfs2/glock.c
 @@ -585,6 +585,7 @@ __acquires(&gl->gl_lockref.lock)
@@ -60,7 +60,7 @@ index f17049f27fab..7330d50673e6 100644
  	/*
  	 * Check for an error encountered since we called go_sync and go_inval.
  	 * If so, we can't withdraw from the glock code because the withdraw
-@@ -689,37 +695,37 @@ __acquires(&gl->gl_lockref.lock)
+@@ -689,37 +695,38 @@ __acquires(&gl->gl_lockref.lock)
  			 */
  			clear_bit(GLF_LOCK, &gl->gl_flags);
  			clear_bit(GLF_DEMOTE_IN_PROGRESS, &gl->gl_flags);
@@ -78,6 +78,7 @@ index f17049f27fab..7330d50673e6 100644
 +	if (ls->ls_ops->lm_lock)	{
 +		spin_unlock(&gl->gl_lockref.lock);
 +		ret = ls->ls_ops->lm_lock(gl, target, lck_flags);
++		/* coverity[missing_unlock] */
 +		spin_lock(&gl->gl_lockref.lock);
  
 -		/* lock_dlm */
