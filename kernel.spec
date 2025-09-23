@@ -4368,7 +4368,7 @@ fi\
 #
 #
 %changelog
-* Mon Jul 15 2025 Yann Dirson <yann.dirson@vates.tech> - 6.12.0-55.20.1.0.ydi.2
+* Tue Jul 15 2025 Yann Dirson <yann.dirson@vates.tech> - 6.12.0-55.20.1.0.ydi.2
 - Take kernel macros from XS RPM to keep the same way to build out of tree module packages
 
 * Wed Jul 09 2025 Yann Dirson <yann.dirson@vates.tech> - 6.12.0-55.20.1.0.ydi.1
