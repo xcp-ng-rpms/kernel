@@ -168,7 +168,7 @@ Summary: The Linux kernel
 # This is needed to do merge window version magic
 %define patchlevel 12
 # This allows pkg_release to have configurable %%{?dist} tag
-%define specrelease 55.20.1.ydi.2%{?buildid}%{?dist}
+%define specrelease 55.20.1.ydi.3%{?buildid}%{?dist}
 # This defines the kabi tarball version
 %define kabiversion 6.12.0-55.20.1.el10_0
 
@@ -4368,11 +4368,9 @@ fi\
 #
 #
 %changelog
-* Tue Jul 15 2025 Yann Dirson <yann.dirson@vates.tech> - 6.12.0-55.20.1.0.ydi.2
+* Fri Oct 17 2025 Yann Dirson <yann.dirson@vates.tech> - 6.12.0-55.20.1.0.ydi.3
+- Enable Xen Dom0 support for x86_64 and aarch64
 - Take kernel macros from XS RPM to keep the same way to build out of tree module packages
-
-* Wed Jul 09 2025 Yann Dirson <yann.dirson@vates.tech> - 6.12.0-55.20.1.0.ydi.1
-- WIP: Enable Xen Dom0 support
 
 * Tue Jul 08 2025 Andrei Lukoshko <alukoshko@almalinux.org> - 6.12.0-55.20.1
 - hpsa: bring back deprecated PCI ids #CFHack #CFHack2024
