@@ -98,7 +98,7 @@ Summary: The Linux kernel
 %if 0%{?fedora}
 %define secure_boot_arch x86_64
 %else
-%define secure_boot_arch x86_64 aarch64 s390x ppc64le
+%define secure_boot_arch x86_64 s390x ppc64le
 %endif
 
 # Signing for secure boot authentication
@@ -4373,7 +4373,7 @@ fi\
 - Take kernel macros from XS RPM to keep the same way to build out of tree module packages
 - Enable CONFIG_PMUV3
 - Disable CONFIG_EFI_ZBOOT
-- Change kernel target to Image.gz
+- Change ARM kernel target to Image.gz, disable SB on ARM
 
 * Tue Jul 08 2025 Andrei Lukoshko <alukoshko@almalinux.org> - 6.12.0-55.20.1
 - hpsa: bring back deprecated PCI ids #CFHack #CFHack2024
