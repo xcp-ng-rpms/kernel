@@ -168,7 +168,7 @@ Summary: The Linux kernel
 # This is needed to do merge window version magic
 %define patchlevel 12
 # This allows pkg_release to have configurable %%{?dist} tag
-%define specrelease 55.20.1.ydi.5%{?buildid}%{?dist}
+%define specrelease 55.20.1.ydi.6%{?buildid}%{?dist}
 # This defines the kabi tarball version
 %define kabiversion 6.12.0-55.20.1.el10_0
 
@@ -586,8 +586,8 @@ Summary: The Linux kernel
 %ifarch aarch64
 %define asmarch arm64
 %define hdrarch arm64
-%define make_target vmlinuz.efi
-%define kernel_image arch/arm64/boot/vmlinuz.efi
+%define make_target Image.gz
+%define kernel_image arch/arm64/boot/Image.gz
 %endif
 
 %ifarch riscv64
@@ -4368,11 +4368,12 @@ fi\
 #
 #
 %changelog
-* Fri Oct 17 2025 Yann Dirson <yann.dirson@vates.tech> - 6.12.0-55.20.1.0.ydi.5
+* Fri Oct 17 2025 Yann Dirson <yann.dirson@vates.tech> - 6.12.0-55.20.1.0.ydi.6
 - Enable Xen Dom0 support for x86_64 and aarch64
 - Take kernel macros from XS RPM to keep the same way to build out of tree module packages
 - Enable CONFIG_PMUV3
-- Re-enable CONFIG_EFI_ZBOOT
+- Disable CONFIG_EFI_ZBOOT
+- Change kernel target to Image.gz
 
 * Tue Jul 08 2025 Andrei Lukoshko <alukoshko@almalinux.org> - 6.12.0-55.20.1
 - hpsa: bring back deprecated PCI ids #CFHack #CFHack2024
