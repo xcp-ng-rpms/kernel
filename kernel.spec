@@ -168,7 +168,7 @@ Summary: The Linux kernel
 # This is needed to do merge window version magic
 %define patchlevel 12
 # This allows pkg_release to have configurable %%{?dist} tag
-%define specrelease 55.20.1.ydi.6%{?buildid}%{?dist}
+%define specrelease 55.20.1.ydi.7%{?buildid}%{?dist}
 # This defines the kabi tarball version
 %define kabiversion 6.12.0-55.20.1.el10_0
 
@@ -1129,6 +1129,8 @@ Patch2007: 0007-Bring-back-deprecated-pci-ids-to-be2iscsi-driver.patch
 Patch2008: 0008-Bring-back-deprecated-pci-ids-to-megaraid_sas-driver.patch
 Patch2009: 0009-Bring-back-deprecated-pci-ids-to-mpt3sas-driver.patch
 Patch2010: 0010-Bring-back-deprecated-pci-ids-to-aacraid-driver.patch
+
+Patch2011: 0001-xen-enable-some-debug-logs-in-gntdev.c.patch
 
 # END OF PATCH DEFINITIONS
 

@@ -1,0 +1,292 @@
+From a4eb9afecdbb29931ca8e4350addb041ed4eeb3f Mon Sep 17 00:00:00 2001
+From: Oleksii Kurochko <oleksii.kurochko@gmail.com>
+Date: Tue, 4 Nov 2025 12:40:53 +0100
+Subject: [PATCH] xen: enable some debug logs in gntdev.c
+
+Signed-off-by: Oleksii Kurochko <oleksii.kurochko@gmail.com>
+---
+ drivers/xen/gntdev.c        |   2 +-
+ e CAUSE_VIRTUAL_INST_FAULT: | 258 ++++++++++++++++++++++++++++++++++++
+ 2 files changed, 259 insertions(+), 1 deletion(-)
+ create mode 100644 e CAUSE_VIRTUAL_INST_FAULT:
+
+diff --git a/drivers/xen/gntdev.c b/drivers/xen/gntdev.c
+index 61faea1f0663..49efe34b3c25 100644
+--- a/drivers/xen/gntdev.c
++++ b/drivers/xen/gntdev.c
+@@ -18,7 +18,7 @@
+  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  */
+ 
+-#undef DEBUG
++#define DEBUG
+ 
+ #define pr_fmt(fmt) "xen:" KBUILD_MODNAME ": " fmt
+ 
+diff --git a/e CAUSE_VIRTUAL_INST_FAULT: b/e CAUSE_VIRTUAL_INST_FAULT:
+new file mode 100644
+index 000000000000..c8617603c45e
+--- /dev/null
++++ b/e CAUSE_VIRTUAL_INST_FAULT:	
+@@ -0,0 +1,258 @@
++99cdc6c18c2d8 (Anup Patel    2021-09-27 17:10:01 +0530   1) // SPDX-License-Identifier: GPL-2.0
++99cdc6c18c2d8 (Anup Patel    2021-09-27 17:10:01 +0530   2) /*
++99cdc6c18c2d8 (Anup Patel    2021-09-27 17:10:01 +0530   3)  * Copyright (C) 2019 Western Digital Corporation or its affiliates.
++99cdc6c18c2d8 (Anup Patel    2021-09-27 17:10:01 +0530   4)  *
++99cdc6c18c2d8 (Anup Patel    2021-09-27 17:10:01 +0530   5)  * Authors:
++99cdc6c18c2d8 (Anup Patel    2021-09-27 17:10:01 +0530   6)  *     Anup Patel <anup.patel@wdc.com>
++99cdc6c18c2d8 (Anup Patel    2021-09-27 17:10:01 +0530   7)  */
++99cdc6c18c2d8 (Anup Patel    2021-09-27 17:10:01 +0530   8) 
++99cdc6c18c2d8 (Anup Patel    2021-09-27 17:10:01 +0530   9) #include <linux/kvm_host.h>
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  10) #include <asm/csr.h>
++26b73f14933e9 (Andrew Jones  2022-10-02 10:18:20 +0530  11) #include <asm/insn-def.h>
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  12) 
++26708234eb12e (Anup Patel    2022-05-09 10:43:30 +0530  13) static int gstage_page_fault(struct kvm_vcpu *vcpu, struct kvm_run *run,
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  14) 			     struct kvm_cpu_trap *trap)
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  15) {
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  16) 	struct kvm_memory_slot *memslot;
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  17) 	unsigned long hva, fault_addr;
++6259d2f834f28 (Zhang Jiaming 2022-07-29 17:14:17 +0530  18) 	bool writable;
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  19) 	gfn_t gfn;
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  20) 	int ret;
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  21) 
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  22) 	fault_addr = (trap->htval << 2) | (trap->stval & 0x3);
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  23) 	gfn = fault_addr >> PAGE_SHIFT;
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  24) 	memslot = gfn_to_memslot(vcpu->kvm, gfn);
++6259d2f834f28 (Zhang Jiaming 2022-07-29 17:14:17 +0530  25) 	hva = gfn_to_hva_memslot_prot(memslot, gfn, &writable);
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  26) 
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  27) 	if (kvm_is_error_hva(hva) ||
++6259d2f834f28 (Zhang Jiaming 2022-07-29 17:14:17 +0530  28) 	    (trap->scause == EXC_STORE_GUEST_PAGE_FAULT && !writable)) {
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  29) 		switch (trap->scause) {
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  30) 		case EXC_LOAD_GUEST_PAGE_FAULT:
++b91f0e4cb8a3c (Anup Patel    2022-07-29 17:14:40 +0530  31) 			return kvm_riscv_vcpu_mmio_load(vcpu, run,
++b91f0e4cb8a3c (Anup Patel    2022-07-29 17:14:40 +0530  32) 							fault_addr,
++b91f0e4cb8a3c (Anup Patel    2022-07-29 17:14:40 +0530  33) 							trap->htinst);
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  34) 		case EXC_STORE_GUEST_PAGE_FAULT:
++b91f0e4cb8a3c (Anup Patel    2022-07-29 17:14:40 +0530  35) 			return kvm_riscv_vcpu_mmio_store(vcpu, run,
++b91f0e4cb8a3c (Anup Patel    2022-07-29 17:14:40 +0530  36) 							 fault_addr,
++b91f0e4cb8a3c (Anup Patel    2022-07-29 17:14:40 +0530  37) 							 trap->htinst);
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  38) 		default:
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  39) 			return -EOPNOTSUPP;
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  40) 		};
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  41) 	}
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  42) 
++26708234eb12e (Anup Patel    2022-05-09 10:43:30 +0530  43) 	ret = kvm_riscv_gstage_map(vcpu, memslot, fault_addr, hva,
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  44) 		(trap->scause == EXC_STORE_GUEST_PAGE_FAULT) ? true : false);
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  45) 	if (ret < 0)
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  46) 		return ret;
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  47) 
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  48) 	return 1;
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  49) }
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  50) 
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  51) /**
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  52)  * kvm_riscv_vcpu_unpriv_read -- Read machine word from Guest memory
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  53)  *
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  54)  * @vcpu: The VCPU pointer
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  55)  * @read_insn: Flag representing whether we are reading instruction
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  56)  * @guest_addr: Guest address to read
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  57)  * @trap: Output pointer to trap details
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  58)  */
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  59) unsigned long kvm_riscv_vcpu_unpriv_read(struct kvm_vcpu *vcpu,
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  60) 					 bool read_insn,
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  61) 					 unsigned long guest_addr,
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  62) 					 struct kvm_cpu_trap *trap)
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  63) {
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  64) 	register unsigned long taddr asm("a0") = (unsigned long)trap;
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  65) 	register unsigned long ttmp asm("a1");
++26b73f14933e9 (Andrew Jones  2022-10-02 10:18:20 +0530  66) 	unsigned long flags, val, tmp, old_stvec, old_hstatus;
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  67) 
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  68) 	local_irq_save(flags);
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  69) 
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  70) 	old_hstatus = csr_swap(CSR_HSTATUS, vcpu->arch.guest_context.hstatus);
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  71) 	old_stvec = csr_swap(CSR_STVEC, (ulong)&__kvm_riscv_unpriv_trap);
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  72) 
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  73) 	if (read_insn) {
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  74) 		/*
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  75) 		 * HLVX.HU instruction
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  76) 		 * 0110010 00011 rs1 100 rd 1110011
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  77) 		 */
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  78) 		asm volatile ("\n"
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  79) 			".option push\n"
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  80) 			".option norvc\n"
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  81) 			"add %[ttmp], %[taddr], 0\n"
++26b73f14933e9 (Andrew Jones  2022-10-02 10:18:20 +0530  82) 			HLVX_HU(%[val], %[addr])
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  83) 			"andi %[tmp], %[val], 3\n"
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  84) 			"addi %[tmp], %[tmp], -3\n"
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  85) 			"bne %[tmp], zero, 2f\n"
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  86) 			"addi %[addr], %[addr], 2\n"
++26b73f14933e9 (Andrew Jones  2022-10-02 10:18:20 +0530  87) 			HLVX_HU(%[tmp], %[addr])
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  88) 			"sll %[tmp], %[tmp], 16\n"
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  89) 			"add %[val], %[val], %[tmp]\n"
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  90) 			"2:\n"
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  91) 			".option pop"
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  92) 		: [val] "=&r" (val), [tmp] "=&r" (tmp),
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  93) 		  [taddr] "+&r" (taddr), [ttmp] "+&r" (ttmp),
++26b73f14933e9 (Andrew Jones  2022-10-02 10:18:20 +0530  94) 		  [addr] "+&r" (guest_addr) : : "memory");
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  95) 
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  96) 		if (trap->scause == EXC_LOAD_PAGE_FAULT)
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  97) 			trap->scause = EXC_INST_PAGE_FAULT;
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  98) 	} else {
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530  99) 		/*
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 100) 		 * HLV.D instruction
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 101) 		 * 0110110 00000 rs1 100 rd 1110011
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 102) 		 *
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 103) 		 * HLV.W instruction
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 104) 		 * 0110100 00000 rs1 100 rd 1110011
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 105) 		 */
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 106) 		asm volatile ("\n"
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 107) 			".option push\n"
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 108) 			".option norvc\n"
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 109) 			"add %[ttmp], %[taddr], 0\n"
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 110) #ifdef CONFIG_64BIT
++26b73f14933e9 (Andrew Jones  2022-10-02 10:18:20 +0530 111) 			HLV_D(%[val], %[addr])
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 112) #else
++26b73f14933e9 (Andrew Jones  2022-10-02 10:18:20 +0530 113) 			HLV_W(%[val], %[addr])
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 114) #endif
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 115) 			".option pop"
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 116) 		: [val] "=&r" (val),
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 117) 		  [taddr] "+&r" (taddr), [ttmp] "+&r" (ttmp)
++26b73f14933e9 (Andrew Jones  2022-10-02 10:18:20 +0530 118) 		: [addr] "r" (guest_addr) : "memory");
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 119) 	}
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 120) 
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 121) 	csr_write(CSR_STVEC, old_stvec);
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 122) 	csr_write(CSR_HSTATUS, old_hstatus);
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 123) 
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 124) 	local_irq_restore(flags);
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 125) 
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 126) 	return val;
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 127) }
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 128) 
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 129) /**
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 130)  * kvm_riscv_vcpu_trap_redirect -- Redirect trap to Guest
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 131)  *
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 132)  * @vcpu: The VCPU pointer
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 133)  * @trap: Trap details
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 134)  */
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 135) void kvm_riscv_vcpu_trap_redirect(struct kvm_vcpu *vcpu,
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 136) 				  struct kvm_cpu_trap *trap)
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 137) {
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 138) 	unsigned long vsstatus = csr_read(CSR_VSSTATUS);
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 139) 
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 140) 	/* Change Guest SSTATUS.SPP bit */
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 141) 	vsstatus &= ~SR_SPP;
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 142) 	if (vcpu->arch.guest_context.sstatus & SR_SPP)
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 143) 		vsstatus |= SR_SPP;
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 144) 
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 145) 	/* Change Guest SSTATUS.SPIE bit */
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 146) 	vsstatus &= ~SR_SPIE;
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 147) 	if (vsstatus & SR_SIE)
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 148) 		vsstatus |= SR_SPIE;
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 149) 
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 150) 	/* Clear Guest SSTATUS.SIE bit */
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 151) 	vsstatus &= ~SR_SIE;
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 152) 
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 153) 	/* Update Guest SSTATUS */
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 154) 	csr_write(CSR_VSSTATUS, vsstatus);
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 155) 
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 156) 	/* Update Guest SCAUSE, STVAL, and SEPC */
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 157) 	csr_write(CSR_VSCAUSE, trap->scause);
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 158) 	csr_write(CSR_VSTVAL, trap->stval);
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 159) 	csr_write(CSR_VSEPC, trap->sepc);
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 160) 
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 161) 	/* Set Guest PC to Guest exception vector */
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 162) 	vcpu->arch.guest_context.sepc = csr_read(CSR_VSTVEC);
++06723e124fcbf (Anup Patel    2023-01-28 13:18:25 +0530 163) 
++06723e124fcbf (Anup Patel    2023-01-28 13:18:25 +0530 164) 	/* Set Guest privilege mode to supervisor */
++06723e124fcbf (Anup Patel    2023-01-28 13:18:25 +0530 165) 	vcpu->arch.guest_context.sstatus |= SR_SPP;
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 166) }
++99cdc6c18c2d8 (Anup Patel    2021-09-27 17:10:01 +0530 167) 
++2f15b5eaff79b (Atish Patra   2024-12-24 13:04:54 -0800 168) static inline int vcpu_redirect(struct kvm_vcpu *vcpu, struct kvm_cpu_trap *trap)
++2f15b5eaff79b (Atish Patra   2024-12-24 13:04:54 -0800 169) {
++2f15b5eaff79b (Atish Patra   2024-12-24 13:04:54 -0800 170) 	int ret = -EFAULT;
++2f15b5eaff79b (Atish Patra   2024-12-24 13:04:54 -0800 171) 
++2f15b5eaff79b (Atish Patra   2024-12-24 13:04:54 -0800 172) 	if (vcpu->arch.guest_context.hstatus & HSTATUS_SPV) {
++2f15b5eaff79b (Atish Patra   2024-12-24 13:04:54 -0800 173) 		kvm_riscv_vcpu_trap_redirect(vcpu, trap);
++2f15b5eaff79b (Atish Patra   2024-12-24 13:04:54 -0800 174) 		ret = 1;
++2f15b5eaff79b (Atish Patra   2024-12-24 13:04:54 -0800 175) 	}
++2f15b5eaff79b (Atish Patra   2024-12-24 13:04:54 -0800 176) 	return ret;
++2f15b5eaff79b (Atish Patra   2024-12-24 13:04:54 -0800 177) }
++2f15b5eaff79b (Atish Patra   2024-12-24 13:04:54 -0800 178) 
++99cdc6c18c2d8 (Anup Patel    2021-09-27 17:10:01 +0530 179) /*
++99cdc6c18c2d8 (Anup Patel    2021-09-27 17:10:01 +0530 180)  * Return > 0 to return to guest, < 0 on error, 0 (and set exit_reason) on
++99cdc6c18c2d8 (Anup Patel    2021-09-27 17:10:01 +0530 181)  * proper exit to userspace.
++99cdc6c18c2d8 (Anup Patel    2021-09-27 17:10:01 +0530 182)  */
++99cdc6c18c2d8 (Anup Patel    2021-09-27 17:10:01 +0530 183) int kvm_riscv_vcpu_exit(struct kvm_vcpu *vcpu, struct kvm_run *run,
++99cdc6c18c2d8 (Anup Patel    2021-09-27 17:10:01 +0530 184) 			struct kvm_cpu_trap *trap)
++99cdc6c18c2d8 (Anup Patel    2021-09-27 17:10:01 +0530 185) {
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 186) 	int ret;
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 187) 
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 188) 	/* If we got host interrupt then do nothing */
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 189) 	if (trap->scause & CAUSE_IRQ_FLAG)
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 190) 		return 1;
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 191) 
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 192) 	/* Handle guest traps */
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 193) 	ret = -EFAULT;
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 194) 	run->exit_reason = KVM_EXIT_UNKNOWN;
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 195) 	switch (trap->scause) {
++cdeb59bbf19f4 (Andy Chiu     2023-01-27 11:28:55 +0530 196) 	case EXC_INST_ILLEGAL:
++2f15b5eaff79b (Atish Patra   2024-12-24 13:04:54 -0800 197) 		kvm_riscv_vcpu_pmu_incr_fw(vcpu, SBI_PMU_FW_ILLEGAL_INSN);
++af79caa83f6aa (Atish Patra   2024-12-24 13:04:55 -0800 198) 		vcpu->stat.instr_illegal_exits++;
++2f15b5eaff79b (Atish Patra   2024-12-24 13:04:54 -0800 199) 		ret = vcpu_redirect(vcpu, trap);
++2f15b5eaff79b (Atish Patra   2024-12-24 13:04:54 -0800 200) 		break;
++19bff88e65b55 (wchen         2023-05-20 23:01:16 +0800 201) 	case EXC_LOAD_MISALIGNED:
++2f15b5eaff79b (Atish Patra   2024-12-24 13:04:54 -0800 202) 		kvm_riscv_vcpu_pmu_incr_fw(vcpu, SBI_PMU_FW_MISALIGNED_LOAD);
++af79caa83f6aa (Atish Patra   2024-12-24 13:04:55 -0800 203) 		vcpu->stat.load_misaligned_exits++;
++2f15b5eaff79b (Atish Patra   2024-12-24 13:04:54 -0800 204) 		ret = vcpu_redirect(vcpu, trap);
++2f15b5eaff79b (Atish Patra   2024-12-24 13:04:54 -0800 205) 		break;
++19bff88e65b55 (wchen         2023-05-20 23:01:16 +0800 206) 	case EXC_STORE_MISALIGNED:
++2f15b5eaff79b (Atish Patra   2024-12-24 13:04:54 -0800 207) 		kvm_riscv_vcpu_pmu_incr_fw(vcpu, SBI_PMU_FW_MISALIGNED_STORE);
++af79caa83f6aa (Atish Patra   2024-12-24 13:04:55 -0800 208) 		vcpu->stat.store_misaligned_exits++;
++2f15b5eaff79b (Atish Patra   2024-12-24 13:04:54 -0800 209) 		ret = vcpu_redirect(vcpu, trap);
++2f15b5eaff79b (Atish Patra   2024-12-24 13:04:54 -0800 210) 		break;
++e325618349cdc (Yu-Wei Hsu    2024-04-29 09:21:13 +0000 211) 	case EXC_LOAD_ACCESS:
++2f15b5eaff79b (Atish Patra   2024-12-24 13:04:54 -0800 212) 		kvm_riscv_vcpu_pmu_incr_fw(vcpu, SBI_PMU_FW_ACCESS_LOAD);
++af79caa83f6aa (Atish Patra   2024-12-24 13:04:55 -0800 213) 		vcpu->stat.load_access_exits++;
++2f15b5eaff79b (Atish Patra   2024-12-24 13:04:54 -0800 214) 		ret = vcpu_redirect(vcpu, trap);
++2f15b5eaff79b (Atish Patra   2024-12-24 13:04:54 -0800 215) 		break;
++e325618349cdc (Yu-Wei Hsu    2024-04-29 09:21:13 +0000 216) 	case EXC_STORE_ACCESS:
++2f15b5eaff79b (Atish Patra   2024-12-24 13:04:54 -0800 217) 		kvm_riscv_vcpu_pmu_incr_fw(vcpu, SBI_PMU_FW_ACCESS_STORE);
++af79caa83f6aa (Atish Patra   2024-12-24 13:04:55 -0800 218) 		vcpu->stat.store_access_exits++;
++2f15b5eaff79b (Atish Patra   2024-12-24 13:04:54 -0800 219) 		ret = vcpu_redirect(vcpu, trap);
++2f15b5eaff79b (Atish Patra   2024-12-24 13:04:54 -0800 220) 		break;
++51c58956732bb (Quan Zhou     2024-12-24 13:04:53 -0800 221) 	case EXC_INST_ACCESS:
++2f15b5eaff79b (Atish Patra   2024-12-24 13:04:54 -0800 222) 		ret = vcpu_redirect(vcpu, trap);
++cdeb59bbf19f4 (Andy Chiu     2023-01-27 11:28:55 +0530 223) 		break;
++5a5d79acd7dae (Anup Patel    2021-09-27 17:10:07 +0530 224) 	case EXC_VIRTUAL_INST_FAULT:
++5a5d79acd7dae (Anup Patel    2021-09-27 17:10:07 +0530 225) 		if (vcpu->arch.guest_context.hstatus & HSTATUS_SPV)
++b91f0e4cb8a3c (Anup Patel    2022-07-29 17:14:40 +0530 226) 			ret = kvm_riscv_vcpu_virtual_insn(vcpu, run, trap);
++5a5d79acd7dae (Anup Patel    2021-09-27 17:10:07 +0530 227) 		break;
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 228) 	case EXC_INST_GUEST_PAGE_FAULT:
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 229) 	case EXC_LOAD_GUEST_PAGE_FAULT:
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 230) 	case EXC_STORE_GUEST_PAGE_FAULT:
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 231) 		if (vcpu->arch.guest_context.hstatus & HSTATUS_SPV)
++26708234eb12e (Anup Patel    2022-05-09 10:43:30 +0530 232) 			ret = gstage_page_fault(vcpu, run, trap);
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 233) 		break;
++dea8ee31a0392 (Atish Patra   2021-09-27 17:10:14 +0530 234) 	case EXC_SUPERVISOR_SYSCALL:
++dea8ee31a0392 (Atish Patra   2021-09-27 17:10:14 +0530 235) 		if (vcpu->arch.guest_context.hstatus & HSTATUS_SPV)
++dea8ee31a0392 (Atish Patra   2021-09-27 17:10:14 +0530 236) 			ret = kvm_riscv_vcpu_sbi_ecall(vcpu, run);
++dea8ee31a0392 (Atish Patra   2021-09-27 17:10:14 +0530 237) 		break;
++1df1fb521b9dc (Chao Du       2024-04-02 06:26:27 +0000 238) 	case EXC_BREAKPOINT:
++1df1fb521b9dc (Chao Du       2024-04-02 06:26:27 +0000 239) 		run->exit_reason = KVM_EXIT_DEBUG;
++1df1fb521b9dc (Chao Du       2024-04-02 06:26:27 +0000 240) 		ret = 0;
++1df1fb521b9dc (Chao Du       2024-04-02 06:26:27 +0000 241) 		break;
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 242) 	default:
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 243) 		break;
++7b161d9cab5d2 (ran jianping  2021-10-21 11:57:06 +0000 244) 	}
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 245) 
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 246) 	/* Print details in-case of error */
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 247) 	if (ret < 0) {
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 248) 		kvm_err("VCPU exit error %d\n", ret);
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 249) 		kvm_err("SEPC=0x%lx SSTATUS=0x%lx HSTATUS=0x%lx\n",
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 250) 			vcpu->arch.guest_context.sepc,
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 251) 			vcpu->arch.guest_context.sstatus,
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 252) 			vcpu->arch.guest_context.hstatus);
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 253) 		kvm_err("SCAUSE=0x%lx STVAL=0x%lx HTVAL=0x%lx HTINST=0x%lx\n",
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 254) 			trap->scause, trap->stval, trap->htval, trap->htinst);
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 255) 	}
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 256) 
++9f7013265112a (Anup Patel    2021-09-27 17:10:06 +0530 257) 	return ret;
++99cdc6c18c2d8 (Anup Patel    2021-09-27 17:10:01 +0530 258) }
+-- 
+2.51.1
+
