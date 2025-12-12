@@ -1,0 +1,32 @@
+From 6108448f32350da1eaf462536a78a97565bb108f Mon Sep 17 00:00:00 2001
+From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+Date: Fri, 12 Dec 2025 16:50:37 +0100
+Subject: [PATCH 1/2] xen-blkfront: add debug BUG_ON if num_sg > num_grant in
+ blkif_completion.
+
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+---
+ drivers/block/xen-blkfront.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/drivers/block/xen-blkfront.c b/drivers/block/xen-blkfront.c
+index 737d0747e9cd..03a364dc5709 100644
+--- a/drivers/block/xen-blkfront.c
++++ b/drivers/block/xen-blkfront.c
+@@ -1499,10 +1499,13 @@ static int blkif_completion(unsigned long *id,
+ 	data.s = s;
+ 	num_sg = s->num_sg;
+ 
++	BUG_ON(num_sg > num_grant);
++
+ 	if (bret->operation == BLKIF_OP_READ && info->bounce) {
+ 		for_each_sg(s->sg, sg, num_sg, i) {
+ 			BUG_ON(sg->offset + sg->length > PAGE_SIZE);
+ 
++
+ 			data.bvec_offset = sg->offset;
+ 			data.bvec_data = kmap_atomic(sg_page(sg));
+ 
+-- 
+2.43.0
+
