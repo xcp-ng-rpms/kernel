@@ -1,0 +1,312 @@
+From e554b5cda067c7bec6e888291df2918d027ace09 Mon Sep 17 00:00:00 2001
+From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+Date: Mon, 5 Jan 2026 19:26:12 +0100
+Subject: [PATCH] nvme-fabrics: reject I/O to offline device
+
+Commands get stuck while Host NVMe-oF controller is in reconnect state.
+The controller enters into reconnect state when it loses connection with
+the target.  It tries to reconnect every 10 seconds (default) until
+a successful reconnect or until the reconnect time-out is reached.
+The default reconnect time out is 10 minutes.
+
+Applications are expecting commands to complete with success or error
+within a certain timeout (30 seconds by default).  The NVMe host is
+enforcing that timeout while it is connected, but during reconnect the
+timeout is not enforced and commands may get stuck for a long period or
+even forever.
+
+To fix this long delay due to the default timeout, introduce new
+"fast_io_fail_tmo" session parameter.  The timeout is measured in seconds
+from the controller reconnect and any command beyond that timeout is
+rejected.  The new parameter value may be passed during 'connect'.
+The default value of -1 means no timeout (similar to current behavior).
+
+Signed-off-by: Victor Gladkov <victor.gladkov@kioxia.com>
+Signed-off-by: Chaitanya Kulkarni <chaitanya.kulkarni@wdc.com>
+Reviewed-by: Hannes Reinecke <hare@suse.de>
+Reviewed-by: Sagi Grimberg <sagi@grimberg.me>
+Reviewed-by: Chao Leng <lengchao@huawei.com>
+Signed-off-by: Christoph Hellwig <hch@lst.de>
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+
+[Quentin: rebase from v4.19.19 to v4.19.325 conflicts:
+ - drivers/nvme/host/nvme.h: context changes due to 5ac0da68eae1 ("nvme:
+   provide fallback for discard alloc failure") which requires genksyms
+   neutralization in custom commit.]
+
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+---
+ drivers/nvme/host/core.c      | 46 ++++++++++++++++++++++++++++++++++-
+ drivers/nvme/host/fabrics.c   | 25 ++++++++++++++++---
+ drivers/nvme/host/fabrics.h   |  7 ++++++
+ drivers/nvme/host/multipath.c | 26 +++++++++++++++++---
+ drivers/nvme/host/nvme.h      |  5 ++++
+ 5 files changed, 102 insertions(+), 7 deletions(-)
+
+diff --git a/drivers/nvme/host/core.c b/drivers/nvme/host/core.c
+index fcf062f3b507..af5afab4fb0c 100644
+--- a/drivers/nvme/host/core.c
++++ b/drivers/nvme/host/core.c
+@@ -129,6 +129,38 @@ static void nvme_queue_scan(struct nvme_ctrl *ctrl)
+ 		queue_work(nvme_wq, &ctrl->scan_work);
+ }
+ 
++static void nvme_failfast_work(struct work_struct *work)
++{
++	struct nvme_ctrl *ctrl = container_of(to_delayed_work(work),
++			struct nvme_ctrl, failfast_work);
++
++	if (ctrl->state != NVME_CTRL_CONNECTING)
++		return;
++
++	set_bit(NVME_CTRL_FAILFAST_EXPIRED, &ctrl->flags);
++	dev_info(ctrl->device, "failfast expired\n");
++	nvme_kick_requeue_lists(ctrl);
++}
++
++static inline void nvme_start_failfast_work(struct nvme_ctrl *ctrl)
++{
++	if (!ctrl->opts || ctrl->opts->fast_io_fail_tmo == -1)
++		return;
++
++	schedule_delayed_work(&ctrl->failfast_work,
++			      ctrl->opts->fast_io_fail_tmo * HZ);
++}
++
++static inline void nvme_stop_failfast_work(struct nvme_ctrl *ctrl)
++{
++	if (!ctrl->opts)
++		return;
++
++	cancel_delayed_work_sync(&ctrl->failfast_work);
++	clear_bit(NVME_CTRL_FAILFAST_EXPIRED, &ctrl->flags);
++}
++
++
+ int nvme_reset_ctrl(struct nvme_ctrl *ctrl)
+ {
+ 	if (!nvme_change_ctrl_state(ctrl, NVME_CTRL_RESETTING))
+@@ -360,8 +392,17 @@ bool nvme_change_ctrl_state(struct nvme_ctrl *ctrl,
+ 		ctrl->state = new_state;
+ 
+ 	spin_unlock_irqrestore(&ctrl->lock, flags);
+-	if (changed && ctrl->state == NVME_CTRL_LIVE)
++	if (!changed)
++		return false;
++
++	if (ctrl->state == NVME_CTRL_LIVE) {
++		if (old_state == NVME_CTRL_CONNECTING)
++			nvme_stop_failfast_work(ctrl);
+ 		nvme_kick_requeue_lists(ctrl);
++	} else if (ctrl->state == NVME_CTRL_CONNECTING &&
++		old_state == NVME_CTRL_RESETTING) {
++		nvme_start_failfast_work(ctrl);
++	}
+ 	return changed;
+ }
+ EXPORT_SYMBOL_GPL(nvme_change_ctrl_state);
+@@ -3599,6 +3640,7 @@ void nvme_stop_ctrl(struct nvme_ctrl *ctrl)
+ {
+ 	nvme_mpath_stop(ctrl);
+ 	nvme_stop_keep_alive(ctrl);
++	nvme_stop_failfast_work(ctrl);
+ 	flush_work(&ctrl->async_event_work);
+ 	cancel_work_sync(&ctrl->fw_act_work);
+ 	if (ctrl->ops->stop_ctrl)
+@@ -3663,6 +3705,7 @@ int nvme_init_ctrl(struct nvme_ctrl *ctrl, struct device *dev,
+ 	int ret;
+ 
+ 	ctrl->state = NVME_CTRL_NEW;
++	clear_bit(NVME_CTRL_FAILFAST_EXPIRED, &ctrl->flags);
+ 	spin_lock_init(&ctrl->lock);
+ 	mutex_init(&ctrl->scan_lock);
+ 	INIT_LIST_HEAD(&ctrl->namespaces);
+@@ -3676,6 +3719,7 @@ int nvme_init_ctrl(struct nvme_ctrl *ctrl, struct device *dev,
+ 	INIT_WORK(&ctrl->delete_work, nvme_delete_ctrl_work);
+ 
+ 	INIT_DELAYED_WORK(&ctrl->ka_work, nvme_keep_alive_work);
++	INIT_DELAYED_WORK(&ctrl->failfast_work, nvme_failfast_work);
+ 	memset(&ctrl->ka_cmd, 0, sizeof(ctrl->ka_cmd));
+ 	ctrl->ka_cmd.common.opcode = nvme_admin_keep_alive;
+ 
+diff --git a/drivers/nvme/host/fabrics.c b/drivers/nvme/host/fabrics.c
+index 3ae800e87999..19c2b9f7d823 100644
+--- a/drivers/nvme/host/fabrics.c
++++ b/drivers/nvme/host/fabrics.c
+@@ -555,6 +555,7 @@ blk_status_t nvmf_fail_nonready_command(struct nvme_ctrl *ctrl,
+ {
+ 	if (ctrl->state != NVME_CTRL_DELETING &&
+ 	    ctrl->state != NVME_CTRL_DEAD &&
++	    !test_bit(NVME_CTRL_FAILFAST_EXPIRED, &ctrl->flags) &&
+ 	    !blk_noretry_request(rq) && !(rq->cmd_flags & REQ_NVME_MPATH))
+ 		return BLK_STS_RESOURCE;
+ 
+@@ -611,6 +612,7 @@ static const match_table_t opt_tokens = {
+ 	{ NVMF_OPT_HOST_TRADDR,		"host_traddr=%s"	},
+ 	{ NVMF_OPT_HOST_ID,		"hostid=%s"		},
+ 	{ NVMF_OPT_DUP_CONNECT,		"duplicate_connect"	},
++	{ NVMF_OPT_FAIL_FAST_TMO,		"fast_io_fail_tmo=%d"	},
+ 	{ NVMF_OPT_ERR,			NULL			}
+ };
+ 
+@@ -630,6 +632,7 @@ static int nvmf_parse_options(struct nvmf_ctrl_options *opts,
+ 	opts->reconnect_delay = NVMF_DEF_RECONNECT_DELAY;
+ 	opts->kato = NVME_DEFAULT_KATO;
+ 	opts->duplicate_connect = false;
++	opts->fast_io_fail_tmo = NVMF_DEF_FAIL_FAST_TMO;
+ 
+ 	options = o = kstrdup(buf, GFP_KERNEL);
+ 	if (!options)
+@@ -754,6 +757,17 @@ static int nvmf_parse_options(struct nvmf_ctrl_options *opts,
+ 				pr_warn("ctrl_loss_tmo < 0 will reconnect forever\n");
+ 			ctrl_loss_tmo = token;
+ 			break;
++		case NVMF_OPT_FAIL_FAST_TMO:
++			if (match_int(args, &token)) {
++				ret = -EINVAL;
++				goto out;
++			}
++
++			if (token >= 0)
++				pr_warn("I/O fail on reconnect controller after %d sec\n",
++					token);
++			opts->fast_io_fail_tmo = token;
++			break;
+ 		case NVMF_OPT_HOSTNQN:
+ 			if (opts->host) {
+ 				pr_err("hostnqn already user-assigned: %s\n",
+@@ -834,11 +848,15 @@ static int nvmf_parse_options(struct nvmf_ctrl_options *opts,
+ 		opts->nr_io_queues = 0;
+ 		opts->duplicate_connect = true;
+ 	}
+-	if (ctrl_loss_tmo < 0)
++	if (ctrl_loss_tmo < 0) {
+ 		opts->max_reconnects = -1;
+-	else
++	} else {
+ 		opts->max_reconnects = DIV_ROUND_UP(ctrl_loss_tmo,
+ 						opts->reconnect_delay);
++		if (ctrl_loss_tmo < opts->fast_io_fail_tmo)
++			pr_warn("failfast tmo (%d) larger than controller loss tmo (%d)\n",
++				opts->fast_io_fail_tmo, ctrl_loss_tmo);
++	}
+ 
+ 	if (!opts->host) {
+ 		kref_get(&nvmf_default_host->ref);
+@@ -907,7 +925,8 @@ EXPORT_SYMBOL_GPL(nvmf_free_options);
+ #define NVMF_REQUIRED_OPTS	(NVMF_OPT_TRANSPORT | NVMF_OPT_NQN)
+ #define NVMF_ALLOWED_OPTS	(NVMF_OPT_QUEUE_SIZE | NVMF_OPT_NR_IO_QUEUES | \
+ 				 NVMF_OPT_KATO | NVMF_OPT_HOSTNQN | \
+-				 NVMF_OPT_HOST_ID | NVMF_OPT_DUP_CONNECT)
++				 NVMF_OPT_HOST_ID | NVMF_OPT_DUP_CONNECT | \
++				 NVMF_OPT_FAIL_FAST_TMO)
+ 
+ static struct nvme_ctrl *
+ nvmf_create_ctrl(struct device *dev, const char *buf, size_t count)
+diff --git a/drivers/nvme/host/fabrics.h b/drivers/nvme/host/fabrics.h
+index aa2fdb2a2e8f..5a434a8d2552 100644
+--- a/drivers/nvme/host/fabrics.h
++++ b/drivers/nvme/host/fabrics.h
+@@ -23,6 +23,8 @@
+ #define NVMF_DEF_RECONNECT_DELAY	10
+ /* default to 600 seconds of reconnect attempts before giving up */
+ #define NVMF_DEF_CTRL_LOSS_TMO		600
++/* default is -1: the fail fast mechanism is disabled  */
++#define NVMF_DEF_FAIL_FAST_TMO		-1
+ 
+ /*
+  * Define a host as seen by the target.  We allocate one at boot, but also
+@@ -58,6 +60,7 @@ enum {
+ 	NVMF_OPT_CTRL_LOSS_TMO	= 1 << 11,
+ 	NVMF_OPT_HOST_ID	= 1 << 12,
+ 	NVMF_OPT_DUP_CONNECT	= 1 << 13,
++	NVMF_OPT_FAIL_FAST_TMO	= 1 << 20,
+ };
+ 
+ /**
+@@ -85,6 +88,7 @@ enum {
+  * @max_reconnects: maximum number of allowed reconnect attempts before removing
+  *              the controller, (-1) means reconnect forever, zero means remove
+  *              immediately;
++ * @fast_io_fail_tmo: Fast I/O fail timeout in seconds
+  */
+ struct nvmf_ctrl_options {
+ 	unsigned		mask;
+@@ -101,6 +105,9 @@ struct nvmf_ctrl_options {
+ 	unsigned int		kato;
+ 	struct nvmf_host	*host;
+ 	int			max_reconnects;
++#ifndef __GENKSYMS__
++	int			fast_io_fail_tmo;
++#endif
+ };
+ 
+ /*
+diff --git a/drivers/nvme/host/multipath.c b/drivers/nvme/host/multipath.c
+index 022e03643dac..4bd994bac9b5 100644
+--- a/drivers/nvme/host/multipath.c
++++ b/drivers/nvme/host/multipath.c
+@@ -180,6 +180,26 @@ inline struct nvme_ns *nvme_find_path(struct nvme_ns_head *head)
+ 	return ns;
+ }
+ 
++static bool nvme_available_path(struct nvme_ns_head *head)
++{
++	struct nvme_ns *ns;
++
++	list_for_each_entry_rcu(ns, &head->list, siblings) {
++		if (test_bit(NVME_CTRL_FAILFAST_EXPIRED, &ns->ctrl->flags))
++			continue;
++		switch (ns->ctrl->state) {
++		case NVME_CTRL_LIVE:
++		case NVME_CTRL_RESETTING:
++		case NVME_CTRL_CONNECTING:
++			/* fallthru */
++			return true;
++		default:
++			break;
++		}
++	}
++	return false;
++}
++
+ static blk_qc_t nvme_ns_head_make_request(struct request_queue *q,
+ 		struct bio *bio)
+ {
+@@ -198,14 +218,14 @@ static blk_qc_t nvme_ns_head_make_request(struct request_queue *q,
+ 				      disk_devt(ns->head->disk),
+ 				      bio->bi_iter.bi_sector);
+ 		ret = direct_make_request(bio);
+-	} else if (!list_empty_careful(&head->list)) {
+-		dev_warn_ratelimited(dev, "no path available - requeuing I/O\n");
++	} else if (nvme_available_path(head)) {
++		dev_warn_ratelimited(dev, "no usable path - requeuing I/O\n");
+ 
+ 		spin_lock_irq(&head->requeue_lock);
+ 		bio_list_add(&head->requeue_list, bio);
+ 		spin_unlock_irq(&head->requeue_lock);
+ 	} else {
+-		dev_warn_ratelimited(dev, "no path - failing I/O\n");
++		dev_warn_ratelimited(dev, "no available path - failing I/O\n");
+ 
+ 		bio->bi_status = BLK_STS_IOERR;
+ 		bio_endio(bio);
+diff --git a/drivers/nvme/host/nvme.h b/drivers/nvme/host/nvme.h
+index 276975506709..48928565291c 100644
+--- a/drivers/nvme/host/nvme.h
++++ b/drivers/nvme/host/nvme.h
+@@ -242,6 +242,11 @@ struct nvme_ctrl {
+ 
+ 	struct page *discard_page;
+ 	unsigned long discard_page_busy;
++#ifndef __GENKSYMS__
++	struct delayed_work failfast_work;
++	unsigned long flags;
++#endif
++#define NVME_CTRL_FAILFAST_EXPIRED	0
+ };
+ 
+ struct nvme_subsystem {
+-- 
+2.43.0
+
