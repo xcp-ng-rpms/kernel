@@ -1130,7 +1130,8 @@ Patch2008: 0008-Bring-back-deprecated-pci-ids-to-megaraid_sas-driver.patch
 Patch2009: 0009-Bring-back-deprecated-pci-ids-to-mpt3sas-driver.patch
 Patch2010: 0010-Bring-back-deprecated-pci-ids-to-aacraid-driver.patch
 
-Patch2011: 0001-xen-enable-some-debug-logs-in-gntdev.c.patch
+# XCP-ng debug patches
+Patch4000: 0001-xen-enable-some-debug-logs-in-gntdev.c.patch
 
 # END OF PATCH DEFINITIONS
 
@@ -2000,6 +2001,8 @@ ApplyPatch 0007-Bring-back-deprecated-pci-ids-to-be2iscsi-driver.patch
 ApplyPatch 0008-Bring-back-deprecated-pci-ids-to-megaraid_sas-driver.patch
 ApplyPatch 0009-Bring-back-deprecated-pci-ids-to-mpt3sas-driver.patch
 ApplyPatch 0010-Bring-back-deprecated-pci-ids-to-aacraid-driver.patch
+
+#ApplyPatch 0001-xen-enable-some-debug-logs-in-gntdev.c.patch
 
 %{log_msg "End of patch applications"}
 # END OF PATCH APPLICATIONS
