@@ -1,6 +1,79 @@
---- linux-6.12.0-55.20.1.ydi.16.xcpng8.99.x86_64_v2/drivers/scsi/mpt3sas/mpt3sas_base.c.orig	2026-01-12 10:23:25.229499426 +0000
-+++ linux-6.12.0-55.20.1.ydi.16.xcpng8.99.x86_64_v2/drivers/scsi/mpt3sas/mpt3sas_base.c	2026-01-12 10:26:42.708512952 +0000
-@@ -8428,15 +8428,19 @@
+--- linux-6.12.0-55.20.1.ydi.16.xcpng8.99.x86_64_v2/drivers/scsi/mpt3sas/mpt3sas_base.c.orig	2026-01-12 10:35:19.050548318 +0000
++++ linux-6.12.0-55.20.1.ydi.16.xcpng8.99.x86_64_v2/drivers/scsi/mpt3sas/mpt3sas_base.c	2026-01-12 10:55:00.086629211 +0000
+@@ -3607,6 +3607,8 @@
+ 		rc = _base_diag_reset(ioc);
+ 	}
+ 
++	if (rc)
++		ioc_info(ioc, "mpt3sas_base_check_for_fault_and_issue_reset returning %d\n", rc);
+ 	return rc;
+ }
+ 
+@@ -3684,8 +3686,10 @@
+ 	r = _base_get_ioc_facts(ioc);
+ 	if (r) {
+ 		rc = mpt3sas_base_check_for_fault_and_issue_reset(ioc);
+-		if (rc || (_base_get_ioc_facts(ioc)))
++		if (rc || (_base_get_ioc_facts(ioc))) {
++			ioc_info(ioc, "Calling _base_get_ioc_facts() from mpt3sas_base_map_resources failed!!!\n");
+ 			goto out_fail;
++		}
+ 	}
+ 
+ 	if (!ioc->rdpq_array_enable_assigned) {
+@@ -3694,8 +3698,10 @@
+ 	}
+ 
+ 	r = _base_enable_msix(ioc);
+-	if (r)
++	if (r) {
++		ioc_err(ioc, "Calling _base_enable_msix() failed\n");
+ 		goto out_fail;
++	}
+ 
+ 	iopoll_q_count = ioc->reply_queue_count - ioc->iopoll_q_start_index;
+ 	for (i = 0; i < iopoll_q_count; i++) {
+@@ -6572,8 +6578,10 @@
+ 
+ 	ioc->io_queue_num = kcalloc(ioc->scsiio_depth,
+ 	    sizeof(u16), GFP_KERNEL);
+-	if (!ioc->io_queue_num)
++	if (!ioc->io_queue_num) {
++		ioc_err(ioc, "io_queue_num: kcalloc failed\n");
+ 		goto out;
++	}
+ 	/*
+ 	 * The number of NVMe page sized blocks needed is:
+ 	 *     (((sg_tablesize * 8) - 1) / (page_size - 8)) + 1
+@@ -8151,11 +8159,14 @@
+ 			mpt3sas_base_wait_for_coredump_completion(ioc,
+ 			    __func__);
+ 		}
++		ioc_info(ioc, "mpt3sas_base_make_ioc_ready: coredump!\n");
+ 		goto issue_diag_reset;
+ 	}
+ 
+-	if (type == FORCE_BIG_HAMMER)
++	if (type == FORCE_BIG_HAMMER) {
++		ioc_info(ioc, "mpt3sas_base_make_ioc_ready: FORCE_BIG_HAMMER reset!\n");
+ 		goto issue_diag_reset;
++	}
+ 
+ 	if ((ioc_state & MPI2_IOC_STATE_MASK) == MPI2_IOC_STATE_OPERATIONAL)
+ 		if (!(_base_send_ioc_reset(ioc,
+@@ -8286,8 +8297,10 @@
+ 		 * diag reset during host reset. This check is need
+ 		 * only during driver load time.
+ 		 */
+-		if (!ioc->is_driver_loading)
++		if (!ioc->is_driver_loading) {
++			ioc_info(ioc, "_base_make_ioc_operational: not during driver load\n");
+ 			return r;
++		}
+ 
+ 		rc = mpt3sas_base_check_for_fault_and_issue_reset(ioc);
+ 		if (rc || (_base_send_ioc_init(ioc)))
+@@ -8428,15 +8441,19 @@
  		ioc->base_readl_ext_retry = &_base_readl;
  	}
  	r = mpt3sas_base_map_resources(ioc);
@@ -22,7 +95,7 @@
  	}
  
  	switch (ioc->hba_mpi_version_belonged) {
-@@ -8493,12 +8497,15 @@
+@@ -8493,12 +8510,15 @@
  	ioc->build_zero_len_sge_mpi = &_base_build_zero_len_sge;
  
  	r = mpt3sas_base_make_ioc_ready(ioc, SOFT_RESET);
@@ -39,7 +112,7 @@
  		r = -ENOMEM;
  		goto out_free_resources;
  	}
-@@ -8507,14 +8514,18 @@
+@@ -8507,14 +8527,18 @@
  		r = _base_get_port_facts(ioc, i);
  		if (r) {
  			rc = mpt3sas_base_check_for_fault_and_issue_reset(ioc);
@@ -60,7 +133,7 @@
  
  	if (irqpoll_weight > 0)
  		ioc->thresh_hold = irqpoll_weight;
-@@ -8537,12 +8548,14 @@
+@@ -8537,12 +8561,14 @@
  	ioc->pd_handles = kzalloc(ioc->pd_handles_sz,
  	    GFP_KERNEL);
  	if (!ioc->pd_handles) {
@@ -75,7 +148,7 @@
  		r = -ENOMEM;
  		goto out_free_resources;
  	}
-@@ -8561,6 +8574,7 @@
+@@ -8561,6 +8587,7 @@
  	ioc->pend_os_device_add = kzalloc(ioc->pend_os_device_add_sz,
  	    GFP_KERNEL);
  	if (!ioc->pend_os_device_add) {
@@ -83,7 +156,7 @@
  		r = -ENOMEM;
  		goto out_free_resources;
  	}
-@@ -8569,6 +8583,7 @@
+@@ -8569,6 +8596,7 @@
  	ioc->device_remove_in_progress =
  		kzalloc(ioc->device_remove_in_progress_sz, GFP_KERNEL);
  	if (!ioc->device_remove_in_progress) {
@@ -91,7 +164,7 @@
  		r = -ENOMEM;
  		goto out_free_resources;
  	}
-@@ -8614,6 +8629,7 @@
+@@ -8614,6 +8642,7 @@
  	    !ioc->transport_cmds.reply || !ioc->scsih_cmds.reply ||
  	    !ioc->tm_cmds.reply || !ioc->config_cmds.reply ||
  	    !ioc->ctl_cmds.reply || !ioc->ctl_cmds.sense) {
@@ -99,7 +172,7 @@
  		r = -ENOMEM;
  		goto out_free_resources;
  	}
-@@ -8647,8 +8663,10 @@
+@@ -8647,8 +8676,10 @@
  	r = _base_make_ioc_operational(ioc);
  	if (r == -EAGAIN) {
  		r = _base_make_ioc_operational(ioc);
