@@ -1,0 +1,12 @@
+--- linux-6.12.0-55.20.1.ydi.16.xcpng8.99.x86_64_v2/drivers/scsi/mpt3sas/mpt3sas_scsih.c.orig	2026-01-12 10:14:48.048464003 +0000
++++ linux-6.12.0-55.20.1.ydi.16.xcpng8.99.x86_64_v2/drivers/scsi/mpt3sas/mpt3sas_scsih.c	2026-01-12 10:16:06.647469386 +0000
+@@ -12316,7 +12316,8 @@
+ 		shost->host_tagset = 1;
+ 
+ 	ioc->is_driver_loading = 1;
+-	if ((mpt3sas_base_attach(ioc))) {
++	rv = mpt3sas_base_attach(ioc);
++	if (rv) {
+ 		ioc_err(ioc, "failure at %s:%d/%s()!\n",
+ 			__FILE__, __LINE__, __func__);
+ 		rv = -ENODEV;

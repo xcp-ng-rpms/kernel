@@ -168,7 +168,7 @@ Summary: The Linux kernel
 # This is needed to do merge window version magic
 %define patchlevel 12
 # This allows pkg_release to have configurable %%{?dist} tag
-%define specrelease 55.20.1.ydi.16%{?buildid}%{?dist}
+%define specrelease 55.20.1.ydi.17%{?buildid}%{?dist}
 # This defines the kabi tarball version
 %define kabiversion 6.12.0-55.20.1.el10_0
 
@@ -1137,6 +1137,8 @@ Patch3001: 0001-PCI-MSI-Convert-pci_msi_ignore_mask-to-per-MSI-domai.patch
 
 # XCP-ng debug patches
 Patch4000: 0001-xen-enable-some-debug-logs-in-gntdev.c.patch
+Patch4001: mpt3sas_scsih-attach-returnvalue.patch
+Patch4002: mpt3sas_base-attach-failure-reasons.patch
 
 # END OF PATCH DEFINITIONS
 
@@ -2010,6 +2012,8 @@ ApplyPatch 0010-Bring-back-deprecated-pci-ids-to-aacraid-driver.patch
 #ApplyPatch 0001-xen-enable-some-debug-logs-in-gntdev.c.patch
 
 ApplyPatch 0001-PCI-MSI-Convert-pci_msi_ignore_mask-to-per-MSI-domai.patch
+ApplyPatch mpt3sas_scsih-attach-returnvalue.patch
+ApplyPatch mpt3sas_base-attach-failure-reasons.patch
 
 %{log_msg "End of patch applications"}
 # END OF PATCH APPLICATIONS
@@ -4380,9 +4384,10 @@ fi\
 #
 #
 %changelog
-* Tue Jan 06 2026 Yann Dirson <yann.dirson@vates.tech> - 6.12.0-55.20.1.0.ydi.16
+* Tue Jan 06 2026 Yann Dirson <yann.dirson@vates.tech> - 6.12.0-55.20.1.0.ydi.17
 - Disable CONFIG_XEN_VIRTIO to avoid a dom0 kernel bug in CONFIG_XEN_GRANT_DMA_OPS
 - Add patch for Intel VMD support
+- Debug logs for mpt3sas
 
 * Fri Oct 17 2025 Yann Dirson <yann.dirson@vates.tech> - 6.12.0-55.20.1.0.ydi.11
 - Enable Xen Dom0 support for x86_64 and aarch64

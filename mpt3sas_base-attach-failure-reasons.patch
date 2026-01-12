@@ -1,0 +1,113 @@
+--- linux-6.12.0-55.20.1.ydi.16.xcpng8.99.x86_64_v2/drivers/scsi/mpt3sas/mpt3sas_base.c.orig	2026-01-12 10:23:25.229499426 +0000
++++ linux-6.12.0-55.20.1.ydi.16.xcpng8.99.x86_64_v2/drivers/scsi/mpt3sas/mpt3sas_base.c	2026-01-12 10:26:42.708512952 +0000
+@@ -8428,15 +8428,19 @@
+ 		ioc->base_readl_ext_retry = &_base_readl;
+ 	}
+ 	r = mpt3sas_base_map_resources(ioc);
+-	if (r)
++	if (r) {
++		ioc_info(ioc, "Calling mpt3sas_base_map_resources() failed!!!\n");
+ 		goto out_free_resources;
++        }
+ 
+ 	pci_set_drvdata(ioc->pdev, ioc->shost);
+ 	r = _base_get_ioc_facts(ioc);
+ 	if (r) {
+ 		rc = mpt3sas_base_check_for_fault_and_issue_reset(ioc);
+-		if (rc || (_base_get_ioc_facts(ioc)))
++		if (rc || (_base_get_ioc_facts(ioc))) {
++			ioc_info(ioc, "Calling _base_get_ioc_facts() failed!!!\n");
+ 			goto out_free_resources;
++		}
+ 	}
+ 
+ 	switch (ioc->hba_mpi_version_belonged) {
+@@ -8493,12 +8497,15 @@
+ 	ioc->build_zero_len_sge_mpi = &_base_build_zero_len_sge;
+ 
+ 	r = mpt3sas_base_make_ioc_ready(ioc, SOFT_RESET);
+-	if (r)
++	if (r) {
++		ioc_info(ioc, "Calling mpt3sas_base_make_ioc_ready() failed!!!\n");		
+ 		goto out_free_resources;
++	}
+ 
+ 	ioc->pfacts = kcalloc(ioc->facts.NumberOfPorts,
+ 	    sizeof(struct mpt3sas_port_facts), GFP_KERNEL);
+ 	if (!ioc->pfacts) {
++		ioc_info(ioc, "Allocation for pfacts failed!!!\n");
+ 		r = -ENOMEM;
+ 		goto out_free_resources;
+ 	}
+@@ -8507,14 +8514,18 @@
+ 		r = _base_get_port_facts(ioc, i);
+ 		if (r) {
+ 			rc = mpt3sas_base_check_for_fault_and_issue_reset(ioc);
+-			if (rc || (_base_get_port_facts(ioc, i)))
++			if (rc || (_base_get_port_facts(ioc, i))) {
++				ioc_info(ioc, "Calling _base_get_port_facts() failed!!!\n");
+ 				goto out_free_resources;
++			}
+ 		}
+ 	}
+ 
+ 	r = _base_allocate_memory_pools(ioc);
+-	if (r)
++	if (r) {
++		ioc_info(ioc, "Calling _base_allocate_memory_pools() failed!!!\n");
+ 		goto out_free_resources;
++	}
+ 
+ 	if (irqpoll_weight > 0)
+ 		ioc->thresh_hold = irqpoll_weight;
+@@ -8537,12 +8548,14 @@
+ 	ioc->pd_handles = kzalloc(ioc->pd_handles_sz,
+ 	    GFP_KERNEL);
+ 	if (!ioc->pd_handles) {
++		ioc_info(ioc, "Allocation for pd_handles failed!!!\n");
+ 		r = -ENOMEM;
+ 		goto out_free_resources;
+ 	}
+ 	ioc->blocking_handles = kzalloc(ioc->pd_handles_sz,
+ 	    GFP_KERNEL);
+ 	if (!ioc->blocking_handles) {
++		ioc_info(ioc, "Allocation for blocking_handles failed!!!\n");
+ 		r = -ENOMEM;
+ 		goto out_free_resources;
+ 	}
+@@ -8561,6 +8574,7 @@
+ 	ioc->pend_os_device_add = kzalloc(ioc->pend_os_device_add_sz,
+ 	    GFP_KERNEL);
+ 	if (!ioc->pend_os_device_add) {
++		ioc_info(ioc, "Allocation for pend_os_device_add failed!!!\n");
+ 		r = -ENOMEM;
+ 		goto out_free_resources;
+ 	}
+@@ -8569,6 +8583,7 @@
+ 	ioc->device_remove_in_progress =
+ 		kzalloc(ioc->device_remove_in_progress_sz, GFP_KERNEL);
+ 	if (!ioc->device_remove_in_progress) {
++		ioc_info(ioc, "Allocation for device_remove_in_progress failed!!!\n");
+ 		r = -ENOMEM;
+ 		goto out_free_resources;
+ 	}
+@@ -8614,6 +8629,7 @@
+ 	    !ioc->transport_cmds.reply || !ioc->scsih_cmds.reply ||
+ 	    !ioc->tm_cmds.reply || !ioc->config_cmds.reply ||
+ 	    !ioc->ctl_cmds.reply || !ioc->ctl_cmds.sense) {
++		ioc_info(ioc, "Allocation for 1 of 8 things failed!!!\n");
+ 		r = -ENOMEM;
+ 		goto out_free_resources;
+ 	}
+@@ -8647,8 +8663,10 @@
+ 	r = _base_make_ioc_operational(ioc);
+ 	if (r == -EAGAIN) {
+ 		r = _base_make_ioc_operational(ioc);
+-		if (r)
++		if (r) {
++			ioc_info(ioc, "Calling _base_make_ioc_operational() failed!!!\n");
+ 			goto out_free_resources;
++		}
+ 	}
+ 
+ 	/*
