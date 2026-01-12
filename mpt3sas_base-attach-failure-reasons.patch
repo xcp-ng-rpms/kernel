@@ -1,5 +1,5 @@
 --- linux-6.12.0-55.20.1.ydi.16.xcpng8.99.x86_64_v2/drivers/scsi/mpt3sas/mpt3sas_base.c.orig	2026-01-12 10:35:19.050548318 +0000
-+++ linux-6.12.0-55.20.1.ydi.16.xcpng8.99.x86_64_v2/drivers/scsi/mpt3sas/mpt3sas_base.c	2026-01-12 10:55:00.086629211 +0000
++++ linux-6.12.0-55.20.1.ydi.16.xcpng8.99.x86_64_v2/drivers/scsi/mpt3sas/mpt3sas_base.c	2026-01-12 11:52:49.791866863 +0000
 @@ -3607,6 +3607,8 @@
  		rc = _base_diag_reset(ioc);
  	}
@@ -33,7 +33,67 @@
  
  	iopoll_q_count = ioc->reply_queue_count - ioc->iopoll_q_start_index;
  	for (i = 0; i < iopoll_q_count; i++) {
-@@ -6572,8 +6578,10 @@
+@@ -6203,8 +6209,10 @@
+ 
+ 	ioc->reply_post = kcalloc(count, sizeof(struct reply_post_struct),
+ 			GFP_KERNEL);
+-	if (!ioc->reply_post)
++	if (!ioc->reply_post) {
++		ioc_err(ioc, "base_alloc_rdpq_dma_pool failed to alloc reply_post\n");
+ 		return -ENOMEM;
++	}
+ 	/*
+ 	 *  For INVADER_SERIES each set of 8 reply queues(0-7, 8-15, ..) and
+ 	 *  VENTURA_SERIES each set of 16 reply queues(0-15, 16-31, ..) should
+@@ -6219,16 +6227,20 @@
+ 	ioc->reply_post_free_dma_pool =
+ 		dma_pool_create("reply_post_free pool",
+ 		    &ioc->pdev->dev, sz, 16, 0);
+-	if (!ioc->reply_post_free_dma_pool)
++	if (!ioc->reply_post_free_dma_pool) {
++		ioc_err(ioc, "base_alloc_rdpq_dma_pool failed to alloc reply_post_free_dma_pool\n");
+ 		return -ENOMEM;
++	}
+ 	for (i = 0; i < count; i++) {
+ 		if ((i % RDPQ_MAX_INDEX_IN_ONE_CHUNK == 0) && dma_alloc_count) {
+ 			ioc->reply_post[i].reply_post_free =
+ 			    dma_pool_zalloc(ioc->reply_post_free_dma_pool,
+ 				GFP_KERNEL,
+ 				&ioc->reply_post[i].reply_post_free_dma);
+-			if (!ioc->reply_post[i].reply_post_free)
++			if (!ioc->reply_post[i].reply_post_free) {
++				ioc_err(ioc, "base_alloc_rdpq_dma_pool failed to alloc reply_post_free\n");
+ 				return -ENOMEM;
++			}
+ 			/*
+ 			 * Each set of RDPQ pool must satisfy 4gb boundary
+ 			 * restriction.
+@@ -6246,6 +6258,7 @@
+ 				    ioc->reply_post[i].reply_post_free,
+ 				    (unsigned long long)
+ 				    ioc->reply_post[i].reply_post_free_dma));
++				ioc_err(ioc, "mpt3sas_check_same_4gb_region failed, EAGAIN\n");
+ 				return -EAGAIN;
+ 			}
+ 			dma_alloc_count--;
+@@ -6453,10 +6466,14 @@
+ 			    "32 DMA mask failed %s\n", pci_name(ioc->pdev));
+ 			return -ENODEV;
+ 		}
+-		if (base_alloc_rdpq_dma_pool(ioc, rdpq_sz))
++		if (base_alloc_rdpq_dma_pool(ioc, rdpq_sz)) {
++			ioc_err(ioc, "Calling (again) base_alloc_rdpq_dma_pool() failed\n");
+ 			return -ENOMEM;
+-	} else if (ret == -ENOMEM)
++		}
++	} else if (ret == -ENOMEM) {
++		ioc_err(ioc, "Calling base_alloc_rdpq_dma_pool() failed\n");
+ 		return -ENOMEM;
++	}
+ 	total_sz = rdpq_sz * (!ioc->rdpq_array_enable ? 1 :
+ 	    DIV_ROUND_UP(ioc->reply_queue_count, RDPQ_MAX_INDEX_IN_ONE_CHUNK));
+ 	ioc->scsiio_depth = ioc->hba_queue_depth -
+@@ -6572,8 +6589,10 @@
  
  	ioc->io_queue_num = kcalloc(ioc->scsiio_depth,
  	    sizeof(u16), GFP_KERNEL);
@@ -45,7 +105,7 @@
  	/*
  	 * The number of NVMe page sized blocks needed is:
  	 *     (((sg_tablesize * 8) - 1) / (page_size - 8)) + 1
-@@ -8151,11 +8159,14 @@
+@@ -8151,11 +8170,14 @@
  			mpt3sas_base_wait_for_coredump_completion(ioc,
  			    __func__);
  		}
@@ -61,7 +121,7 @@
  
  	if ((ioc_state & MPI2_IOC_STATE_MASK) == MPI2_IOC_STATE_OPERATIONAL)
  		if (!(_base_send_ioc_reset(ioc,
-@@ -8286,8 +8297,10 @@
+@@ -8286,8 +8308,10 @@
  		 * diag reset during host reset. This check is need
  		 * only during driver load time.
  		 */
@@ -73,7 +133,7 @@
  
  		rc = mpt3sas_base_check_for_fault_and_issue_reset(ioc);
  		if (rc || (_base_send_ioc_init(ioc)))
-@@ -8428,15 +8441,19 @@
+@@ -8428,15 +8452,19 @@
  		ioc->base_readl_ext_retry = &_base_readl;
  	}
  	r = mpt3sas_base_map_resources(ioc);
@@ -95,7 +155,7 @@
  	}
  
  	switch (ioc->hba_mpi_version_belonged) {
-@@ -8493,12 +8510,15 @@
+@@ -8493,12 +8521,15 @@
  	ioc->build_zero_len_sge_mpi = &_base_build_zero_len_sge;
  
  	r = mpt3sas_base_make_ioc_ready(ioc, SOFT_RESET);
@@ -112,7 +172,7 @@
  		r = -ENOMEM;
  		goto out_free_resources;
  	}
-@@ -8507,14 +8527,18 @@
+@@ -8507,14 +8538,18 @@
  		r = _base_get_port_facts(ioc, i);
  		if (r) {
  			rc = mpt3sas_base_check_for_fault_and_issue_reset(ioc);
@@ -133,7 +193,7 @@
  
  	if (irqpoll_weight > 0)
  		ioc->thresh_hold = irqpoll_weight;
-@@ -8537,12 +8561,14 @@
+@@ -8537,12 +8572,14 @@
  	ioc->pd_handles = kzalloc(ioc->pd_handles_sz,
  	    GFP_KERNEL);
  	if (!ioc->pd_handles) {
@@ -148,7 +208,7 @@
  		r = -ENOMEM;
  		goto out_free_resources;
  	}
-@@ -8561,6 +8587,7 @@
+@@ -8561,6 +8598,7 @@
  	ioc->pend_os_device_add = kzalloc(ioc->pend_os_device_add_sz,
  	    GFP_KERNEL);
  	if (!ioc->pend_os_device_add) {
@@ -156,7 +216,7 @@
  		r = -ENOMEM;
  		goto out_free_resources;
  	}
-@@ -8569,6 +8596,7 @@
+@@ -8569,6 +8607,7 @@
  	ioc->device_remove_in_progress =
  		kzalloc(ioc->device_remove_in_progress_sz, GFP_KERNEL);
  	if (!ioc->device_remove_in_progress) {
@@ -164,7 +224,7 @@
  		r = -ENOMEM;
  		goto out_free_resources;
  	}
-@@ -8614,6 +8642,7 @@
+@@ -8614,6 +8653,7 @@
  	    !ioc->transport_cmds.reply || !ioc->scsih_cmds.reply ||
  	    !ioc->tm_cmds.reply || !ioc->config_cmds.reply ||
  	    !ioc->ctl_cmds.reply || !ioc->ctl_cmds.sense) {
@@ -172,7 +232,7 @@
  		r = -ENOMEM;
  		goto out_free_resources;
  	}
-@@ -8647,8 +8676,10 @@
+@@ -8647,8 +8687,10 @@
  	r = _base_make_ioc_operational(ioc);
  	if (r == -EAGAIN) {
  		r = _base_make_ioc_operational(ioc);
