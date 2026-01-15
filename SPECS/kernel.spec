@@ -1076,7 +1076,7 @@ fi
 %{?_cov_results_package}
 
 %changelog
-* Mon Dec 08 2025 Quentin Casasnovas <quentin.casasnovas@vates.tech> - 4.19.19-8.0.44.1
+* Thu Jan 15 2026 Quentin Casasnovas <quentin.casasnovas@vates.tech> - 4.19.19-8.0.44.1
 - Sync with 4.19.19-8.0.44
 - *** Upstream changelog ***
   * Fri Oct 31 2025 Ross Lagerwall <ross.lagerwall@citrix.com> - 4.19.19-8.0.44
