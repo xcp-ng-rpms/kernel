@@ -220,12 +220,12 @@ pushd tools/perf/Documentation/
 make %{?_smp_mflags} man
 popd
 
-# eBPF support: pahole encodes the type infos into a small (3MB) .BTF section:
-cp vmlinux                                     tmp-vmlinux-with-btf
-LLVM_OBJCOPY=objcopy pahole %{?_smp_mflags} -J tmp-vmlinux-with-btf
-# Copy the BTF section into a new BTF file which eBPF tools to get kernel types:
-objcopy --only-section .BTF                    tmp-vmlinux-with-btf vmlinux.btf
-rm                                             tmp-vmlinux-with-btf
+# # eBPF support: pahole encodes the type infos into a small (3MB) .BTF section:
+# cp vmlinux                                     tmp-vmlinux-with-btf
+# LLVM_OBJCOPY=objcopy pahole %{?_smp_mflags} -J tmp-vmlinux-with-btf
+# # Copy the BTF section into a new BTF file which eBPF tools to get kernel types:
+# objcopy --only-section .BTF                    tmp-vmlinux-with-btf vmlinux.btf
+# rm                                             tmp-vmlinux-with-btf
 
 %install
 # Install kernel
@@ -351,12 +351,12 @@ install -m 644 vmlinux %{buildroot}%{lp_devel_dir}
 # Using /usr/lib/debug/lib/modules/4.19.0+1/vmlinux for symbols (file from kernel-debuginfo)
 # Open Debuginfo file: /usr/lib/debug/lib/modules/4.19.0+1/vmlinux
 
-# Thus, we can install it here (/lib/.../build is an absolute symlink to this path)
-install -m 644 vmlinux.btf %{buildroot}/usr/src/kernels/%{uname}-%{_arch}/vmlinux
+# # Thus, we can install it here (/lib/.../build is an absolute symlink to this path)
+# install -m 644 vmlinux.btf %{buildroot}/usr/src/kernels/%{uname}-%{_arch}/vmlinux
 
 %check
-# Check that the .BTF section is present at the start of the file:
-objdump -h %{buildroot}/usr/src/kernels/%{uname}-%{_arch}/vmlinux|grep " 0 .BTF"
+# # Check that the .BTF section is present at the start of the file:
+# objdump -h %{buildroot}/usr/src/kernels/%{uname}-%{_arch}/vmlinux|grep " 0 .BTF"
 
 %post
 > %{_localstatedir}/lib/rpm-state/regenerate-initrd-%{uname}
@@ -438,6 +438,7 @@ fi
 - Removed patches, XS- and RHELkernel-specificities
 - Switch to python3
 - Disable LTO for building perf (link error)
+- Disable BTF usage (TODO: determine what would be needed)
 
 * Thu Jan 15 2026 Quentin Casasnovas <quentin.casasnovas@vates.tech> - 4.19.19-8.0.44.1
 - Sync with 4.19.19-8.0.44
