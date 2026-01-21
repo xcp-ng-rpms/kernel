@@ -207,6 +207,7 @@ bash -c 'diff -u <(grep -v "^#" .config) <(grep -v "^#" %{SOURCE1})'
 %endif
 
 # make perf
+%define _lto_cflags %{nil}
 %global perf_make \
   %{?_cov_wrap} make EXTRA_CFLAGS="${RPM_OPT_FLAGS}" LDFLAGS="%{__global_ldflags}" %{?cross_opts} V=1 NO_PERF_READ_VDSO32=1 NO_PERF_READ_VDSOX32=1 WERROR=0 HAVE_CPLUS_DEMANGLE=1 NO_GTK2=1 NO_STRLCPY=1 NO_BIONIC=1 NO_JVMTI=1 NO_LIBCRYPTO=1 prefix=%{_prefix}
 %global perf_python3 -C tools/perf PYTHON=%{__python3}
@@ -436,6 +437,7 @@ fi
 - Test-switch to linux-stable
 - Removed patches, XS- and RHELkernel-specificities
 - Switch to python3
+- Disable LTO for building perf (link error)
 
 * Thu Jan 15 2026 Quentin Casasnovas <quentin.casasnovas@vates.tech> - 4.19.19-8.0.44.1
 - Sync with 4.19.19-8.0.44
