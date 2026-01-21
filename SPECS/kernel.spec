@@ -1,6 +1,6 @@
 %global package_speccommit ccb8ee3c01ade60b0ee7a22436d4b25d84702ae4
 %global usver 6.12.66
-%define uname 6.12.0
+%define uname 6.12.66
 %define short_uname 6.12
 %define srcpath /usr/src/kernels/%{uname}-%{_arch}
 
@@ -439,6 +439,7 @@ fi
 - Switch to python3
 - Disable LTO for building perf (link error)
 - Disable BTF usage (TODO: determine what would be needed)
+- Use patchlevel in utsname version (not .0) to match upstream
 
 * Thu Jan 15 2026 Quentin Casasnovas <quentin.casasnovas@vates.tech> - 4.19.19-8.0.44.1
 - Sync with 4.19.19-8.0.44
