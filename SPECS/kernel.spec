@@ -1,6 +1,6 @@
 %global package_speccommit ccb8ee3c01ade60b0ee7a22436d4b25d84702ae4
 %global usver 6.12.66
-%define uname 6.12.0
+%define uname 6.12.66
 %define short_uname 6.12
 %define srcpath /usr/src/kernels/%{uname}-%{_arch}
 
