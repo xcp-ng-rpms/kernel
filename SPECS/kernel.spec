@@ -45,6 +45,7 @@ BuildRequires: elfutils-devel
 BuildRequires: libtraceevent-devel
 BuildRequires: openssl-devel
 BuildRequires: openssl
+BuildRequires: rsync
 BuildRequires: systemtap-sdt-devel
 
 # These build dependencies are needed for building the main kernel and
