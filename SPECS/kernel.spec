@@ -307,8 +307,8 @@ cp -a include %{buildroot}%{srcpath}/include
 
 # files for 'make prepare' to succeed with kernel-devel
 cp -a --parents arch/x86/entry/syscalls/syscall_32.tbl %{buildroot}%{srcpath}
-cp -a --parents arch/x86/entry/syscalls/syscalltbl.sh %{buildroot}%{srcpath}
-cp -a --parents arch/x86/entry/syscalls/syscallhdr.sh %{buildroot}%{srcpath}
+cp -a --parents scripts/syscalltbl.sh %{buildroot}%{srcpath}
+cp -a --parents scripts/syscallhdr.sh %{buildroot}%{srcpath}
 cp -a --parents arch/x86/entry/syscalls/syscall_64.tbl %{buildroot}%{srcpath}
 cp -a --parents arch/x86/tools/relocs_32.c %{buildroot}%{srcpath}
 cp -a --parents arch/x86/tools/relocs_64.c %{buildroot}%{srcpath}
@@ -318,7 +318,7 @@ cp -a --parents arch/x86/tools/relocs.h %{buildroot}%{srcpath}
 cp -a --parents tools/include/tools/le_byteshift.h %{buildroot}%{srcpath}
 cp -a --parents arch/x86/purgatory/purgatory.c %{buildroot}%{srcpath}
 cp -a --parents arch/x86/purgatory/stack.S %{buildroot}%{srcpath}
-cp -a --parents arch/x86/purgatory/string.c %{buildroot}%{srcpath}
+cp -a --parents arch/x86/boot/compressed/string.c %{buildroot}%{srcpath}
 cp -a --parents arch/x86/purgatory/setup-x86_64.S %{buildroot}%{srcpath}
 cp -a --parents arch/x86/purgatory/entry64.S %{buildroot}%{srcpath}
 cp -a --parents arch/x86/boot/string.h %{buildroot}%{srcpath}
