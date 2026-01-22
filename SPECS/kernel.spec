@@ -291,8 +291,8 @@ echo '%%kernel_version %{uname}' >> %{buildroot}%{_rpmconfigdir}/macros.d/macros
 %{?_cov_install}
 
 # Setup -devel links correctly
-ln -nsf %{srcpath} %{buildroot}/lib/modules/%{uname}/source
-ln -nsf %{srcpath} %{buildroot}/lib/modules/%{uname}/build
+ln -nsfr %{srcpath} %{buildroot}/lib/modules/%{uname}/source
+ln -nsfr %{srcpath} %{buildroot}/lib/modules/%{uname}/build
 
 # Copy Makefiles and Kconfigs except in some directories
 paths=$(find . -path './Documentation' -prune -o -path './scripts' -prune -o -path './include' -prune -o -type f -a \( -name "Makefile*" -o -name "Kconfig*" \) -print)
@@ -417,8 +417,6 @@ fi
 
 %files -n perf
 %{_bindir}/perf
-%dir %{_libdir}/traceevent
-%{_libdir}/traceevent/plugins/
 %{_libexecdir}/perf-core
 %{_datadir}/perf-core/
 %{_mandir}/man[1-8]/perf*
