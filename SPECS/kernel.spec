@@ -335,7 +335,6 @@ touch -r %{buildroot}%{srcpath}/Makefile %{buildroot}%{srcpath}/include/generate
 find %{buildroot} -name '.*.cmd' -type f -delete
 
 # Install files for building live patches
-mv ../prepared-source %{buildroot}%{lp_devel_dir}
 install -m 644 vmlinux %{buildroot}%{lp_devel_dir}
 
 # eBPF support: Install the BTF file to /usr/src/kernels for kernel-devel
