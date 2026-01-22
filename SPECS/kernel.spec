@@ -72,6 +72,7 @@ BuildRequires: python
 BuildRequires: xz-devel
 BuildRequires: libunwind-devel
 BuildRequires: python3-devel
+BuildRequires: python3-setuptools
 BuildRequires: asciidoc xmlto
 %{?_cov_buildrequires}
 AutoReqProv: no
