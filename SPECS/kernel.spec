@@ -121,7 +121,6 @@ Group: System Environment/Kernel
 AutoReqProv: no
 Provides: kernel-devel-%{_arch} = %{version}-%{release}
 Provides: kernel-devel-uname-r = %{uname}
-Requires: devtoolset-11-elfutils-libelf-devel
 
 %description devel
 This package provides kernel headers and makefiles sufficient to build modules
