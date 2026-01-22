@@ -253,9 +253,10 @@ install -d -m 755 %{buildroot}/lib/modules/%{uname}/updates
 
 make INSTALL_MOD_PATH=%{buildroot} vdso_install
 
-# Save debuginfo
-install -d -m 755 %{buildroot}/usr/lib/debug/lib/modules/%{uname}
-install -m 755 vmlinux %{buildroot}/usr/lib/debug/lib/modules/%{uname}
+#XCP-ng: needs clarification about how to get debuginfo rpm generated in el10?
+# # Save debuginfo
+# install -d -m 755 %{buildroot}/usr/lib/debug/lib/modules/%{uname}
+# install -m 755 vmlinux %{buildroot}/usr/lib/debug/lib/modules/%{uname}
 
 # Install -headers files
 make INSTALL_HDR_PATH=%{buildroot}/usr headers_install
@@ -395,6 +396,8 @@ fi
 %ghost /lib/modules/%{uname}/modules.alias
 %ghost /lib/modules/%{uname}/modules.alias.bin
 %ghost /lib/modules/%{uname}/modules.builtin.bin
+%ghost /lib/modules/%{uname}/modules.builtin.alias.bin
+%ghost /lib/modules/%{uname}/modules.builtin.modinfo
 %ghost /lib/modules/%{uname}/modules.dep
 %ghost /lib/modules/%{uname}/modules.dep.bin
 %ghost /lib/modules/%{uname}/modules.devname
@@ -443,6 +446,7 @@ fi
 - Use patchlevel in utsname version (not .0) to match upstream
 - Add patch to workaround brp-mangle-shebangs from rejecting "python" as
   interpreter
+- WIP Disable installation of debug vmlinux
 
 * Thu Jan 15 2026 Quentin Casasnovas <quentin.casasnovas@vates.tech> - 4.19.19-8.0.44.1
 - Sync with 4.19.19-8.0.44
