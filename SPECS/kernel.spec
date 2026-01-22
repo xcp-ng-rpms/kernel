@@ -90,6 +90,8 @@ Source3: check-kabi
 Source4: Module.kabi
 %endif
 
+Patch0: 0001-Force-py2-compatible-scripts-to-use-py3-interpreter.patch
+
 %description
 The kernel package contains the Linux kernel (vmlinuz), the core of any
 Linux operating system. The kernel handles the basic functions of the operating
@@ -440,6 +442,8 @@ fi
 - Switch to python3
 - Disable LTO for building perf (link error)
 - WIP Disable installation of debug vmlinux
+- Add patch to workaround brp-mangle-shebangs from rejecting "python" as
+  interpreter
 
 * Thu Jan 15 2026 Quentin Casasnovas <quentin.casasnovas@vates.tech> - 4.19.19-8.0.44.1
 - Sync with 4.19.19-8.0.44
