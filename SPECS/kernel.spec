@@ -258,7 +258,7 @@ install -m 755 vmlinux %{buildroot}/usr/lib/debug/lib/modules/%{uname}
 make INSTALL_HDR_PATH=%{buildroot}/usr headers_install
 
 # perf tool binary and supporting scripts/binaries
-%{perf_make} %{perf_python3} DESTDIR=%{buildroot} lib=%{_lib} install-bin install-traceevent-plugins
+%{perf_make} %{perf_python3} DESTDIR=%{buildroot} lib=%{_lib} install-bin
 # remove the 'trace' symlink.
 rm -f %{buildroot}%{_bindir}/trace
 # remove the perf-tips
