@@ -90,6 +90,8 @@ Source3: check-kabi
 Source4: Module.kabi
 %endif
 
+Patch0: 0001-Force-py2-compatible-scripts-to-use-py3-interpreter.patch
+
 %description
 The kernel package contains the Linux kernel (vmlinuz), the core of any
 Linux operating system. The kernel handles the basic functions of the operating
