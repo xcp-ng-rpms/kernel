@@ -34,7 +34,7 @@
 Name: kernel
 License: GPLv2
 Version: %{usver}
-Release: 0.ydi.0
+Release: 0.ydi.1
 ExclusiveOS: Linux
 Summary: The Linux kernel
 BuildRequires: kmod
@@ -446,6 +446,7 @@ fi
 - Use patchlevel in utsname version (not .0) to match upstream
 - Add patch to workaround brp-mangle-shebangs from rejecting "python" as
   interpreter
+- Remove wireless network drivers
 
 * Thu Jan 15 2026 Quentin Casasnovas <quentin.casasnovas@vates.tech> - 4.19.19-8.0.44.1
 - Sync with 4.19.19-8.0.44
