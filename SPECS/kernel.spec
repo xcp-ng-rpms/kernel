@@ -723,6 +723,9 @@ Patch1002: 0001-perf-probe-Fix-getting-the-kernel-map.patch
 Patch1003: 0001-ACPI-processor-idle-Check-acpi_bus_get_device-return.patch
 Patch1004: 0001-scsi-target-Fix-XCOPY-NAA-identifier-lookup.patch
 
+# XCPNG-2843
+Patch1005: 0001-tcp-fix-possible-socket-leaks-in-internal-pacing-mod.patch
+
 %description
 The kernel package contains the Linux kernel (vmlinuz), the core of any
 Linux operating system. The kernel handles the basic functions of the operating
