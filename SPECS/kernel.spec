@@ -787,7 +787,7 @@ Provides: python2-perf
 %{pythonperfdesc}
 
 %prep
-%autosetup -p1
+%autosetup -p1 -n linux-%{version}
 %{?_cov_prepare}
 
 %build
