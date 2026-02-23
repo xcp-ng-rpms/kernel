@@ -1,8 +1,9 @@
 %global package_speccommit ccb8ee3c01ade60b0ee7a22436d4b25d84702ae4
 %global usver 4.19.325
+%global cipver 129
 %global xsver 8.0.44
-%global xsrel %{xsver}%{?xscount}%{?xshash}
-%global package_srccommit refs/tags/v4.19.325
+%global xsrel cip%{cipver}.%{xsver}%{?xscount}%{?xshash}
+%global package_srccommit refs/tags/v4.19.325-cip129
 %define uname 4.19.0+1
 %define short_uname 4.19
 %define srcpath /usr/src/kernels/%{uname}-%{_arch}
@@ -79,7 +80,7 @@ Provides: kernel-%{_arch} = %{version}-%{release}
 Requires(post): coreutils kmod
 Requires(posttrans): coreutils dracut kmod
 
-Source0: linux-4.19.325.tar.gz
+Source0: linux-4.19.325-cip129.tar.gz
 Source1: kernel-x86_64.config
 Source2: macros.kernel
 # Patch0: 0001-Fix-net-ipv4-do-not-handle-duplicate-fragments-as-ov.patch: c763a3cf502 Fix "net: ipv4: do not handle duplicate fragments as overlapping"
@@ -720,7 +721,7 @@ Source5: prepare-build
 # Patch1000: ceph.patch: already included in v4.19.325
 # Patch1001: tg3-v4.19.315.patch: already included in v4.19.325
 # Patch1002: 0001-perf-probe-Fix-getting-the-kernel-map.patch: 37c6f8089806 perf probe: Fix getting the kernel map
-Patch1003: 0001-ACPI-processor-idle-Check-acpi_bus_get_device-return.patch
+# Patch1003: 0001-ACPI-processor-idle-Check-acpi_bus_get_device-return.patch f001c5c35a00 ACPI: processor: idle: Check acpi_fetch_acpi_dev() return value
 # Patch1004: 0001-scsi-target-Fix-XCOPY-NAA-identifier-lookup.patch: fff1180d24e6 scsi: target: Fix XCOPY NAA identifier lookup
 
 %description
@@ -787,7 +788,7 @@ Provides: python2-perf
 %{pythonperfdesc}
 
 %prep
-%autosetup -p1 -n linux-%{version}
+%autosetup -p1 -n linux-cip-%{version}-cip%{cipver}
 %{?_cov_prepare}
 
 %build
