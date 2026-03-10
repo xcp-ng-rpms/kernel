@@ -1,0 +1,183 @@
+From 4ccddffb05346b895c54c46c5f70602eb0fb57a1 Mon Sep 17 00:00:00 2001
+Message-ID: <4ccddffb05346b895c54c46c5f70602eb0fb57a1.1773167101.git.teddy.astie@outlook.fr>
+In-Reply-To: <651ecd41d7c801252a6278039ccbc3e02ef3a383.1773167101.git.teddy.astie@outlook.fr>
+References: <651ecd41d7c801252a6278039ccbc3e02ef3a383.1773167101.git.teddy.astie@outlook.fr>
+From: =?UTF-8?q?Edwin=20T=C3=B6r=C3=B6k?= <edwin.torok@cloud.com>
+Date: Fri, 25 Jul 2025 16:06:49 +0100
+Subject: [PATCH 3/3] perf kvm: implement Xen hypervisor stacktraces
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Using the new VPMU 0.2 interface.
+This is backwards compatible with VPMU 0.1:
+the new 'struct xen_pmu_hv_stacktrace` is stored at the end of the page,
+and stacktrace_nr would be 0 on old hypervisors.
+
+Signed-off-by: Edwin Török <edwin.torok@cloud.com>
+---
+ arch/x86/events/core.c |  5 ++-
+ arch/x86/xen/pmu.c     | 75 ++++++++++++++++++++++++++++++++++++++----
+ 2 files changed, 73 insertions(+), 7 deletions(-)
+
+diff --git a/arch/x86/events/core.c b/arch/x86/events/core.c
+index c8d08da5b308..de1b77030f7f 100644
+--- a/arch/x86/events/core.c
++++ b/arch/x86/events/core.c
+@@ -2325,12 +2325,15 @@ perf_callchain_kernel(struct perf_callchain_entry_ctx *entry, struct pt_regs *re
+ 	struct unwind_state state;
+ 	unsigned long addr;
+ 
++	if (perf_guest_cbs)
++		perf_guest_cbs->hypervisor_callchain(entry, regs);
++
+ 	if (perf_guest_cbs && perf_guest_cbs->is_in_guest()) {
+ 		/* TODO: We don't support guest os callchain now */
+ 		return;
+ 	}
+ 
+-	if (perf_callchain_store(entry, regs->ip))
++	if (!regs->ip || perf_callchain_store(entry, regs->ip))
+ 		return;
+ 
+ 	for (unwind_start(&state, current, regs, NULL); !unwind_done(&state);
+diff --git a/arch/x86/xen/pmu.c b/arch/x86/xen/pmu.c
+index d5d11b4c6b1c..94e3c930cfd5 100644
+--- a/arch/x86/xen/pmu.c
++++ b/arch/x86/xen/pmu.c
+@@ -18,11 +18,13 @@
+ struct xenpmu {
+ 	/* Shared page between hypervisor and domain */
+ 	struct xen_pmu_data *xenpmu_data;
++	const struct xen_pmu_hv_stacktrace *xenpmu_hv_stacktrace;
+ 
+ 	uint8_t flags;
+ };
+ static DEFINE_PER_CPU(struct xenpmu, xenpmu_shared);
+ #define get_xenpmu_data()    (this_cpu_ptr(&xenpmu_shared)->xenpmu_data)
++#define get_xenpmu_hv_stacktrace()    (this_cpu_ptr(&xenpmu_shared)->xenpmu_hv_stacktrace)
+ #define get_xenpmu_flags()   (this_cpu_ptr(&xenpmu_shared)->flags)
+ 
+ /* Macro for computing address of a PMU MSR bank */
+@@ -415,8 +417,19 @@ static int xen_is_in_guest(void)
+ 		return 0;
+ 	}
+ 
+-	if (!xen_initial_domain() || (xenpmu_data->domain_id >= DOMID_SELF))
+-		return 0;
++	if (!xen_initial_domain() || (xenpmu_data->domain_id >= DOMID_SELF)) {
++		if (xenpmu_data->domain_id == DOMID_XEN) {
++			/* when inside Xen we output the hypervisor stacktrace if available,
++			* but only look at guest stacktrace if this is our domid
++			*/
++			const struct xen_pmu_hv_stacktrace *xenpmu_hv_stacktrace =
++				get_xenpmu_hv_stacktrace();
++			if (!xenpmu_hv_stacktrace ||
++					xenpmu_hv_stacktrace->guest_domain_id == DOMID_SELF)
++				return 0;
++		} else
++			return 0;
++	}
+ 
+ 	return 1;
+ }
+@@ -448,11 +461,57 @@ static unsigned long xen_get_guest_ip(void)
+ 	return xenpmu_data->pmu.r.regs.ip;
+ }
+ 
++static void xen_convert_regs(const struct xen_pmu_regs *xen_regs,
++			     struct pt_regs *regs, uint64_t pmu_flags);
++
++static void xen_hypervisor_callchain(struct perf_callchain_entry_ctx *entry,
++				     struct pt_regs *regs)
++{
++	unsigned int i;
++
++	if (!entry)
++		return;
++
++	const struct xen_pmu_data *xenpmu_data = get_xenpmu_data();
++
++	if (!xenpmu_data) {
++		pr_warn_once("%s: pmudata not initialized\n", __func__);
++		return;
++	}
++
++	if (xenpmu_data->domain_id != DOMID_XEN)
++		return;
++
++	if (!regs->ip || perf_callchain_store(entry, regs->ip))
++		return;
++
++	const struct xen_pmu_hv_stacktrace *pmu_stack =
++		get_xenpmu_hv_stacktrace();
++
++	const unsigned int stacktrace_nr = pmu_stack->stacktrace_nr;
++
++	if (stacktrace_nr > ARRAY_SIZE(pmu_stack->stacktrace)) {
++		pr_warn_once("%s: stacktrace_nr out of bounds: %d", __func__,
++			     stacktrace_nr);
++		return;
++	}
++
++	for (i = 0; i < stacktrace_nr; i++) {
++		uint64_t addr =
++			pmu_stack->stacktrace[PMU_MAX_STACKTRACE - 1 - i];
++		if (!addr || perf_callchain_store(entry, addr))
++			break;
++	}
++
++	xen_convert_regs(&pmu_stack->guest.r.regs, regs,
++			 xenpmu_data->pmu.pmu_flags);
++}
++
+ static struct perf_guest_info_callbacks xen_guest_cbs = {
+ 	.is_in_guest            = xen_is_in_guest,
+ 	.is_user_mode           = xen_is_user_mode,
+ 	.get_guest_ip           = xen_get_guest_ip,
+-	.hypervisor_callchain   = NULL
++	.hypervisor_callchain   = xen_hypervisor_callchain
+ };
+ 
+ /* Convert registers from Xen's format to Linux' */
+@@ -476,7 +535,6 @@ static void xen_convert_regs(const struct xen_pmu_regs *xen_regs,
+ 	}
+ }
+ 
+-
+ irqreturn_t xen_pmu_irq_handler(int irq, void *dev_id)
+ {
+ 	int err, ret = IRQ_NONE;
+@@ -516,7 +574,7 @@ void xen_pmu_init(int cpu)
+ {
+ 	int err;
+ 	struct xen_pmu_params xp;
+-	unsigned long pfn;
++	unsigned long pfn, pmu_page;
+ 	struct xen_pmu_data *xenpmu_data;
+ 
+ 	BUILD_BUG_ON(sizeof(struct xen_pmu_data) > PAGE_SIZE);
+@@ -524,7 +582,8 @@ void xen_pmu_init(int cpu)
+ 	if (xen_hvm_domain())
+ 		return;
+ 
+-	xenpmu_data = (struct xen_pmu_data *)get_zeroed_page(GFP_KERNEL);
++	pmu_page = get_zeroed_page(GFP_KERNEL);
++	xenpmu_data = (struct xen_pmu_data *)pmu_page;
+ 	if (!xenpmu_data) {
+ 		pr_err("VPMU init: No memory\n");
+ 		return;
+@@ -540,6 +599,10 @@ void xen_pmu_init(int cpu)
+ 		goto fail;
+ 
+ 	per_cpu(xenpmu_shared, cpu).xenpmu_data = xenpmu_data;
++	per_cpu(xenpmu_shared, cpu).xenpmu_hv_stacktrace =
++		(const struct xen_pmu_hv_stacktrace *)
++			    (pmu_page + PAGE_SIZE -
++			    sizeof(struct xen_pmu_hv_stacktrace));
+ 	per_cpu(xenpmu_shared, cpu).flags = 0;
+ 
+ 	if (cpu == 0) {
+-- 
+2.53.0
+

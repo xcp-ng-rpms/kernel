@@ -1,0 +1,90 @@
+From 651ecd41d7c801252a6278039ccbc3e02ef3a383 Mon Sep 17 00:00:00 2001
+Message-ID: <651ecd41d7c801252a6278039ccbc3e02ef3a383.1773167101.git.teddy.astie@outlook.fr>
+From: =?UTF-8?q?Edwin=20T=C3=B6r=C3=B6k?= <edwin.torok@cloud.com>
+Date: Fri, 25 Jul 2025 16:06:47 +0100
+Subject: [PATCH 1/3] perf kvm: introduce a hypervisor_callchain callback
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+`perf kvm` currently assumes that it can construct a stacktrace by
+looking up stack pointer addresses in the current kernel's address
+space.
+That only works if the hypervisor is the same as the kernel (i.e. KVM),
+but doesn't work if the hypervisor is separate from the kernel (Xen,
+with Linux as Dom0).
+
+Introduce a callback to enable Xen to retrieve the stacktrace from Xen
+instead when a sample is inside the hypervisor (domid == DOMID_XEN
+instead of DOMID_SELF).
+
+The callback can replace the registers with the guest kernel's registers
+upon return when domid == DOMID_SELF, so that we can continue with the
+kernel stacktrace.
+
+Both KVM and Xen define this as NULL, a followup commit will implement
+the callback for Xen (KVM doesn't need a callback implementation).
+
+No functional change.
+
+Signed-off-by: Edwin Török <edwin.torok@cloud.com>
+---
+ arch/x86/kvm/x86.c         | 1 +
+ arch/x86/xen/pmu.c         | 2 ++
+ include/linux/perf_event.h | 4 ++++
+ 3 files changed, 7 insertions(+)
+
+diff --git a/arch/x86/kvm/x86.c b/arch/x86/kvm/x86.c
+index 5a9a3ebe8fba..f7c860264169 100644
+--- a/arch/x86/kvm/x86.c
++++ b/arch/x86/kvm/x86.c
+@@ -6587,6 +6587,7 @@ static struct perf_guest_info_callbacks kvm_guest_cbs = {
+ 	.is_in_guest		= kvm_is_in_guest,
+ 	.is_user_mode		= kvm_is_user_mode,
+ 	.get_guest_ip		= kvm_get_guest_ip,
++	.hypervisor_callchain   = NULL
+ };
+ 
+ static void kvm_set_mmio_spte_mask(void)
+diff --git a/arch/x86/xen/pmu.c b/arch/x86/xen/pmu.c
+index 95997e6c0696..d5d11b4c6b1c 100644
+--- a/arch/x86/xen/pmu.c
++++ b/arch/x86/xen/pmu.c
+@@ -452,6 +452,7 @@ static struct perf_guest_info_callbacks xen_guest_cbs = {
+ 	.is_in_guest            = xen_is_in_guest,
+ 	.is_user_mode           = xen_is_user_mode,
+ 	.get_guest_ip           = xen_get_guest_ip,
++	.hypervisor_callchain   = NULL
+ };
+ 
+ /* Convert registers from Xen's format to Linux' */
+@@ -475,6 +476,7 @@ static void xen_convert_regs(const struct xen_pmu_regs *xen_regs,
+ 	}
+ }
+ 
++
+ irqreturn_t xen_pmu_irq_handler(int irq, void *dev_id)
+ {
+ 	int err, ret = IRQ_NONE;
+diff --git a/include/linux/perf_event.h b/include/linux/perf_event.h
+index 53c500f0ca79..c5e37d4f538a 100644
+--- a/include/linux/perf_event.h
++++ b/include/linux/perf_event.h
+@@ -26,10 +26,14 @@
+ # include <asm/local64.h>
+ #endif
+ 
++struct perf_callchain_entry_ctx;
++
+ struct perf_guest_info_callbacks {
+ 	int				(*is_in_guest)(void);
+ 	int				(*is_user_mode)(void);
+ 	unsigned long			(*get_guest_ip)(void);
++	void				(*hypervisor_callchain)(struct perf_callchain_entry_ctx *pc,
++							struct pt_regs *regs);
+ };
+ 
+ #ifdef CONFIG_HAVE_HW_BREAKPOINT
+-- 
+2.53.0
+

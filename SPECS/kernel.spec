@@ -723,6 +723,11 @@ Patch1002: 0001-perf-probe-Fix-getting-the-kernel-map.patch
 Patch1003: 0001-ACPI-processor-idle-Check-acpi_bus_get_device-return.patch
 Patch1004: 0001-scsi-target-Fix-XCOPY-NAA-identifier-lookup.patch
 
+# XCP-ng vPMU patches
+Patch1101: pmu-0001-perf-kvm-introduce-a-hypervisor_callchain-callback.patch
+Patch1102: pmu-0002-xen-interface-xenpmu-.h-update-with-VPMU-0.2-from-Xe.patch 
+Patch1103: pmu-0003-perf-kvm-implement-Xen-hypervisor-stacktraces.patch 
+
 %description
 The kernel package contains the Linux kernel (vmlinuz), the core of any
 Linux operating system. The kernel handles the basic functions of the operating

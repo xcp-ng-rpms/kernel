@@ -1,0 +1,232 @@
+From 92b13354494b1deecbc0fbc3637648f382d60674 Mon Sep 17 00:00:00 2001
+Message-ID: <92b13354494b1deecbc0fbc3637648f382d60674.1773167101.git.teddy.astie@outlook.fr>
+In-Reply-To: <651ecd41d7c801252a6278039ccbc3e02ef3a383.1773167101.git.teddy.astie@outlook.fr>
+References: <651ecd41d7c801252a6278039ccbc3e02ef3a383.1773167101.git.teddy.astie@outlook.fr>
+From: =?UTF-8?q?Edwin=20T=C3=B6r=C3=B6k?= <edwin.torok@cloud.com>
+Date: Fri, 25 Jul 2025 16:06:48 +0100
+Subject: [PATCH 2/3] xen/{interface,xenpmu}.h: update with VPMU 0.2 from Xen
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Signed-off-by: Edwin Török <edwin.torok@cloud.com>
+---
+ arch/x86/include/asm/xen/interface.h | 100 +++++++++++++++++++++++++++
+ include/xen/interface/xenpmu.h       |  56 +++++++++++++--
+ 2 files changed, 152 insertions(+), 4 deletions(-)
+
+diff --git a/arch/x86/include/asm/xen/interface.h b/arch/x86/include/asm/xen/interface.h
+index 496eceebb9aa..438c11247265 100644
+--- a/arch/x86/include/asm/xen/interface.h
++++ b/arch/x86/include/asm/xen/interface.h
+@@ -318,6 +318,25 @@ struct xen_pmu_regs {
+ #define PMU_SAMPLE_REAL	   (1<<2) /* Sample is from realmode */
+ #define PMU_SAMPLE_PV	   (1<<3) /* Sample from a PV guest */
+ 
++/*
++ * Architecture-specific information describing state of the guest at
++ * the time of PMU interrupt.
++ * Even if the interrupt arrived while inside Xen, this will always contain
++ * the guest's state.
++ */
++struct xen_pmu_arch_guest {
++	union {
++		/*
++		 * Processor's registers at the time of interrupt.
++		 * WO for hypervisor, RO for guests.
++		 */
++		struct xen_pmu_regs regs;
++		/* Padding for adding new registers to xen_pmu_regs in the future */
++#define XENPMU_REGS_PAD_SZ 64
++		uint8_t pad[XENPMU_REGS_PAD_SZ];
++	} r;
++};
++
+ /*
+  * Architecture-specific information describing state of the processor at
+  * the time of PMU interrupt.
+@@ -374,6 +393,87 @@ struct xen_pmu_arch {
+ 	} c;
+ };
+ 
++/* Memory layout:
++ *                ╭─────────────────────╮
++ *                │ struct xen_pmu_data │
++ * ╒══════════════╧═════════════════════╧═══════════════════════╕ ◁│
++ * │ vcpu_id                                                    │  │
++ * ├────────────────────────────────────────────────────────────┤  │
++ * │ pcpu_id                                                    │  │
++ * ├────────────────────────────────────────────────────────────┤  │
++ * │ domain_id                                                  │  │
++ * ├────────────────────────────────────────────────────────────┤  │
++ * │██pad███████████████████████████████████████████████████████│  │
++ * ╞════╤═╤═══╤══════════════════╤══════════════════════════════╡  │
++ * │ pmu│ │ r │ regs             │██pad█████████████████████████│  │
++ * ├────╯ ├───╯ (xen or guest)   │██████████████████████████████│  │
++ * │      ╞══════════════════════╧══════════════════════════════╡  │
++ * │      │ pmu_flags                                           │  │
++ * │      ╞═══╤════════════════════╤════════════════════════════╡  │
++ * │      │ l │ lapic_lvtpc        │████████████████████████████│  │
++ * │      ├───╯ ███████████████████│██pad███████████████████████│  │
++ * │      │     ███████████████████│████████████████████████████│  │
++ * │      ╞═══╤═╤═══════╤═════╤════╪════╤═══════╤═══════════════╡  │
++ * │      │ c │ │       │ amd │    │    │ intel │         │█████│  │
++ * │      ├───┘ │       ╰─────╯    │    ╰───────╯         │█████│  │
++ * │      │     │ counter          │ fixed_counters       │█████│  │
++ * │      │     ├──────────────────┼──────────────────────┤█████│  │
++ * │      │     │ ctrls            │ arch_counters        │█████│  │
++ * │      │     ╞═════╤════════╤═══├──────────────────────┤█████│  │
++ * │      │     │     │ regs[] │  ┆│ global_ctrl          │█████│  │
++ * │      │     │     └────────╯  ┆├──────────────────────┤█████│  │
++ * │      │     │struct           ┆│ global_ovf_ctrl      │█████│  │
++ * │      │     │xen_pmu_cntr_pair┆├──────────────────────┤█████│  │
++ * │      │     │[counters]       ┆│ global_status        │█████│  │
++ * │      │     │                 ┆├──────────────────────┤█████│  │
++ * │      │     │                 ┆│ fixed_ctrl           │█████│  │
++ * │      │     │                 ┆├──────────────────────┤█████│  │
++ * │      │     │                 ┆│ ds_area              │█████│  │
++ * │      │     │                 ┆├──────────────────────┤█████│  │
++ * │      │     │                 ┆│ pebs_enable          │█pad█│  │
++ * │      │     │                 ┆├──────────────────────┤█████│  │
++ * │      │     │                 ▽│ debugctl             │█████│  │
++ * │      │     │██████████████████╞═══════╤════════╤═════╡█████│  │
++ * │      │     │██████████████████│       │ regs[] │ ┆[0]│█████│  │
++ * │      │     │██████████████████│       └────────╯ ┆   │█████│  │
++ * │      │     │██████████████████│ uint64_t         ┆   │█████│  │
++ * │      │     │██████████████████│ [fixed_counters] ┆   │█████│  │
++ * │      │     │██████████████████│                  ┆   │█████│  │
++ * │      │     │██████████████████│                  ┆   │█████│  │
++ * │      │     │██████████████████│ ─────────────────┆   │█████│  │
++ * │      │     │██████████████████│  struct          ┆   │█████│  │
++ * │      │     │██████████████████│ xen_pmu_cntr_pair┆   │█████│  │
++ * │      │     ╘══════════════════╡ [arch_counters]  ┆   ╞═════╡  │
++ * │      │                        │                  ┆   │     │  │
++ * │      │                        │                  ▽   │     │  │
++ * │      │                        ╘══════════════════════╛     │  │
++ * │      ╘═════════════════════════════════════════════════════╡  │
++ * ╞════════════════════════════════════════════════════════════╡  │
++ * │████████████████████████████████████████████████████████████│  │
++ * ┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆  ┆
++ * ┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆┆  ┆
++ * │████████████████████████████████████████████████████████████│  │
++ * │████████████████████████████████████████████████████████████│  │
++ * │██████████╭──────────────────────────────╮██████████████████│  │
++ * │██████████│ struct xen_pmu_hv_stacktrace │██████████████████│  │
++ * ╞══════════╧══════════════════════════════╧══════════════════╡  │
++ * │                              △ [stacktrace_nr-1]           │  │
++ * │                              ┆                             │  │
++ * │ stacktrace[stacktrace_nr]    ┆ [0]                         │  │
++ * ├────────────────────────────────────────────────────────────┤  │
++ * │ stacktrace_nr                                              │  │
++ * ├────────────────────────────────────────────────────────────┤  │
++ * │ guest_domain_id                                            │  │
++ * ├────────────────────────────────────────────────────────────┤  │
++ * │██pad███████████████████████████████████████████████████████│  │
++ * ╞═══════╤═╤═══╤══════════════════╤═══════════════════════════╡  │
++ * │ guest │ │ r │ regs             │██pad██████████████████████│  │
++ * ├───────╯ ├───╯ (xen or guest)   │███████████████████████████│  │
++ * │         ╞══════════════════════╧═══════════════════════════╡  │
++ * │         │██pad2████████████████████████████████████████████│  │ PAGE_SIZE
++ * ╘═════════╧══════════════════════════════════════════════════╛ ◁╯
++ */
++
+ #endif	/* !__ASSEMBLY__ */
+ 
+ /*
+diff --git a/include/xen/interface/xenpmu.h b/include/xen/interface/xenpmu.h
+index ad603eab24b3..8ea21802ff92 100644
+--- a/include/xen/interface/xenpmu.h
++++ b/include/xen/interface/xenpmu.h
+@@ -5,7 +5,7 @@
+ #include "xen.h"
+ 
+ #define XENPMU_VER_MAJ    0
+-#define XENPMU_VER_MIN    1
++#define XENPMU_VER_MIN    2
+ 
+ /*
+  * ` enum neg_errnoval
+@@ -22,8 +22,7 @@
+ #define XENPMU_init            4
+ #define XENPMU_finish          5
+ #define XENPMU_lvtpc_set       6
+-#define XENPMU_flush           7
+-
++#define XENPMU_flush           7 /* Write cached MSR values to HW     */
+ /* ` } */
+ 
+ /* Parameters structure for HYPERVISOR_xenpmu_op call */
+@@ -56,8 +55,20 @@ struct xen_pmu_params {
+ /*
+  * PMU features:
+  * - XENPMU_FEATURE_INTEL_BTS: Intel BTS support (ignored on AMD)
++ * - XENPMU_FEATURE_IPC_ONLY:   Restrict PMCs to the most minimum set possible.
++ *                              Instructions, cycles, and ref cycles. Can be
++ *                              used to calculate instructions-per-cycle (IPC)
++ *                              (ignored on AMD).
++ * - XENPMU_FEATURE_ARCH_ONLY:  Restrict PMCs to the Intel Pre-Defined
++ *                              Architectural Performance Events exposed by
++ *                              cpuid and listed in the Intel developer's manual
++ *                              (ignored on AMD).
++ * - XENPMU_FEATURE_HV_STACKTRACE: Hypervisor stacktraces (when compiled with frame pointers)
+  */
+-#define XENPMU_FEATURE_INTEL_BTS  1
++#define XENPMU_FEATURE_INTEL_BTS  (1<<0)
++#define XENPMU_FEATURE_IPC_ONLY   (1<<1)
++#define XENPMU_FEATURE_ARCH_ONLY  (1<<2)
++#define XENPMU_FEATURE_HV_STACKTRACE (1<<3)
+ 
+ /*
+  * Shared PMU data between hypervisor and PV(H) domains.
+@@ -67,6 +78,9 @@ struct xen_pmu_params {
+  * Architecture-independent fields of xen_pmu_data are WO for the hypervisor
+  * and RO for the guest but some fields in xen_pmu_arch can be writable
+  * by both the hypervisor and the guest (see arch-$arch/pmu.h).
++ *
++ * PAGE_SIZE bytes of memory are allocated.
++ * This struct cannot be larger than PAGE_SIZE.
+  */
+ struct xen_pmu_data {
+ 	/* Interrupted VCPU */
+@@ -92,4 +106,38 @@ struct xen_pmu_data {
+ 	struct xen_pmu_arch pmu;
+ };
+ 
++/* stacktrace entry populated from the end,
++ * so stacktrace_nr == 1, means that stacktrace[PMU_MAX_STACKTRCE-1] is valid.
++ * This is done, so that PMU_MAX_STACKTRACE can be changed in the future, without breaking the ABI.
++ * The struct itself (and thus the stacktrace_nr field) will always be placed at the end of a page.
++ *
++ * See arch-x86/pmu.h for an example memory layout on x86.
++ *
++ */
++#define PMU_MAX_STACKTRACE 127
++
++/* WO for hypervisor, RO for guest */
++struct xen_pmu_hv_stacktrace {
++	uint64_t stacktrace[PMU_MAX_STACKTRACE];
++	uint64_t stacktrace_nr;
++
++	/* Like xen_pmu_data.domain_id, but instead of DOMID_XEN always contains the
++	 * domain that was interrupted (DOMID_SELF if it matches the sampling
++	 * domain).
++	 */
++	domid_t guest_domain_id;
++	uint8_t pad[6];
++
++	/* When xen_pmu_data.domain_id == DOMID_XEN, this will contain
++	 * the registers of the guest that was interrupted.
++	 * This is useful for Dom0 kernel stacktraces, even if the interrupt
++	 * arrives while in Xen.
++	 */
++	struct xen_pmu_arch_guest guest;
++#define XEN_PMU_STACKTRACE_PAD 56
++	uint8_t pad2[XEN_PMU_STACKTRACE_PAD];
++};
++
++#define MAX_XEN_PMU_DATA_SIZE (PAGE_SIZE - sizeof(struct xen_pmu_hv_stacktrace))
++
+ #endif /* __XEN_PUBLIC_XENPMU_H__ */
+-- 
+2.53.0
+
