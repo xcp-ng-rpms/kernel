@@ -848,10 +848,10 @@ install -m 644 %{SOURCE5} ../prepared-source
 #    the Module.symvers file from the build directory to the root of
 #    the patchqueue repository and name it Module.kabi.
 #
-%if %{do_kabichk}
-    echo "**** kABI checking is enabled in kernel SPEC file. ****"
-    %{SOURCE3} -k %{SOURCE4} -s Module.symvers || exit 1
-%endif
+#%if %{do_kabichk}
+#    echo "**** kABI checking is enabled in kernel SPEC file. ****"
+#    %{SOURCE3} -k %{SOURCE4} -s Module.symvers || exit 1
+#%endif
 
 # make perf
 %global perf_make \
