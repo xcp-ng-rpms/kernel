@@ -1,0 +1,118 @@
+From 7a7a29f25443238e56583a6ee33eac5f19ada44b Mon Sep 17 00:00:00 2001
+From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+Date: Sat, 31 Jan 2026 16:18:10 +0100
+Subject: [PATCH] !kabi crypto: public_key: fix overflow during implicit
+ conversion
+
+The original struct had enough padding to convert from u8 to u32
+digest_size without changing offsets:
+
+   struct public_key_signature {
+	   struct asymmetric_key_id * auth_ids[2];          /*     0    16 */
+	   u8 *                       s;                    /*    16     8 */
+	   u32                        s_size;               /*    24     4 */
+
+	   /* XXX 4 bytes hole, try to pack */
+
+	   u8 *                       digest;               /*    32     8 */
+	   u8                         digest_size;          /*    40     1 */
+
+	   /* XXX 7 bytes hole, try to pack */
+
+	   const char  *              pkey_algo;            /*    48     8 */
+	   const char  *              hash_algo;            /*    56     8 */
+
+	   /* size: 64, cachelines: 1, members: 7 */
+	   /* sum members: 53, holes: 2, sum holes: 11 */
+   };
+
+After the change:
+
+   struct public_key_signature {
+	   struct asymmetric_key_id * auth_ids[2];          /*     0    16 */
+	   u8 *                       s;                    /*    16     8 */
+	   u32                        s_size;               /*    24     4 */
+
+	   /* XXX 4 bytes hole, try to pack */
+
+	   u8 *                       digest;               /*    32     8 */
+	   u32                        digest_size;          /*    40     4 */
+
+	   /* XXX 4 bytes hole, try to pack */
+
+	   const char  *              pkey_algo;            /*    48     8 */
+	   const char  *              hash_algo;            /*    56     8 */
+
+	   /* size: 64, cachelines: 1, members: 7 */
+	   /* sum members: 53, holes: 2, sum holes: 8 */
+   };
+
+This commit also put back in place the `s_size` field, it was moved to fill
+a four bytes hole, but would obviously change the kABI.
+
+Fixes: aab312696d37 ("crypto: public_key: fix overflow during implicit conversion")
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+---
+ crypto/asymmetric_keys/signature.c | 24 ++++++++++++++++++++++++
+ include/crypto/public_key.h        | 11 ++++++++++-
+ 2 files changed, 34 insertions(+), 1 deletion(-)
+
+diff --git a/crypto/asymmetric_keys/signature.c b/crypto/asymmetric_keys/signature.c
+index 28198314bc39..41cb637b9766 100644
+--- a/crypto/asymmetric_keys/signature.c
++++ b/crypto/asymmetric_keys/signature.c
+@@ -66,3 +66,27 @@ int verify_signature(const struct key *key,
+ 	return ret;
+ }
+ EXPORT_SYMBOL_GPL(verify_signature);
++
++void kabi_check_struct_public_key(void)
++{
++	struct old_public_key_signature {
++		struct asymmetric_key_id *auth_ids[2];
++		u8 *s;			/* Signature */
++		u32 s_size; 		/* Number of bytes in signature */
++		u8 *digest;
++		u8 digest_size;		/* Number of bytes in digest */
++		const char *pkey_algo;
++		const char *hash_algo;
++	};
++
++	BUILD_BUG_ON(sizeof(struct old_public_key_signature) != sizeof(struct public_key_signature));
++	BUILD_BUG_ON(
++		offsetof(struct old_public_key_signature, digest_size) !=
++		offsetof(struct public_key_signature, digest_size)
++		);
++	BUILD_BUG_ON(
++		offsetof(struct old_public_key_signature, pkey_algo) !=
++		offsetof(struct public_key_signature, pkey_algo)
++		);
++
++}
+diff --git a/include/crypto/public_key.h b/include/crypto/public_key.h
+index 052e26fda2e6..9c68984da215 100644
+--- a/include/crypto/public_key.h
++++ b/include/crypto/public_key.h
+@@ -35,9 +35,18 @@ extern void public_key_free(struct public_key *key);
+ struct public_key_signature {
+ 	struct asymmetric_key_id *auth_ids[2];
+ 	u8 *s;			/* Signature */
++	u32 s_size; 		/* Number of bytes in signature */
+ 	u8 *digest;
+-	u32 s_size;		/* Number of bytes in signature */
++#ifndef __GENKSYMS__
++	/*
++	 * Type change in aab312696d37 ("crypto: public_key: fix overflow
++	 * during implicit conversion"), luckily there was a three bytes
++	 * hole to make it fit.
++	 */
+ 	u32 digest_size;	/* Number of bytes in digest */
++#else
++	u8 digest_size;		/* Number of bytes in digest */
++#endif
+ 	const char *pkey_algo;
+ 	const char *hash_algo;
+ };
+-- 
+2.43.0
+

@@ -1,0 +1,45 @@
+From f30ea8794c1b190b1732d8c572e694766fac551a Mon Sep 17 00:00:00 2001
+From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+Date: Tue, 24 Feb 2026 14:53:13 +0100
+Subject: [PATCH] !kabi Revert: netfilter: nf_conntrack_pptp: fix compilation
+ warning with W=1 build
+
+The original commit only removed a compilation warning about a const
+qualifier having no effect - get rid of it as it causes a kABI change.
+
+Reverts: 8efa59fc90a5 ("netfilter: nf_conntrack_pptp: fix compilation warning with W=1 build")
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+---
+ include/linux/netfilter/nf_conntrack_pptp.h | 2 +-
+ net/netfilter/nf_conntrack_pptp.c           | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/include/linux/netfilter/nf_conntrack_pptp.h b/include/linux/netfilter/nf_conntrack_pptp.h
+index ade993809ebc..03eb3f49b4af 100644
+--- a/include/linux/netfilter/nf_conntrack_pptp.h
++++ b/include/linux/netfilter/nf_conntrack_pptp.h
+@@ -5,7 +5,7 @@
+ 
+ #include <linux/netfilter/nf_conntrack_common.h>
+ 
+-const char *pptp_msg_name(u_int16_t msg);
++extern const char *const pptp_msg_name(u_int16_t msg);
+ 
+ /* state of the control session */
+ enum pptp_ctrlsess_state {
+diff --git a/net/netfilter/nf_conntrack_pptp.c b/net/netfilter/nf_conntrack_pptp.c
+index 203107ce2455..bd25570ec665 100644
+--- a/net/netfilter/nf_conntrack_pptp.c
++++ b/net/netfilter/nf_conntrack_pptp.c
+@@ -90,7 +90,7 @@ static const char *const pptp_msg_name_array[PPTP_MSG_MAX + 1] = {
+ 	[PPTP_SET_LINK_INFO]		= "SET_LINK_INFO"
+ };
+ 
+-const char *pptp_msg_name(u_int16_t msg)
++const char *const pptp_msg_name(u_int16_t msg)
+ {
+ 	if (msg > PPTP_MSG_MAX)
+ 		return pptp_msg_name_array[0];
+-- 
+2.43.0
+

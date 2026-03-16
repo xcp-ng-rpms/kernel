@@ -1,0 +1,111 @@
+From affa3b4d12377685d95562a2df24fb5f78e21a6b Mon Sep 17 00:00:00 2001
+From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+Date: Thu, 26 Feb 2026 16:30:34 +0100
+Subject: [PATCH] !kabi bdi: add a ->dev_name field to struct backing_dev_info
+
+No room for 64 bytes in the original struct, so rely on shadow live
+patching code.
+
+Fixes: d6c434ae9d3b ("bdi: add a ->dev_name field to struct backing_dev_info")
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+---
+ include/linux/backing-dev-defs.h |  8 +++++++-
+ mm/backing-dev.c                 | 28 +++++++++++++++++++++++++---
+ 2 files changed, 32 insertions(+), 4 deletions(-)
+
+diff --git a/include/linux/backing-dev-defs.h b/include/linux/backing-dev-defs.h
+index 65d47522413c..e9d66f77062b 100644
+--- a/include/linux/backing-dev-defs.h
++++ b/include/linux/backing-dev-defs.h
+@@ -197,7 +197,13 @@ struct backing_dev_info {
+ 	wait_queue_head_t wb_waitq;
+ 
+ 	struct device *dev;
+-	char dev_name[64];
++	/*
++	 * Added in d6c434ae9d3b ("bdi: add a ->dev_name field to struct
++	 * backing_dev_info"), and causing kABI changes.  Use of shadow
++	 * live patching code to neutralize kABI change.
++	 *
++	 * char dev_name[64];
++	 */
+ 	struct device *owner;
+ 
+ 	struct timer_list laptop_mode_wb_timer;
+diff --git a/mm/backing-dev.c b/mm/backing-dev.c
+index 67431d02ad9d..69b303bbc639 100644
+--- a/mm/backing-dev.c
++++ b/mm/backing-dev.c
+@@ -12,6 +12,8 @@
+ #include <linux/device.h>
+ #include <trace/events/writeback.h>
+ 
++#include <linux/shadow_var.h>
++
+ struct backing_dev_info noop_backing_dev_info = {
+ 	.name		= "noop",
+ 	.capabilities	= BDI_CAP_NO_ACCT_AND_WRITEBACK,
+@@ -865,7 +867,14 @@ struct backing_dev_info *bdi_alloc_node(gfp_t gfp_mask, int node_id)
+ 	if (!bdi)
+ 		return NULL;
+ 
++
++	if (!shadow_var_alloc(bdi, "dev_name", sizeof(char[64]), gfp_mask)) {
++		kfree(bdi);
++		return NULL;
++	}
++
+ 	if (bdi_init(bdi)) {
++		shadow_var_free(bdi, "dev_name");
+ 		kfree(bdi);
+ 		return NULL;
+ 	}
+@@ -876,12 +885,17 @@ EXPORT_SYMBOL(bdi_alloc_node);
+ int bdi_register_va(struct backing_dev_info *bdi, const char *fmt, va_list args)
+ {
+ 	struct device *dev;
++	char (*kabi_bdi_dev_name)[64];
+ 
+ 	if (bdi->dev)	/* The driver needs to use separate queues per device */
+ 		return 0;
+ 
+-	vsnprintf(bdi->dev_name, sizeof(bdi->dev_name), fmt, args);
+-	dev = device_create(bdi_class, NULL, MKDEV(0, 0), bdi, bdi->dev_name);
++	kabi_bdi_dev_name = shadow_var_get(bdi, "dev_name");
++	if (!kabi_bdi_dev_name)
++		return -ENOMEM;
++
++	vsnprintf(*kabi_bdi_dev_name, sizeof(*kabi_bdi_dev_name), fmt, args);
++	dev = device_create(bdi_class, NULL, MKDEV(0, 0), bdi, *kabi_bdi_dev_name);
+ 	if (IS_ERR(dev))
+ 		return PTR_ERR(dev);
+ 
+@@ -975,6 +989,7 @@ static void release_bdi(struct kref *ref)
+ 	WARN_ON_ONCE(bdi->dev);
+ 	wb_exit(&bdi->wb);
+ 	cgwb_bdi_exit(bdi);
++	shadow_var_free(bdi, "dev_name");
+ 	kfree(bdi);
+ }
+ 
+@@ -986,9 +1001,16 @@ EXPORT_SYMBOL(bdi_put);
+ 
+ const char *bdi_dev_name(struct backing_dev_info *bdi)
+ {
++	char (*kabi_bdi_dev_name)[64];
++
+ 	if (!bdi || !bdi->dev)
+ 		return bdi_unknown_name;
+-	return bdi->dev_name;
++
++	kabi_bdi_dev_name = shadow_var_get(bdi, "dev_name");
++	if (kabi_bdi_dev_name == NULL)
++		return bdi_unknown_name;
++
++	return *kabi_bdi_dev_name;
+ }
+ EXPORT_SYMBOL_GPL(bdi_dev_name);
+ 
+-- 
+2.43.0
+

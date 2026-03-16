@@ -1,0 +1,38 @@
+From 4b303302a32c488d9e369d04e4687311e045bbd2 Mon Sep 17 00:00:00 2001
+From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+Date: Fri, 27 Feb 2026 14:04:01 +0100
+Subject: [PATCH] !kabi sysfs: Add sysfs_emit and sysfs_emit_at to format sysfs
+ output
+
+Made sure the `struct dev_pagemap` hasn't changed during the rebase from
+v4.19.19 to v4.19.325-cip129 through pahole.
+
+Fixes: cb1f69d53ac8 ("sysfs: Add sysfs_emit and sysfs_emit_at to format sysfs output")
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+---
+ fs/sysfs/file.c | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/fs/sysfs/file.c b/fs/sysfs/file.c
+index e7c7d28c3fc6..a56520b67158 100644
+--- a/fs/sysfs/file.c
++++ b/fs/sysfs/file.c
+@@ -15,8 +15,14 @@
+ #include <linux/list.h>
+ #include <linux/mutex.h>
+ #include <linux/seq_file.h>
++#ifndef __GENKSYMS__
++/*
++ * Added in 7c43f84efd6d ("driver core: Establish order of operations for
++ * device_add and device_del via bitflag") and causes struct dev_pagemap to
++ * be fully defined, which changes the kABI of sysfs_* exported symbols.
++ */
+ #include <linux/mm.h>
+-
++#endif
+ #include "sysfs.h"
+ #include "../kernfs/kernfs-internal.h"
+ 
+-- 
+2.43.0
+

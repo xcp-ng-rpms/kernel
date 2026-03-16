@@ -1,0 +1,36 @@
+From 0f055a248eab0484994d9f90205540073ec9f599 Mon Sep 17 00:00:00 2001
+From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+Date: Tue, 24 Feb 2026 11:14:11 +0100
+Subject: [PATCH] !kabi tracing: Constify string literal data member in struct
+ trace_event_call
+
+Fixes: f613189ab5c7 ("tracing: Constify string literal data member in struct trace_event_call")
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+---
+ include/linux/trace_events.h | 10 +++++++++-
+ 1 file changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/include/linux/trace_events.h b/include/linux/trace_events.h
+index bcd611d19f72..10cf82c96d71 100644
+--- a/include/linux/trace_events.h
++++ b/include/linux/trace_events.h
+@@ -254,7 +254,15 @@ struct trace_event_call {
+ 	struct list_head	list;
+ 	struct trace_event_class *class;
+ 	union {
+-		const char		*name;
++#ifndef __GENKSYMS__
++		/*
++		 * Was constified in f613189ab5c7 ("tracing: Constify
++		 * string literal data member in struct trace_event_call")
++		 */
++		const char *name;
++#else
++		char *name;
++#endif
+ 		/* Set TRACE_EVENT_FL_TRACEPOINT flag when using "tp" */
+ 		struct tracepoint	*tp;
+ 	};
+-- 
+2.43.0
+

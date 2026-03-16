@@ -1,0 +1,33 @@
+From 3770a91daed7e235ed81f057a4bcc57447c7f201 Mon Sep 17 00:00:00 2001
+From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+Date: Thu, 26 Feb 2026 11:04:08 +0100
+Subject: [PATCH] !kabi PCI: Decode PCIe 32 GT/s link speed
+
+Fixes: eac3517cd335 ("PCI: Decode PCIe 32 GT/s link speed")
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+---
+ include/linux/pci.h | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/include/linux/pci.h b/include/linux/pci.h
+index 0c1afef354e9..1b9ae87520c0 100644
+--- a/include/linux/pci.h
++++ b/include/linux/pci.h
+@@ -269,7 +269,14 @@ enum pci_bus_speed {
+ 	PCIE_SPEED_5_0GT		= 0x15,
+ 	PCIE_SPEED_8_0GT		= 0x16,
+ 	PCIE_SPEED_16_0GT		= 0x17,
++#ifndef __GENKSYMS__
++	/*
++	 * Added in eac3517cd335 ("PCI: Decode PCIe 32 GT/s link speed")
++	 * and no effect on subsequent enum values.  Safe to ignore in
++	 * genksyms.
++	 */
+ 	PCIE_SPEED_32_0GT		= 0x18,
++#endif
+ 	PCI_SPEED_UNKNOWN		= 0xff,
+ };
+ 
+-- 
+2.43.0
+

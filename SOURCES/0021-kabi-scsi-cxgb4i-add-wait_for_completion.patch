@@ -1,0 +1,43 @@
+From b71148cc8a0e0c2dd5e4624fe31f351f5e689070 Mon Sep 17 00:00:00 2001
+From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+Date: Thu, 19 Mar 2026 10:54:45 +0100
+Subject: [PATCH] !kabi scsi: cxgb4i: add wait_for_completion()
+
+Fixes: 4c3b23e90307 ("scsi: cxgb4i: add wait_for_completion()")
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+---
+ drivers/scsi/cxgbi/libcxgbi.h | 14 ++++++++++++++
+ 1 file changed, 14 insertions(+)
+
+diff --git a/drivers/scsi/cxgbi/libcxgbi.h b/drivers/scsi/cxgbi/libcxgbi.h
+index 3bf7414a75e5..bba70f18f209 100644
+--- a/drivers/scsi/cxgbi/libcxgbi.h
++++ b/drivers/scsi/cxgbi/libcxgbi.h
+@@ -487,10 +487,24 @@ struct cxgbi_device {
+ 	void (*csk_ddp_clear_map)(struct cxgbi_device *cdev,
+ 				  struct cxgbi_ppm *,
+ 				  struct cxgbi_task_tag_info *);
++#ifndef __GENKSYMS__
++	/**
++	 * Extra arguments removed in 4c3b23e90307 ("scsi: cxgb4i: add
++	 * wait_for_completion()") - it is fine to hide them from genksyms
++	 * as both amd64 and arm architectures, prior modules built with
++	 * the old definition and calling those functors would simply pass
++	 * one extra un-used argument in either in r8 (amd64) or x4 (arm).
++	 */
+ 	int (*csk_ddp_setup_digest)(struct cxgbi_sock *,
+ 				    unsigned int, int, int);
+ 	int (*csk_ddp_setup_pgidx)(struct cxgbi_sock *,
+ 				   unsigned int, int);
++#else
++	int (*csk_ddp_setup_digest)(struct cxgbi_sock *,
++				    unsigned int, int, int, int);
++	int (*csk_ddp_setup_pgidx)(struct cxgbi_sock *,
++				   unsigned int, int, bool);
++#endif
+ 
+ 	void (*csk_release_offload_resources)(struct cxgbi_sock *);
+ 	int (*csk_rx_pdu_ready)(struct cxgbi_sock *, struct sk_buff *);
+-- 
+2.43.0
+

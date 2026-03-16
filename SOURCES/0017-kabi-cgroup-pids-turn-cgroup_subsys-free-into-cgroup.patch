@@ -1,0 +1,48 @@
+From e685f9947b804baf75ccb778caaa9436bd86b1e7 Mon Sep 17 00:00:00 2001
+From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+Date: Thu, 19 Mar 2026 07:39:18 +0100
+Subject: [PATCH] =?UTF-8?q?!kabi=20cgroup/pids:=20turn=20cgroup=5Fsubsys->?=
+ =?UTF-8?q?free()=20into=20cgroup=5Fsubsys->release()=20to=20fix=20the?=
+ =?UTF-8?q?=E2=80=A6?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Fixes: d0bc74c5632f ("cgroup/pids: turn cgroup_subsys->free() into cgroup_subsys->release() to fix the accounting")
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+---
+ include/linux/cgroup-defs.h | 10 +++++++++-
+ 1 file changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/include/linux/cgroup-defs.h b/include/linux/cgroup-defs.h
+index 56442d3b651d..d2f55bfab479 100644
+--- a/include/linux/cgroup-defs.h
++++ b/include/linux/cgroup-defs.h
+@@ -535,7 +535,6 @@ struct cftype {
+ 
+ 	int (*open)(struct kernfs_open_file *of);
+ 	void (*release)(struct kernfs_open_file *of);
+-
+ 	/*
+ 	 * read_u64() is a shortcut for the common case of returning a
+ 	 * single integer. Use it in place of read()
+@@ -604,7 +603,16 @@ struct cgroup_subsys {
+ 	void (*cancel_fork)(struct task_struct *task);
+ 	void (*fork)(struct task_struct *task);
+ 	void (*exit)(struct task_struct *task);
++#ifndef __GENKSYMS__
++	/**
++	 * Field renamed in d0bc74c5632f ("cgroup/pids: turn
++	 * cgroup_subsys->free() into cgroup_subsys->release() to fix the
++	 * accounting").
++	 */
+ 	void (*release)(struct task_struct *task);
++#else
++	void (*free)(struct task_struct *task);
++#endif
+ 	void (*bind)(struct cgroup_subsys_state *root_css);
+ 
+ 	bool early_init:1;
+-- 
+2.43.0
+

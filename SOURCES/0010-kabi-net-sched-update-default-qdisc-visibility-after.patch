@@ -1,0 +1,167 @@
+From 35da17ff9e70d94b0c312ac8ae27b76ae4f116ca Mon Sep 17 00:00:00 2001
+From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+Date: Thu, 26 Feb 2026 15:28:49 +0100
+Subject: [PATCH] !kabi net: sched: update default qdisc visibility after Tx
+ queue cnt changes
+
+This one is a bit tricky, we first remove the new fields because there is
+no extra room in the structure.
+
+Then there are two users of the new field, one is always compiled in the
+kernel in net/sched/sch_generic.c (and has its Qdisc_ops structures
+non-static), the other, net/sched/sch_mqprio.c, can be in a module, and has
+its Qdisc_ops structure static.  As such, for sch_mqprio.c, we need to
+dynamically teach the net scheduler core code to recognize it is dealing
+with a mqprio ops, all the while making sure we don't invert the
+dependencies between net/sched core and mqprio (hence the dance with
+exported symbols in net/sched/sch_generic.c and not in
+net/sched/sch_mqprio.c).
+
+Fixes: aa90302e3189 ("net: sched: update default qdisc visibility after Tx queue cnt changes")
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+---
+ include/net/sch_generic.h | 10 +++++++---
+ net/sched/sch_generic.c   | 18 ++++++++++++++++--
+ net/sched/sch_mq.c        |  9 +++++++--
+ net/sched/sch_mqprio.c    | 24 +++++++++++++++++++++++-
+ 4 files changed, 53 insertions(+), 8 deletions(-)
+
+diff --git a/include/net/sch_generic.h b/include/net/sch_generic.h
+index 807f2ab06ef7..30e296d2b527 100644
+--- a/include/net/sch_generic.h
++++ b/include/net/sch_generic.h
+@@ -238,9 +238,13 @@ struct Qdisc_ops {
+ 					  struct netlink_ext_ack *extack);
+ 	void			(*attach)(struct Qdisc *sch);
+ 	int			(*change_tx_queue_len)(struct Qdisc *, unsigned int);
+-	void			(*change_real_num_tx)(struct Qdisc *sch,
+-						      unsigned int new_real_tx);
+-
++	/*
++	 * Added in aa90302e3189 ("net: sched: update default qdisc
++	 * visibility after Tx queue cnt changes"), causing kABI changes.
++	 *
++	 * void			(*change_real_num_tx)(struct Qdisc *sch,
++	 *                                            unsigned int new_real_tx);
++	 */
+ 	int			(*dump)(struct Qdisc *, struct sk_buff *);
+ 	int			(*dump_stats)(struct Qdisc *, struct gnet_dump *);
+ 
+diff --git a/net/sched/sch_generic.c b/net/sched/sch_generic.c
+index 28e289c91455..b524c3265a1e 100644
+--- a/net/sched/sch_generic.c
++++ b/net/sched/sch_generic.c
+@@ -11,6 +11,7 @@
+  *              - Ingress support
+  */
+ 
++#include "linux/stddef.h"
+ #include <linux/bitops.h>
+ #include <linux/module.h>
+ #include <linux/types.h>
+@@ -1280,13 +1281,26 @@ static int qdisc_change_tx_queue_len(struct net_device *dev,
+ 	return 0;
+ }
+ 
++void mq_change_real_num_tx(struct Qdisc *sch, unsigned int new_real_tx);
++
++struct Qdisc_ops *kabi_mqprio_qdisc_ops = NULL;
++EXPORT_SYMBOL(kabi_mqprio_qdisc_ops);
++void (*kabi_mqprio_qdisc_change_real_num_tx)(struct Qdisc *, unsigned int) = NULL;
++EXPORT_SYMBOL(kabi_mqprio_qdisc_change_real_num_tx);
++
+ void dev_qdisc_change_real_num_tx(struct net_device *dev,
+ 				  unsigned int new_real_tx)
+ {
+ 	struct Qdisc *qdisc = dev->qdisc;
+ 
+-	if (qdisc->ops->change_real_num_tx)
+-		qdisc->ops->change_real_num_tx(qdisc, new_real_tx);
++	if (qdisc->ops == &mq_qdisc_ops) {
++		mq_change_real_num_tx(qdisc, new_real_tx);
++	}
++
++	if (kabi_mqprio_qdisc_ops != NULL
++	    && qdisc->ops == kabi_mqprio_qdisc_ops) {
++		kabi_mqprio_qdisc_change_real_num_tx(qdisc, new_real_tx);
++	}
+ }
+ 
+ int dev_qdisc_change_tx_queue_len(struct net_device *dev)
+diff --git a/net/sched/sch_mq.c b/net/sched/sch_mq.c
+index 0ab13a495af9..e282a2578885 100644
+--- a/net/sched/sch_mq.c
++++ b/net/sched/sch_mq.c
+@@ -130,7 +130,7 @@ static void mq_attach(struct Qdisc *sch)
+ 	priv->qdiscs = NULL;
+ }
+ 
+-static void mq_change_real_num_tx(struct Qdisc *sch, unsigned int new_real_tx)
++void mq_change_real_num_tx(struct Qdisc *sch, unsigned int new_real_tx)
+ {
+ #ifdef CONFIG_NET_SCHED
+ 	struct net_device *dev = qdisc_dev(sch);
+@@ -308,7 +308,12 @@ struct Qdisc_ops mq_qdisc_ops __read_mostly = {
+ 	.init		= mq_init,
+ 	.destroy	= mq_destroy,
+ 	.attach		= mq_attach,
+-	.change_real_num_tx = mq_change_real_num_tx,
++	/*
++	 * See in sch_generic.c or how this gets used.  This work arounds
++	 * kABI changes introduced in aa90302e3189 ("net: sched: update
++	 * default qdisc visibility after Tx queue cnt changes")
++	 */
++	/* .change_real_num_tx = mq_change_real_num_tx, */
+ 	.dump		= mq_dump,
+ 	.owner		= THIS_MODULE,
+ };
+diff --git a/net/sched/sch_mqprio.c b/net/sched/sch_mqprio.c
+index c0ab1e38e80c..7bd52f60422f 100644
+--- a/net/sched/sch_mqprio.c
++++ b/net/sched/sch_mqprio.c
+@@ -696,19 +696,41 @@ static struct Qdisc_ops mqprio_qdisc_ops __read_mostly = {
+ 	.init		= mqprio_init,
+ 	.destroy	= mqprio_destroy,
+ 	.attach		= mqprio_attach,
+-	.change_real_num_tx = mqprio_change_real_num_tx,
++	 /* .change_real_num_tx = mqprio_change_real_num_tx, */
+ 	.dump		= mqprio_dump,
+ 	.owner		= THIS_MODULE,
+ };
+ 
++/*
++ * Defined in net/sched/sch_generic.c - to avoid kABI changes from
++ * aa90302e3189 ("net: sched: update default qdisc visibility after Tx queue
++ * cnt changes")
++ */
++extern struct Qdisc_ops *kabi_mqprio_qdisc_ops;
++extern void (*kabi_mqprio_qdisc_change_real_num_tx)(struct Qdisc *, unsigned int);
++
+ static int __init mqprio_module_init(void)
+ {
++	/*
++	 * Avoid kABI changes from aa90302e3189 ("net: sched: update
++	 * default qdisc visibility after Tx queue cnt changes")
++	 */
++	kabi_mqprio_qdisc_change_real_num_tx = mqprio_change_real_num_tx;
++	kabi_mqprio_qdisc_ops = &mqprio_qdisc_ops;
++
+ 	return register_qdisc(&mqprio_qdisc_ops);
+ }
+ 
+ static void __exit mqprio_module_exit(void)
+ {
+ 	unregister_qdisc(&mqprio_qdisc_ops);
++
++	/*
++	 * Avoid kABI changes from aa90302e3189 ("net: sched: update
++	 * default qdisc visibility after Tx queue cnt changes")
++	 */
++	kabi_mqprio_qdisc_ops = NULL;
++	kabi_mqprio_qdisc_change_real_num_tx = NULL;
+ }
+ 
+ module_init(mqprio_module_init);
+-- 
+2.43.0
+

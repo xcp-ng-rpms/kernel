@@ -1,0 +1,92 @@
+From ecdbebf1c528244f66594b3431800832d05ed9c6 Mon Sep 17 00:00:00 2001
+From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+Date: Thu, 26 Feb 2026 14:26:52 +0100
+Subject: [PATCH] !kabi net: sched: extend Qdisc with rcu
+
+The new fields ends up on padding bytes, size of struct shouldn't be
+modified.
+
+Fixes: f602ed9f8574 ("net: sched: extend Qdisc with rcu")
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+---
+ include/net/sch_generic.h |  8 ++++++++
+ net/sched/sch_generic.c   | 39 +++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 47 insertions(+)
+
+diff --git a/include/net/sch_generic.h b/include/net/sch_generic.h
+index 483303adf3df..807f2ab06ef7 100644
+--- a/include/net/sch_generic.h
++++ b/include/net/sch_generic.h
+@@ -2,6 +2,7 @@
+ #ifndef __NET_SCHED_GENERIC_H
+ #define __NET_SCHED_GENERIC_H
+ 
++#include <linux/build_bug.h>
+ #include <linux/netdevice.h>
+ #include <linux/types.h>
+ #include <linux/rcupdate.h>
+@@ -108,7 +109,14 @@ struct Qdisc {
+ 
+ 	spinlock_t		busylock ____cacheline_aligned_in_smp;
+ 	spinlock_t		seqlock;
++#ifndef __GENKSYMS__
++	/*
++	 * Added in f602ed9f8574 ("net: sched: extend Qdisc with rcu"),
++	 * luckily ends up filling padding bytes, no changes in struct
++	 * layout/size.
++	 */
+ 	struct rcu_head		rcu;
++#endif
+ };
+ 
+ static inline void qdisc_refcount_inc(struct Qdisc *qdisc)
+diff --git a/net/sched/sch_generic.c b/net/sched/sch_generic.c
+index 25324701bdf1..28e289c91455 100644
+--- a/net/sched/sch_generic.c
++++ b/net/sched/sch_generic.c
+@@ -1441,3 +1441,42 @@ void mini_qdisc_pair_init(struct mini_Qdisc_pair *miniqp, struct Qdisc *qdisc,
+ 	miniqp->p_miniq = p_miniq;
+ }
+ EXPORT_SYMBOL(mini_qdisc_pair_init);
++
++void kabi_check_struct_Qdisk_size(void)
++{
++	struct old_Qdisc {
++		int 			(*enqueue)(struct sk_buff *skb,
++					   struct Qdisc *sch,
++					   struct sk_buff **to_free);
++		struct sk_buff *	(*dequeue)(struct Qdisc *sch);
++		unsigned int		flags;
++		const struct Qdisc_ops	*ops;
++		struct qdisc_size_table	__rcu *stab;
++		struct hlist_node       hash;
++		u32			handle;
++		u32			parent;
++
++		struct netdev_queue	*dev_queue;
++
++		struct net_rate_estimator __rcu *rate_est;
++		struct gnet_stats_basic_cpu __percpu *cpu_bstats;
++		struct gnet_stats_queue	__percpu *cpu_qstats;
++		int			padded;
++		refcount_t		refcnt;
++
++		struct sk_buff_head	gso_skb ____cacheline_aligned_in_smp;
++		struct qdisc_skb_head	q;
++		struct gnet_stats_basic_packed bstats;
++		seqcount_t		running;
++		struct gnet_stats_queue	qstats;
++		unsigned long		state;
++		struct Qdisc            *next_sched;
++		struct sk_buff_head	skb_bad_txq;
++
++		spinlock_t		busylock ____cacheline_aligned_in_smp;
++		spinlock_t		seqlock;
++	};
++
++
++	BUILD_BUG_ON(sizeof(struct old_Qdisc) != sizeof(struct Qdisc));
++}
+-- 
+2.43.0
+

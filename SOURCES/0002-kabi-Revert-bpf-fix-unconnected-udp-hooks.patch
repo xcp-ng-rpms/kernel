@@ -1,0 +1,196 @@
+From 29aa112fcaf37e3cbdb7250ef34791b00f6dd32c Mon Sep 17 00:00:00 2001
+From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+Date: Mon, 16 Mar 2026 11:56:25 +0100
+Subject: [PATCH] !kabi Revert: bpf: fix unconnected udp hooks
+
+The upstream commit 13bc37f74c9 ("bpf: fix unconnected udp hooks") adds a
+new BPF hook in the UDP stack in order to track recvmsg() calls, to allow a
+specific use-case with cilium.
+
+This is not fixing a bug or a security fix, and it breaks the kABI due to
+the change in the `enum bpf_attach_type`, simply revert it to avoid the
+kABI change.
+
+Reverts: 613bc37f74c9 ("bpf: fix unconnected udp hooks")
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+---
+ include/linux/bpf-cgroup.h |  8 --------
+ include/uapi/linux/bpf.h   |  2 --
+ kernel/bpf/syscall.c       |  8 --------
+ kernel/bpf/verifier.c      | 12 ++++--------
+ net/core/filter.c          |  2 --
+ net/ipv4/udp.c             |  4 ----
+ net/ipv6/udp.c             |  4 ----
+ 7 files changed, 4 insertions(+), 36 deletions(-)
+
+diff --git a/include/linux/bpf-cgroup.h b/include/linux/bpf-cgroup.h
+index ad6b30137ac2..f91b0f8ff3a9 100644
+--- a/include/linux/bpf-cgroup.h
++++ b/include/linux/bpf-cgroup.h
+@@ -210,12 +210,6 @@ void bpf_cgroup_storage_release(struct bpf_prog *prog, struct bpf_map *map);
+ #define BPF_CGROUP_RUN_PROG_UDP6_SENDMSG_LOCK(sk, uaddr, t_ctx)		       \
+ 	BPF_CGROUP_RUN_SA_PROG_LOCK(sk, uaddr, BPF_CGROUP_UDP6_SENDMSG, t_ctx)
+ 
+-#define BPF_CGROUP_RUN_PROG_UDP4_RECVMSG_LOCK(sk, uaddr)			\
+-	BPF_CGROUP_RUN_SA_PROG_LOCK(sk, uaddr, BPF_CGROUP_UDP4_RECVMSG, NULL)
+-
+-#define BPF_CGROUP_RUN_PROG_UDP6_RECVMSG_LOCK(sk, uaddr)			\
+-	BPF_CGROUP_RUN_SA_PROG_LOCK(sk, uaddr, BPF_CGROUP_UDP6_RECVMSG, NULL)
+-
+ #define BPF_CGROUP_RUN_PROG_SOCK_OPS(sock_ops)				       \
+ ({									       \
+ 	int __ret = 0;							       \
+@@ -296,8 +290,6 @@ static inline void bpf_cgroup_storage_free(
+ #define BPF_CGROUP_RUN_PROG_INET6_CONNECT_LOCK(sk, uaddr) ({ 0; })
+ #define BPF_CGROUP_RUN_PROG_UDP4_SENDMSG_LOCK(sk, uaddr, t_ctx) ({ 0; })
+ #define BPF_CGROUP_RUN_PROG_UDP6_SENDMSG_LOCK(sk, uaddr, t_ctx) ({ 0; })
+-#define BPF_CGROUP_RUN_PROG_UDP4_RECVMSG_LOCK(sk, uaddr) ({ 0; })
+-#define BPF_CGROUP_RUN_PROG_UDP6_RECVMSG_LOCK(sk, uaddr) ({ 0; })
+ #define BPF_CGROUP_RUN_PROG_SOCK_OPS(sock_ops) ({ 0; })
+ #define BPF_CGROUP_RUN_PROG_DEVICE_CGROUP(type,major,minor,access) ({ 0; })
+ 
+diff --git a/include/uapi/linux/bpf.h b/include/uapi/linux/bpf.h
+index 91c43f375612..f5cd04f4fb02 100644
+--- a/include/uapi/linux/bpf.h
++++ b/include/uapi/linux/bpf.h
+@@ -172,8 +172,6 @@ enum bpf_attach_type {
+ 	BPF_CGROUP_UDP4_SENDMSG,
+ 	BPF_CGROUP_UDP6_SENDMSG,
+ 	BPF_LIRC_MODE2,
+-	BPF_CGROUP_UDP4_RECVMSG = 19,
+-	BPF_CGROUP_UDP6_RECVMSG,
+ 	__MAX_BPF_ATTACH_TYPE
+ };
+ 
+diff --git a/kernel/bpf/syscall.c b/kernel/bpf/syscall.c
+index 02e5bdb82a9a..f3e7eb21e1a2 100644
+--- a/kernel/bpf/syscall.c
++++ b/kernel/bpf/syscall.c
+@@ -1343,8 +1343,6 @@ bpf_prog_load_check_attach_type(enum bpf_prog_type prog_type,
+ 		case BPF_CGROUP_INET6_CONNECT:
+ 		case BPF_CGROUP_UDP4_SENDMSG:
+ 		case BPF_CGROUP_UDP6_SENDMSG:
+-		case BPF_CGROUP_UDP4_RECVMSG:
+-		case BPF_CGROUP_UDP6_RECVMSG:
+ 			return 0;
+ 		default:
+ 			return -EINVAL;
+@@ -1636,8 +1634,6 @@ static int bpf_prog_attach(const union bpf_attr *attr)
+ 	case BPF_CGROUP_INET6_CONNECT:
+ 	case BPF_CGROUP_UDP4_SENDMSG:
+ 	case BPF_CGROUP_UDP6_SENDMSG:
+-	case BPF_CGROUP_UDP4_RECVMSG:
+-	case BPF_CGROUP_UDP6_RECVMSG:
+ 		ptype = BPF_PROG_TYPE_CGROUP_SOCK_ADDR;
+ 		break;
+ 	case BPF_CGROUP_SOCK_OPS:
+@@ -1714,8 +1710,6 @@ static int bpf_prog_detach(const union bpf_attr *attr)
+ 	case BPF_CGROUP_INET6_CONNECT:
+ 	case BPF_CGROUP_UDP4_SENDMSG:
+ 	case BPF_CGROUP_UDP6_SENDMSG:
+-	case BPF_CGROUP_UDP4_RECVMSG:
+-	case BPF_CGROUP_UDP6_RECVMSG:
+ 		ptype = BPF_PROG_TYPE_CGROUP_SOCK_ADDR;
+ 		break;
+ 	case BPF_CGROUP_SOCK_OPS:
+@@ -1762,8 +1756,6 @@ static int bpf_prog_query(const union bpf_attr *attr,
+ 	case BPF_CGROUP_INET6_CONNECT:
+ 	case BPF_CGROUP_UDP4_SENDMSG:
+ 	case BPF_CGROUP_UDP6_SENDMSG:
+-	case BPF_CGROUP_UDP4_RECVMSG:
+-	case BPF_CGROUP_UDP6_RECVMSG:
+ 	case BPF_CGROUP_SOCK_OPS:
+ 	case BPF_CGROUP_DEVICE:
+ 		break;
+diff --git a/kernel/bpf/verifier.c b/kernel/bpf/verifier.c
+index de0926cff835..894e6cbf536c 100644
+--- a/kernel/bpf/verifier.c
++++ b/kernel/bpf/verifier.c
+@@ -4534,12 +4534,9 @@ static int check_return_code(struct bpf_verifier_env *env)
+ 	struct tnum range = tnum_range(0, 1);
+ 
+ 	switch (env->prog->type) {
+-	case BPF_PROG_TYPE_CGROUP_SOCK_ADDR:
+-		if (env->prog->expected_attach_type == BPF_CGROUP_UDP4_RECVMSG ||
+-		    env->prog->expected_attach_type == BPF_CGROUP_UDP6_RECVMSG)
+-			range = tnum_range(1, 1);
+ 	case BPF_PROG_TYPE_CGROUP_SKB:
+ 	case BPF_PROG_TYPE_CGROUP_SOCK:
++	case BPF_PROG_TYPE_CGROUP_SOCK_ADDR:
+ 	case BPF_PROG_TYPE_SOCK_OPS:
+ 	case BPF_PROG_TYPE_CGROUP_DEVICE:
+ 		break;
+@@ -4555,17 +4552,16 @@ static int check_return_code(struct bpf_verifier_env *env)
+ 	}
+ 
+ 	if (!tnum_in(range, reg->var_off)) {
+-		char tn_buf[48];
+-
+ 		verbose(env, "At program exit the register R0 ");
+ 		if (!tnum_is_unknown(reg->var_off)) {
++			char tn_buf[48];
++
+ 			tnum_strn(tn_buf, sizeof(tn_buf), reg->var_off);
+ 			verbose(env, "has value %s", tn_buf);
+ 		} else {
+ 			verbose(env, "has unknown scalar value");
+ 		}
+-		tnum_strn(tn_buf, sizeof(tn_buf), range);
+-		verbose(env, " should have been in %s\n", tn_buf);
++		verbose(env, " should have been 0 or 1\n");
+ 		return -EINVAL;
+ 	}
+ 	return 0;
+diff --git a/net/core/filter.c b/net/core/filter.c
+index 28083e6ddb92..911a718c6882 100644
+--- a/net/core/filter.c
++++ b/net/core/filter.c
+@@ -5585,7 +5585,6 @@ static bool sock_addr_is_valid_access(int off, int size,
+ 		case BPF_CGROUP_INET4_BIND:
+ 		case BPF_CGROUP_INET4_CONNECT:
+ 		case BPF_CGROUP_UDP4_SENDMSG:
+-		case BPF_CGROUP_UDP4_RECVMSG:
+ 			break;
+ 		default:
+ 			return false;
+@@ -5596,7 +5595,6 @@ static bool sock_addr_is_valid_access(int off, int size,
+ 		case BPF_CGROUP_INET6_BIND:
+ 		case BPF_CGROUP_INET6_CONNECT:
+ 		case BPF_CGROUP_UDP6_SENDMSG:
+-		case BPF_CGROUP_UDP6_RECVMSG:
+ 			break;
+ 		default:
+ 			return false;
+diff --git a/net/ipv4/udp.c b/net/ipv4/udp.c
+index 85839e91bdd3..52cbbb04af32 100644
+--- a/net/ipv4/udp.c
++++ b/net/ipv4/udp.c
+@@ -1745,10 +1745,6 @@ int udp_recvmsg(struct sock *sk, struct msghdr *msg, size_t len, int noblock,
+ 		sin->sin_addr.s_addr = ip_hdr(skb)->saddr;
+ 		memset(sin->sin_zero, 0, sizeof(sin->sin_zero));
+ 		*addr_len = sizeof(*sin);
+-
+-		if (cgroup_bpf_enabled)
+-			BPF_CGROUP_RUN_PROG_UDP4_RECVMSG_LOCK(sk,
+-							(struct sockaddr *)sin);
+ 	}
+ 	if (inet->cmsg_flags)
+ 		ip_cmsg_recv_offset(msg, sk, skb, sizeof(struct udphdr), off);
+diff --git a/net/ipv6/udp.c b/net/ipv6/udp.c
+index 0af0ae7b1517..a6f5d09243fb 100644
+--- a/net/ipv6/udp.c
++++ b/net/ipv6/udp.c
+@@ -436,10 +436,6 @@ int udpv6_recvmsg(struct sock *sk, struct msghdr *msg, size_t len,
+ 						    inet6_iif(skb));
+ 		}
+ 		*addr_len = sizeof(*sin6);
+-
+-		if (cgroup_bpf_enabled)
+-			BPF_CGROUP_RUN_PROG_UDP6_RECVMSG_LOCK(sk,
+-						(struct sockaddr *)sin6);
+ 	}
+ 
+ 	if (np->rxopt.all)
+-- 
+2.43.0
+

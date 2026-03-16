@@ -1,0 +1,52 @@
+From 0b92b874300087f72ab948b7b1a7bd6e1bbe19ae Mon Sep 17 00:00:00 2001
+From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+Date: Tue, 24 Feb 2026 10:36:00 +0100
+Subject: [PATCH] !kabi sched/fair: Fix low cpu usage with high throttling by
+ removing expiration of cpu-local slices
+
+Fixes: 502bd151448c ("sched/fair: Fix low cpu usage with high throttling by removing expiration of cpu-local slices")
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+---
+ kernel/sched/sched.h | 19 +++++++++++++++++++
+ 1 file changed, 19 insertions(+)
+
+diff --git a/kernel/sched/sched.h b/kernel/sched/sched.h
+index 55e695080fc6..f63912914a81 100644
+--- a/kernel/sched/sched.h
++++ b/kernel/sched/sched.h
+@@ -337,6 +337,15 @@ struct cfs_bandwidth {
+ 	u64			runtime;
+ 	s64			hierarchical_quota;
+ 
++#ifdef __GENKSYMS__
++	u64 runtime_expires;
++	int expires_seq;
++#else
++	/* Removed in: 502bd151448c sched/fair: Fix low cpu usage with high throttling by removing expiration of cpu-local slices */
++	u64 __unused_runtime_expires;
++	int __unused_expires_seq;
++#endif
++
+ 	short			idle;
+ 	short			period_active;
+ 	struct hrtimer		period_timer;
+@@ -555,6 +564,16 @@ struct cfs_rq {
+ 
+ #ifdef CONFIG_CFS_BANDWIDTH
+ 	int			runtime_enabled;
++
++#ifdef __GENKSYMS__
++	int expires_seq;
++	u64 runtime_expires;
++#else
++	/* Removed in: 502bd151448c sched/fair: Fix low cpu usage with high throttling by removing expiration of cpu-local slices */
++	int __unused_expires_seq;
++	u64 __unused_runtime_expires;
++#endif
++
+ 	s64			runtime_remaining;
+ 
+ 	u64			throttled_clock;
+-- 
+2.43.0
+

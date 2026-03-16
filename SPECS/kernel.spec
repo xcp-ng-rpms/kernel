@@ -717,6 +717,19 @@ Source4: Module.kabi
 %endif
 Source5: prepare-build
 
+#kABI neutralization patches
+%define kabi_patches %(\
+bash <<'EOF'
+patch_index=900
+for f in SOURCES/[0-9][0-9][0-9][0-9]-kabi-*.patch; do
+    echo Patch${patch_index}: $(basename ${f})
+    patch_index=$((${patch_index} + 1))
+done
+EOF
+)
+
+%kabi_patches
+
 # XCP-ng patches
 # Patch1000: ceph.patch: already included in v4.19.325
 # Patch1001: tg3-v4.19.315.patch: already included in v4.19.325

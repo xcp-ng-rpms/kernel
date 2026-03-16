@@ -1,0 +1,69 @@
+From 73fc9a70669e4798e6b06be369604aba39aa80dc Mon Sep 17 00:00:00 2001
+From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+Date: Tue, 17 Mar 2026 10:00:01 +0100
+Subject: [PATCH] !kabi block: fix null pointer dereference in
+ blk_mq_rq_timed_out()
+
+Fixes: 82652c06f976 ("block: fix null pointer dereference in blk_mq_rq_timed_out()")
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+---
+ block/blk-flush.c | 24 ++++++++++++++++++++++++
+ block/blk.h       |  9 +++++++++
+ 2 files changed, 33 insertions(+)
+
+diff --git a/block/blk-flush.c b/block/blk-flush.c
+index dc71da0e6b0e..b54eda1e2bf2 100644
+--- a/block/blk-flush.c
++++ b/block/blk-flush.c
+@@ -616,3 +616,27 @@ void blk_free_flush_queue(struct blk_flush_queue *fq)
+ 	kfree(fq->flush_rq);
+ 	kfree(fq);
+ }
++
++void kabi_check_blk_flush_queue(void)
++{
++	struct old_blk_flush_queue {
++		unsigned int		flush_queue_delayed:1;
++		unsigned int		flush_pending_idx:1;
++		unsigned int		flush_running_idx:1;
++
++		unsigned long		flush_pending_since;
++		struct list_head	flush_queue[2];
++		struct list_head	flush_data_in_flight;
++		struct request		*flush_rq;
++
++		/*
++		 * flush_rq shares tag with this rq, both can't be active
++		 * at the same time
++		 */
++		struct request		*orig_rq;
++		spinlock_t		mq_flush_lock;
++	};
++	BUILD_BUG_ON(sizeof(struct old_blk_flush_queue) != sizeof(struct blk_flush_queue));
++	BUILD_BUG_ON(offsetof(struct old_blk_flush_queue, flush_pending_since) != offsetof(struct blk_flush_queue, flush_pending_since));
++
++}
+diff --git a/block/blk.h b/block/blk.h
+index ae87e2a5f2bd..67b7b35fed82 100644
+--- a/block/blk.h
++++ b/block/blk.h
+@@ -23,7 +23,16 @@ struct blk_flush_queue {
+ 	unsigned int		flush_queue_delayed:1;
+ 	unsigned int		flush_pending_idx:1;
+ 	unsigned int		flush_running_idx:1;
++#ifndef __GENKSYMS__
++	/**
++	 *  Field added in 82652c06f976 ("block: fix null pointer
++	 *  dereference in blk_mq_rq_timed_out()"), causing kABI changes.
++	 *  We luckily have a struct hole at this exact place so simply
++	 *  hide the change from genksyms.  The field rq_status is only
++	 *  used internally in flush_end_io.
++	 */
+ 	blk_status_t 		rq_status;
++#endif
+ 	unsigned long		flush_pending_since;
+ 	struct list_head	flush_queue[2];
+ 	struct list_head	flush_data_in_flight;
+-- 
+2.43.0
+
