@@ -1,9 +1,9 @@
 %global package_speccommit ccb8ee3c01ade60b0ee7a22436d4b25d84702ae4
 %global usver 4.19.325
-%global cipver 129
+%global cipver 130
 %global xsver 8.0.44
 %global xsrel cip%{cipver}.%{xsver}%{?xscount}%{?xshash}
-%global package_srccommit refs/tags/v4.19.325-cip129
+%global package_srccommit refs/tags/v4.19.325-cip130
 %define uname 4.19.0+1
 %define short_uname 4.19
 %define srcpath /usr/src/kernels/%{uname}-%{_arch}
@@ -80,7 +80,7 @@ Provides: kernel-%{_arch} = %{version}-%{release}
 Requires(post): coreutils kmod
 Requires(posttrans): coreutils dracut kmod
 
-Source0: linux-4.19.325-cip129.tar.gz
+Source0: linux-cip-4.19.325-cip130.tar.gz
 Source1: kernel-x86_64.config
 Source2: macros.kernel
 # Patch0: 0001-Fix-net-ipv4-do-not-handle-duplicate-fragments-as-ov.patch: c763a3cf502 Fix "net: ipv4: do not handle duplicate fragments as overlapping"
