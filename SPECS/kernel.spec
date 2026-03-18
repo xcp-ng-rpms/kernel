@@ -34,7 +34,7 @@
 Name: kernel
 License: GPLv2
 Version: %{usver}
-Release: 0.ydi.1
+Release: 0.ydi.2
 ExclusiveOS: Linux
 Summary: The Linux kernel
 BuildRequires: kmod
@@ -47,6 +47,7 @@ BuildRequires: openssl-devel
 BuildRequires: openssl
 BuildRequires: rsync
 BuildRequires: systemtap-sdt-devel
+BuildRequires: perl-interpreter
 
 # These build dependencies are needed for building the main kernel and
 # modules as well live patches.
@@ -436,7 +437,7 @@ fi
 %{?_cov_results_package}
 
 %changelog
-* Wed Jan 21 2026 Yann Dirson <yann.dirson@vates.tech> - 6.12.66-0.ydi.1
+* Wed Jan 21 2026 Yann Dirson <yann.dirson@vates.tech> - 6.12.66-0.ydi.2
 - Test-switch to linux-stable
 - Removed patches, XS- and RHELkernel-specificities
 - Switch to python3
@@ -447,6 +448,7 @@ fi
   interpreter
 - Remove wireless network drivers
 - WIP Disable installation of debug vmlinux
+- Add BuildRequires: perl-interpreter
 
 * Thu Jan 15 2026 Quentin Casasnovas <quentin.casasnovas@vates.tech> - 4.19.19-8.0.44.1
 - Sync with 4.19.19-8.0.44
