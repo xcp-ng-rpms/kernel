@@ -6,9 +6,9 @@
 
 # Control whether we perform a compat. check against published ABI.
 # Default enabled: (to override: --without kabichk)
-%define do_kabichk  %{?_without_kabichk: 0} %{?!_without_kabichk: 1}
+#%%define do_kabichk  %%{?_without_kabichk: 0} %%{?!_without_kabichk: 1}
 # Default disabled: (to override: --with kabichk)
-#%%define do_kabichk  %%{?_with_kabichk: 1} %%{?!_with_kabichk: 0}
+%define do_kabichk  %{?_with_kabichk: 1} %{?!_with_kabichk: 0}
 
 #
 # Adjust debuginfo generation to suit building a kernel:
@@ -449,6 +449,7 @@ fi
 - Remove wireless network drivers
 - WIP Disable installation of debug vmlinux
 - Add BuildRequires: perl-interpreter
+- HACK: disable kabichk, script depends on python2
 
 * Thu Jan 15 2026 Quentin Casasnovas <quentin.casasnovas@vates.tech> - 4.19.19-8.0.44.1
 - Sync with 4.19.19-8.0.44
