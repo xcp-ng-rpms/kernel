@@ -47,7 +47,7 @@ BuildRequires: openssl-devel
 BuildRequires: openssl
 BuildRequires: rsync
 BuildRequires: systemtap-sdt-devel
-BuildRequires: perl
+BuildRequires: perl-interpreter
 
 # These build dependencies are needed for building the main kernel and
 # modules as well live patches.
@@ -448,7 +448,7 @@ fi
   interpreter
 - Remove wireless network drivers
 - WIP Disable installation of debug vmlinux
-- Add BuildRequires: perl
+- Add BuildRequires: perl-interpreter
 
 * Thu Jan 15 2026 Quentin Casasnovas <quentin.casasnovas@vates.tech> - 4.19.19-8.0.44.1
 - Sync with 4.19.19-8.0.44
