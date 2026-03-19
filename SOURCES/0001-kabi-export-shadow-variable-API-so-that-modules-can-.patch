@@ -1,0 +1,38 @@
+From c39359f66b94f2630400b9c048ec8f63a0f994c4 Mon Sep 17 00:00:00 2001
+From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+Date: Thu, 19 Mar 2026 14:23:28 +0100
+Subject: [PATCH] kabi: export shadow variable API so that modules can use it.
+
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+---
+ kernel/shadow_var.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/kernel/shadow_var.c b/kernel/shadow_var.c
+index 54ac27026025..d97c269e72f6 100644
+--- a/kernel/shadow_var.c
++++ b/kernel/shadow_var.c
+@@ -114,6 +114,7 @@ void *shadow_var_alloc(void *obj, char *var, size_t size, gfp_t gfp)
+ 
+ 	return shadow->data;
+ }
++EXPORT_SYMBOL(shadow_var_alloc);
+ 
+ static void kpatch_shadow_rcu_free(struct rcu_head *head)
+ {
+@@ -146,6 +147,7 @@ void shadow_var_free(void *obj, char *var)
+ 
+ 	spin_unlock_irqrestore(&kpatch_shadow_lock, flags);
+ }
++EXPORT_SYMBOL(shadow_var_free);
+ 
+ void *shadow_var_get(void *obj, char *var)
+ {
+@@ -168,3 +170,4 @@ void *shadow_var_get(void *obj, char *var)
+ 
+ 	return NULL;
+ }
++EXPORT_SYMBOL(shadow_var_get);
+-- 
+2.43.0
+

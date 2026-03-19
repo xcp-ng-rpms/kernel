@@ -1,4 +1,4 @@
-From ecdbebf1c528244f66594b3431800832d05ed9c6 Mon Sep 17 00:00:00 2001
+From 8c9da98f43a21dd323dc9815963fcf252ce4cdcd Mon Sep 17 00:00:00 2001
 From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
 Date: Thu, 26 Feb 2026 14:26:52 +0100
 Subject: [PATCH] !kabi net: sched: extend Qdisc with rcu

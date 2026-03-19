@@ -1,4 +1,4 @@
-From bcfd96995ada53393bdd1adeecb5e36234649702 Mon Sep 17 00:00:00 2001
+From 9771a9e882a5627d6bd8822f1a222d8c9d7967cf Mon Sep 17 00:00:00 2001
 From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
 Date: Tue, 17 Mar 2026 10:25:40 +0100
 Subject: [PATCH] !kabi blk-mq: add callback of .cleanup_rq

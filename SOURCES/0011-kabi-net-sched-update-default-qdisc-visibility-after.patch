@@ -1,4 +1,4 @@
-From 35da17ff9e70d94b0c312ac8ae27b76ae4f116ca Mon Sep 17 00:00:00 2001
+From 7730b09d513ce58870126f38156e6efcb1dbf680 Mon Sep 17 00:00:00 2001
 From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
 Date: Thu, 26 Feb 2026 15:28:49 +0100
 Subject: [PATCH] !kabi net: sched: update default qdisc visibility after Tx

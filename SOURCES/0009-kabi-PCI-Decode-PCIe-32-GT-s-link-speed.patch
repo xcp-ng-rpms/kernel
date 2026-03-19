@@ -1,4 +1,4 @@
-From 3770a91daed7e235ed81f057a4bcc57447c7f201 Mon Sep 17 00:00:00 2001
+From ed7898d47d918f59f326ad1fcd3645bdc1677eab Mon Sep 17 00:00:00 2001
 From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
 Date: Thu, 26 Feb 2026 11:04:08 +0100
 Subject: [PATCH] !kabi PCI: Decode PCIe 32 GT/s link speed

@@ -1,4 +1,4 @@
-From e685f9947b804baf75ccb778caaa9436bd86b1e7 Mon Sep 17 00:00:00 2001
+From c77377e26a75e45cc3bcc18af8c569fc6357b77a Mon Sep 17 00:00:00 2001
 From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
 Date: Thu, 19 Mar 2026 07:39:18 +0100
 Subject: [PATCH] =?UTF-8?q?!kabi=20cgroup/pids:=20turn=20cgroup=5Fsubsys->?=

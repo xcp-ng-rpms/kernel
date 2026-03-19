@@ -1,4 +1,4 @@
-From affa3b4d12377685d95562a2df24fb5f78e21a6b Mon Sep 17 00:00:00 2001
+From 0cf93d99b29704eac78a318c7b811f36167ca468 Mon Sep 17 00:00:00 2001
 From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
 Date: Thu, 26 Feb 2026 16:30:34 +0100
 Subject: [PATCH] !kabi bdi: add a ->dev_name field to struct backing_dev_info

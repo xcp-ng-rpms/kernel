@@ -1,4 +1,4 @@
-From 0b92b874300087f72ab948b7b1a7bd6e1bbe19ae Mon Sep 17 00:00:00 2001
+From 8f25d540805bc0841bf26a79a5fd5808e1da72b3 Mon Sep 17 00:00:00 2001
 From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
 Date: Tue, 24 Feb 2026 10:36:00 +0100
 Subject: [PATCH] !kabi sched/fair: Fix low cpu usage with high throttling by

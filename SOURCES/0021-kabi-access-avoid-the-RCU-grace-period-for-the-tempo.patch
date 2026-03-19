@@ -1,4 +1,4 @@
-From 25ee51100c71e2c3de94cb6efff97781c2a2e99c Mon Sep 17 00:00:00 2001
+From 63b5735067b1ac95cb79cbe1c6b984048a2b1005 Mon Sep 17 00:00:00 2001
 From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
 Date: Thu, 19 Mar 2026 09:13:29 +0100
 Subject: [PATCH] !kabi access: avoid the RCU grace period for the temporary

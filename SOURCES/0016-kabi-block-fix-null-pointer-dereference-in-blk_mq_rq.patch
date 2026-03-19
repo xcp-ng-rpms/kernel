@@ -1,4 +1,4 @@
-From 73fc9a70669e4798e6b06be369604aba39aa80dc Mon Sep 17 00:00:00 2001
+From a40ef13bbcadb6b656b74454f8ecbe7ea390c578 Mon Sep 17 00:00:00 2001
 From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
 Date: Tue, 17 Mar 2026 10:00:01 +0100
 Subject: [PATCH] !kabi block: fix null pointer dereference in

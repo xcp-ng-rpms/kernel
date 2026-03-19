@@ -1,4 +1,4 @@
-From 0237a753a555af0fab29c7b927d6cf66c18b47aa Mon Sep 17 00:00:00 2001
+From 21a9cddd60b030bf3c881dc910d22e38429a1d3f Mon Sep 17 00:00:00 2001
 From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
 Date: Tue, 24 Feb 2026 14:54:39 +0100
 Subject: [PATCH] !kabi linux/bits.h: make BIT(), GENMASK(), and friends

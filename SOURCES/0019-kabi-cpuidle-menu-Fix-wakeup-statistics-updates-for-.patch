@@ -1,4 +1,4 @@
-From 08dfab44e40b09c317d355897e6a1826c813fc4a Mon Sep 17 00:00:00 2001
+From 2982cf0127bc1cc46e9efebf4db2a061cbd98ae3 Mon Sep 17 00:00:00 2001
 From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
 Date: Thu, 19 Mar 2026 09:00:52 +0100
 Subject: [PATCH] !kabi cpuidle: menu: Fix wakeup statistics updates for

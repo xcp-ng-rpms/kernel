@@ -1,0 +1,72 @@
+From d592502b3e02c40ee731921a3ecd854a4c83e223 Mon Sep 17 00:00:00 2001
+From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+Date: Thu, 19 Mar 2026 12:14:46 +0100
+Subject: [PATCH] =?UTF-8?q?!kabi=20driver=20core:=20Establish=20order=20of?=
+ =?UTF-8?q?=20operations=20for=20device=5Fadd=20and=20device=5Fdel=20via?=
+ =?UTF-8?q?=20bit=E2=80=A6?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Fixes: 7c43f84efd6d ("driver core: Establish order of operations for device_add and device_del via bitflag")
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+---
+ drivers/base/base.h | 10 ++++++++--
+ drivers/base/core.c | 19 +++++++++++++++++++
+ 2 files changed, 27 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/base/base.h b/drivers/base/base.h
+index 99ac3b2498a9..92f8840c818e 100644
+--- a/drivers/base/base.h
++++ b/drivers/base/base.h
+@@ -74,12 +74,18 @@ struct driver_private {
+  */
+ struct device_private {
+ 	struct klist klist_children;
+-	struct klist_node knode_parent;
++	union {
++		struct klist_node knode_parent;
++		struct {
++			/* The struct klist_node has 4 bytes of padding at the end */
++			u8 padding[sizeof(struct klist_node) - 4];
++			u8 dead:1;
++		};
++	};
+ 	struct klist_node knode_driver;
+ 	struct klist_node knode_bus;
+ 	struct list_head deferred_probe;
+ 	struct device *device;
+-	u8 dead:1;
+ };
+ #define to_device_private_parent(obj)	\
+ 	container_of(obj, struct device_private, knode_parent)
+diff --git a/drivers/base/core.c b/drivers/base/core.c
+index b24342ad4c05..baebbeb4072c 100644
+--- a/drivers/base/core.c
++++ b/drivers/base/core.c
+@@ -3543,3 +3543,22 @@ void kabi_check_struct_device(void)
+ 	BUILD_BUG_ON(sizeof(struct old_device) != sizeof(struct device));
+ 	BUILD_BUG_ON(offsetof(struct old_device, devres_lock) != offsetof(struct device, devres_lock));
+ }
++
++void kabi_check_struct_device_private(void)
++{
++	struct old_device_private {
++		struct klist klist_children;
++		struct klist_node knode_parent;
++		struct klist_node knode_driver;
++		struct klist_node knode_bus;
++		struct list_head deferred_probe;
++		struct device *device;
++	};
++	BUILD_BUG_ON(sizeof(struct old_device_private) != sizeof(struct device_private));
++	BUILD_BUG_ON(offsetof(struct old_device_private, knode_driver) != offsetof(struct device_private, knode_driver));
++	/*
++	 *Verify there is indeed padding at the end of the struct for our
++	 * usage, and that it equals four bytes.
++	 */
++	BUILD_BUG_ON(sizeof(struct klist_node) != offsetof(struct klist_node, n_ref) + sizeof(((struct klist_node*)0)->n_ref) + 4);
++}
+-- 
+2.43.0
+

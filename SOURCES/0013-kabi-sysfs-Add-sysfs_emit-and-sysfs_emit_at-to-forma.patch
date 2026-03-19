@@ -1,4 +1,4 @@
-From 4b303302a32c488d9e369d04e4687311e045bbd2 Mon Sep 17 00:00:00 2001
+From c1c4751972df480cbbc96e035232f1f9548bc0a4 Mon Sep 17 00:00:00 2001
 From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
 Date: Fri, 27 Feb 2026 14:04:01 +0100
 Subject: [PATCH] !kabi sysfs: Add sysfs_emit and sysfs_emit_at to format sysfs

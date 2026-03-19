@@ -1,4 +1,4 @@
-From f30ea8794c1b190b1732d8c572e694766fac551a Mon Sep 17 00:00:00 2001
+From 0fc62a54ba6a4e6111e99ec9a00078fb5ef0a22a Mon Sep 17 00:00:00 2001
 From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
 Date: Tue, 24 Feb 2026 14:53:13 +0100
 Subject: [PATCH] !kabi Revert: netfilter: nf_conntrack_pptp: fix compilation

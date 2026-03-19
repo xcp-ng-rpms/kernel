@@ -1,4 +1,4 @@
-From 0f055a248eab0484994d9f90205540073ec9f599 Mon Sep 17 00:00:00 2001
+From d7b548a23bb32d7498b7c6571debc0d24404d42f Mon Sep 17 00:00:00 2001
 From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
 Date: Tue, 24 Feb 2026 11:14:11 +0100
 Subject: [PATCH] !kabi tracing: Constify string literal data member in struct

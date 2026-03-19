@@ -1,4 +1,4 @@
-From 7a7a29f25443238e56583a6ee33eac5f19ada44b Mon Sep 17 00:00:00 2001
+From 0ae48f75b664986e55b8779b75fcc8e2f16699ca Mon Sep 17 00:00:00 2001
 From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
 Date: Sat, 31 Jan 2026 16:18:10 +0100
 Subject: [PATCH] !kabi crypto: public_key: fix overflow during implicit

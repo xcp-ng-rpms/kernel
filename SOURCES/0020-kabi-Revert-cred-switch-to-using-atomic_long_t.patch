@@ -1,4 +1,4 @@
-From b383932ec43301fd141cb52cf128c2a0e1855429 Mon Sep 17 00:00:00 2001
+From 43854cbb028fee040b9321aaf7c30d94fb552d9c Mon Sep 17 00:00:00 2001
 From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
 Date: Thu, 19 Mar 2026 09:13:40 +0100
 Subject: [PATCH] !kabi Revert: cred: switch to using atomic_long_t

@@ -1,4 +1,4 @@
-From 8158c874457873220b4b560dfcfbb35fc08b53d7 Mon Sep 17 00:00:00 2001
+From 8a523d6dd958cbf6a19a3239a7fbfe04189c6400 Mon Sep 17 00:00:00 2001
 From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
 Date: Tue, 24 Feb 2026 10:56:20 +0100
 Subject: [PATCH] !kabi PCI/ACPI: Fix runtime PM ref imbalance on Hot-Plug
