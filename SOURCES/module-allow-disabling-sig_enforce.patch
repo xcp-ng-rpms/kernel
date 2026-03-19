@@ -1,0 +1,25 @@
+module: Allow disabling sig_enforce
+
+For XenServer, the desired behaviour is that signature checking is always
+enabled unless Secure Boot is disabled and sig_enforce=false is passed.
+
+This is implemented by setting CONFIG_MODULE_SIG_FORCE but allowing it to be
+disabled from the command-line with this patch.  The command-line setting is
+overridden in arch_get_ima_policy() so if Secure Boot is enabled, sig_enforce
+will always be true.
+
+Signed-off-by: Kevin Lampis <klampis@cloud.com>
+Signed-off-by: Ross Lagerwall <ross.lagerwall@citrix.com>
+diff --git a/kernel/module/signing.c b/kernel/module/signing.c
+index a2ff4242e623..c81ee6b6380e 100644
+--- a/kernel/module/signing.c
++++ b/kernel/module/signing.c
+@@ -20,7 +20,7 @@
+ #define MODULE_PARAM_PREFIX "module."
+ 
+ static bool sig_enforce = IS_ENABLED(CONFIG_MODULE_SIG_FORCE);
+-module_param(sig_enforce, bool_enable_only, 0644);
++module_param(sig_enforce, bool, 0644);
+ 
+ /*
+  * Export sig_enforce kernel cmdline parameter to allow other subsystems rely

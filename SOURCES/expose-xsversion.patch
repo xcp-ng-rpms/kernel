@@ -1,8 +1,8 @@
 diff --git a/fs/proc/version.c b/fs/proc/version.c
-index b449f186577f..c556feac8c44 100644
+index 02e3c3cd4a9a..d88a2f7f6749 100644
 --- a/fs/proc/version.c
 +++ b/fs/proc/version.c
-@@ -15,9 +15,16 @@ static int version_proc_show(struct seq_file *m, void *v)
+@@ -16,12 +16,20 @@ static int version_proc_show(struct seq_file *m, void *v)
  	return 0;
  }
  
@@ -14,28 +14,32 @@ index b449f186577f..c556feac8c44 100644
 +
  static int __init proc_version_init(void)
  {
- 	proc_create_single("version", 0, NULL, version_proc_show);
-+	proc_create_single("xsversion", 0, NULL, xsversion_proc_show);
+ 	struct proc_dir_entry *pde;
+ 
+ 	pde = proc_create_single("version", 0, NULL, version_proc_show);
+ 	pde_make_permanent(pde);
++	pde = proc_create_single("xsversion", 0, NULL, xsversion_proc_show);
++	pde_make_permanent(pde);
  	return 0;
  }
  fs_initcall(proc_version_init);
 diff --git a/include/linux/printk.h b/include/linux/printk.h
-index cf3eccfe1543..ad73740cec23 100644
+index 8c81806c2e99..0deb0ed763e2 100644
 --- a/include/linux/printk.h
 +++ b/include/linux/printk.h
-@@ -10,6 +10,7 @@
+@@ -11,6 +11,7 @@
  
  extern const char linux_banner[];
  extern const char linux_proc_banner[];
 +extern const char xs_proc_banner[];
  
- #define PRINTK_MAX_SINGLE_HEADER_LEN 2
+ extern int oops_in_progress;	/* If set, an oops, panic(), BUG() or die() is in progress */
  
 diff --git a/init/version.c b/init/version.c
-index ef4012ec4375..8ce3e2bc86f1 100644
+index 01d4ab05f0ba..cf7536df0e89 100644
 --- a/init/version.c
 +++ b/init/version.c
-@@ -51,4 +51,9 @@ const char linux_proc_banner[] =
+@@ -38,6 +38,11 @@ const char linux_proc_banner[] =
  	" (" LINUX_COMPILE_BY "@" LINUX_COMPILE_HOST ")"
  	" (" LINUX_COMPILER ") %s\n";
  
@@ -45,12 +49,14 @@ index ef4012ec4375..8ce3e2bc86f1 100644
 +	"pq_commit   " XS_PQ_COMMIT "\n";
 +
  BUILD_SALT;
+ BUILD_LTO_INFO;
+ 
 diff --git a/scripts/mkcompile_h b/scripts/mkcompile_h
-index 87f1fc9801d7..c9f992ec88d6 100755
+index 2596f78e52ef..6d1c57991fa9 100755
 --- a/scripts/mkcompile_h
 +++ b/scripts/mkcompile_h
-@@ -33,6 +33,14 @@ else
- 	VERSION=$KBUILD_BUILD_VERSION
+@@ -16,6 +16,14 @@ else
+ 	LINUX_COMPILE_HOST=$KBUILD_BUILD_HOST
  fi
  
 +if [ -f .xsversion ]; then
@@ -61,17 +67,16 @@ index 87f1fc9801d7..c9f992ec88d6 100755
 +    XS_PQ_COMMIT=unknown
 +fi
 +
- if [ -z "$KBUILD_BUILD_TIMESTAMP" ]; then
- 	TIMESTAMP=`date`
- else
-@@ -73,6 +81,10 @@ UTS_TRUNCATE="cut -b -$UTS_LEN"
-   echo \#define LINUX_COMPILE_HOST \"`echo $LINUX_COMPILE_HOST | $UTS_TRUNCATE`\"
+ LD_VERSION=$(LC_ALL=C $LD -v | head -n1 |
+ 		sed -e 's/(compatible with [^)]*)//' -e 's/[[:space:]]*$//')
  
-   echo \#define LINUX_COMPILER \"`$CC -v 2>&1 | grep ' version ' | sed 's/[[:space:]]*$//'`\"
+@@ -24,4 +32,9 @@ cat <<EOF
+ #define LINUX_COMPILE_BY	"${LINUX_COMPILE_BY}"
+ #define LINUX_COMPILE_HOST	"${LINUX_COMPILE_HOST}"
+ #define LINUX_COMPILER		"${CC_VERSION}, ${LD_VERSION}"
 +
-+  echo \#define XS_VERSION \"$XS_VERSION\"
-+  echo \#define XS_BASE_COMMIT \"$XS_BASE_COMMIT\"
-+  echo \#define XS_PQ_COMMIT \"$XS_PQ_COMMIT\"
- ) > .tmpcompile
- 
- # Only replace the real compile.h if the new one is different,
++#define XS_VERSION		"${XS_VERSION}"
++#define XS_BASE_COMMIT		"${XS_BASE_COMMIT}"
++#define XS_PQ_COMMIT		"${XS_PQ_COMMIT}"
++
+ EOF

@@ -1,0 +1,43 @@
+From 55bf34f2533677f71916f9f9fdd760ceb47674cf Mon Sep 17 00:00:00 2001
+From: Mark Syms <mark.syms@cloud.com>
+Date: Mon, 2 Jun 2025 11:01:40 +0100
+Subject: [PATCH] CA-411820: add STATX_DIOALIGN support to GFS2
+
+Inspiration taken from 8434ef1d8aa but in simplified form. 8434ef1d8aa
+makes the response conditional on the result from `ext4_dio_alignment`.
+It is not clear if similar discrimination needs to be performed for
+GFS2 or if the iomap defaults will be generally suitable. In tests
+performed with XenServer this does appear to be the case.
+
+Signed-off-by: Mark Syms <mark.syms@cloud.com>
+---
+ fs/gfs2/inode.c | 13 +++++++++++++
+ 1 file changed, 13 insertions(+)
+
+diff --git a/fs/gfs2/inode.c b/fs/gfs2/inode.c
+index 4e63fbb63151..31024a09f00d 100644
+--- a/fs/gfs2/inode.c
++++ b/fs/gfs2/inode.c
+@@ -2087,6 +2087,19 @@ static int gfs2_getattr(struct mnt_idmap *idmap,
+ 
+ 	generic_fillattr(&nop_mnt_idmap, request_mask, inode, stat);
+ 
++	/*
++	 * Return the DIO alignment restrictions if requested.  We only return
++	 * this information when requested.
++	 */
++	if ((request_mask & STATX_DIOALIGN) && S_ISREG(inode->i_mode)) {
++		struct block_device *bdev = inode->i_sb->s_bdev;
++
++		stat->result_mask |= STATX_DIOALIGN;
++		/* iomap defaults */
++		stat->dio_mem_align = bdev_dma_alignment(bdev) + 1;
++		stat->dio_offset_align = bdev_logical_block_size(bdev);
++	}
++
+ 	if (gfs2_holder_initialized(&gh))
+ 		gfs2_glock_dq_uninit(&gh);
+ 
+-- 
+2.49.0
+

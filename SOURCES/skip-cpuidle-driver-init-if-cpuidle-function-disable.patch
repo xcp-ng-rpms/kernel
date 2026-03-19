@@ -1,0 +1,94 @@
+From f7aa5f27bd04e05a2cd6542f5ced08a4a86ef64e Mon Sep 17 00:00:00 2001
+From: Chunjie Zhu <chunjie.zhu@cloud.com>
+Date: Thu, 11 Apr 2024 10:18:42 +0000
+Subject: [PATCH] skip cpuidle driver init if cpuidle function disabled
+
+When kernel runs as Xen PV dom0, it does not have access to the required MSRs
+and so cpuidle is explicitly disabled in xen_arch_setup(). Skip intel_idle
+initialization early if cpuidle is disabled to avoid spurious warnings reading
+MSRs.
+
+[   11.706584]  <TASK>
+[   11.706629]  ? ex_handler_msr+0x128/0x140
+[   11.706716]  ? fixup_exception+0x85/0x340
+[   11.706803]  ? exc_general_protection+0x136/0x400
+[   11.706907]  ? asm_exc_general_protection+0x22/0x30
+[   11.707055]  ? xen_do_read_msr+0x81/0xa0
+[   11.707182]  xen_read_msr+0x20/0x30
+[   11.707340]  intel_idle_init+0xa5c/0xc90
+[   11.707642]  ? _raw_spin_unlock_irqrestore+0x18/0x20
+[   11.708159]  ? __pfx_intel_idle_init+0x10/0x10
+[   11.708451]  do_one_initcall+0x41/0x2e0
+[   11.708580]  kernel_init_freeable+0x1c0/0x2c0
+[   11.708748]  ? __pfx_kernel_init+0x10/0x10
+[   11.709013]  kernel_init+0x16/0x1b0
+[   11.709193]  ret_from_fork+0x2d/0x50
+[   11.709389]  ? __pfx_kernel_init+0x10/0x10
+[   11.709656]  ret_from_fork_asm+0x1b/0x30
+[   11.709844]  </TASK>
+
+Signed-off-by: Chunjie Zhu <chunjie.zhu@cloud.com>
+---
+ drivers/cpuidle/cpuidle.h | 3 ++-
+ drivers/idle/intel_idle.c | 2 +-
+ include/linux/cpuidle.h   | 3 +++
+ 3 files changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/cpuidle/cpuidle.h b/drivers/cpuidle/cpuidle.h
+index 52701d9588f1..7b65f168c82e 100644
+--- a/drivers/cpuidle/cpuidle.h
++++ b/drivers/cpuidle/cpuidle.h
+@@ -6,6 +6,8 @@
+ #ifndef __DRIVER_CPUIDLE_H
+ #define __DRIVER_CPUIDLE_H
+ 
++extern int cpuidle_disabled(void);
++
+ /* For internal use only */
+ extern char param_governor[];
+ extern struct cpuidle_governor *cpuidle_curr_governor;
+@@ -14,7 +16,6 @@ extern struct list_head cpuidle_governors;
+ extern struct list_head cpuidle_detected_devices;
+ extern struct mutex cpuidle_lock;
+ extern spinlock_t cpuidle_driver_lock;
+-extern int cpuidle_disabled(void);
+ extern int cpuidle_enter_state(struct cpuidle_device *dev,
+ 		struct cpuidle_driver *drv, int next_state);
+ 
+diff --git a/drivers/idle/intel_idle.c b/drivers/idle/intel_idle.c
+index 45500d2d5b4b..6dbcb30c1abe 100644
+--- a/drivers/idle/intel_idle.c
++++ b/drivers/idle/intel_idle.c
+@@ -2061,7 +2061,7 @@ static int __init intel_idle_init(void)
+ 	if (boot_option_idle_override != IDLE_NO_OVERRIDE)
+ 		return -ENODEV;
+ 
+-	if (max_cstate == 0) {
++	if (max_cstate == 0 || cpuidle_disabled()) {
+ 		pr_debug("disabled\n");
+ 		return -EPERM;
+ 	}
+diff --git a/include/linux/cpuidle.h b/include/linux/cpuidle.h
+index 3183aeb7f5b4..f31a10a89cfe 100644
+--- a/include/linux/cpuidle.h
++++ b/include/linux/cpuidle.h
+@@ -168,6 +168,7 @@ struct cpuidle_driver {
+ };
+ 
+ #ifdef CONFIG_CPU_IDLE
++extern int cpuidle_disabled(void);
+ extern void disable_cpuidle(void);
+ extern bool cpuidle_not_available(struct cpuidle_driver *drv,
+ 				  struct cpuidle_device *dev);
+@@ -203,6 +204,8 @@ extern struct cpuidle_driver *cpuidle_get_cpu_driver(struct cpuidle_device *dev)
+ static inline struct cpuidle_device *cpuidle_get_device(void)
+ {return __this_cpu_read(cpuidle_devices); }
+ #else
++static inline int cpuidle_disabled(void)
++{return 1; }
+ static inline void disable_cpuidle(void) { }
+ static inline bool cpuidle_not_available(struct cpuidle_driver *drv,
+ 					 struct cpuidle_device *dev)
+-- 
+2.34.1
+

@@ -1,0 +1,31 @@
+diff --git a/fs/dlm/debug_fs.c b/fs/dlm/debug_fs.c
+index d2c035387595..38009410adbc 100644
+--- a/fs/dlm/debug_fs.c
++++ b/fs/dlm/debug_fs.c
+@@ -990,7 +990,7 @@ void dlm_create_debug_file(struct dlm_ls *ls)
+ 	snprintf(name, sizeof(name), "%s_locks", ls->ls_name);
+ 
+ 	ls->ls_debug_locks_dentry = debugfs_create_file(name,
+-							0644,
++							0444,
+ 							dlm_root,
+ 							ls,
+ 							&format2_fops);
+@@ -1021,7 +1021,7 @@ void dlm_create_debug_file(struct dlm_ls *ls)
+ 	snprintf(name, sizeof(name), "%s_waiters", ls->ls_name);
+ 
+ 	ls->ls_debug_waiters_dentry = debugfs_create_file(name,
+-							  0644,
++							  0444,
+ 							  dlm_root,
+ 							  ls,
+ 							  &waiters_fops);
+@@ -1032,7 +1032,7 @@ void dlm_create_debug_file(struct dlm_ls *ls)
+ 	snprintf(name, sizeof(name), "%s_queued_asts", ls->ls_name);
+ 
+ 	ls->ls_debug_queued_asts_dentry = debugfs_create_file(name,
+-							      0644,
++							      0444,
+ 							      dlm_root,
+ 							      ls,
+ 							      &format5_fops);

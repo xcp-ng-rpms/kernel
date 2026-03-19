@@ -1,0 +1,45 @@
+From a6ae082ce8b66f899a237f3288873dcae77fdf23 Mon Sep 17 00:00:00 2001
+From: David Vrabel <david.vrabel@citrix.com>
+Date: Thu, 10 Jul 2014 13:10:04 +0100
+Subject: [PATCH] pci: export pci_probe_reset_function()
+
+The xen-pciback needs to test if a per-function reset is available so
+it can provide an interface for a safe bus reset instead.
+
+Signed-off-by: David Vrabel <david.vrabel@citrix.com>
+diff --git a/drivers/pci/pci.c b/drivers/pci/pci.c
+index ab615ab4e440..863967caf092 100644
+--- a/drivers/pci/pci.c
++++ b/drivers/pci/pci.c
+@@ -81,6 +81,7 @@ bool pci_reset_supported(struct pci_dev *dev)
+ {
+ 	return dev->reset_methods[0] != 0;
+ }
++EXPORT_SYMBOL_GPL(pci_reset_supported);
+ 
+ #ifdef CONFIG_PCI_DOMAINS
+ int pci_domains_supported = 1;
+diff --git a/drivers/pci/pci.h b/drivers/pci/pci.h
+index b1ebb7ab8805..454c052726e2 100644
+--- a/drivers/pci/pci.h
++++ b/drivers/pci/pci.h
+@@ -33,7 +33,6 @@ enum pci_mmap_api {
+ int pci_mmap_fits(struct pci_dev *pdev, int resno, struct vm_area_struct *vmai,
+ 		  enum pci_mmap_api mmap_api);
+ 
+-bool pci_reset_supported(struct pci_dev *dev);
+ void pci_init_reset_methods(struct pci_dev *dev);
+ int pci_bridge_secondary_bus_reset(struct pci_dev *dev);
+ int pci_bus_error_reset(struct pci_dev *dev);
+diff --git a/include/linux/pci.h b/include/linux/pci.h
+index 2bda4a4e47e8..84f52e05c106 100644
+--- a/include/linux/pci.h
++++ b/include/linux/pci.h
+@@ -1301,6 +1301,7 @@ u32 pcie_bandwidth_available(struct pci_dev *dev, struct pci_dev **limiting_dev,
+ void pcie_print_link_status(struct pci_dev *dev);
+ int pcie_reset_flr(struct pci_dev *dev, bool probe);
+ int pcie_flr(struct pci_dev *dev);
++bool pci_reset_supported(struct pci_dev *dev);
+ int __pci_reset_function_locked(struct pci_dev *dev);
+ int pci_reset_function(struct pci_dev *dev);
+ int pci_reset_function_locked(struct pci_dev *dev);

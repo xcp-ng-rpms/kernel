@@ -1,0 +1,348 @@
+From 4b0ebbca3e1679765c06d5c466ee7f3228d4b156 Mon Sep 17 00:00:00 2001
+From: Richard Gobert <richardbgobert@gmail.com>
+Date: Thu, 9 May 2024 21:08:18 +0200
+Subject: [PATCH 1/1] net: gro: move L3 flush checks to tcp_gro_receive and
+ udp_gro_receive_segment
+
+{inet,ipv6}_gro_receive functions perform flush checks (ttl, flags,
+iph->id, ...) against all packets in a loop. These flush checks are used in
+all merging UDP and TCP flows.
+
+These checks need to be done only once and only against the found p skb,
+since they only affect flush and not same_flow.
+
+This patch leverages correct network header offsets from the cb for both
+outer and inner network headers - allowing these checks to be done only
+once, in tcp_gro_receive and udp_gro_receive_segment. As a result,
+NAPI_GRO_CB(p)->flush is not used at all. In addition, flush_id checks are
+more declarative and contained in inet_gro_flush, thus removing the need
+for flush_id in napi_gro_cb.
+
+This results in less parsing code for non-loop flush tests for TCP and UDP
+flows.
+
+To make sure results are not within noise range - I've made netfilter drop
+all TCP packets, and measured CPU performance in GRO (in this case GRO is
+responsible for about 50% of the CPU utilization).
+
+perf top while replaying 64 parallel IP/TCP streams merging in GRO:
+(gro_receive_network_flush is compiled inline to tcp_gro_receive)
+net-next:
+        6.94% [kernel] [k] inet_gro_receive
+        3.02% [kernel] [k] tcp_gro_receive
+
+patch applied:
+        4.27% [kernel] [k] tcp_gro_receive
+        4.22% [kernel] [k] inet_gro_receive
+
+perf top while replaying 64 parallel IP/IP/TCP streams merging in GRO (same
+results for any encapsulation, in this case inet_gro_receive is top
+offender in net-next)
+net-next:
+        10.09% [kernel] [k] inet_gro_receive
+        2.08% [kernel] [k] tcp_gro_receive
+
+patch applied:
+        6.97% [kernel] [k] inet_gro_receive
+        3.68% [kernel] [k] tcp_gro_receive
+
+Signed-off-by: Richard Gobert <richardbgobert@gmail.com>
+Reviewed-by: Willem de Bruijn <willemb@google.com>
+Link: https://lore.kernel.org/r/20240509190819.2985-3-richardbgobert@gmail.com
+Signed-off-by: Jakub Kicinski <kuba@kernel.org>
+diff --git a/include/net/gro.h b/include/net/gro.h
+index 018343254c90..40dca12db1c9 100644
+--- a/include/net/gro.h
++++ b/include/net/gro.h
+@@ -35,15 +35,15 @@ struct napi_gro_cb {
+ 	/* This is non-zero if the packet cannot be merged with the new skb. */
+ 	u16	flush;
+ 
+-	/* Save the IP ID here and check when we get to the transport layer */
+-	u16	flush_id;
+-
+ 	/* Number of segments aggregated. */
+ 	u16	count;
+ 
+ 	/* Used in ipv6_gro_receive() and foo-over-udp */
+ 	u16	proto;
+ 
++	/* used to support CHECKSUM_COMPLETE for tunneling protocols */
++	__wsum	csum;
++
+ /* Used in napi_gro_cb::free */
+ #define NAPI_GRO_FREE             1
+ #define NAPI_GRO_FREE_STOLEN_HEAD 2
+@@ -74,8 +74,8 @@ struct napi_gro_cb {
+ 		/* Used in GRE, set in fou/gue_gro_receive */
+ 		u8	is_fou:1;
+ 
+-		/* Used to determine if flush_id can be ignored */
+-		u8	is_atomic:1;
++		/* Used to determine if ipid_offset can be ignored */
++		u8	ip_fixedid:1;
+ 
+ 		/* Number of gro_receive callbacks this packet already went through */
+ 		u8 recursion_counter:4;
+@@ -84,9 +84,6 @@ struct napi_gro_cb {
+ 		u8	is_flist:1;
+ 	);
+ 
+-	/* used to support CHECKSUM_COMPLETE for tunneling protocols */
+-	__wsum	csum;
+-
+ 	/* L3 offsets */
+ 	union {
+ 		struct {
+@@ -438,6 +435,69 @@ static inline __wsum ip6_gro_compute_pseudo(struct sk_buff *skb, int proto)
+ 					    skb_gro_len(skb), proto, 0));
+ }
+ 
++static inline int inet_gro_flush(const struct iphdr *iph, const struct iphdr *iph2,
++				 struct sk_buff *p, bool outer)
++{
++	const u32 id = ntohl(*(__be32 *)&iph->id);
++	const u32 id2 = ntohl(*(__be32 *)&iph2->id);
++	const u16 ipid_offset = (id >> 16) - (id2 >> 16);
++	const u16 count = NAPI_GRO_CB(p)->count;
++	const u32 df = id & IP_DF;
++	int flush;
++
++	/* All fields must match except length and checksum. */
++	flush = (iph->ttl ^ iph2->ttl) | (iph->tos ^ iph2->tos) | (df ^ (id2 & IP_DF));
++
++	if (flush | (outer && df))
++		return flush;
++
++	/* When we receive our second frame we can make a decision on if we
++	 * continue this flow as an atomic flow with a fixed ID or if we use
++	 * an incrementing ID.
++	 */
++	if (count == 1 && df && !ipid_offset)
++		NAPI_GRO_CB(p)->ip_fixedid = true;
++
++	return ipid_offset ^ (count * !NAPI_GRO_CB(p)->ip_fixedid);
++}
++
++static inline int ipv6_gro_flush(const struct ipv6hdr *iph, const struct ipv6hdr *iph2)
++{
++	/* <Version:4><Traffic_Class:8><Flow_Label:20> */
++	__be32 first_word = *(__be32 *)iph ^ *(__be32 *)iph2;
++
++	/* Flush if Traffic Class fields are different. */
++	return !!((first_word & htonl(0x0FF00000)) |
++		(__force __be32)(iph->hop_limit ^ iph2->hop_limit));
++}
++
++static inline int __gro_receive_network_flush(const void *th, const void *th2,
++					      struct sk_buff *p, const u16 diff,
++					      bool outer)
++{
++	const void *nh = th - diff;
++	const void *nh2 = th2 - diff;
++
++	if (((struct iphdr *)nh)->version == 6)
++		return ipv6_gro_flush(nh, nh2);
++	else
++		return inet_gro_flush(nh, nh2, p, outer);
++}
++
++static inline int gro_receive_network_flush(const void *th, const void *th2,
++					    struct sk_buff *p)
++{
++	const bool encap_mark = NAPI_GRO_CB(p)->encap_mark;
++	int off = skb_transport_offset(p);
++	int flush;
++
++	flush = __gro_receive_network_flush(th, th2, p, off - NAPI_GRO_CB(p)->network_offset, encap_mark);
++	if (encap_mark)
++		flush |= __gro_receive_network_flush(th, th2, p, off - NAPI_GRO_CB(p)->inner_network_offset, false);
++
++	return flush;
++}
++
+ int skb_gro_receive(struct sk_buff *p, struct sk_buff *skb);
+ 
+ /* Pass the currently batched GRO_NORMAL SKBs up to the stack. */
+diff --git a/net/core/gro.c b/net/core/gro.c
+index 397cf5984250..2c4cbeb7f7a9 100644
+--- a/net/core/gro.c
++++ b/net/core/gro.c
+@@ -328,8 +328,6 @@ static void gro_list_prepare(const struct list_head *head,
+ 	list_for_each_entry(p, head, list) {
+ 		unsigned long diffs;
+ 
+-		NAPI_GRO_CB(p)->flush = 0;
+-
+ 		if (hash != skb_get_hash_raw(p)) {
+ 			NAPI_GRO_CB(p)->same_flow = 0;
+ 			continue;
+@@ -463,7 +461,6 @@ static enum gro_result dev_gro_receive(struct napi_struct *napi, struct sk_buff
+ 					sizeof(u32))); /* Avoid slow unaligned acc */
+ 	*(u32 *)&NAPI_GRO_CB(skb)->zeroed = 0;
+ 	NAPI_GRO_CB(skb)->flush = skb_has_frag_list(skb);
+-	NAPI_GRO_CB(skb)->is_atomic = 1;
+ 	NAPI_GRO_CB(skb)->count = 1;
+ 	if (unlikely(skb_is_gso(skb))) {
+ 		NAPI_GRO_CB(skb)->count = skb_shinfo(skb)->gso_segs;
+diff --git a/net/ipv4/af_inet.c b/net/ipv4/af_inet.c
+index f336b2ddf972..d303abac85b8 100644
+--- a/net/ipv4/af_inet.c
++++ b/net/ipv4/af_inet.c
+@@ -1480,7 +1480,6 @@ struct sk_buff *inet_gro_receive(struct list_head *head, struct sk_buff *skb)
+ 	struct sk_buff *p;
+ 	unsigned int hlen;
+ 	unsigned int off;
+-	unsigned int id;
+ 	int flush = 1;
+ 	int proto;
+ 
+@@ -1506,13 +1505,10 @@ struct sk_buff *inet_gro_receive(struct list_head *head, struct sk_buff *skb)
+ 		goto out;
+ 
+ 	NAPI_GRO_CB(skb)->proto = proto;
+-	id = ntohl(*(__be32 *)&iph->id);
+-	flush = (u16)((ntohl(*(__be32 *)iph) ^ skb_gro_len(skb)) | (id & ~IP_DF));
+-	id >>= 16;
++	flush = (u16)((ntohl(*(__be32 *)iph) ^ skb_gro_len(skb)) | (ntohl(*(__be32 *)&iph->id) & ~IP_DF));
+ 
+ 	list_for_each_entry(p, head, list) {
+ 		struct iphdr *iph2;
+-		u16 flush_id;
+ 
+ 		if (!NAPI_GRO_CB(p)->same_flow)
+ 			continue;
+@@ -1529,43 +1525,8 @@ struct sk_buff *inet_gro_receive(struct list_head *head, struct sk_buff *skb)
+ 			NAPI_GRO_CB(p)->same_flow = 0;
+ 			continue;
+ 		}
+-
+-		/* All fields must match except length and checksum. */
+-		NAPI_GRO_CB(p)->flush |=
+-			(iph->ttl ^ iph2->ttl) |
+-			(iph->tos ^ iph2->tos) |
+-			((iph->frag_off ^ iph2->frag_off) & htons(IP_DF));
+-
+-		NAPI_GRO_CB(p)->flush |= flush;
+-
+-		/* We need to store of the IP ID check to be included later
+-		 * when we can verify that this packet does in fact belong
+-		 * to a given flow.
+-		 */
+-		flush_id = (u16)(id - ntohs(iph2->id));
+-
+-		/* This bit of code makes it much easier for us to identify
+-		 * the cases where we are doing atomic vs non-atomic IP ID
+-		 * checks.  Specifically an atomic check can return IP ID
+-		 * values 0 - 0xFFFF, while a non-atomic check can only
+-		 * return 0 or 0xFFFF.
+-		 */
+-		if (!NAPI_GRO_CB(p)->is_atomic ||
+-		    !(iph->frag_off & htons(IP_DF))) {
+-			flush_id ^= NAPI_GRO_CB(p)->count;
+-			flush_id = flush_id ? 0xFFFF : 0;
+-		}
+-
+-		/* If the previous IP ID value was based on an atomic
+-		 * datagram we can overwrite the value and ignore it.
+-		 */
+-		if (NAPI_GRO_CB(skb)->is_atomic)
+-			NAPI_GRO_CB(p)->flush_id = flush_id;
+-		else
+-			NAPI_GRO_CB(p)->flush_id |= flush_id;
+ 	}
+ 
+-	NAPI_GRO_CB(skb)->is_atomic = !!(iph->frag_off & htons(IP_DF));
+ 	NAPI_GRO_CB(skb)->flush |= flush;
+ 	skb_set_network_header(skb, off);
+ 	/* The above will be needed by the transport layer if there is one
+diff --git a/net/ipv4/tcp_offload.c b/net/ipv4/tcp_offload.c
+index f1f723579a49..0bea9ba77776 100644
+--- a/net/ipv4/tcp_offload.c
++++ b/net/ipv4/tcp_offload.c
+@@ -238,9 +238,7 @@ struct sk_buff *tcp_gro_receive(struct list_head *head, struct sk_buff *skb)
+ 	goto out_check_final;
+ 
+ found:
+-	/* Include the IP ID check below from the inner most IP hdr */
+-	flush = NAPI_GRO_CB(p)->flush;
+-	flush |= (__force int)(flags & TCP_FLAG_CWR);
++	flush = (__force int)(flags & TCP_FLAG_CWR);
+ 	flush |= (__force int)((flags ^ tcp_flag_word(th2)) &
+ 		  ~(TCP_FLAG_CWR | TCP_FLAG_FIN | TCP_FLAG_PSH));
+ 	flush |= (__force int)(th->ack_seq ^ th2->ack_seq);
+@@ -248,16 +246,7 @@ struct sk_buff *tcp_gro_receive(struct list_head *head, struct sk_buff *skb)
+ 		flush |= *(u32 *)((u8 *)th + i) ^
+ 			 *(u32 *)((u8 *)th2 + i);
+ 
+-	/* When we receive our second frame we can made a decision on if we
+-	 * continue this flow as an atomic flow with a fixed ID or if we use
+-	 * an incrementing ID.
+-	 */
+-	if (NAPI_GRO_CB(p)->flush_id != 1 ||
+-	    NAPI_GRO_CB(p)->count != 1 ||
+-	    !NAPI_GRO_CB(p)->is_atomic)
+-		flush |= NAPI_GRO_CB(p)->flush_id;
+-	else
+-		NAPI_GRO_CB(p)->is_atomic = false;
++	flush |= gro_receive_network_flush(th, th2, p);
+ 
+ 	mss = skb_shinfo(p)->gso_size;
+ 
+@@ -341,10 +330,8 @@ INDIRECT_CALLABLE_SCOPE int tcp4_gro_complete(struct sk_buff *skb, int thoff)
+ 
+ 	th->check = ~tcp_v4_check(skb->len - thoff, iph->saddr,
+ 				  iph->daddr, 0);
+-	skb_shinfo(skb)->gso_type |= SKB_GSO_TCPV4;
+-
+-	if (NAPI_GRO_CB(skb)->is_atomic)
+-		skb_shinfo(skb)->gso_type |= SKB_GSO_TCP_FIXEDID;
++	skb_shinfo(skb)->gso_type |= SKB_GSO_TCPV4 |
++			(NAPI_GRO_CB(skb)->ip_fixedid * SKB_GSO_TCP_FIXEDID);
+ 
+ 	tcp_gro_complete(skb);
+ 	return 0;
+diff --git a/net/ipv4/udp_offload.c b/net/ipv4/udp_offload.c
+index 3870b59f5400..6a0e3c4ff573 100644
+--- a/net/ipv4/udp_offload.c
++++ b/net/ipv4/udp_offload.c
+@@ -596,14 +596,7 @@ static struct sk_buff *udp_gro_receive_segment(struct list_head *head,
+ 			return p;
+ 		}
+ 
+-		flush = NAPI_GRO_CB(p)->flush;
+-
+-		if (NAPI_GRO_CB(p)->flush_id != 1 ||
+-		    NAPI_GRO_CB(p)->count != 1 ||
+-		    !NAPI_GRO_CB(p)->is_atomic)
+-			flush |= NAPI_GRO_CB(p)->flush_id;
+-		else
+-			NAPI_GRO_CB(p)->is_atomic = false;
++		flush = gro_receive_network_flush(uh, uh2, p);
+ 
+ 		/* Terminate the flow on len mismatch or if it grow "too much".
+ 		 * Under small packet flood GRO count could elsewhere grow a lot
+diff --git a/net/ipv6/ip6_offload.c b/net/ipv6/ip6_offload.c
+index 7f014a8969fb..59b2833b2fde 100644
+--- a/net/ipv6/ip6_offload.c
++++ b/net/ipv6/ip6_offload.c
+@@ -294,19 +294,8 @@ INDIRECT_CALLABLE_SCOPE struct sk_buff *ipv6_gro_receive(struct list_head *head,
+ 				   nlen - sizeof(struct ipv6hdr)))
+ 				goto not_same_flow;
+ 		}
+-		/* flush if Traffic Class fields are different */
+-		NAPI_GRO_CB(p)->flush |= !!((first_word & htonl(0x0FF00000)) |
+-			(__force __be32)(iph->hop_limit ^ iph2->hop_limit));
+-		NAPI_GRO_CB(p)->flush |= flush;
+-
+-		/* If the previous IP ID value was based on an atomic
+-		 * datagram we can overwrite the value and ignore it.
+-		 */
+-		if (NAPI_GRO_CB(skb)->is_atomic)
+-			NAPI_GRO_CB(p)->flush_id = 0;
+ 	}
+ 
+-	NAPI_GRO_CB(skb)->is_atomic = true;
+ 	NAPI_GRO_CB(skb)->flush |= flush;
+ 
+ 	skb_gro_postpull_rcsum(skb, iph, nlen);

@@ -1,7 +1,5 @@
 GFS2: Avoid recently demoted rgrps.
 
-From: Mark Syms <mark.syms@citrix.com>
-
 When under heavy I/O load from two or more hosts the resource group
 allocation can result in glocks being bounced around between hosts.
 Follow the example of inodes and if we have local waiters when asked
@@ -12,12 +10,19 @@ to use resource groups where we've been asked to demote the glock
 within the last second.
 
 Signed-off-by: Mark Syms <mark.syms@citrix.com>
+---
+ fs/gfs2/glock.c      |  7 +++++--
+ fs/gfs2/incore.h     |  2 ++
+ fs/gfs2/main.c       |  1 +
+ fs/gfs2/rgrp.c       | 10 ++++++++++
+ fs/gfs2/trace_gfs2.h | 12 +++++++++---
+ 5 files changed, 27 insertions(+), 5 deletions(-)
 
 diff --git a/fs/gfs2/glock.c b/fs/gfs2/glock.c
-index ccdd8c821abd..ad0278b4ad41 100644
+index 687670075d22..fddcd22fe8ad 100644
 --- a/fs/gfs2/glock.c
 +++ b/fs/gfs2/glock.c
-@@ -978,7 +978,9 @@ static void handle_callback(struct gfs2_glock *gl, unsigned int state,
+@@ -1475,7 +1475,9 @@ static void handle_callback(struct gfs2_glock *gl, unsigned int state,
  	}
  	if (gl->gl_ops->go_callback)
  		gl->gl_ops->go_callback(gl, remote);
@@ -28,21 +33,21 @@ index ccdd8c821abd..ad0278b4ad41 100644
  }
  
  void gfs2_print_dbg(struct seq_file *seq, const char *fmt, ...)
-@@ -1343,7 +1345,8 @@ void gfs2_glock_cb(struct gfs2_glock *gl, unsigned int state)
- 	gfs2_glock_hold(gl);
+@@ -1898,7 +1900,8 @@ void gfs2_glock_cb(struct gfs2_glock *gl, unsigned int state)
+ 	spin_lock(&gl->gl_lockref.lock);
  	holdtime = gl->gl_tchange + gl->gl_hold_time;
- 	if (test_bit(GLF_QUEUED, &gl->gl_flags) &&
+ 	if (!list_empty(&gl->gl_holders) &&
 -	    gl->gl_name.ln_type == LM_TYPE_INODE) {
-+	    (gl->gl_name.ln_type == LM_TYPE_INODE ||
-+	     gl->gl_name.ln_type == LM_TYPE_RGRP)) {
++		(gl->gl_name.ln_type == LM_TYPE_INODE ||
++		 gl->gl_name.ln_type == LM_TYPE_RGRP)) {
  		if (time_before(now, holdtime))
  			delay = holdtime - now;
  		if (test_bit(GLF_REPLY_PENDING, &gl->gl_flags))
 diff --git a/fs/gfs2/incore.h b/fs/gfs2/incore.h
-index 40f3954411d6..b21b09b2a79c 100644
+index 853fad2bc485..31966fef9120 100644
 --- a/fs/gfs2/incore.h
 +++ b/fs/gfs2/incore.h
-@@ -365,6 +365,8 @@ struct gfs2_glock {
+@@ -348,6 +348,8 @@ struct gfs2_glock {
  		     gl_reply:8;	/* Last reply from the dlm */
  
  	unsigned long gl_demote_time; /* time of first demote request */
@@ -52,10 +57,10 @@ index 40f3954411d6..b21b09b2a79c 100644
  	struct list_head gl_holders;
  
 diff --git a/fs/gfs2/main.c b/fs/gfs2/main.c
-index 2d55e2c3333c..2183c73f6d2f 100644
+index 66eb98b690a2..5e69b8d10c60 100644
 --- a/fs/gfs2/main.c
 +++ b/fs/gfs2/main.c
-@@ -58,6 +58,7 @@ static void gfs2_init_glock_once(void *foo)
+@@ -57,6 +57,7 @@ static void gfs2_init_glock_once(void *foo)
  	INIT_LIST_HEAD(&gl->gl_ail_list);
  	atomic_set(&gl->gl_ail_count, 0);
  	atomic_set(&gl->gl_revokes, 0);
@@ -64,38 +69,38 @@ index 2d55e2c3333c..2183c73f6d2f 100644
  
  static void gfs2_init_gl_aspace_once(void *foo)
 diff --git a/fs/gfs2/rgrp.c b/fs/gfs2/rgrp.c
-index ae17c0ed5283..32497ad8c208 100644
+index 4a5e2732d1da..4ae086b37be4 100644
 --- a/fs/gfs2/rgrp.c
 +++ b/fs/gfs2/rgrp.c
-@@ -1956,6 +1956,12 @@ static bool gfs2_rgrp_used_recently(const struct gfs2_blkreserv *rs,
+@@ -1984,6 +1984,12 @@ static bool gfs2_rgrp_used_recently(const struct gfs2_blkreserv *rs,
  	return tdiff > (msecs * 1000 * 1000);
  }
  
 +static bool gfs2_rgrp_demoted_recently(const struct gfs2_blkreserv *rs,
-+				       u32 max_age_jiffies, u32 loop)
++		              u32 max_age_jiffies, u32 loop)
 +{
-+	return time_before(jiffies, rs->rs_rbm.rgd->rd_gl->gl_last_demote + max_age_jiffies);
++	return time_before(jiffies, rs->rs_rgd->rd_gl->gl_last_demote + max_age_jiffies);
 +}
 +
  static u32 gfs2_orlov_skip(const struct gfs2_inode *ip)
  {
  	const struct gfs2_sbd *sdp = GFS2_SB(&ip->i_inode);
-@@ -2084,6 +2090,10 @@ int gfs2_inplace_reserve(struct gfs2_inode *ip, struct gfs2_alloc_parms *ap)
- 							goto next_rgrp;
- 						}
- 					}
+@@ -2087,6 +2093,10 @@ int gfs2_inplace_reserve(struct gfs2_inode *ip, struct gfs2_alloc_parms *ap)
+ 				if (loops == 0 &&
+ 				    !fast_to_acquire(rs->rs_rgd))
+ 					goto next_rgrp;
 +
-+					if (gfs2_rgrp_demoted_recently(rs, HZ, loops))
-+						goto next_rgrp;
++				if (gfs2_rgrp_demoted_recently(rs, HZ, loops))
++					goto next_rgrp;
 +
- 					if (gfs2_rgrp_used_recently(rs, 1000) &&
- 						gfs2_rgrp_congested(rs->rs_rbm.rgd, loops))
- 						goto next_rgrp;
+ 				if ((loops < 2) &&
+ 				    gfs2_rgrp_used_recently(rs, 1000) &&
+ 				    gfs2_rgrp_congested(rs->rs_rgd, loops))
 diff --git a/fs/gfs2/trace_gfs2.h b/fs/gfs2/trace_gfs2.h
-index e0025258107a..79935dc6b32f 100644
+index a5deb9f86831..5fe2d46846f5 100644
 --- a/fs/gfs2/trace_gfs2.h
 +++ b/fs/gfs2/trace_gfs2.h
-@@ -161,9 +161,9 @@ TRACE_EVENT(gfs2_glock_put,
+@@ -160,9 +160,9 @@ TRACE_EVENT(gfs2_glock_put,
  /* Callback (local or remote) requesting lock demotion */
  TRACE_EVENT(gfs2_demote_rq,
  
@@ -107,22 +112,22 @@ index e0025258107a..79935dc6b32f 100644
  
  	TP_STRUCT__entry(
  		__field(        dev_t,  dev                     )
-@@ -173,6 +173,8 @@ TRACE_EVENT(gfs2_demote_rq,
+@@ -172,6 +172,8 @@ TRACE_EVENT(gfs2_demote_rq,
  		__field(	u8,	dmt_state		)
  		__field(	unsigned long,	flags		)
  		__field(	bool,	remote			)
-+		__field(	unsigned long,  gl_last_demote	)
-+		__field(	unsigned long,  delay		)
++		__field(    unsigned long,  gl_last_demote  )
++		__field(    unsigned long,  delay       )
  	),
  
  	TP_fast_assign(
-@@ -182,15 +184,19 @@ TRACE_EVENT(gfs2_demote_rq,
+@@ -181,15 +183,19 @@ TRACE_EVENT(gfs2_demote_rq,
  		__entry->cur_state	= glock_trace_state(gl->gl_state);
  		__entry->dmt_state	= glock_trace_state(gl->gl_demote_state);
  		__entry->flags		= gl->gl_flags  | (gl->gl_object ? (1UL<<GLF_OBJECT) : 0);
-+		__entry->gl_last_demote	= jiffies - gl->gl_last_demote;
++		__entry->gl_last_demote = jiffies - gl->gl_last_demote;
  		__entry->remote		= remote;
-+		__entry->delay		= delay;
++		__entry->delay      = delay;
  	),
  
 -	TP_printk("%u,%u glock %d:%lld demote %s to %s flags:%s %s",
@@ -137,3 +142,6 @@ index e0025258107a..79935dc6b32f 100644
  		  __entry->remote ? "remote" : "local")
  
  );
+-- 
+2.34.1
+

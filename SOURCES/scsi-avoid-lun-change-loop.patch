@@ -6,10 +6,10 @@ turn trigger more LUN change events.
 
 Signed-off-by: Gerald Elder-Vass <gerald.elder-vass@cloud.com>
 diff --git a/drivers/scsi/scsi_error.c b/drivers/scsi/scsi_error.c
-index b7a8fdfeb2f4..4e0274607dae 100644
+index 43eff1107038..3a2a7e8124a3 100644
 --- a/drivers/scsi/scsi_error.c
 +++ b/drivers/scsi/scsi_error.c
-@@ -418,7 +418,8 @@ static void scsi_report_sense(struct scsi_device *sdev,
+@@ -465,7 +465,8 @@ static void scsi_report_sense(struct scsi_device *sdev,
  			sdev_printk(KERN_WARNING, sdev,
  				    "Inquiry data has changed");
  		} else if (sshdr->asc == 0x3f && sshdr->ascq == 0x0e) {
@@ -18,4 +18,4 @@ index b7a8fdfeb2f4..4e0274607dae 100644
 +				evt_type = SDEV_EVT_LUN_CHANGE_REPORTED;
  			scsi_report_lun_change(sdev);
  			sdev_printk(KERN_WARNING, sdev,
- 				    "Warning! Received an indication that the "
+ 				    "LUN assignments on this target have "

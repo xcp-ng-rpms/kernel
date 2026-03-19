@@ -1,0 +1,47 @@
+lpfc: Fallback to SLI-2 mode
+
+The Emulex LPe11000 card with firmware 2.50A4 doesn't support SLI-3 mode which
+results in an initialization failure after d2f2547efd39 ("scsi: lpfc: Fix auto
+sli_mode and its effect on CONFIG_PORT for SLI3"), removed the fallback to
+SLI-2. This patch reinstates just that part of the commit to make it work
+again.
+
+This patch is not for upstream since the driver doesn't officially support
+SLI-2 mode anymore. It is just a workaround until the firmware can be updated.
+More details here: https://patches.linaro.org/project/linux-scsi/patch/20210104180240.46824-3-jsmart2021@gmail.com/
+
+Signed-off-by: Ross Lagerwall <ross.lagerwall@citrix.com>
+diff --git a/drivers/scsi/lpfc/lpfc_init.c b/drivers/scsi/lpfc/lpfc_init.c
+index 2f38c8d5a48a..8b090d82ed46 100644
+--- a/drivers/scsi/lpfc/lpfc_init.c
++++ b/drivers/scsi/lpfc/lpfc_init.c
+@@ -12225,9 +12225,8 @@ lpfc_sli_enable_intr(struct lpfc_hba *phba, uint32_t cfg_mode)
+ 
+ 	/* Need to issue conf_port mbox cmd before conf_msi mbox cmd */
+ 	retval = lpfc_sli_config_port(phba, LPFC_SLI_REV3);
+-	if (retval)
+-		return intr_mode;
+-	phba->hba_flag &= ~HBA_NEEDS_CFG_PORT;
++	if (!retval)
++		phba->hba_flag &= ~HBA_NEEDS_CFG_PORT;
+ 
+ 	if (cfg_mode == 2) {
+ 		/* Now, try to enable MSI-X interrupt mode */
+diff --git a/drivers/scsi/lpfc/lpfc_sli.c b/drivers/scsi/lpfc/lpfc_sli.c
+index b44bb3ae22ad..53df88f9461e 100644
+--- a/drivers/scsi/lpfc/lpfc_sli.c
++++ b/drivers/scsi/lpfc/lpfc_sli.c
+@@ -5703,8 +5703,11 @@ lpfc_sli_hba_setup(struct lpfc_hba *phba)
+ 	/* Enable ISR already does config_port because of config_msi mbx */
+ 	if (phba->hba_flag & HBA_NEEDS_CFG_PORT) {
+ 		rc = lpfc_sli_config_port(phba, LPFC_SLI_REV3);
+-		if (rc)
+-			return -EIO;
++		if (rc) {
++			rc = lpfc_sli_config_port(phba, LPFC_SLI_REV2);
++			if (rc)
++				return -EIO;
++		}
+ 		phba->hba_flag &= ~HBA_NEEDS_CFG_PORT;
+ 	}
+ 	phba->fcp_embed_io = 0;	/* SLI4 FC support only */
