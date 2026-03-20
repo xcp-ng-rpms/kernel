@@ -116,26 +116,6 @@ index aa3f946eb0eb..1b2c83d5e964 100644
  }
  
  static void __rpc_atrun(struct rpc_task *task)
-diff --git a/net/sunrpc/xprtsock.c b/net/sunrpc/xprtsock.c
-index f6b2ff3148a6..d1850f63eac7 100644
---- a/net/sunrpc/xprtsock.c
-+++ b/net/sunrpc/xprtsock.c
-@@ -1610,6 +1610,7 @@ static void xs_tcp_state_change(struct sock *sk)
- 	trace_rpc_socket_state_change(xprt, sk->sk_socket);
- 	switch (sk->sk_state) {
- 	case TCP_ESTABLISHED:
-+		spin_lock(&xprt->transport_lock);
- 		if (!xprt_test_and_set_connected(xprt)) {
- 
- 			/* Reset TCP record info */
-@@ -1624,6 +1625,7 @@ static void xs_tcp_state_change(struct sock *sk)
- 
- 			xs_run_error_worker(transport, XPRT_SOCK_WAKE_PENDING);
- 		}
-+		spin_unlock(&xprt->transport_lock);
- 		break;
- 	case TCP_FIN_WAIT1:
- 		/* The client initiated a shutdown of the socket */
 -- 
 2.34.1
 
