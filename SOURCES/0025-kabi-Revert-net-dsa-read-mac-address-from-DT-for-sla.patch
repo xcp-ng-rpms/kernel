@@ -1,0 +1,61 @@
+From 65dddc1b69dfbb0d240d869e17f41d443e7babc3 Mon Sep 17 00:00:00 2001
+From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+Date: Thu, 19 Mar 2026 18:55:24 +0100
+Subject: [PATCH] !kabi Revert: net: dsa: read mac address from DT for slave
+ device
+
+This commit is actually a no-op on amd64 because of_get_mac_address always
+returns true on this architecture, so revert it to avoid unecessary kABI
+changes.
+
+Reverts: 8069a08d35b7 ("net: dsa: read mac address from DT for slave device")
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+---
+ include/net/dsa.h | 1 -
+ net/dsa/dsa2.c    | 1 -
+ net/dsa/slave.c   | 5 +----
+ 3 files changed, 1 insertion(+), 6 deletions(-)
+
+diff --git a/include/net/dsa.h b/include/net/dsa.h
+index d28df7adf948..461e8a7661b7 100644
+--- a/include/net/dsa.h
++++ b/include/net/dsa.h
+@@ -196,7 +196,6 @@ struct dsa_port {
+ 	unsigned int		index;
+ 	const char		*name;
+ 	const struct dsa_port	*cpu_dp;
+-	const char		*mac;
+ 	struct device_node	*dn;
+ 	unsigned int		ageing_time;
+ 	u8			stp_state;
+diff --git a/net/dsa/dsa2.c b/net/dsa/dsa2.c
+index 05aadb25e294..52b9f62ead25 100644
+--- a/net/dsa/dsa2.c
++++ b/net/dsa/dsa2.c
+@@ -261,7 +261,6 @@ static int dsa_port_setup(struct dsa_port *dp)
+ 	int err = 0;
+ 
+ 	memset(&dp->devlink_port, 0, sizeof(dp->devlink_port));
+-	dp->mac = of_get_mac_address(dp->dn);
+ 
+ 	if (dp->type != DSA_PORT_TYPE_UNUSED)
+ 		err = devlink_port_register(ds->devlink, &dp->devlink_port,
+diff --git a/net/dsa/slave.c b/net/dsa/slave.c
+index 9b74e439809f..cb7cc14529f0 100644
+--- a/net/dsa/slave.c
++++ b/net/dsa/slave.c
+@@ -1313,10 +1313,7 @@ int dsa_slave_create(struct dsa_port *port)
+ 	slave_dev->features = master->vlan_features | NETIF_F_HW_TC;
+ 	slave_dev->hw_features |= NETIF_F_HW_TC;
+ 	slave_dev->ethtool_ops = &dsa_slave_ethtool_ops;
+-	if (port->mac && is_valid_ether_addr(port->mac))
+-		ether_addr_copy(slave_dev->dev_addr, port->mac);
+-	else
+-		eth_hw_addr_inherit(slave_dev, master);
++	eth_hw_addr_inherit(slave_dev, master);
+ 	slave_dev->priv_flags |= IFF_NO_QUEUE;
+ 	slave_dev->netdev_ops = &dsa_slave_netdev_ops;
+ 	slave_dev->switchdev_ops = &dsa_slave_switchdev_ops;
+-- 
+2.43.0
+

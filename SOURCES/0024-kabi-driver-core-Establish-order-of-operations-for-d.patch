@@ -1,4 +1,4 @@
-From d592502b3e02c40ee731921a3ecd854a4c83e223 Mon Sep 17 00:00:00 2001
+From c490cfc00e2e21deeea06c62694c4c3d747c58cb Mon Sep 17 00:00:00 2001
 From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
 Date: Thu, 19 Mar 2026 12:14:46 +0100
 Subject: [PATCH] =?UTF-8?q?!kabi=20driver=20core:=20Establish=20order=20of?=
@@ -11,19 +11,29 @@ Content-Transfer-Encoding: 8bit
 Fixes: 7c43f84efd6d ("driver core: Establish order of operations for device_add and device_del via bitflag")
 Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
 ---
- drivers/base/base.h | 10 ++++++++--
+ drivers/base/base.h | 22 +++++++++++++++++++++-
  drivers/base/core.c | 19 +++++++++++++++++++
- 2 files changed, 27 insertions(+), 2 deletions(-)
+ 2 files changed, 40 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/base/base.h b/drivers/base/base.h
-index 99ac3b2498a9..92f8840c818e 100644
+index 99ac3b2498a9..420212280d4e 100644
 --- a/drivers/base/base.h
 +++ b/drivers/base/base.h
-@@ -74,12 +74,18 @@ struct driver_private {
+@@ -74,12 +74,32 @@ struct driver_private {
   */
  struct device_private {
  	struct klist klist_children;
--	struct klist_node knode_parent;
++#ifndef __GENKSYMS__
++	/**
++	 * 7c43f84efd6d ("driver core: Establish order of operations for
++	 * device_add and device_del via bitflag") added a new field, dead,
++	 * to the device_private struct but we have no holes to stick it
++	 * into and there is no padding at the end of the device_private
++	 * struct.
++	 *
++	 * Luckily, there are padding bytes at the end of the struct
++	 * klist_node, so abuse them to store our one bit data.
++	 */
 +	union {
 +		struct klist_node knode_parent;
 +		struct {
@@ -32,6 +42,9 @@ index 99ac3b2498a9..92f8840c818e 100644
 +			u8 dead:1;
 +		};
 +	};
++#else
+ 	struct klist_node knode_parent;
++#endif
  	struct klist_node knode_driver;
  	struct klist_node knode_bus;
  	struct list_head deferred_probe;

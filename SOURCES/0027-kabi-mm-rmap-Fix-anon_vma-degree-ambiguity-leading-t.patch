@@ -1,0 +1,98 @@
+From e9f9d586344e8de375ab9298c3f82fe4f98a3b13 Mon Sep 17 00:00:00 2001
+From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+Date: Fri, 20 Mar 2026 09:24:24 +0100
+Subject: [PATCH] !kabi mm/rmap: Fix anon_vma->degree ambiguity leading to
+ double-reuse
+
+The original commit introducing the kABI breakage fixes CVE-2022-42703, for
+which a public exploit has been described publicly since December 2022.
+
+The struct anon_vma is only allocated and used from the mm/rmap.c code, and
+most other third party kernel modules don't know its full definition which
+is embedded in include/linux/rmap.h (even other parts of the linux kernel
+do not include rmap.h directly a part from the Kernel Same Page Merger).
+
+As such, no out-of-tree kernel modules are supposed to use the sizeof
+operator or declare static arrays of anon_vmas, so it should be fine to
+stick the new fields at the end of the struct (to prevent other fields from
+changing offsets in the very unlikely event they are used by anything
+outside the kernel source code) and hide them from genksyms.
+
+Fixes: 6dbfc25d68d9 ("mm/rmap: Fix anon_vma->degree ambiguity leading to double-reuse")
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+---
+ include/linux/rmap.h | 49 +++++++++++++++++++++++++++++++++++---------
+ 1 file changed, 39 insertions(+), 10 deletions(-)
+
+diff --git a/include/linux/rmap.h b/include/linux/rmap.h
+index c80bd129e939..50fea011cf38 100644
+--- a/include/linux/rmap.h
++++ b/include/linux/rmap.h
+@@ -37,18 +37,24 @@ struct anon_vma {
+ 	 * anon_vma if they are the last user on release
+ 	 */
+ 	atomic_t refcount;
+-
+-	/*
+-	 * Count of child anon_vmas. Equals to the count of all anon_vmas that
+-	 * have ->parent pointing to this one, including itself.
++#ifdef __GENKSYMS__
++	/**
++	 * 6dbfc25d68d9 ("mm/rmap: Fix anon_vma->degree ambiguity leading
++	 * to double-reuse") (fixing CVE-2022-42703) removed the degree
++	 * field and added num_children and num_active_vmas instead, but
++	 * that causes changes in the kABI of the struct mm_area_struct,
++	 * which is passed to the two exported functions find_vma and
++	 * remap_pfn_range, used by broadcom-bnxt-en and qlogic-fastlinq.
+ 	 *
+-	 * This counter is used for making decision about reusing anon_vma
+-	 * instead of forking new one. See comments in function anon_vma_clone.
++	 * So leave the unused field in place such as to not change the
++	 * kABI and offsets of subsequent fields in the very unlikely event
++	 * they are used by third party drivers, but rename the field to
++	 * get build errors if that happens so we can know about them.
+ 	 */
+-	unsigned long num_children;
+-	/* Count of VMAs whose ->anon_vma pointer points to this object. */
+-	unsigned long num_active_vmas;
+-
++	unsigned degree;
++#else
++	unsigned __unused_degree;
++#endif
+ 	struct anon_vma *parent;	/* Parent of this anon_vma */
+ 
+ 	/*
+@@ -62,6 +68,29 @@ struct anon_vma {
+ 
+ 	/* Interval tree of private "related" vmas */
+ 	struct rb_root_cached rb_root;
++#ifndef __GENKSYMS__
++	/**
++	 * 6dbfc25d68d9 ("mm/rmap: Fix anon_vma->degree ambiguity leading
++	 * to double-reuse") added those two new fields which are only used
++	 * internally by the rmap code in (mm/rmap.c).
++	 *
++	 * It is somewhat dangerous to hide this from genksyms but
++	 * out-of-tree kernel modules are not supposed to allocate anon_vma
++	 * structures, instead it is an opaque struct attached as a pointer
++	 * to a vm_area_struct.
++	 */
++
++        /*
++	 * Count of child anon_vmas. Equals to the count of all anon_vmas that
++	 * have ->parent pointing to this one, including itself.
++         *
++         * This counter is used for making decision about reusing anon_vma
++         * instead of forking new one. See comments in function anon_vma_clone.
++         */
++	unsigned long num_children;
++	/* Count of VMAs whose ->anon_vma pointer points to this object. */
++	unsigned long num_active_vmas;
++#endif
+ };
+ 
+ /*
+-- 
+2.43.0
+
