@@ -1,0 +1,61 @@
+diff --git a/kernel/module/Kconfig b/kernel/module/Kconfig
+index 33a2e991f608..83d9fb0c3cb3 100644
+--- a/kernel/module/Kconfig
++++ b/kernel/module/Kconfig
+@@ -2,6 +2,7 @@
+ menuconfig MODULES
+ 	bool "Enable loadable module support"
+ 	modules
++	select CRYPTO_LIB_SHA256
+ 	help
+ 	  Kernel modules are small pieces of compiled code which can
+ 	  be inserted in the running kernel, rather than being
+diff --git a/kernel/module/main.c b/kernel/module/main.c
+index 98fedfdb8db5..1007735e04e6 100644
+--- a/kernel/module/main.c
++++ b/kernel/module/main.c
+@@ -60,9 +60,13 @@
+ #include <uapi/linux/module.h>
+ #include "internal.h"
+ 
++#include <crypto/sha2.h>
++#include <keys/system_keyring.h>
++
+ #define CREATE_TRACE_POINTS
+ #include <trace/events/module.h>
+ 
++
+ /*
+  * Mutex protects:
+  * 1) List of modules (also safely readable with preempt_disable),
+@@ -1646,6 +1650,19 @@ static int validate_section_offset(struct load_info *info, Elf_Shdr *shdr)
+ 	return 0;
+ }
+ 
++static int is_module_blacklisted(struct load_info *info)
++{
++	u8 hash[SHA256_DIGEST_SIZE];
++
++	/*
++	 * We use the direct sha256 API rather than the generic hash API to avoid
++	 * circular dependencies where the module loader calls the hash API which
++	 * then tries to load the relevant module.
++	 */
++	sha256((const u8*)info->hdr, info->len, hash);
++	return is_binary_blacklisted(hash, SHA256_DIGEST_SIZE);
++}
++
+ /*
+  * Check userspace passed ELF module against our expectations, and cache
+  * useful variables for further processing as we go.
+@@ -2833,6 +2850,10 @@ static int load_module(struct load_info *info, const char __user *uargs,
+ 	long err = 0;
+ 	char *after_dashes;
+ 
++	err = is_module_blacklisted(info);
++	if (err)
++		goto free_copy;
++
+ 	/*
+ 	 * Do the signature check (if any) first. All that
+ 	 * the signature check needs is info->len, it does

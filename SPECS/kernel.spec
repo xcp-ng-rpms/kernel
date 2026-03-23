@@ -1,32 +1,52 @@
-%global package_speccommit ccb8ee3c01ade60b0ee7a22436d4b25d84702ae4
-%global usver 4.19.19
-%global xsver 8.0.44
+%global package_speccommit 4e8483896f686b3215dc3bfd9ee6911106b47d30
+%global usver 6.6.98
+%global xsver 19
 %global xsrel %{xsver}%{?xscount}%{?xshash}
-%global package_srccommit refs/tags/v4.19.19
-%define uname 4.19.0+1
-%define short_uname 4.19
+%global package_srccommit refs/tags/v6.6.98
+%define uname 6.6.98+1
+%define short_uname 6.6
 %define srcpath /usr/src/kernels/%{uname}-%{_arch}
 
 # Control whether we perform a compat. check against published ABI.
 # Default enabled: (to override: --without kabichk)
 %define do_kabichk  %{?_without_kabichk: 0} %{?!_without_kabichk: 1}
 # Default disabled: (to override: --with kabichk)
-#%%define do_kabichk  %%{?_with_kabichk: 1} %%{?!_with_kabichk: 0}
+# %%define do_kabichk  %%{?_with_kabichk: 1} %%{?!_with_kabichk: 0}
+
+# Enabling LTO causes build errors
+# Below patches are for gcc-LTO support
+# https://lore.kernel.org/lkml/87a64qo4th.ffs@tglx/T/
+# But these patches are not merged to upstream
+# Keep lto disabled
+%global _lto_cflags %nil
+# Some python shebang like drivers/staging/greybus/tools/lbtest
+%global __brp_mangle_shebangs %nil
 
 #
 # Adjust debuginfo generation to suit building a kernel:
 #
+
 # Don't run dwz.
-%undefine _find_debuginfo_dwz_opts
+%global _find_debuginfo_dwz_opts %{nil}
 # Don't try to generate minidebuginfo.
-%undefine _include_minidebuginfo
+%global _include_minidebuginfo %{nil}
+%global _debuginfo_subpackages %{nil}
+
 # Resolve trivial relocations in debug sections.
 # This reduces the size of debuginfo.
 %define _find_debuginfo_opts -r
+%undefine _unique_build_ids
+%global _no_recompute_build_ids 1
+# Turn off Python bytecode compilation as they are from upstream
+# The upstream contains both python2 and python3 scripts,  fail one or the other
+%global __brp_python_bytecompile %{nil}
 
 # RPM tries to bytecompile Python sources files it finds in /usr/src and fails
 # since some of them are for Python 3 only. Just ignore the errors.
 %global _python_bytecompile_errors_terminate_build 0
+
+# Make sure bytecode compilation is using python3
+%global __python %{__python3}
 
 %define lp_devel_dir %{_usrsrc}/kernel-%{version}-%{release}
 
@@ -34,43 +54,115 @@
 %global __provides_exclude_from ^%{lp_devel_dir}/.*$
 %global __requires_exclude_from ^%{lp_devel_dir}/.*$
 
+# BPF type info with bpftool for full bpftrace support and light-weight BPF programs (without LLVM install)
+%bcond_without bpftool
+
 Name: kernel
 License: GPLv2
-Version: 4.19.19
+Version: 6.6.98
 Release: %{?xsrel}%{?dist}
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
+
+Source0: kernel-6.6.98.tar.gz
+Source1: kernel-x86_64.config
+Source2: macros.kernel
+Patch0: 0001-net-gro-move-L3-flush-checks-to-tcp_gro_receive-and-.patch
+Patch1: 0001-x86-xen-time-Reduce-Xen-timer-tick.patch
+Patch2: 0001-sched-fair-Bump-sd-max_newidle_lb_cost-when-newidle-.patch
+Patch3: disable-mitigations-by-default.patch
+Patch4: expose-xsversion.patch
+Patch5: blkback-kthread-pid.patch
+Patch6: tg3-alloc-repeat.patch
+Patch7: net-Do-not-scrub-ignore_df-within-the-same-name-spac.patch
+Patch8: enable-fragmention-gre-packets.patch
+Patch9: call-kexec-before-offlining-noncrashing-cpus.patch
+Patch10: lpfc-fallback-to-sli-2.patch
+Patch11: fix-hypercall-preemption.patch
+Patch12: skip-cpuidle-driver-init-if-cpuidle-function-disable.patch
+Patch13: CA-392853-fix-kdump-kernel-cannot-find-ACPI-RSDP.patch
+Patch14: CA-415346-export-module-symbol-offsets.patch
+Patch15: 0002-x86-xen-correct-dma_get_required_mask-for-Xen-PV-gue.patch
+Patch16: 0001-pci-export-pci_reset_supported.patch
+Patch17: 0002-xen-pciback-provide-a-reset-sysfs-file-to-try-harder.patch
+Patch18: pciback-disable-root-port-aer.patch
+Patch19: pciback-mask-root-port-comp-timeout.patch
+Patch20: no-flr-quirk.patch
+Patch21: CA-135938-nfs-disconnect-on-rpc-retry.patch
+Patch22: sunrpc-force-disconnect-on-connection-timeout.patch
+Patch23: xen-ioemu-inject-msi.patch
+Patch24: pv-iommu-support.patch
+Patch25: kexec-reserve-crashkernel-region.patch
+Patch26: 0001-xen-swiotlb-size-128MiB.patch
+Patch27: 0002-xen-swiotlb-rework-early-repeat-code.patch
+Patch28: 0001-Revert-to-use-num_online_cpus-for-default-rss-queues.patch
+Patch29: GFS2__Avoid_recently_demoted_rgrps
+Patch30: gfs2-debug-rgrp-sweep
+Patch31: 0001-fix-gfs2-umount-timeout-bug.patch
+Patch32: gfs2-No-more-self-recovery
+Patch33: CA-411820-add-STATX_DIOALIGN-support-to-GFS2
+Patch34: scsi-avoid-lun-change-loop.patch
+Patch35: add-sbat.patch
+Patch36: enable-lockdown.patch
+Patch37: module-allow-disabling-sig_enforce.patch
+Patch38: use-mok-variable-fallback.patch
+Patch39: allow_reading_xen_netback_ring.patch
+Patch40: import-xen-public-headers.patch
+Patch41: filter-hypercalls.patch
+Patch42: module-hash-revocation.patch
+Patch43: gfs2-fix-debugfs-access.patch
+Patch44: 0001-CP-46343-common-data-structure-padding.patch
+Patch45: 0002-CP-46343-reserve-cpuid-leaves-for-future-use.patch
+Patch46: abi-version.patch
+%if %{do_kabichk}
+Source3: check-kabi
+%endif
+Source4: Module.kabi
+Source5: prepare-build
+Source6: module-hash-list.csv
+
 BuildRequires: kmod
+%if %{with bpftool}
 BuildRequires: dwarves
+%endif
 
 # These build dependencies are needed for building the main kernel and
 # modules as well live patches.
 %define core_builddeps() %{lua:
     deps = {
-        'bc',
-        'bison',
-        'gcc',
-        'devtoolset-11-elfutils-libelf-devel',
-        'devtoolset-11-elfutils-devel',
-        'binutils-devel',
-        'flex',
-        'hostname',
+            'bc',
+            'binutils',
+            'binutils-devel',
+            'bison',
+            'elfutils-devel',
+            'elfutils',
+            'elfutils-libelf-devel',
+            'flex',
+            'gcc',
+            'gcc-c++',
+            'hostname',
+            'openssl-devel',
+            'perl'
     }
+
     for _, dep in ipairs(deps) do
         print(rpm.expand("%1") .. ': ' .. dep .. '\\n')
     end
 }
 
 %{core_builddeps BuildRequires}
-%if %{do_kabichk}
-BuildRequires: python
-%endif
 
 BuildRequires: xz-devel
 BuildRequires: libunwind-devel
-BuildRequires: python2-devel
-BuildRequires: asciidoc xmlto
+BuildRequires: python3-devel
+BuildRequires: libtraceevent-devel
+BuildRequires: debugedit >= 5.0-2
+BuildRequires: python3
+BuildRequires: rsync
+# For perf
+BuildRequires: xssign-macros
+BuildRequires: python3-setuptools
 %{?_cov_buildrequires}
 AutoReqProv: no
 Provides: kernel-uname-r = %{uname}
@@ -79,642 +171,9 @@ Provides: kernel-%{_arch} = %{version}-%{release}
 Requires(post): coreutils kmod
 Requires(posttrans): coreutils dracut kmod
 
-Source0: kernel-4.19.19.tar.gz
-Source1: kernel-x86_64.config
-Source2: macros.kernel
-Patch0: 0001-Fix-net-ipv4-do-not-handle-duplicate-fragments-as-ov.patch
-Patch1: 0001-xen-privcmd-allow-fetching-resource-sizes.patch
-Patch2: 0001-block-genhd-add-groups-argument-to-device_add_disk.patch
-Patch3: 0002-nvme-register-ns_id-attributes-as-default-sysfs-grou.patch
-Patch4: 0001-mm-zero-remaining-unavailable-struct-pages.patch
-Patch5: 0002-mm-return-zero_resv_unavail-optimization.patch
-Patch6: 0001-mm-page_alloc.c-fix-uninitialized-memmaps-on-a-parti.patch
-Patch7: 0001-mtip32xx-fully-switch-to-the-generic-DMA-API.patch
-Patch8: 0002-mtip32xx-clean-an-indentation-issue-remove-extraneou.patch
-Patch9: 0001-GFS2-Flush-the-GFS2-delete-workqueue-before-stopping.patch
-Patch10: 0001-scsi-libfc-retry-PRLI-if-we-cannot-analyse-the-paylo.patch
-Patch11: 0001-gfs2-improve-debug-information-when-lvb-mismatches-a.patch
-Patch12: 0001-gfs2-Don-t-set-GFS2_RDF_UPTODATE-when-the-lvb-is-upd.patch
-Patch13: 0001-gfs2-slow-the-deluge-of-io-error-messages.patch
-Patch14: 0001-gfs2-Use-fs_-functions-instead-of-pr_-function-where.patch
-Patch15: 0001-gfs2-getlabel-support.patch
-Patch16: 0001-gfs2-Always-check-the-result-of-gfs2_rbm_from_block.patch
-Patch17: 0001-gfs2-Clean-up-out-of-bounds-check-in-gfs2_rbm_from_b.patch
-Patch18: 0001-gfs2-Move-rs_-sizehint-rgd_gh-fields-into-the-inode.patch
-Patch19: 0001-gfs2-Remove-unused-RGRP_RSRV_MINBYTES-definition.patch
-Patch20: 0001-gfs2-Rename-bitmap.bi_-len-bytes.patch
-Patch21: 0001-gfs2-Fix-some-minor-typos.patch
-Patch22: 0001-gfs2-Fix-marking-bitmaps-non-full.patch
-Patch23: 0001-gfs2-Remove-unnecessary-gfs2_rlist_alloc-parameter.patch
-Patch24: 0001-gfs2-Pass-resource-group-to-rgblk_free.patch
-Patch25: 0001-gfs2-write-revokes-should-traverse-sd_ail1_list-in-r.patch
-Patch26: 0001-gfs2-Fix-minor-typo-couln-t-versus-couldn-t.patch
-Patch27: 0003-mtip32xx-move-the-blk_rq_map_sg-call-to-mtip_hw_subm.patch
-Patch28: 0004-mtip32xx-merge-mtip_submit_request-into-mtip_queue_r.patch
-Patch29: 0005-mtip32xx-return-a-blk_status_t-from-mtip_send_trim.patch
-Patch30: 0006-mtip32xx-remove-__force_bit2int.patch
-Patch31: 0007-mtip32xx-add-missing-endianess-annotations-on-struct.patch
-Patch32: 0008-mtip32xx-remove-mtip_init_cmd_header.patch
-Patch33: 0009-mtip32xx-remove-mtip_get_int_command.patch
-Patch34: 0010-mtip32xx-don-t-use-req-special.patch
-Patch35: 0011-mtip32xxx-use-for_each_sg.patch
-Patch36: 0012-mtip32xx-avoid-using-semaphores.patch
-Patch37: 0013-mtip32xx-use-BLK_STS_DEV_RESOURCE-for-device-resourc.patch
-Patch38: 0001-cifs-Limit-memory-used-by-lock-request-calls-to-a-pa.patch
-Patch39: 0001-always-clear-the-X2APIC_ENABLE-bit-for-PV-guest.patch
-Patch40: 0001-xen-pciback-Check-dev_data-before-using-it.patch
-Patch41: 0001-gfs2-changes-to-gfs2_log_XXX_bio.patch
-Patch42: 0001-gfs2-Remove-vestigial-bd_ops.patch
-Patch43: 0001-gfs2-properly-initial-file_lock-used-for-unlock.patch
-Patch44: 0001-gfs2-Clean-up-gfs2_is_-ordered-writeback.patch
-Patch45: 0001-gfs2-Fix-the-gfs2_invalidatepage-description.patch
-Patch46: 0001-gfs2-add-more-timing-info-to-journal-recovery-proces.patch
-Patch47: 0001-gfs2-add-a-helper-function-to-get_log_header-that-ca.patch
-Patch48: 0001-gfs2-Dump-nrpages-for-inodes-and-their-glocks.patch
-Patch49: 0001-gfs2-take-jdata-unstuff-into-account-in-do_grow.patch
-Patch50: 0001-dlm-fix-invalid-free.patch
-Patch51: 0001-dlm-don-t-allow-zero-length-names.patch
-Patch52: 0001-dlm-don-t-leak-kernel-pointer-to-userspace.patch
-Patch53: 0001-dlm-Don-t-swamp-the-CPU-with-callbacks-queued-during.patch
-Patch54: 0001-dlm-fix-possible-call-to-kfree-for-non-initialized-p.patch
-Patch55: 0001-dlm-fix-missing-idr_destroy-for-recover_idr.patch
-Patch56: 0001-dlm-NULL-check-before-kmem_cache_destroy-is-not-need.patch
-Patch57: 0001-dlm-NULL-check-before-some-freeing-functions-is-not-.patch
-Patch58: 0001-dlm-fix-invalid-cluster-name-warning.patch
-Patch59: gfs2-revert-fix-loop-in-gfs2_rbm_find.patch
-Patch60: 0001-scsi-libfc-free-skb-when-receiving-invalid-flogi-res.patch
-Patch61: 0001-Revert-scsi-libfc-Add-WARN_ON-when-deleting-rports.patch
-Patch62: 0001-net-crypto-set-sk-to-NULL-when-af_alg_release.patch
-Patch63: 0001-xen-netback-fix-occasional-leak-of-grant-ref-mapping.patch
-Patch64: 0002-xen-netback-don-t-populate-the-hash-cache-on-XenBus-.patch
-Patch65: 0001-gfs2-Fix-missed-wakeups-in-find_insert_glock.patch
-Patch66: 0001-gfs2-Fix-an-incorrect-gfs2_assert.patch
-Patch67: 0001-ACPI-APEI-Fix-possible-out-of-bounds-access-to-BERT-.patch
-Patch68: 0001-efi-cper-Fix-possible-out-of-bounds-access.patch
-Patch69: 0001-gfs-no-need-to-check-return-value-of-debugfs_create-.patch
-Patch70: 0001-scsi-iscsi-flush-running-unbind-operations-when-remo.patch
-Patch71: 0001-xen-Prevent-buffer-overflow-in-privcmd-ioctl.patch
-Patch72: 0001-Revert-scsi-fcoe-clear-FC_RP_STARTED-flags-when-rece.patch
-Patch73: 0001-gfs2-Fix-lru_count-going-negative.patch
-Patch74: 0002-gfs2-clean_journal-improperly-set-sd_log_flush_head.patch
-Patch75: 0003-gfs2-Fix-occasional-glock-use-after-free.patch
-Patch76: 0001-gfs2-Replace-gl_revokes-with-a-GLF-flag.patch
-Patch77: 0005-gfs2-Remove-misleading-comments-in-gfs2_evict_inode.patch
-Patch78: 0006-gfs2-Rename-sd_log_le_-revoke-ordered.patch
-Patch79: 0007-gfs2-Rename-gfs2_trans_-add_unrevoke-remove_revoke.patch
-Patch80: 0001-iomap-Clean-up-__generic_write_end-calling.patch
-Patch81: 0002-fs-Turn-__generic_write_end-into-a-void-function.patch
-Patch82: 0003-iomap-Fix-use-after-free-error-in-page_done-callback.patch
-Patch83: 0004-iomap-Add-a-page_prepare-callback.patch
-Patch84: 0008-gfs2-Fix-iomap-write-page-reclaim-deadlock.patch
-Patch85: 0001-fs-mark-expected-switch-fall-throughs.patch
-Patch86: 0001-gfs2-Fix-loop-in-gfs2_rbm_find-v2.patch
-Patch87: 0001-gfs2-Remove-unnecessary-extern-declarations.patch
-Patch88: 0001-gfs2-fix-race-between-gfs2_freeze_func-and-unmount.patch
-Patch89: 0001-gfs2-read-journal-in-large-chunks.patch
-Patch90: 0001-gfs2-Fix-error-path-kobject-memory-leak.patch
-Patch91: 0009-SUNRPC-Ensure-that-the-transport-layer-respect-major.patch
-Patch92: 0011-SUNRPC-Start-the-first-major-timeout-calculation-at-.patch
-Patch93: 0001-gfs2-Fix-sign-extension-bug-in-gfs2_update_stats.patch
-Patch94: 0001-Revert-gfs2-Replace-gl_revokes-with-a-GLF-flag.patch
-Patch95: 0001-gfs2-Fix-rounding-error-in-gfs2_iomap_page_prepare.patch
-Patch96: 0001-iomap-don-t-mark-the-inode-dirty-in-iomap_write_end.patch
-Patch97: 0001-gfs2-Clean-up-freeing-struct-gfs2_sbd.patch
-Patch98: 0001-gfs2-Use-IS_ERR_OR_NULL.patch
-Patch99: 0001-gfs2-kthread-and-remount-improvements.patch
-Patch100: 0001-gfs2-eliminate-tr_num_revoke_rm.patch
-Patch101: 0001-gfs2-log-which-portion-of-the-journal-is-replayed.patch
-Patch102: 0001-gfs2-Warn-when-a-journal-replay-overwrites-a-rgrp-wi.patch
-Patch103: 0001-gfs2-Rename-SDF_SHUTDOWN-to-SDF_WITHDRAWN.patch
-Patch104: 0001-gfs2-simplify-gfs2_freeze-by-removing-case.patch
-Patch105: 0001-gfs2-dump-fsid-when-dumping-glock-problems.patch
-Patch106: 0001-gfs2-replace-more-printk-with-calls-to-fs_info-and-f.patch
-Patch107: 0001-gfs2-use-page_offset-in-gfs2_page_mkwrite.patch
-Patch108: 0001-gfs2-remove-the-unused-gfs2_stuffed_write_end-functi.patch
-Patch109: 0001-gfs2-merge-gfs2_writeback_aops-and-gfs2_ordered_aops.patch
-Patch110: 0001-gfs2-merge-gfs2_writepage_common-into-gfs2_writepage.patch
-Patch111: 0001-gfs2-mark-stuffed_readpage-static.patch
-Patch112: 0001-gfs2-use-iomap_bmap-instead-of-generic_block_bmap.patch
-Patch113: 0001-gfs2-don-t-use-buffer_heads-in-gfs2_allocate_page_ba.patch
-Patch114: 0001-gfs2-Remove-unused-gfs2_iomap_alloc-argument.patch
-Patch115: 0001-dlm-check-if-workqueues-are-NULL-before-flushing-des.patch
-Patch116: 0001-dlm-no-need-to-check-return-value-of-debugfs_create-.patch
-Patch117: 0001-gfs2-Inode-dirtying-fix.patch
-Patch118: 0001-gfs2-gfs2_walk_metadata-fix.patch
-Patch119: 0001-nbd-add-missing-config-put.patch
-Patch120: 0001-xen-pci-reserve-MCFG-areas-earlier.patch
-Patch121: 0001-kernel-module.c-Only-return-EEXIST-for-modules-that-.patch
-Patch122: 0001-net-mlx5e-Force-CHECKSUM_UNNECESSARY-for-short-ether.patch
-Patch123: 0001-net-mlx4_en-Force-CHECKSUM_NONE-for-short-ethernet-f.patch
-Patch124: 0001-cifs-allow-calling-SMB2_xxx_free-NULL.patch
-Patch125: 0001-random-add-a-spinlock_t-to-struct-batched_entropy.patch
-Patch126: 0001-tcp-limit-payload-size-of-sacked-skbs.patch
-Patch127: 0002-tcp-tcp_fragment-should-apply-sane-memory-limits.patch
-Patch128: 0003-tcp-add-tcp_min_snd_mss-sysctl.patch
-Patch129: 0004-tcp-enforce-tcp_min_snd_mss-in-tcp_mtu_probing.patch
-Patch130: 0001-tcp-refine-memory-limit-test-in-tcp_fragment.patch
-Patch131: 0002-xen-events-fix-binding-user-event-channels-to-cpus.patch
-Patch132: 0003-xen-let-alloc_xenballooned_pages-fail-if-not-enough-.patch
-Patch133: 0001-tcp-be-more-careful-in-tcp_fragment.patch
-Patch134: 0001-random-always-use-batched-entropy-for-get_random_u-3.patch
-Patch135: 0001-xen-blkback-set-ring-xenblkd-to-NULL-after-kthread_s.patch
-Patch136: 0001-block-cleanup-__blkdev_issue_discard.patch
-Patch137: 0001-block-fix-32-bit-overflow-in-__blkdev_issue_discard.patch
-Patch138: 0001-scsi-libiscsi-Fix-race-between-iscsi_xmit_task-and-i.patch
-Patch139: 0001-xen-netback-Reset-nr_frags-before-freeing-skb.patch
-Patch140: 0001-openvswitch-change-type-of-UPCALL_PID-attribute-to-N.patch
-Patch141: 0001-gfs2-gfs2_iomap_begin-cleanup.patch
-Patch142: 0001-gfs2-Add-support-for-IOMAP_ZERO.patch
-Patch143: 0001-gfs2-implement-gfs2_block_zero_range-using-iomap_zer.patch
-Patch144: 0001-gfs2-Minor-gfs2_alloc_inode-cleanup.patch
-Patch145: 0001-gfs2-Always-mark-inode-dirty-in-fallocate.patch
-Patch146: 0001-gfs2-untangle-the-logic-in-gfs2_drevalidate.patch
-Patch147: 0001-gfs2-Fix-possible-fs-name-overflows.patch
-Patch148: 0001-gfs2-Fix-recovery-slot-bumping.patch
-Patch149: 0001-gfs2-Minor-PAGE_SIZE-arithmetic-cleanups.patch
-Patch150: 0001-gfs2-Delete-an-unnecessary-check-before-brelse.patch
-Patch151: 0001-gfs2-separate-holder-for-rgrps-in-gfs2_rename.patch
-Patch152: 0001-gfs2-create-function-gfs2_glock_update_hold_time.patch
-Patch153: 0001-gfs2-Use-async-glocks-for-rename.patch
-Patch154: 0001-gfs2-Improve-mmap-write-vs.-truncate-consistency.patch
-Patch155: 0001-gfs2-clear-buf_in_tr-when-ending-a-transaction-in-sw.patch
-Patch156: 0001-xen-efi-Set-nonblocking-callbacks.patch
-Patch157: 0001-net-fix-sk_page_frag-recursion-from-memory-reclaim.patch
-Patch158: 0001-drm-i915-gvt-Allow-F_CMD_ACCESS-on-mmio-0x21f0.patch
-Patch159: 0001-gfs2-add-compat_ioctl-support.patch
-Patch160: 0001-gfs2-removed-unnecessary-semicolon.patch
-Patch161: 0001-gfs2-Some-whitespace-cleanups.patch
-Patch162: 0001-gfs2-Improve-mmap-write-vs.-punch_hole-consistency.patch
-Patch163: 0001-gfs2-Multi-block-allocations-in-gfs2_page_mkwrite.patch
-Patch164: 0001-gfs2-Fix-end-of-file-handling-in-gfs2_page_mkwrite.patch
-Patch165: 0001-gfs2-Remove-active-journal-side-effect-from-gfs2_wri.patch
-Patch166: 0001-gfs2-make-gfs2_log_shutdown-static.patch
-Patch167: 0001-gfs2-fix-glock-reference-problem-in-gfs2_trans_remov.patch
-Patch168: 0001-gfs2-Introduce-function-gfs2_withdrawn.patch
-Patch169: 0001-gfs2-fix-infinite-loop-in-gfs2_ail1_flush-on-io-erro.patch
-Patch170: 0001-gfs2-Don-t-loop-forever-in-gfs2_freeze-if-withdrawn.patch
-Patch171: 0001-gfs2-Abort-gfs2_freeze-if-io-error-is-seen.patch
-Patch172: 0001-gfs2-Close-timing-window-with-GLF_INVALIDATE_IN_PROG.patch
-Patch173: 0001-gfs2-clean-up-iopen-glock-mess-in-gfs2_create_inode.patch
-Patch174: 0001-gfs2-Remove-duplicate-call-from-gfs2_create_inode.patch
-Patch175: 0001-gfs2-Don-t-write-log-headers-after-file-system-withd.patch
-Patch176: 0001-xen-events-remove-event-handling-recursion-detection.patch
-Patch177: 0001-gfs2-Another-gfs2_find_jhead-fix.patch
-Patch178: 0001-gfs2-eliminate-ssize-parameter-from-gfs2_struct2blk.patch
-Patch179: 0001-gfs2-minor-cleanup-remove-unneeded-variable-ret-in-g.patch
-Patch180: 0001-gfs2-Avoid-access-time-thrashing-in-gfs2_inode_looku.patch
-Patch181: 0001-gfs2-Fix-incorrect-variable-name.patch
-Patch182: 0001-gfs2-Remove-GFS2_MIN_LVB_SIZE-define.patch
-Patch183: 0001-fs-gfs2-remove-unused-IS_DINODE-and-IS_LEAF-macros.patch
-Patch184: 0001-gfs2-remove-unused-LBIT-macros.patch
-Patch185: 0001-Revert-gfs2-eliminate-tr_num_revoke_rm.patch
-Patch186: 0001-gfs2-fix-gfs2_find_jhead-that-returns-uninitialized-.patch
-Patch187: 0001-gfs2-move-setting-current-backing_dev_info.patch
-Patch188: 0001-gfs2-fix-O_SYNC-write-handling.patch
-Patch189: 0001-drm-i915-gvt-fix-high-order-allocation-failure-on-la.patch
-Patch190: 0001-drm-i915-gvt-Add-mutual-lock-for-ppgtt-mm-LRU-list.patch
-Patch191: 0002-drm-i915-gvt-more-locking-for-ppgtt-mm-LRU-list.patch
-Patch192: 0001-xenbus-req-body-should-be-updated-before-req-state.patch
-Patch193: 0002-xenbus-req-err-should-be-updated-before-req-state.patch
-Patch194: 0001-gfs2_atomic_open-fix-O_EXCL-O_CREAT-handling-on-cold.patch
-Patch195: 0001-gfs2-Split-gfs2_lm_withdraw-into-two-functions.patch
-Patch196: 0001-gfs2-Report-errors-before-withdraw.patch
-Patch197: 0001-gfs2-Remove-usused-cluster_wide-arguments-of-gfs2_co.patch
-Patch198: 0001-gfs2-Turn-gfs2_consist-into-void-functions.patch
-Patch199: 0001-gfs2-Return-bool-from-gfs2_assert-functions.patch
-Patch200: 0001-gfs2-Introduce-concept-of-a-pending-withdraw.patch
-Patch201: 0001-gfs2-clear-ail1-list-when-gfs2-withdraws.patch
-Patch202: 0001-gfs2-Rework-how-rgrp-buffer_heads-are-managed.patch
-Patch203: 0001-gfs2-log-error-reform.patch
-Patch204: 0001-gfs2-Only-complain-the-first-time-an-io-error-occurs.patch
-Patch205: 0001-gfs2-Ignore-dlm-recovery-requests-if-gfs2-is-withdra.patch
-Patch206: 0001-gfs2-move-check_journal_clean-to-util.c-for-future-u.patch
-Patch207: 0001-gfs2-Allow-some-glocks-to-be-used-during-withdraw.patch
-Patch208: 0001-gfs2-Force-withdraw-to-replay-journals-and-wait-for-.patch
-Patch209: 0001-gfs2-fix-infinite-loop-when-checking-ail-item-count-.patch
-Patch210: 0001-gfs2-Add-verbose-option-to-check_journal_clean.patch
-Patch211: 0001-gfs2-Issue-revokes-more-intelligently.patch
-Patch212: 0001-gfs2-Prepare-to-withdraw-as-soon-as-an-IO-error-occu.patch
-Patch213: 0001-gfs2-Check-for-log-write-errors-before-telling-dlm-t.patch
-Patch214: 0001-gfs2-Do-log_flush-in-gfs2_ail_empty_gl-even-if-ail-l.patch
-Patch215: 0001-gfs2-Withdraw-in-gfs2_ail1_flush-if-write_cache_page.patch
-Patch216: 0001-gfs2-drain-the-ail2-list-after-io-errors.patch
-Patch217: 0001-gfs2-Don-t-demote-a-glock-until-its-revokes-are-writ.patch
-Patch218: 0001-gfs2-Do-proper-error-checking-for-go_sync-family-of-.patch
-Patch219: 0001-gfs2-flesh-out-delayed-withdraw-for-gfs2_log_flush.patch
-Patch220: 0001-gfs2-don-t-allow-releasepage-to-free-bd-still-used-f.patch
-Patch221: 0001-gfs2-allow-journal-replay-to-hold-sd_log_flush_lock.patch
-Patch222: 0001-gfs2-leaf_dealloc-needs-to-allocate-one-more-revoke.patch
-Patch223: 0001-gfs2-Additional-information-when-gfs2_ail1_flush-wit.patch
-Patch224: 0001-gfs2-Clean-up-inode-initialization-and-teardown.patch
-Patch225: 0001-gfs2-Switch-to-list_-first-last-_entry.patch
-Patch226: 0001-gfs2-eliminate-gfs2_rsqa_alloc-in-favor-of-gfs2_qa_a.patch
-Patch227: 0001-gfs2-Change-inode-qa_data-to-allow-multiple-users.patch
-Patch228: 0001-gfs2-Split-gfs2_rsqa_delete-into-gfs2_rs_delete-and-.patch
-Patch229: 0001-gfs2-Remove-unnecessary-gfs2_qa_-get-put-pairs.patch
-Patch230: 0001-gfs2-don-t-lock-sd_log_flush_lock-in-try_rgrp_unlink.patch
-Patch231: 0001-gfs2-instrumentation-wrt-ail1-stuck.patch
-Patch232: 0001-gfs2-change-from-write-to-read-lock-for-sd_log_flush.patch
-Patch233: 0001-gfs2-Fix-oversight-in-gfs2_ail1_flush.patch
-Patch234: 0001-gfs2-If-go_sync-returns-error-withdraw-but-skip-inva.patch
-Patch235: 0001-dlm-Switch-to-using-wait_event.patch
-Patch236: 0001-dlm-use-the-tcp-version-of-accept_from_sock-for-sctp.patch
-Patch237: 0002-net-add-sock_set_reuseaddr.patch
-Patch238: 0003-net-add-sock_set_sndtimeo.patch
-Patch239: 0004-net-add-sock_set_keepalive.patch
-Patch240: 0005-net-add-sock_set_rcvbuf.patch
-Patch241: 0006-tcp-add-tcp_sock_set_nodelay.patch
-Patch242: 0007-sctp-add-sctp_sock_set_nodelay.patch
-Patch243: 0009-dlm-dlm_internal-Replace-zero-length-array-with-flex.patch
-Patch244: 0010-dlm-user-Replace-zero-length-array-with-flexible-arr.patch
-Patch245: 0011-fs-dlm-remove-unneeded-semicolon-in-rcom.c.patch
-Patch246: 0012-dlm-remove-BUG-before-panic.patch
-Patch247: 0001-gfs2-fix-withdraw-sequence-deadlock.patch
-Patch248: 0001-gfs2-Fix-error-exit-in-do_xmote.patch
-Patch249: 0001-gfs2-Fix-BUG-during-unmount-after-file-system-withdr.patch
-Patch250: 0001-gfs2-Fix-use-after-free-in-gfs2_logd-after-withdraw.patch
-Patch251: 0001-block-call-rq_qos_exit-after-queue-is-frozen.patch
-Patch252: 0001-scsi-libfc-free-response-frame-from-GPN_ID.patch
-Patch253: 0001-xen-xenbus-ensure-xenbus_map_ring_valloc-returns-pro.patch
-Patch254: 0013-treewide-Remove-uninitialized_var-usage.patch
-Patch255: 0014-dlm-Fix-kobject-memleak.patch
-Patch256: 0001-net-sock-add-sock_set_mark.patch
-Patch257: 0015-fs-dlm-set-skb-mark-for-listen-socket.patch
-Patch258: 0016-fs-dlm-set-skb-mark-per-peer-socket.patch
-Patch259: 0017-fs-dlm-don-t-close-socket-on-invalid-message.patch
-Patch260: 0018-fs-dlm-change-handling-of-reconnects.patch
-Patch261: 0019-fs-dlm-implement-tcp-graceful-shutdown.patch
-Patch262: 0021-fs-dlm-synchronize-dlm-before-shutdown.patch
-Patch263: 0022-fs-dlm-make-connection-hash-lockless.patch
-Patch264: 0023-fs-dlm-fix-dlm_local_addr-memory-leak.patch
-Patch265: 0024-fs-dlm-fix-configfs-memory-leak.patch
-Patch266: 0025-fs-dlm-move-free-writequeue-into-con-free.patch
-Patch267: 0026-fs-dlm-handle-possible-othercon-writequeues.patch
-Patch268: 0027-fs-dlm-use-free_con-to-free-connection.patch
-Patch269: 0028-fs-dlm-remove-lock-dependency-warning.patch
-Patch270: 0029-fs-dlm-fix-mark-per-nodeid-setting.patch
-Patch271: 0030-fs-dlm-handle-range-check-as-callback.patch
-Patch272: 0031-fs-dlm-disallow-buffer-size-below-default.patch
-Patch273: 0032-fs-dlm-rework-receive-handling.patch
-Patch274: 0033-fs-dlm-fix-race-in-nodeid2con.patch
-Patch275: 0001-xen-events-avoid-removing-an-event-channel-while-han.patch
-Patch276: 0002-xen-events-add-a-proper-barrier-to-2-level-uevent-un.patch
-Patch277: 0003-xen-events-fix-race-in-evtchn_fifo_unmask.patch
-Patch278: 0004-xen-events-add-a-new-late-EOI-evtchn-framework.patch
-Patch279: 0005-xen-blkback-use-lateeoi-irq-binding.patch
-Patch280: 0006-xen-netback-use-lateeoi-irq-binding.patch
-Patch281: 0007-xen-scsiback-use-lateeoi-irq-binding.patch
-Patch282: 0008-xen-pvcallsback-use-lateeoi-irq-binding.patch
-Patch283: 0009-xen-pciback-use-lateeoi-irq-binding.patch
-Patch284: 0010-xen-events-switch-user-event-channels-to-lateeoi-mod.patch
-Patch285: 0011-xen-events-use-a-common-cpu-hotplug-hook-for-event-c.patch
-Patch286: 0012-xen-events-defer-eoi-in-case-of-excessive-number-of-.patch
-Patch287: 0013-xen-events-block-rogue-events-for-some-time.patch
-Patch288: 0014-xen-events-unmask-a-fifo-event-channel-only-if-it-wa.patch
-Patch289: 0034-fs-dlm-fix-proper-srcu-api-call.patch
-Patch290: 0035-fs-dlm-define-max-send-buffer.patch
-Patch291: 0036-fs-dlm-add-get-buffer-error-handling.patch
-Patch292: 0037-fs-dlm-flush-othercon-at-close.patch
-Patch293: 0038-fs-dlm-handle-non-blocked-connect-event.patch
-Patch294: 0039-fs-dlm-add-helper-for-init-connection.patch
-Patch295: 0040-fs-dlm-move-connect-callback-in-node-creation.patch
-Patch296: 0041-fs-dlm-move-shutdown-action-to-node-creation.patch
-Patch297: 0042-fs-dlm-refactor-sctp-sock-parameter.patch
-Patch298: 0043-fs-dlm-listen-socket-out-of-connection-hash.patch
-Patch299: 0044-fs-dlm-fix-check-for-multi-homed-hosts.patch
-Patch300: 0045-fs-dlm-constify-addr_compare.patch
-Patch301: 0046-fs-dlm-check-on-existing-node-address.patch
-Patch302: 0001-xen-netback-avoid-race-in-xenvif_rx_ring_slots_avail.patch
-Patch303: 0001-Xen-x86-don-t-bail-early-from-clear_foreign_p2m_mapp.patch
-Patch304: 0001-Xen-x86-also-check-kernel-mapping-in-set_foreign_p2m.patch
-Patch305: 0001-Xen-gntdev-correct-dev_bus_addr-handling-in-gntdev_m.patch
-Patch306: 0001-Xen-gntdev-correct-error-checking-in-gntdev_map_gran.patch
-Patch307: 0001-xen-blkback-don-t-handle-error-by-BUG.patch
-Patch308: 0001-xen-netback-don-t-handle-error-by-BUG.patch
-Patch309: 0001-xen-scsiback-don-t-handle-error-by-BUG.patch
-Patch310: 0001-xen-blkback-fix-error-handling-in-xen_blkbk_map.patch
-Patch311: 0001-xen-netback-fix-spurious-event-detection-for-common-.patch
-Patch312: 0007-xen-evtchn-use-smp-barriers-for-user-event-ring.patch
-Patch313: 0008-xen-evtchn-use-READ-WRITE_ONCE-for-accessing-ring-in.patch
-Patch314: xen-events-reset-affinity-of-2-level-event-when-tearing-it-down.patch
-Patch315: xen-events-don-t-unmask-an-event-channel-when-an-eoi-is-pending.patch
-Patch316: xen-events-avoid-handling-the-same-event-on-two-cpus-at-the-same-time.patch
-Patch317: 0001-x86-ioperm-Add-new-paravirt-function-update_io_bitma.patch
-Patch318: 0001-Xen-gnttab-handle-p2m-update-errors-on-a-per-slot-ba.patch
-Patch319: 0002-xen-netback-respect-gnttab_map_refs-s-return-value.patch
-Patch320: 0001-xen-blkback-don-t-leak-persistent-grants-from-xen_bl.patch
-Patch321: 0001-bpf-x86-Validate-computation-of-branch-displacements.patch
-Patch322: 0002-bpf-x86-Validate-computation-of-branch-displacements.patch
-Patch323: 0001-xen-events-fix-setting-irq-affinity.patch
-Patch324: 0001-xen-netback-fix-rx-queue-stall-detection.patch
-Patch325: 0002-xen-netback-don-t-queue-unlimited-number-of-packages.patch
-Patch326: 0047-fs-dlm-fix-debugfs-dump.patch
-Patch327: 0048-fs-dlm-fix-mark-setting-deadlock.patch
-Patch328: 0049-fs-dlm-set-connected-bit-after-accept.patch
-Patch329: 0050-fs-dlm-set-subclass-for-othercon-sock_mutex.patch
-Patch330: 0051-fs-dlm-add-errno-handling-to-check-callback.patch
-Patch331: 0052-fs-dlm-add-check-if-dlm-is-currently-running.patch
-Patch332: 0053-fs-dlm-change-allocation-limits.patch
-Patch333: 0054-fs-dlm-use-GFP_ZERO-for-page-buffer.patch
-Patch334: 0055-fs-dlm-simplify-writequeue-handling.patch
-Patch335: 0056-fs-dlm-check-on-minimum-msglen-size.patch
-Patch336: 0057-fs-dlm-remove-unaligned-memory-access-handling.patch
-Patch337: 0058-fs-dlm-flush-swork-on-shutdown.patch
-Patch338: 0059-fs-dlm-add-shutdown-hook.patch
-Patch339: 0060-fs-dlm-fix-missing-unlock-on-error-in-accept_from_so.patch
-Patch340: 0001-xen-events-reset-active-flag-for-lateeoi-events-late.patch
-Patch341: 0001-gfs2-fix-a-deadlock-on-withdraw-during-mount.patch
-Patch342: 0061-fs-dlm-always-run-complete-for-possible-waiters.patch
-Patch343: 0062-fs-dlm-add-dlm-macros-for-ratelimit-log.patch
-Patch344: 0063-fs-dlm-fix-srcu-read-lock-usage.patch
-Patch345: 0064-fs-dlm-set-is-othercon-flag.patch
-Patch346: 0065-fs-dlm-reconnect-if-socket-error-report-occurs.patch
-Patch347: 0066-fs-dlm-cancel-work-sync-othercon.patch
-Patch348: 0067-fs-dlm-fix-connection-tcp-EOF-handling.patch
-Patch349: 0068-fs-dlm-public-header-in-out-utility.patch
-Patch350: 0069-fs-dlm-add-more-midcomms-hooks.patch
-Patch351: 0070-fs-dlm-make-buffer-handling-per-msg.patch
-Patch352: 0071-fs-dlm-add-functionality-to-re-transmit-a-message.patch
-Patch353: 0072-fs-dlm-move-out-some-hash-functionality.patch
-Patch354: 0073-fs-dlm-add-union-in-dlm-header-for-lockspace-id.patch
-Patch355: 0074-fs-dlm-add-reliable-connection-if-reconnect.patch
-Patch356: 0075-fs-dlm-add-midcomms-debugfs-functionality.patch
-Patch357: 0076-fs-dlm-don-t-allow-half-transmitted-messages.patch
-Patch358: 0077-fs-dlm-Fix-memory-leak-of-object-mh.patch
-Patch359: 0078-fs-dlm-Fix-spelling-mistake-stucked-stuck.patch
-Patch360: 0079-fs-dlm-fix-lowcomms_start-error-case.patch
-Patch361: 0080-fs-dlm-fix-memory-leak-when-fenced.patch
-Patch362: 0081-fs-dlm-use-alloc_ordered_workqueue.patch
-Patch363: 0082-fs-dlm-move-dlm-allow-conn.patch
-Patch364: 0083-fs-dlm-introduce-proto-values.patch
-Patch365: 0084-fs-dlm-rename-socket-and-app-buffer-defines.patch
-Patch366: 0085-fs-dlm-fix-race-in-mhandle-deletion.patch
-Patch367: 0086-fs-dlm-invalid-buffer-access-in-lookup-error.patch
-Patch368: 0001-seq_file-disallow-extremely-large-seq-buffer-allocat.patch
-Patch369: 0001-xen-events-Fix-race-in-set_evtchn_to_irq.patch
-Patch370: 0087-fs-dlm-use-sk-sk_socket-instead-of-con-sock.patch
-Patch371: 0088-fs-dlm-use-READ_ONCE-for-config-var.patch
-Patch372: 0089-fs-dlm-fix-typo-in-tlv-prefix.patch
-Patch373: 0090-fs-dlm-clear-CF_APP_LIMITED-on-close.patch
-Patch374: 0091-fs-dlm-cleanup-and-remove-_send_rcom.patch
-Patch375: 0092-fs-dlm-introduce-con_next_wq-helper.patch
-Patch376: 0093-fs-dlm-move-to-static-proto-ops.patch
-Patch377: 0094-fs-dlm-introduce-generic-listen.patch
-Patch378: 0095-fs-dlm-auto-load-sctp-module.patch
-Patch379: 0096-fs-dlm-generic-connect-func.patch
-Patch380: 0097-fs-dlm-fix-multiple-empty-writequeue-alloc.patch
-Patch381: 0098-fs-dlm-move-receive-loop-into-receive-handler.patch
-Patch382: 0099-fs-dlm-implement-delayed-ack-handling.patch
-Patch383: 0100-fs-dlm-fix-return-EINTR-on-recovery-stopped.patch
-Patch384: 0101-fs-dlm-avoid-comms-shutdown-delay-in-release_lockspa.patch
-Patch385: 0001-iommu-vt-d-Fix-agaw-for-a-supported-48-bit-guest-add.patch
-Patch386: 0001-bpf-Do-not-use-ax-register-in-interpreter-on-div-mod.patch
-Patch387: 0002-bpf-Fix-32-bit-src-register-truncation-on-div-mod.patch
-Patch388: 0003-bpf-Fix-truncation-handling-for-mod32-dst-reg-wrt-ze.patch
-Patch389: 0001-x86-timer-Skip-PIT-initialization-on-modern-chipsets.patch
-Patch390: 0001-x86-timer-Force-PIT-initialization-when-X86_FEATURE_.patch
-Patch391: 0001-x86-timer-Don-t-skip-PIT-setup-when-APIC-is-disabled.patch
-Patch392: 0001-nbd-Fix-use-after-free-in-pid_show.patch
-Patch393: 0001-fs-dlm-remove-check-SCTP-is-loaded-message.patch
-Patch394: 0001-fs-dlm-let-handle-callback-data-as-void.patch
-Patch395: 0001-fs-dlm-remove-double-list_first_entry-call.patch
-Patch396: 0001-fs-dlm-don-t-call-kernel_getpeername-in-error_report.patch
-Patch397: 0001-fs-dlm-replace-use-of-socket-sk_callback_lock-with-s.patch
-Patch398: 0001-fs-dlm-fix-build-with-CONFIG_IPV6-disabled.patch
-Patch399: 0001-fs-dlm-check-for-pending-users-filling-buffers.patch
-Patch400: 0001-fs-dlm-remove-wq_alloc-mutex.patch
-Patch401: 0001-fs-dlm-memory-cache-for-writequeue_entry.patch
-Patch402: 0001-fs-dlm-memory-cache-for-lowcomms-hotpath.patch
-Patch403: 0001-fs-dlm-print-cluster-addr-if-non-cluster-node-connec.patch
-Patch404: 0001-xen-x86-obtain-upper-32-bits-of-video-frame-buffer-a.patch
-Patch405: 0001-xen-x86-obtain-full-video-frame-buffer-address-for-D.patch
-Patch406: 0001-dlm-uninitialized-variable-on-error-in-dlm_listen_fo.patch
-Patch407: 0001-dlm-add-__CHECKER__-for-false-positives.patch
-Patch408: 0001-fs-dlm-fix-grammar-in-lowcomms-output.patch
-Patch409: 0001-fs-dlm-fix-race-in-lowcomms.patch
-Patch410: 0001-fs-dlm-relax-sending-to-allow-receiving.patch
-Patch411: 0001-fs-dlm-fix-sock-release-if-listen-fails.patch
-Patch412: 0002-fs-dlm-retry-accept-until-EAGAIN-or-error-returns.patch
-Patch413: 0003-fs-dlm-remove-send-repeat-remove-handling.patch
-Patch414: 0001-xen-pvh-set-xen_domain_type-to-HVM-in-xen_pvh_init.patch
-Patch415: 0001-xen-pvh-correctly-setup-the-PV-EFI-interface-for-dom.patch
-Patch416: 0001-PCI-pciehp-Fix-AB-BA-deadlock-between-reset_lock-and.patch
-Patch417: 0001-nvme_fc-add-nvme_discovery-sysfs-attribute-to-fc-tra.patch
-Patch418: 0001-ACPI-processor-Fix-evaluating-_PDC-method-when-runni.patch
-Patch419: 0001-SUNRPC-Always-drop-the-XPRT_LOCK-on-XPRT_CLOSE_WAIT.patch
-Patch420: 0001-xen-netback-use-default-TX-queue-size-for-vifs.patch
-Patch421: 0001-gfs2-Expect-EBUSY-after-canceling-dlm-locking-reques.patch
-Patch422: 0001-gfs2-Clear-flags-when-withdraw-prevents-xmote.patch
-Patch423: 0002-fs-dlm-fix-race-between-test_bit-and-queue_work.patch
-Patch424: 0001-xhci-show-fault-reason-for-a-failed-enable-slot-comm.patch
-Patch425: 0001-gfs2-Fix-ignore-unlock-failures-after-withdraw.patch
-Patch426: 0001-gfs2-finish_xmote-cleanup.patch
-Patch427: 0001-gfs2-do_xmote-fixes.patch
-Patch428: 0001-x86-xen-time-Reduce-Xen-timer-tick.patch
-Patch429: 0001-decompress_bunzip2-fix-rare-decompression-failure.patch
-Patch430: 0002-scsi-scsi_dh_alua-Fix-possible-null-ptr-deref.patch
-Patch431: 0004-scsi-scsi_dh_alua-always-use-a-2-second-delay-before.patch
-Patch432: 0005-scsi-scsi_dh_alua-handle-RTPG-sense-code-correctly-d.patch
-Patch433: 0006-scsi-scsi_dh_alua-Avoid-crash-during-alua_bus_detach.patch
-Patch434: 0008-scsi-scsi_dh_alua-Set-transitioning-state-on-Unit-At.patch
-Patch435: 0009-scsi-scsi_dh_alua-Prevent-duplicate-pg-info-print-in.patch
-Patch436: 0010-scsi-scsi_dh_alua-Remove-check-for-ASC-24h-in-alua_r.patch
-Patch437: 0012-scsi-scsi_dh_alua-Retry-RTPG-on-a-different-path-aft.patch
-Patch438: 0013-scsi-scsi_dh_alua-Check-for-negative-result-value.patch
-Patch439: 0014-scsi-scsi_dh_alua-Fix-signedness-bug-in-alua_rtpg.patch
-Patch440: 0001-scsi-scsi_dh_alua-Fix-memleak-for-qdata-in-alua_acti.patch
-Patch441: 0001-scsi-core-alua-I-O-errors-for-ALUA-state-transitions.patch
-Patch442: 0002-scsi-scsi_dh_alua-Properly-handle-the-ALUA-transitio.patch
-Patch443: 0001-SUNRPC-Remove-the-bh-safe-lock-requirement-on-the-rp.patch
-Patch444: 0002-SUNRPC-Remove-the-bh-safe-lock-requirement-on-xprt-t.patch
-Patch445: 0003-SUNRPC-Replace-direct-task-wakeups-from-softirq-cont.patch
-Patch446: 0004-SUNRPC-Replace-the-queue-timer-with-a-delayed-work-f.patch
-Patch447: 0001-nbd-fix-possible-sysfs-duplicate-warning.patch
-Patch448: 0001-nbd-protect-cmd-status-with-cmd-lock.patch
-Patch449: 0001-nbd-handle-racing-with-error-ed-out-commands.patch
-Patch450: 0001-nbd-fix-a-block_device-refcount-leak-in-nbd_release.patch
-Patch451: 0001-nbd-Aovid-double-completion-of-a-request.patch
-Patch452: 0001-nbd-don-t-handle-response-without-a-corresponding-re.patch
-Patch453: 0001-nbd-make-sure-request-completion-won-t-concurrent.patch
-Patch454: 0001-nvme-fabrics-reject-I-O-to-offline-device.patch
-Patch455: 0001-Add-shadow-variables-support-from-kpatch.patch
-Patch456: 0002-xen-xenbus-Allow-watches-discard-events-before-queue.patch
-Patch457: 0003-xen-xenbus-Add-will_handle-callback-support-in-xenbu.patch
-Patch458: 0004-xen-xenbus-xen_bus_type-Support-will_handle-watch-ca.patch
-Patch459: 0005-xen-xenbus-Count-pending-messages-for-each-watch.patch
-Patch460: 0006-xenbus-xenbus_backend-Disallow-pending-watch-message.patch
-Patch461: 0001-xen-xenbus-Fix-granting-of-vmalloc-d-memory.patch
-Patch462: 0001-xen-blkfront-switch-kcalloc-to-kvcalloc-for-large-ar.patch
-Patch463: 0002-xen-blkfront-Adjust-indentation-in-xlvbd_alloc_gendi.patch
-Patch464: 0003-xen-blkfront-fix-memory-allocation-flags-in-blkfront.patch
-Patch465: 0004-xen-blkfront-allow-discard-nodes-to-be-optional.patch
-Patch466: 0001-xen-sync-include-xen-interface-io-ring.h-with-Xen-s-.patch
-Patch467: 0005-xen-blkfront-read-response-from-backend-only-once.patch
-Patch468: 0006-xen-blkfront-don-t-take-local-copy-of-a-request-from.patch
-Patch469: 0007-xen-blkfront-don-t-trust-the-backend-response-data-b.patch
-Patch470: 0008-xen-blkfront-harden-blkfront-against-event-channel-s.patch
-Patch471: 0001-xen-netfront-do-not-assume-sk_buff_head-list-is-empt.patch
-Patch472: 0002-xen-netfront-do-not-use-0U-as-error-return-value-for.patch
-Patch473: 0003-xen-netfront-fix-potential-deadlock-in-xennet_remove.patch
-Patch474: 0004-xen-netfront-stop-tx-queues-during-live-migration.patch
-Patch475: 0005-xen-netfront-read-response-from-backend-only-once.patch
-Patch476: 0006-xen-netfront-don-t-read-data-from-request-on-the-rin.patch
-Patch477: 0007-xen-netfront-disentangle-tx_skb_freelist.patch
-Patch478: 0008-xen-netfront-don-t-trust-the-backend-response-data-b.patch
-Patch479: 0009-xen-netfront-harden-netfront-against-event-channel-s.patch
-Patch480: 0010-xen-netfront-destroy-queues-before-real_num_tx_queue.patch
-Patch481: 0001-pvcalls-front-read-all-data-before-closing-the-conne.patch
-Patch482: 0002-pvcalls-front-don-t-try-to-free-unallocated-rings.patch
-Patch483: 0003-pvcalls-front-properly-allocate-sk.patch
-Patch484: 0004-pvcalls-front-Avoid-get_free_pages-GFP_KERNEL-under-.patch
-Patch485: 0005-pvcalls-front-fix-potential-null-dereference.patch
-Patch486: 0006-xen-pvcalls-Remove-set-but-not-used-variable.patch
-Patch487: 0007-pvcalls-front-don-t-return-error-when-the-ring-is-fu.patch
-Patch488: 0001-xen-xenbus-don-t-let-xenbus_grant_ring-remove-grants.patch
-Patch489: 0002-xen-grant-table-add-gnttab_try_end_foreign_access.patch
-Patch490: 0003-xen-blkfront-don-t-use-gnttab_query_foreign_access-f.patch
-Patch491: 0004-xen-netfront-don-t-use-gnttab_query_foreign_access-f.patch
-Patch492: 0005-xen-scsifront-don-t-use-gnttab_query_foreign_access-.patch
-Patch493: 0006-xen-gntalloc-don-t-use-gnttab_query_foreign_access.patch
-Patch494: 0007-xen-remove-gnttab_query_foreign_access.patch
-Patch495: 0008-xen-9p-use-alloc-free_pages_exact.patch
-Patch496: 0009-xen-pvcalls-use-alloc-free_pages_exact.patch
-Patch497: 0010-xen-gnttab-fix-gnttab_end_foreign_access-without-pag.patch
-Patch498: 0011-xen-netfront-react-properly-to-failing-gnttab_end_fo.patch
-Patch499: 0001-xen-blkfront-fix-leaking-data-in-shared-pages.patch
-Patch500: 0002-xen-netfront-fix-leaking-data-in-shared-pages.patch
-Patch501: 0003-xen-netfront-force-data-bouncing-when-backend-is-unt.patch
-Patch502: 0004-xen-blkfront-force-data-bouncing-when-backend-is-unt.patch
-Patch503: xsa423-linux.patch
-Patch504: xsa424-linux.patch
-Patch505: 0002-xen-netback-remove-unused-variables-pending_idx-and-.patch
-Patch506: 0003-xen-netback-don-t-do-grant-copy-across-page-boundary.patch
-Patch507: 0004-xen-netback-remove-not-needed-test-in-xenvif_tx_buil.patch
-Patch508: 0005-xen-netback-use-same-error-messages-for-same-errors.patch
-Patch509: xsa432-linux.patch
-Patch510: xsa441-linux.patch
-Patch511: xsa448-linux.patch
-Patch512: kbuild-AFTER_LINK.patch
-Patch513: expose-xsversion.patch
-Patch514: blktap2.patch
-Patch515: blkback-kthread-pid.patch
-Patch516: tg3-alloc-repeat.patch
-Patch517: disable-EFI-Properties-table-for-Xen.patch
-Patch518: net-Do-not-scrub-ignore_df-within-the-same-name-spac.patch
-Patch519: enable-fragmention-gre-packets.patch
-Patch520: CA-285778-emulex-nic-ip-hdr-len.patch
-Patch521: cifs-Change-the-default-value-SecFlags-to-0x83.patch
-Patch522: call-kexec-before-offlining-noncrashing-cpus.patch
-Patch523: hide-hung-task-for-idle-class.patch
-Patch524: xfs-async-wait.patch
-Patch525: 0002-scsi-libfc-drop-extra-rport-reference-in-fc_rport_cr.patch
-Patch526: dont-select-pinctrl.patch
-Patch527: netscaler_everest_xs8_200g.patch
-Patch528: 0001-dma-add-dma_get_required_mask_from_max_pfn.patch
-Patch529: 0002-x86-xen-correct-dma_get_required_mask-for-Xen-PV-gue.patch
-Patch530: map-1MiB-1-1.patch
-Patch531: hide-nr_cpus-warning.patch
-Patch532: disable-pm-timer.patch
-Patch533: increase-nr-irqs.patch
-Patch534: xen-balloon-hotplug-select-HOLES_IN_ZONE.patch
-Patch535: 0001-pci-export-pci_probe_reset_function.patch
-Patch536: 0002-xen-pciback-provide-a-reset-sysfs-file-to-try-harder.patch
-Patch537: pciback-disable-root-port-aer.patch
-Patch538: pciback-mask-root-port-comp-timeout.patch
-Patch539: no-flr-quirk.patch
-Patch540: revert-PCI-Probe-for-device-reset-support-during-enumeration.patch
-Patch541: CA-135938-nfs-disconnect-on-rpc-retry.patch
-Patch542: sunrpc-force-disconnect-on-connection-timeout.patch
-Patch543: nfs-avoid-double-timeout.patch
-Patch544: bonding-balance-slb.patch
-Patch545: bridge-lock-fdb-after-garp.patch
-Patch546: CP-13181-net-openvswitch-add-dropping-of-fip-and-lldp.patch
-Patch547: xen-ioemu-inject-msi.patch
-Patch548: pv-iommu-support.patch
-Patch549: kexec-reserve-crashkernel-region.patch
-Patch550: 0001-xen-swiotlb-rework-early-repeat-code.patch
-Patch551: 0001-arch-x86-xen-add-infrastruction-in-xen-to-support-gv.patch
-Patch552: 0002-drm-i915-gvt-write-guest-ppgtt-entry-for-xengt-suppo.patch
-Patch553: 0003-drm-i915-xengt-xengt-moudule-initial-files.patch
-Patch554: 0004-drm-i915-xengt-check-on_destroy-on-pfn_to_mfn.patch
-Patch555: 0005-arch-x86-xen-Import-x4.9-interface-for-ioreq.patch
-Patch556: 0006-i915-gvt-xengt.c-Use-new-dm_op-instead-of-hvm_op.patch
-Patch557: 0007-i915-gvt-xengt.c-New-interface-to-write-protect-PPGT.patch
-Patch558: 0008-i915-gvt-xengt.c-Select-vgpu-type-according-to-low_g.patch
-Patch559: 0009-drm-i915-gvt-Don-t-output-error-message-when-DomU-ma.patch
-Patch560: 0010-drm-i915-gvt-xengt-Correctly-get-low-mem-max-gfn.patch
-Patch561: 0011-drm-i915-gvt-Fix-dom0-call-trace-at-shutdown-or-rebo.patch
-Patch562: 0012-hvm-dm_op.h-Sync-dm_op-interface-to-xen-4.9-release.patch
-Patch563: 0013-drm-i915-gvt-Apply-g2h-adjust-for-GTT-mmio-access.patch
-Patch564: 0014-drm-i915-gvt-Apply-g2h-adjustment-during-fence-mmio-.patch
-Patch565: 0015-drm-i915-gvt-Patch-the-gma-in-gpu-commands-during-co.patch
-Patch566: 0016-drm-i915-gvt-Retrieve-the-guest-gm-base-address-from.patch
-Patch567: 0017-drm-i915-gvt-Align-the-guest-gm-aperture-start-offse.patch
-Patch568: 0018-drm-i915-gvt-Add-support-to-new-VFIO-subregion-VFIO_.patch
-Patch569: 0019-drm-i915-gvt-Implement-vGPU-status-save-and-restore-.patch
-Patch570: 0020-vfio-Implement-new-Ioctl-VFIO_IOMMU_GET_DIRTY_BITMAP.patch
-Patch571: 0021-drm-i915-gvt-Add-dev-node-for-vGPU-state-save-restor.patch
-Patch572: 0022-drm-i915-gvt-Add-interface-to-control-the-vGPU-runni.patch
-Patch573: 0023-drm-i915-gvt-Modify-the-vGPU-save-restore-logic-for-.patch
-Patch574: 0024-drm-i915-gvt-Add-log-dirty-support-for-XENGT-migrati.patch
-Patch575: 0025-drm-i915-gvt-xengt-Add-iosrv_enabled-to-track-iosrv-.patch
-Patch576: 0026-drm-i915-gvt-Add-xengt-ppgtt-write-handler.patch
-Patch577: 0027-drm-i915-gvt-xengt-Impliment-mpt-dma_map-unmap_guest.patch
-Patch578: 0028-drm-i915-gvt-introduce-a-new-VFIO-region-for-vfio-de.patch
-Patch579: 0029-drm-i915-gvt-change-the-return-value-of-opregion-acc.patch
-Patch580: 0030-drm-i915-gvt-Rebase-the-code-to-gvt-staging-for-live.patch
-Patch581: 0031-drm-i915-gvt-Apply-g2h-adjustment-to-buffer-start-gm.patch
-Patch582: 0032-drm-i915-gvt-Fix-xengt-opregion-handling-in-migratio.patch
-Patch583: 0033-drm-i915-gvt-XenGT-migration-optimize.patch
-Patch584: 0034-drm-i915-gvt-Add-vgpu-execlist-info-into-migration-d.patch
-Patch585: 0035-drm-i915-gvt-Emulate-ring-mode-register-restore-for-.patch
-Patch586: 0036-drm-i915-gvt-Use-copy_to_user-to-return-opregion.patch
-Patch587: 0037-drm-i915-gvt-Expose-opregion-in-vgpu-open.patch
-Patch588: 0038-drm-i915-gvt-xengt-Don-t-shutdown-vm-at-ioreq-failur.patch
-Patch589: 0039-drm-i915-gvt-Emulate-hw-status-page-address-register.patch
-Patch590: 0040-drm-i915-gvt-migration-copy-vregs-on-vreg-load.patch
-Patch591: 0041-drm-i915-gvt-Fix-a-command-corruption-caused-by-live.patch
-Patch592: 0042-drm-i915-gvt-update-force-to-nonpriv-register-whitel.patch
-Patch593: 0043-drm-i915-gvt-xengt-Fix-xengt-instance-destroy-error.patch
-Patch594: 0044-drm-i915-gvt-invalidate-old-ggtt-page-when-update-gg.patch
-Patch595: 0045-drm-i915-gvt-support-inconsecutive-partial-gtt-entry.patch
-Patch596: set-XENMEM_get_mfn_from_pfn-hypercall-number.patch
-Patch597: gvt-enforce-primary-class-id.patch
-Patch598: gvt-use-xs-vgpu-type.patch
-Patch599: xengt-pviommu-basic.patch
-Patch600: xengt-pviommu-unmap.patch
-Patch601: get_domctl_interface_version.patch
-Patch602: xengt-fix-shutdown-failures.patch
-Patch603: xengt-i915-gem-vgtbuffer.patch
-Patch604: xengt-gtt-2m-alignment.patch
-Patch605: net-core__order-3_frag_allocator_causes_swiotlb_bouncing_under_xen.patch
-Patch606: idle_cpu-return-0-during-softirq.patch
-Patch607: default-xen-swiotlb-size-128MiB.patch
-Patch608: dlm__increase_socket_backlog_to_avoid_hangs_with_16_nodes.patch
-Patch609: gfs2-add-skippiness.patch
-Patch610: GFS2__Avoid_recently_demoted_rgrps
-Patch611: gfs2-debug-rgrp-sweep
-Patch612: gfs2-restore-kabi.patch
-Patch613: 0001-Add-auxiliary-bus-support.patch
-Patch614: 0002-driver-core-auxiliary-bus-move-slab.h-from-include-f.patch
-Patch615: 0003-driver-core-auxiliary-bus-make-remove-function-retur.patch
-Patch616: 0004-driver-core-auxiliary-bus-minor-coding-style-tweaks.patch
-Patch617: 0005-driver-core-auxiliary-bus-Fix-auxiliary-bus-shutdown.patch
-Patch618: 0006-driver-core-auxiliary-bus-Fix-calling-stage-for-auxi.patch
-Patch619: 0007-driver-core-auxiliary-bus-Remove-unneeded-module-bit.patch
-Patch620: 0008-driver-core-auxiliary-bus-Fix-memory-leak-when-drive.patch
-Patch621: 0009-Documentation-auxiliary_bus-Clarify-auxiliary_device.patch
-Patch622: 0010-Documentation-auxiliary_bus-Clarify-__auxiliary_driv.patch
-Patch623: 0011-Documentation-auxiliary_bus-Clarify-the-release-of-d.patch
-Patch624: 0012-Documentation-auxiliary_bus-Move-the-text-into-the-c.patch
-Patch625: 0013-CP-41018-Make-CONFIG_AUXILIARY_BUS-y-work.patch
-Patch626: scsi-avoid-lun-change-loop.patch
-Patch627: abi-version.patch
-%if %{do_kabichk}
-Source3: check-kabi
-Source4: Module.kabi
+%if %{with bpftool}
+BuildRequires: zlib-devel llvm-devel clang-devel libbpf-devel libcap-devel
 %endif
-Source5: prepare-build
 
 %description
 The kernel package contains the Linux kernel (vmlinuz), the core of any
@@ -743,9 +202,12 @@ License: GPLv2
 Summary: Development package for building kernel modules to match the %{uname} kernel
 Group: System Environment/Kernel
 AutoReqProv: no
+%if %{with bpftool}
+Requires: dwarves
+%endif
 Provides: kernel-devel-%{_arch} = %{version}-%{release}
 Provides: kernel-devel-uname-r = %{uname}
-Requires: devtoolset-11-elfutils-libelf-devel
+Requires: elfutils-libelf-devel
 
 %description devel
 This package provides kernel headers and makefiles sufficient to build modules
@@ -773,11 +235,19 @@ of the Linux kernel.
 written in the Python programming language to use the interface \
 to manipulate perf events.
 
-%package -n python2-perf
+%package -n python3-perf
 Summary: %{pythonperfsum}
-Provides: python2-perf
-%description -n python2-perf
+Provides: python3-perf = %{version}-%{release}
+%description -n python3-perf
 %{pythonperfdesc}
+
+%if %{with bpftool}
+%package -n bpftool
+Summary: Inspection and simple manipulation of eBPF programs and maps
+%description -n bpftool
+This package contains the bpftool, which allows inspection and simple
+manipulation of eBPF programs and maps.
+%endif
 
 %prep
 %autosetup -p1
@@ -786,27 +256,47 @@ Provides: python2-perf
 %build
 source %{SOURCE5}
 
-# This override tweaks the kernel makefiles so that we run debugedit on an
-# object before embedding it.  When we later run find-debuginfo.sh, it will
-# run debugedit again.  The edits it does change the build ID bits embedded
-# in the stripped object, but repeating debugedit is a no-op.  We do it
-# beforehand to get the proper final build ID bits into the embedded image.
-# This affects the vDSO images in vmlinux, and the vmlinux image in bzImage.
-export AFTER_LINK='sh -xc "/usr/lib/rpm/debugedit -b %{buildroot} -d /usr/src/debug -i $@ > $@.id"'
-
 cp -f %{SOURCE1} .config
+cp -f %{SOURCE6} .
 echo XS_VERSION=%{version}-%{release} > .xsversion
 echo XS_BASE_COMMIT=%{package_srccommit} >> .xsversion
 echo XS_PQ_COMMIT=%{package_speccommit} >> .xsversion
-# make sure configuration is up to date
+
+# Make sure configuration is up to date.
+# If new options are added we want to avoid unexpected settings.
 %{?_cov_wrap} make olddefconfig
-bash -c 'diff -u <(grep -v "^#" .config) <(grep -v "^#" %{SOURCE1})'
+bash << "END_SCRIPT"
+set -ex
+filter() {
+	grep -E -v -e "^#" -e "^CONFIG_CC_VERSION_TEXT=" -e "^CONFIG_(GCC|AS|LD)_VERSION=" "$1"
+}
+diff -u <(filter %{SOURCE1}) <(filter .config) || {
+	echo "ERROR: Configuration changed, aborting build!"
+	exit 1
+}
+END_SCRIPT
+
+# Export certs for inclusion into the kernel's trusted keyring.
+> trusted_keys.pem
+for i in \
+    LINUX_SIGN_KEY_XS9             $(: For verifying the kexec kernel ) \
+    LINUX_LP_SIGN_KEY_XS9          $(: For verifying live patches ) \
+    LINUX_EXT_SIGN_KEY_XS9         $(: For verifying out-of-tree modules built by XenServer ) \
+    LINUX_THIRD_PARTY_SIGN_KEY_XS9 $(: For verifying modules built by third parties )
+do
+    %fetchcert -c "$i" -o cert-"$i".cert
+    openssl x509 -in cert-"$i".cert -inform der -out cert-"$i".pem -outform pem
+    cat cert-"$i".pem >> trusted_keys.pem
+    rm -f cert-"$i".cer cert-"$i".pem
+done
 
 cp -r `pwd` ../prepared-source
 install -m 644 %{SOURCE5} ../prepared-source
 
 %{?_cov_wrap} make %{?_smp_mflags} bzImage
 %{?_cov_wrap} make %{?_smp_mflags} modules
+
+%sign -c LINUX_SIGN_KEY_XS9 -i arch/x86/boot/bzImage -o arch/x86/boot/bzImage.signed
 
 #
 # Check the kernel ABI (KABI) has not changed.
@@ -843,23 +333,42 @@ install -m 644 %{SOURCE5} ../prepared-source
 
 # make perf
 %global perf_make \
-  %{?_cov_wrap} make EXTRA_CFLAGS="${RPM_OPT_FLAGS}" LDFLAGS="%{__global_ldflags}" %{?cross_opts} V=1 NO_PERF_READ_VDSO32=1 NO_PERF_READ_VDSOX32=1 WERROR=0 HAVE_CPLUS_DEMANGLE=1 NO_GTK2=1 NO_STRLCPY=1 NO_BIONIC=1 NO_JVMTI=1 NO_LIBCRYPTO=1 prefix=%{_prefix}
-%global perf_python2 -C tools/perf PYTHON=%{__python2}
+  %{?_cov_wrap} make EXTRA_CFLAGS="${RPM_OPT_FLAGS}" LDFLAGS="%{__global_ldflags}" %{?cross_opts} V=1 NO_PERF_READ_VDSO32=1 NO_PERF_READ_VDSOX32=1 WERROR=0 HAVE_CPLUS_DEMANGLE=1 NO_GTK2=1 NO_STRLCPY=1 NO_BIONIC=1 NO_JVMTI=1 prefix=%{_prefix}
+%global perf_python3 -C tools/perf PYTHON=%{__python3}
 # perf
 # make sure check-headers.sh is executable
 chmod +x tools/perf/check-headers.sh
-%{perf_make} %{perf_python2} all
+%{perf_make} %{perf_python3} all
 
-pushd tools/perf/Documentation/
-make %{?_smp_mflags} man
+%if %{with bpftool}
+# make bpftool without hardened gcc specs(one is not supported by clang)
+%global bpftool_make \
+  %{__make} EXTRA_CFLAGS="${RPM_OPT_FLAGS}" DESTDIR=$RPM_BUILD_ROOT %{?make_opts} V=1
+pushd tools/bpf/bpftool
+%{bpftool_make}
 popd
+%endif
 
+%if %{with bpftool}
 # eBPF support: pahole encodes the type infos into a small (3MB) .BTF section:
 cp vmlinux                                     tmp-vmlinux-with-btf
 LLVM_OBJCOPY=objcopy pahole %{?_smp_mflags} -J tmp-vmlinux-with-btf
 # Copy the BTF section into a new BTF file which eBPF tools to get kernel types:
 objcopy --only-section .BTF                    tmp-vmlinux-with-btf vmlinux.btf
 rm                                             tmp-vmlinux-with-btf
+%endif
+
+# Module signatures do not tolerate being stripped so signing needs to happen
+# _after_ the debuginfo is stripped in %%{__debug_install_post}. Therefore add
+# a dirty workaround to achieve this (inspired by the Fedora kernel spec file).
+%define __modsign_install_post \
+    find %{buildroot}/lib/modules/%{uname} -name "*.ko" -type f -exec scripts/sign-file sha256 certs/signing_key.pem certs/signing_key.pem {} \\;
+
+%define __spec_install_post \
+    %{?__debug_package:%{__debug_install_post}}\
+    %{__arch_install_post}\
+    %{__os_install_post}\
+    %{__modsign_install_post}
 
 %install
 # Install kernel
@@ -868,7 +377,7 @@ source %{SOURCE5}
 install -d -m 755 %{buildroot}/boot
 install -m 644 .config %{buildroot}/boot/config-%{uname}
 install -m 644 System.map %{buildroot}/boot/System.map-%{uname}
-install -m 644 arch/x86/boot/bzImage %{buildroot}/boot/vmlinuz-%{uname}
+install -m 644 arch/x86/boot/bzImage.signed %{buildroot}/boot/vmlinuz-%{uname}
 truncate -s 20M %{buildroot}/boot/initrd-%{uname}.img
 ln -sf vmlinuz-%{uname} %{buildroot}/boot/vmlinuz-%{short_uname}-xen
 ln -sf initrd-%{uname}.img %{buildroot}/boot/initrd-%{short_uname}-xen.img
@@ -880,8 +389,12 @@ make INSTALL_MOD_PATH=%{buildroot} modules_install mod-fw=
 # mark modules executable so that strip-to-file can strip them
 find %{buildroot}/lib/modules/%{uname} -name "*.ko" -type f | xargs chmod u+x
 
+gzip -c9 < Module.symvers > symvers-%{uname}.gz
+install -m 644 symvers-%{uname}.gz %{buildroot}/lib/modules/%{uname}/symvers.gz
+
 install -d -m 755 %{buildroot}/lib/modules/%{uname}/extra
 install -d -m 755 %{buildroot}/lib/modules/%{uname}/updates
+install -d -m 755 %{buildroot}/lib/modules/%{uname}/weak-updates
 
 make INSTALL_MOD_PATH=%{buildroot} vdso_install
 
@@ -893,7 +406,7 @@ install -m 755 vmlinux %{buildroot}/usr/lib/debug/lib/modules/%{uname}
 make INSTALL_HDR_PATH=%{buildroot}/usr headers_install
 
 # perf tool binary and supporting scripts/binaries
-%{perf_make} %{perf_python2} DESTDIR=%{buildroot} lib=%{_lib} install-bin install-traceevent-plugins
+%{perf_make} %{perf_python3} DESTDIR=%{buildroot} lib=%{_lib} install-bin
 # remove the 'trace' symlink.
 rm -f %{buildroot}%{_bindir}/trace
 # remove the perf-tips
@@ -904,22 +417,19 @@ rm -rf %{buildroot}%{_docdir}/perf-tip
 # Whoever wants examples can fix it up!
 
 # remove examples
-rm -rf %{buildroot}/usr/lib/perf/examples
+rm -rf %{buildroot}/%{_usr}/lib/perf/examples
 # remove the stray header file that somehow got packaged in examples
-rm -rf %{buildroot}/usr/lib/perf/include/bpf/
+rm -rf %{buildroot}/%{_usr}/lib/perf/include/bpf/
 
 # python-perf extension
-%{perf_make} %{perf_python2} DESTDIR=%{buildroot} install-python_ext
-
-# perf man pages (note: implicit rpm magic compresses them later)
-install -d %{buildroot}/%{_mandir}/man1
-install -pm0644 tools/perf/Documentation/*.1 %{buildroot}/%{_mandir}/man1/
+%{perf_make} %{perf_python3} DESTDIR=%{buildroot} install-python_ext
 
 # Install -devel files
 install -d -m 755 %{buildroot}%{_usrsrc}/kernels/%{uname}-%{_arch}
 install -d -m 755 %{buildroot}%{_rpmconfigdir}/macros.d
 install -m 644 %{SOURCE2} %{buildroot}%{_rpmconfigdir}/macros.d
 echo '%%kernel_version %{uname}' >> %{buildroot}%{_rpmconfigdir}/macros.d/macros.kernel
+echo '%%kabi_list %%{_usrsrc}/kernels/%%{kernel_version}-%%{_arch}/Module.kabi' >> %{buildroot}%{_rpmconfigdir}/macros.d/macros.kernel
 %{?_cov_install}
 
 # Setup -devel links correctly
@@ -930,19 +440,23 @@ ln -nsf %{srcpath} %{buildroot}/lib/modules/%{uname}/build
 paths=$(find . -path './Documentation' -prune -o -path './scripts' -prune -o -path './include' -prune -o -type f -a \( -name "Makefile*" -o -name "Kconfig*" \) -print)
 cp --parents $paths %{buildroot}%{srcpath}
 cp Module.symvers %{buildroot}%{srcpath}
+cp %{SOURCE4} %{buildroot}%{srcpath}
 cp System.map %{buildroot}%{srcpath}
 cp .config %{buildroot}%{srcpath}
 cp -a scripts %{buildroot}%{srcpath}
 find %{buildroot}%{srcpath}/scripts -type f -name '*.o' -delete
 cp -a tools/objtool/objtool %{buildroot}%{srcpath}/tools/objtool
+%if %{with bpftool}
+cp -a tools/bpf/resolve_btfids/resolve_btfids %{buildroot}%{srcpath}/tools/bpf/resolve_btfids/resolve_btfids
+%endif
 
 cp -a --parents arch/x86/include %{buildroot}%{srcpath}
 cp -a include %{buildroot}%{srcpath}/include
 
 # files for 'make prepare' to succeed with kernel-devel
 cp -a --parents arch/x86/entry/syscalls/syscall_32.tbl %{buildroot}%{srcpath}
-cp -a --parents arch/x86/entry/syscalls/syscalltbl.sh %{buildroot}%{srcpath}
-cp -a --parents arch/x86/entry/syscalls/syscallhdr.sh %{buildroot}%{srcpath}
+#cp -a --parents arch/x86/entry/syscalls/syscalltbl.sh %{buildroot}%{srcpath}
+#cp -a --parents arch/x86/entry/syscalls/syscallhdr.sh %{buildroot}%{srcpath}
 cp -a --parents arch/x86/entry/syscalls/syscall_64.tbl %{buildroot}%{srcpath}
 cp -a --parents arch/x86/tools/relocs_32.c %{buildroot}%{srcpath}
 cp -a --parents arch/x86/tools/relocs_64.c %{buildroot}%{srcpath}
@@ -952,25 +466,31 @@ cp -a --parents arch/x86/tools/relocs.h %{buildroot}%{srcpath}
 cp -a --parents tools/include/tools/le_byteshift.h %{buildroot}%{srcpath}
 cp -a --parents arch/x86/purgatory/purgatory.c %{buildroot}%{srcpath}
 cp -a --parents arch/x86/purgatory/stack.S %{buildroot}%{srcpath}
-cp -a --parents arch/x86/purgatory/string.c %{buildroot}%{srcpath}
+#cp -a --parents arch/x86/purgatory/string.c %{buildroot}%{srcpath}
 cp -a --parents arch/x86/purgatory/setup-x86_64.S %{buildroot}%{srcpath}
 cp -a --parents arch/x86/purgatory/entry64.S %{buildroot}%{srcpath}
 cp -a --parents arch/x86/boot/string.h %{buildroot}%{srcpath}
 cp -a --parents arch/x86/boot/string.c %{buildroot}%{srcpath}
 cp -a --parents arch/x86/boot/ctype.h %{buildroot}%{srcpath}
 
-# Copy .config to include/config/auto.conf so "make prepare" is unnecessary.
-cp -a %{buildroot}%{srcpath}/.config %{buildroot}%{srcpath}/include/config/auto.conf
-
 # Make sure the Makefile and version.h have a matching timestamp so that
 # external modules can be built
-touch -r %{buildroot}%{srcpath}/Makefile %{buildroot}%{srcpath}/include/generated/uapi/linux/version.h
+touch -r %{buildroot}%{srcpath}/Makefile \
+         %{buildroot}%{srcpath}/include/generated/uapi/linux/version.h \
+         %{buildroot}%{srcpath}/include/config/auto.conf
 
 find %{buildroot} -name '.*.cmd' -type f -delete
 
 # Install files for building live patches
 mv ../prepared-source %{buildroot}%{lp_devel_dir}
 install -m 644 vmlinux %{buildroot}%{lp_devel_dir}
+install -m 755 scripts/sign-file %{buildroot}%{lp_devel_dir}
+
+%if %{with bpftool}
+# Install bpftool
+pushd tools/bpf/bpftool
+%{bpftool_make} prefix=%{_prefix} bash_compdir=%{_sysconfdir}/bash_completion.d/ mandir=%{_mandir} install
+popd
 
 # eBPF support: Install the BTF file to /usr/src/kernels for kernel-devel
 # /usr/src/kernels is also used by `perf` to look for vmlinux files with
@@ -989,10 +509,13 @@ install -m 644 vmlinux %{buildroot}%{lp_devel_dir}
 
 # Thus, we can install it here (/lib/.../build is an absolute symlink to this path)
 install -m 644 vmlinux.btf %{buildroot}/usr/src/kernels/%{uname}-%{_arch}/vmlinux
+%endif
 
 %check
+%if %{with bpftool}
 # Check that the .BTF section is present at the start of the file:
 objdump -h %{buildroot}/usr/src/kernels/%{uname}-%{_arch}/vmlinux|grep " 0 .BTF"
+%endif
 
 %post
 > %{_localstatedir}/lib/rpm-state/regenerate-initrd-%{uname}
@@ -1002,12 +525,25 @@ depmod -ae -F /boot/System.map-%{uname} %{uname}
 mkdir -p %{_rundir}/reboot-required.d/%{name}
 > %{_rundir}/reboot-required.d/%{name}/%{version}-%{release}
 
+%preun
+if [ -x %{_sbindir}/weak-modules ]; then
+    %{_sbindir}/weak-modules --remove-kernel %{uname} || exit $?
+fi
+
 %posttrans
 depmod -ae -F /boot/System.map-%{uname} %{uname}
 
 if [ -e %{_localstatedir}/lib/rpm-state/regenerate-initrd-%{uname} ]; then
     rm %{_localstatedir}/lib/rpm-state/regenerate-initrd-%{uname}
     dracut -f /boot/initrd-%{uname}.img %{uname}
+fi
+
+if [ -x %{_sbindir}/weak-modules ]; then
+    %{_sbindir}/weak-modules --add-kernel %{uname} || exit $?
+fi
+
+if [ ! -e "/boot/symvers-%{uname}.gz" ]; then
+    ln -s "/lib/modules/%{uname}/symvers.gz" "/boot/symvers-%{uname}.gz"
 fi
 
 %files
@@ -1022,12 +558,16 @@ fi
 /lib/modules/%{uname}/kernel
 /lib/modules/%{uname}/modules.order
 /lib/modules/%{uname}/modules.builtin
+/lib/modules/%{uname}/modules.builtin.modinfo
 /lib/modules/%{uname}/updates
+/lib/modules/%{uname}/weak-updates
+/lib/modules/%{uname}/symvers.gz
 /lib/modules/%{uname}/vdso
 %exclude /lib/modules/%{uname}/vdso/.build-id
 %ghost /lib/modules/%{uname}/modules.alias
 %ghost /lib/modules/%{uname}/modules.alias.bin
 %ghost /lib/modules/%{uname}/modules.builtin.bin
+%ghost /lib/modules/%{uname}/modules.builtin.alias.bin
 %ghost /lib/modules/%{uname}/modules.dep
 %ghost /lib/modules/%{uname}/modules.dep.bin
 %ghost /lib/modules/%{uname}/modules.devname
@@ -1050,45 +590,136 @@ fi
 
 %files -n perf
 %{_bindir}/perf
-%dir %{_libdir}/traceevent
-%{_libdir}/traceevent/plugins/
 %{_libexecdir}/perf-core
 %{_datadir}/perf-core/
-%{_mandir}/man[1-8]/perf*
 %{_sysconfdir}/bash_completion.d/perf
-%doc tools/perf/Documentation/examples.txt
 %license COPYING
 
-%files -n python2-perf
+%files -n python3-perf
 %license COPYING
-%{python2_sitearch}/*
+%{python3_sitearch}/*
 
 %files lp-devel_%{version}_%{release}
 %{lp_devel_dir}
 
+%if %{with bpftool}
+%files -n bpftool
+%{_sbindir}/bpftool
+%{_sysconfdir}/bash_completion.d/bpftool
+%endif
+
 %{?_cov_results_package}
 
 %changelog
-* Fri Oct 31 2025 Ross Lagerwall <ross.lagerwall@citrix.com> - 4.19.19-8.0.44
-- CA-399062: NFS timeout causes potential deadlock
-- CA-419803 / CA-419762: Backport patches to fix NBD disconnect crash
+* Fri Feb 06 2026 Roger Pau Monné <roger.pau@citrix.com> - 6.6.98-19
+- Fix filter driver to not return -EPERM for unknown hypercalls.
 
-* Fri Jul 18 2025 Gerald Elder-Vass <gerald.elder-vass@cloud.com> - 4.19.19-8.0.43
-- CA-412882: Register NVMe ns_id attribute(s) as default sysfs groups
-- CA-360450: Fix deadlock on PCI passthrough
+* Tue Feb 03 2026 Bernhard Kaindl <bernhard.kaindl@citrix.com> - 6.6.98-18
+- CA-421997: Add filter support for XEN_SYSCTL_numa_meminfo
 
-* Mon Apr 07 2025 Gerald Elder-Vass <gerald.elder-vass@cloud.com> - 4.19.19-8.0.42
-- XSI-1728: Avoid repeatedly emitting uevents for LUN changes on CHECK_CONDITION
+* Thu Jan 22 2026 Stephen Cheng <stephen.cheng@citrix.com> - 6.6.98-17
+- CP-308436: Update Module.kabi for driver fnic
 
-* Tue Feb 18 2025 Kevin Lampis <klampis@cloud.com> - 4.19.19-8.0.41
-- CP-51825: Add 50G/100G/200G ethtool link modes
+* Thu Jan 22 2026 Frediano Ziglio <frediano.ziglio@citrix.com> - 6.6.98-16
+- CA-408877: Increase bounce buffer for IOMMU_OP hypercalls
+- CA-422743: Remove write bit from *_queued_asts debugfs files
 
-* Tue Feb 18 2025 Kevin Lampis <klampis@cloud.com> - 4.19.19-8.0.40
-- None
+* Mon Jan 19 2026 Lin Liu <lin.liu01@citrix.com> - 6.6.98-15
+- CA-422854: Module.kabi incorrectly contains all symbols
 
-* Thu Jan 09 2025 Gerald Elder-Vass <gerald.elder-vass@citrix.com> - 4.19.19-8.0.39
-- CA-401809: Resolve incorrect coverity warning
-- CA-404447: Improve logging for xhci failures
+* Thu Jan 08 2026 Bernhard Kaindl <bernhard.kaindl@citrix.com> - 6.6.98-14
+- CP-310962: filter-hypercall: Add checking XEN_DOMCTL_numa_op
+- CP-310569: Disabled Marvell QLogic FastLinQ drivers(no support by Marvell)
+
+* Wed Dec 03 2025 Kevin Lampis <kevin.lampis@citrix.com> - 6.6.98-13
+- CA-408856: Trace safe/unsafe PCI cards and assign only if safe
+- CA-411782: Fix Lockdown: glocktop: debugfs access is restricted
+
+* Mon Nov 24 2025 Lin Liu <lin.liu01@citrix.com> - 6.6.98-12
+- CA-414414: restore GFS2 patches
+- Place CONFIG_PROC_MEM_NO_FORCE at the right position
+- CP-310479: disable kernel page-table isolation
+- CP-310479: disable mitigations already applied by Xen
+- CP-310479: disable mitigations to match Xen's policy
+- CP-310158: Change command line mitigation defaults
+
+* Wed Nov 12 2025 Stephen Cheng <stephen.cheng@citrix.com> - 6.6.98-11
+- HP-1275: Fix pv-iommu swiotlb_tbl_map_single() API mismatch for kernel 6.6
+
+* Tue Nov 11 2025 Ming Lu <ming.lu@citrix.com> - 6.6.98-10
+- CP-310213: Revert to use num_online_cpus for default rss queues
+
+* Thu Oct 30 2025 Bernhard Kaindl <Bernhard.Kaindl@citrix.com> - 6.6.98-9
+- CP-310441: Add CONFIG_MODULE_ALLOW_BTF_MISMATCH for vendor drivers
+
+* Mon Oct 27 2025 Bernhard Kaindl <Bernhard.Kaindl@citrix.com> - 6.6.98-8
+- CP-310441: Add missing BTF support to complete the eBPF configuration
+
+* Fri Oct 24 2025 Deli Zhang <deli.zhang@citrix.com> - 6.6.98-7
+- CA-416606: Disable bnxt_re driver
+- CA-413399: Reduce calls to skb_gso_segment()
+
+* Wed Oct 08 2025 Ross Lagerwall <ross.lagerwall@citrix.com> - 6.6.98-6
+- CP-47917: Re-sign with new key
+
+* Thu Sep 25 2025 Chunjie Zhu <chunjie.zhu@citrix.com> - 6.6.98-5
+- CA-415346: export kernel module symbol data offset
+- CA-416603: Update kernel config for binutils-2.45
+
+* Wed Aug 27 2025 Andrew Cooper <andrew.cooper3@citrix.com> - 6.6.98-4
+- Rebuild against Xen 4.20
+
+* Thu Aug 07 2025 Lin Liu <Lin.Liu01@cloud.com> - 6.6.98-3
+- CA-414787: Fix gdb's ability to access process memory
+
+* Tue Aug 05 2025 Frediano Ziglio <frediano.ziglio@cloud.com> - 6.6.98-2
+- CP-308225: Allow toolstack PV hypercalls through hypercall filter
+- CP-308667: fix kernel config after upgrade
+
+* Wed Jul 30 2025 Chunjie Zhu <chunjie.zhu@cloud.com> - 6.6.98-1
+- CP-308667: kernel upgrade to 6.6.98
+
+* Fri Jul 04 2025 Ross Lagerwall <ross.lagerwall@citrix.com> - 6.6.22-10
+- CP-308249: Revoke out-of-tree modules by hash
+- CP-308413: Include additional certs in the trusted keyring
+- Update SBAT email address
+- CP-308408: Remove obsolete patches
+- CP-308776: Add macros to support module signing
+- CP-308580: Put DMV logic into macros.kernel
+
+* Wed Jun 04 2025 Mark Syms <mark.syms@cloud.com> - 6.6.22-9
+- CA-411820: add STATX_DIOALIGN support to GFS2
+- CA-411790: filter-hypercall: Handle XENVER_build_id with NULL pointer
+
+* Wed May 28 2025 Ross Lagerwall <ross.lagerwall@citrix.com> - 6.6.22-8
+- CA-411670: Allow modules to be verified by MoK keys
+
+* Wed May 21 2025 Frediano Ziglio <frediano.ziglio@cloud.com> - 6.6.22-7
+- CP-308117: Rebuild due to signature issue
+
+* Tue Apr 08 2025 Ross Lagerwall <ross.lagerwall@citrix.com> - 6.6.22-6
+- CP-45134: Add support for Secure Boot
+
+* Wed Mar 12 2025 Chunjie Zhu <chunjie.zhu@cloud.com> - 6.6.22-5
+- Bump kernel build version to 5, enable NUMA
+
+* Thu Feb 27 2025 Chunjie Zhu <chunjie.zhu@cloud.com> - 6.6.22-4
+- Bump kernel build version to 4
+- revert CP-46346: duplicated symvers in spec file
+- CA-399556: kernel NULL pointer dereference in gfs2_recover_func
+- CA-401770: fix gfs2 umount timeout issue
+- CA-406963: Stop building intel_ish_ipc module
+- Backports from stable 6.6.y for PVH dom0 testing
+- CA-406411: Disable tg3 PCIe AER on system reboot
+
+* Mon Jan 20 2025 Deli Zhang <deli.zhang@cloud.com> - 6.6.22-3
+- CP-46346: Add intel-i40e kabi Provides
+
+* Fri Jan 17 2025 Ross Lagerwall <ross.lagerwall@citrix.com> - 6.6.22-2
+- CA-404718: Update config for new compiler
+
+* Wed Jan 15 2025 Ross Lagerwall <ross.lagerwall@citrix.com> - 6.6.22-1
+- CP-53166: Update to Linux 6.6.22
 
 * Thu Dec 05 2024 Gerald Elder-Vass <gerald.elder-vass@citrix.com> - 4.19.19-8.0.38
 - CA-401809: DLM failure leaves system unstable fixes

@@ -1,0 +1,111 @@
+From f9e5fda4546b1c6b254f3ec7b75fefc8cba57356 Mon Sep 17 00:00:00 2001
+From: Chunjie Zhu <chunjie.zhu@cloud.com>
+Date: Tue, 26 Aug 2025 13:34:44 +0800
+Subject: [PATCH] CA-415346: export module symbol offsets
+
+  crashdump needs it to navigate around vmcore to dump driver
+  information
+
+Signed-off-by: Chunjie Zhu <chunjie.zhu@cloud.com>
+---
+ arch/x86/kernel/asm-offsets.c | 18 ++++++++++++++++++
+ include/linux/module.h        | 12 ++++++++++++
+ kernel/module/sysfs.c         | 10 ----------
+ scripts/link-vmlinux.sh       |  4 ++++
+ 4 files changed, 34 insertions(+), 10 deletions(-)
+
+diff --git a/arch/x86/kernel/asm-offsets.c b/arch/x86/kernel/asm-offsets.c
+index 50383bc46dd7..5f3d01442ef8 100644
+--- a/arch/x86/kernel/asm-offsets.c
++++ b/arch/x86/kernel/asm-offsets.c
+@@ -10,6 +10,7 @@
+ #include <crypto/aria.h>
+ #include <linux/sched.h>
+ #include <linux/stddef.h>
++#include <linux/list.h>
+ #include <linux/hardirq.h>
+ #include <linux/suspend.h>
+ #include <linux/kbuild.h>
+@@ -127,4 +128,21 @@ static void __used common(void)
+ 	OFFSET(ARIA_CTX_rounds, aria_ctx, rounds);
+ #endif
+ 
++	BLANK();
++	OFFSET(MODULE_LIST_HEAD_next, list_head, next);
++	OFFSET(MODULE_state, module, state);
++	OFFSET(MODULE_next, module, list);
++	OFFSET(MODULE_name, module, name);
++	DEFINE(MODULE_name_len, MODULE_NAME_LEN);
++#ifdef CONFIG_KALLSYMS
++	OFFSET(MODULE_notes_attrs, module, notes_attrs);
++	OFFSET(MODULE_notes_count, module_notes_attrs, notes);
++	OFFSET(MODULE_binattrs, module_notes_attrs, attrs);
++	DEFINE(SIZEOF_binattr, sizeof(struct bin_attribute));
++	OFFSET(MODULE_noteattr, bin_attribute, attr);
++	OFFSET(MODULE_notesize, bin_attribute, size);
++	OFFSET(MODULE_notedata, bin_attribute, private);
++	OFFSET(MODULE_notename, attribute, name);
++	DEFINE(MODULE_notename_len, PAGE_SIZE);
++#endif
+ }
+diff --git a/include/linux/module.h b/include/linux/module.h
+index f58d1eb260fa..eb5b4fb3d73e 100644
+--- a/include/linux/module.h
++++ b/include/linux/module.h
+@@ -401,6 +401,18 @@ struct klp_modinfo {
+ };
+ #endif
+ 
++#ifdef CONFIG_KALLSYMS
++/*
++ * /sys/module/foo/notes/.section.name gives contents of SHT_NOTE sections.
++ */
++
++struct module_notes_attrs {
++	struct kobject *dir;
++	unsigned int notes;
++	struct bin_attribute attrs[];
++};
++#endif
++
+ struct module {
+ 	enum module_state state;
+ 
+diff --git a/kernel/module/sysfs.c b/kernel/module/sysfs.c
+index c921bf044050..1e51a0ff3272 100644
+--- a/kernel/module/sysfs.c
++++ b/kernel/module/sysfs.c
+@@ -136,16 +136,6 @@ static void remove_sect_attrs(struct module *mod)
+ 	}
+ }
+ 
+-/*
+- * /sys/module/foo/notes/.section.name gives contents of SHT_NOTE sections.
+- */
+-
+-struct module_notes_attrs {
+-	struct kobject *dir;
+-	unsigned int notes;
+-	struct bin_attribute attrs[];
+-};
+-
+ static ssize_t module_notes_read(struct file *filp, struct kobject *kobj,
+ 				 struct bin_attribute *bin_attr,
+ 				 char *buf, loff_t pos, size_t count)
+diff --git a/scripts/link-vmlinux.sh b/scripts/link-vmlinux.sh
+index e74e4f058bb1..9026f780719f 100755
+--- a/scripts/link-vmlinux.sh
++++ b/scripts/link-vmlinux.sh
+@@ -306,5 +306,9 @@ if is_enabled CONFIG_KALLSYMS; then
+ 	fi
+ fi
+ 
++# NOTE: above if-statement checks if System.map matches vmlinux symbols
++sed -n '/#define MODULE_LIST_HEAD_next/,$p' ${srctree}/include/generated/asm-offsets.h > output.txt
++awk '/^#define / { printf "%016x - +%s\n", $3, $2 }' output.txt >> System.map
++
+ # For fixdep
+ echo "vmlinux: $0" > .vmlinux.d
+-- 
+2.34.1
+

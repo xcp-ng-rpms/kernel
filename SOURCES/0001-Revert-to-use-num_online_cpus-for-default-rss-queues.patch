@@ -1,0 +1,42 @@
+From 644b8efa408632dd64eb933c8d09e965ba84acb4 Mon Sep 17 00:00:00 2001
+From: Ming Lu <ming.lu@cloud.com>
+Date: Fri, 7 Nov 2025 08:41:00 +0000
+Subject: [PATCH: Revert to use num_online_cpus for default rss queues 1/1] 
+ Revert to use num_online_cpus for default rss queues
+
+In kernel version v4.19.19, the default number of RSS queues is
+determined using num_online_cpus(). However, in kernel v6.6.x, the logic
+is updated to use CPU topology information to determine the number of
+physical cores.
+
+For Xen dom0 kernels, this change introduces a problem: the dom0 kernel
+cannot retrieve valid CPU topology data from Xen. As a result, the
+default number of RSS queues is always set to 1, which degrades
+networking performance of guests using xen-netback.
+
+This patch introduces a fallback mechanism: if CPU topology information
+is unavailable, it reverts to using num_online_cpus(). To avoid excessive
+queue allocation, the number of RSS queues is capped at 8.
+
+Signed-off-by: Ming Lu <ming.lu@cloud.com>
+---
+ net/core/dev.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/net/core/dev.c b/net/core/dev.c
+index 4006fd164b7b..eeee6b376bfa 100644
+--- a/net/core/dev.c
++++ b/net/core/dev.c
+@@ -3139,6 +3139,9 @@ int netif_get_num_default_rss_queues(void)
+ 	}
+ 	free_cpumask_var(cpus);
+ 
++	if (count == 1 && count < num_online_cpus())
++		return min_t(int, num_online_cpus(), 8);
++
+ 	return count > 2 ? DIV_ROUND_UP(count, 2) : count;
+ }
+ EXPORT_SYMBOL(netif_get_num_default_rss_queues);
+-- 
+2.47.3
+

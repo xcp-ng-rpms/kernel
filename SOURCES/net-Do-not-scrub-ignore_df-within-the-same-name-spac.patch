@@ -1,4 +1,4 @@
-From 0bab99d590d35bb48f1162aa48241235174d9ab1 Mon Sep 17 00:00:00 2001
+From e7ccdf026961f0a7200ee39b9e426d2ac5ef9f02 Mon Sep 17 00:00:00 2001
 From: Anoob Soman <anoob.soman@citrix.com>
 Date: Thu, 27 Jul 2017 16:25:54 +0100
 Subject: [PATCH] net: Do not scrub ignore_df within the same name space
@@ -10,23 +10,30 @@ of GRE tunneled packets.
 Clear ignore_df, only when packet is being injected to another namespace.
 
 Signed-off-by: Anoob Soman <anoob.soman@citrix.com>
+---
+ net/core/skbuff.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
 diff --git a/net/core/skbuff.c b/net/core/skbuff.c
-index f817f33..9e7c6d8 100644
+index 21a83e26f004..d0c3597f3e6f 100644
 --- a/net/core/skbuff.c
 +++ b/net/core/skbuff.c
-@@ -4906,7 +4906,6 @@ void skb_scrub_packet(struct sk_buff *skb, bool xnet)
+@@ -5857,7 +5857,6 @@ void skb_scrub_packet(struct sk_buff *skb, bool xnet)
  {
  	skb->pkt_type = PACKET_HOST;
  	skb->skb_iif = 0;
 -	skb->ignore_df = 0;
  	skb_dst_drop(skb);
- 	secpath_reset(skb);
- 	nf_reset(skb);
-@@ -4918,6 +4917,7 @@ void skb_scrub_packet(struct sk_buff *skb, bool xnet)
- 	ipvs_reset(skb);
+ 	skb_ext_reset(skb);
+ 	nf_reset_ct(skb);
+@@ -5874,6 +5873,7 @@ void skb_scrub_packet(struct sk_buff *skb, bool xnet)
+ 
  	skb->mark = 0;
- 	skb->tstamp = 0;
-+        skb->ignore_df = 0;
+ 	skb_clear_tstamp(skb);
++	skb->ignore_df = 0;
  }
  EXPORT_SYMBOL_GPL(skb_scrub_packet);
  
+-- 
+2.34.1
+

@@ -18,16 +18,23 @@ Signed-off-by: Frediano Ziglio <frediano.ziglio@cloud.com>
 Reviewed-by: Juergen Gross <jgross@suse.com>
 Link: https://lore.kernel.org/r/20240619104015.30477-1-frediano.ziglio@cloud.com
 Signed-off-by: Juergen Gross <jgross@suse.com>
+---
+ arch/x86/xen/time.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
 diff --git a/arch/x86/xen/time.c b/arch/x86/xen/time.c
-index 01dcccf9185f..8f2149e600c7 100644
+index 52fa5609b7f6..96521b1874ac 100644
 --- a/arch/x86/xen/time.c
 +++ b/arch/x86/xen/time.c
-@@ -29,7 +29,7 @@
+@@ -30,7 +30,7 @@
  #include "xen-ops.h"
  
- /* Xen may fire a timer up to this many ns early */
+ /* Minimum amount of time until next clock event fires */
 -#define TIMER_SLOP	100000
 +#define TIMER_SLOP	1
  
  static u64 xen_sched_clock_offset __read_mostly;
  
+-- 
+2.47.1
+

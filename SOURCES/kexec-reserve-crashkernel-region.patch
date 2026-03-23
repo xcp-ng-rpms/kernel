@@ -8,10 +8,10 @@ used for PV-IOMMU.
 Signed-off-by: Ross Lagerwall <ross.lagerwall@citrix.com>
 
 diff --git a/arch/x86/xen/setup.c b/arch/x86/xen/setup.c
-index 743d4f6..a78ca48 100644
+index ec7d19b8d34d..f5e89f28ae62 100644
 --- a/arch/x86/xen/setup.c
 +++ b/arch/x86/xen/setup.c
-@@ -24,6 +24,7 @@
+@@ -29,6 +29,7 @@
  #include <xen/xen.h>
  #include <xen/page.h>
  #include <xen/interface/callback.h>
@@ -19,19 +19,19 @@ index 743d4f6..a78ca48 100644
  #include <xen/interface/memory.h>
  #include <xen/interface/physdev.h>
  #include <xen/features.h>
-@@ -779,12 +780,27 @@ char * __init xen_memory_setup(void)
- 	 * a patch in the future.
- 	 */
+@@ -766,6 +767,8 @@ char * __init xen_memory_setup(void)
+ 	xen_e820_table.nr_entries = memmap.nr_entries;
+ 
  	if (xen_initial_domain()) {
 +		xen_kexec_range_t range = { KEXEC_RANGE_MA_CRASH, 0 };
 +
+ 		/*
+ 		 * Xen won't allow a 1:1 mapping to be created to UNUSABLE
+ 		 * regions, so if we're using the machine memory map leave the
+@@ -776,6 +779,19 @@ char * __init xen_memory_setup(void)
+ 		 */
  		xen_ignore_unusable();
- 		/* Reserve 0.5 MiB to 1 MiB region so iBFT can be found */
- 		xen_e820_table.entries[xen_e820_table.nr_entries].addr = 0x80000;
- 		xen_e820_table.entries[xen_e820_table.nr_entries].size = 0x80000;
- 		xen_e820_table.entries[xen_e820_table.nr_entries].type = E820_TYPE_RESERVED;
- 		xen_e820_table.nr_entries++;
-+
+ 
 +		/*
 +		 * Reserve the crashkernel region to prevent outstanding DMA
 +		 * ops overwriting the crashkernel after the IOMMU is disabled
@@ -44,11 +44,12 @@ index 743d4f6..a78ca48 100644
 +			xen_e820_table.entries[xen_e820_table.nr_entries].type = E820_TYPE_RESERVED;
 +			xen_e820_table.nr_entries++;
 +		}
- 	}
- 
- 	/* Make sure the Xen-supplied memory map is well-ordered. */
++
+ #ifdef CONFIG_ISCSI_IBFT_FIND
+ 		/* Reserve 0.5 MiB to 1 MiB region so iBFT can be found */
+ 		xen_e820_table.entries[xen_e820_table.nr_entries].addr = IBFT_START;
 diff --git a/include/xen/interface/kexec.h b/include/xen/interface/kexec.h
-index 443df8a..e6d7215 100644
+index 443df8adf8df..e6d7215df365 100644
 --- a/include/xen/interface/kexec.h
 +++ b/include/xen/interface/kexec.h
 @@ -2,9 +2,19 @@
