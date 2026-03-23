@@ -1,0 +1,42 @@
+From b9e4166b350f6c13eb0b506ba36b8049020a8d56 Mon Sep 17 00:00:00 2001
+From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+Date: Mon, 23 Mar 2026 10:45:41 +0100
+Subject: [PATCH] !kabi genetlink: remove genl_bind
+
+Fixes: 0845447d9c78 ("genetlink: remove genl_bind")
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+---
+ include/net/genetlink.h | 17 +++++++++++++++++
+ 1 file changed, 17 insertions(+)
+
+diff --git a/include/net/genetlink.h b/include/net/genetlink.h
+index b8b7edcfc893..e9e108e03150 100644
+--- a/include/net/genetlink.h
++++ b/include/net/genetlink.h
+@@ -59,6 +59,23 @@ struct genl_family {
+ 	void			(*post_doit)(const struct genl_ops *ops,
+ 					     struct sk_buff *skb,
+ 					     struct genl_info *info);
++#ifdef __GENKSYMS__
++	int         (*mcast_bind)(struct net *net, int group);
++	void            (*mcast_unbind)(struct net *net, int group);
++#else
++	/**
++	 * 0845447d9c78 ("genetlink: remove genl_bind") removed those two
++	 * fields to avoid a deadlock, no in-tree drivers uses those fields
++	 * and the only out-of-tree driver that uses genl_register_family
++	 * is mellanox-mlxen, which does not set those two functors.  So
++	 * hide it from genksyms as to avoid kABI changes, and rename the
++	 * field to be defensive and catch out-of-tree drivers using them
++	 * (unlikely).
++	 */
++	int         (*__unused_mcast_bind)(struct net *net, int group);
++	void            (*__unused_mcast_unbind)(struct net *net, int group);
++
++#endif
+ 	struct nlattr **	attrbuf;	/* private */
+ 	const struct genl_ops *	ops;
+ 	const struct genl_multicast_group *mcgrps;
+-- 
+2.43.0
+

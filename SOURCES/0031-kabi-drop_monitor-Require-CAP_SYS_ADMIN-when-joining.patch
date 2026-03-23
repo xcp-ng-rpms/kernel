@@ -1,0 +1,97 @@
+From e4a2ec7738cb87eb689a762b25fcdd7028c94732 Mon Sep 17 00:00:00 2001
+From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+Date: Mon, 23 Mar 2026 11:38:47 +0100
+Subject: [PATCH] !kabi drop_monitor: Require 'CAP_SYS_ADMIN' when joining
+ "events" group
+
+The only commit actually making use of the flag in the kernel is:
+
+  855a2b559df1 ("drop_monitor: Require 'CAP_SYS_ADMIN' when joining "events" group")
+
+Fixes: 855a2b559df1 ("drop_monitor: Require 'CAP_SYS_ADMIN' when joining "events" group")
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+---
+ include/net/genetlink.h | 10 +++++++++-
+ net/core/drop_monitor.c |  8 +++++++-
+ net/netlink/genetlink.c |  4 +++-
+ 3 files changed, 19 insertions(+), 3 deletions(-)
+
+diff --git a/include/net/genetlink.h b/include/net/genetlink.h
+index e9e108e03150..10287cdfc647 100644
+--- a/include/net/genetlink.h
++++ b/include/net/genetlink.h
+@@ -16,7 +16,15 @@
+ struct genl_multicast_group {
+ 	char			name[GENL_NAMSIZ];
+ 	u8			flags;
+-	u8			cap_sys_admin:1;
++	/**
++	 * 855a2b559df1 ("drop_monitor: Require 'CAP_SYS_ADMIN' when
++	 * joining "events" group") added the cap_sys_admin bitfield for
++	 * later commit 855a2b559df1 ("drop_monitor: Require
++	 * 'CAP_SYS_ADMIN' when joining "events" group"), use shadow
++	 * variables instead.
++	 *
++	 * u8                   cap_sys_admin:1;
++	 */
+ };
+ 
+ struct genl_ops;
+diff --git a/net/core/drop_monitor.c b/net/core/drop_monitor.c
+index 52e559252a9e..6c39668206b2 100644
+--- a/net/core/drop_monitor.c
++++ b/net/core/drop_monitor.c
+@@ -33,6 +33,8 @@
+ 
+ #include <asm/unaligned.h>
+ 
++#include <linux/shadow_var.h>
++
+ #define TRACE_ON 1
+ #define TRACE_OFF 0
+ 
+@@ -122,7 +124,7 @@ static struct sk_buff *reset_per_cpu_data(struct per_cpu_dm_data *data)
+ }
+ 
+ static const struct genl_multicast_group dropmon_mcgrps[] = {
+-	{ .name = "events", .cap_sys_admin = 1 },
++	{ .name = "events", /* .cap_sys_admin = 1 */ },
+ };
+ 
+ static void send_dm_alert(struct work_struct *work)
+@@ -406,6 +408,10 @@ static int __init init_net_drop_monitor(void)
+ 		return -ENOSPC;
+ 	}
+ 
++	if (!shadow_var_alloc((void*)dropmon_mcgrps, "shadow_genl_multicast_group_cap_sys_admin", 0, GFP_KERNEL))
++		return -ENOMEM;
++
++
+ 	rc = genl_register_family(&net_drop_monitor_family);
+ 	if (rc) {
+ 		pr_err("Could not create drop monitor netlink family\n");
+diff --git a/net/netlink/genetlink.c b/net/netlink/genetlink.c
+index f449be93b375..51a3731bc7d9 100644
+--- a/net/netlink/genetlink.c
++++ b/net/netlink/genetlink.c
+@@ -22,6 +22,8 @@
+ #include <net/sock.h>
+ #include <net/genetlink.h>
+ 
++#include <linux/shadow_var.h>
++
+ static DEFINE_MUTEX(genl_mutex); /* serialization of message processing */
+ static DECLARE_RWSEM(cb_lock);
+ 
+@@ -984,7 +986,7 @@ static int genl_bind(struct net *net, int group)
+ 		if ((grp->flags & GENL_UNS_ADMIN_PERM) &&
+ 		    !ns_capable(net->user_ns, CAP_NET_ADMIN))
+ 			ret = -EPERM;
+-		if (grp->cap_sys_admin &&
++		if (shadow_var_get((void*) grp, "shadow_genl_multicast_group_cap_sys_admin") &&
+ 		    !ns_capable(net->user_ns, CAP_SYS_ADMIN))
+ 			ret = -EPERM;
+ 
+-- 
+2.43.0
+

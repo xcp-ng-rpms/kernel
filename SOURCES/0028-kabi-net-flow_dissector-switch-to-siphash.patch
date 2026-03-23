@@ -1,0 +1,35 @@
+From 7fd594bee80d604b62fa057a2a60391d75900f7d Mon Sep 17 00:00:00 2001
+From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+Date: Mon, 23 Mar 2026 10:13:23 +0100
+Subject: [PATCH] !kabi net/flow_dissector: switch to siphash
+
+Fixes: 558d2bdad5f6 ("net/flow_dissector: switch to siphash")
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+---
+ include/net/flow_dissector.h | 10 +++++++++-
+ 1 file changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/include/net/flow_dissector.h b/include/net/flow_dissector.h
+index 01229084b3ed..6a0165bdc25f 100644
+--- a/include/net/flow_dissector.h
++++ b/include/net/flow_dissector.h
+@@ -256,7 +256,15 @@ struct flow_keys_basic {
+ struct flow_keys {
+ 	struct flow_dissector_key_control control;
+ #define FLOW_KEYS_HASH_START_FIELD basic
+-	struct flow_dissector_key_basic basic __aligned(SIPHASH_ALIGNMENT);
++	/**
++	 * 558d2bdad5f6 ("net/flow_dissector: switch to siphash") added the
++	 * extra alignment attribute, but it is not required as the `basic`
++	 * field is already aligned correctly.  Because this causes kABI
++	 * changes, simply hide it.  It should be noted the flow dissector
++	 * already has BUILD_BUG_ON scattered in the code to make sure the
++	 * `basic` field has correct alignment.
++	 */
++	struct flow_dissector_key_basic basic; /* __aligned(SIPHASH_ALIGNMENT); */
+ 	struct flow_dissector_key_tags tags;
+ 	struct flow_dissector_key_vlan vlan;
+ 	struct flow_dissector_key_vlan cvlan;
+-- 
+2.43.0
+

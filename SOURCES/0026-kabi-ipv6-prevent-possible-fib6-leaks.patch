@@ -1,4 +1,4 @@
-From e8f912b7feba650e9bf7ac368c206bb346af8238 Mon Sep 17 00:00:00 2001
+From c42561a823fa01124246be3bcbcf327b1e958a3d Mon Sep 17 00:00:00 2001
 From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
 Date: Thu, 19 Mar 2026 19:07:44 +0100
 Subject: [PATCH] !kabi ipv6: prevent possible fib6 leaks
@@ -10,14 +10,14 @@ Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
  1 file changed, 9 insertions(+)
 
 diff --git a/include/net/ip6_fib.h b/include/net/ip6_fib.h
-index b4fea9dd589d..2cbf3ff5f557 100644
+index b4fea9dd589d..eac1f4946d63 100644
 --- a/include/net/ip6_fib.h
 +++ b/include/net/ip6_fib.h
 @@ -171,8 +171,17 @@ struct fib6_info {
  					dst_nocount:1,
  					dst_nopolicy:1,
  					dst_host:1,
-+#ifndef __GENKSYMS
++#ifndef __GENKSYMS__
 +	/*
 +	 * c3240adde5 ("ipv6: prevent possible fib6 leaks") added the new
 +	 * fib6_destroying bitfield, hide it from genksyms to avoid
