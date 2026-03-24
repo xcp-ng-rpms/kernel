@@ -729,6 +729,7 @@ Patch1001: tg3-v4.19.315.patch
 Patch1002: 0001-perf-probe-Fix-getting-the-kernel-map.patch
 Patch1003: 0001-ACPI-processor-idle-Check-acpi_bus_get_device-return.patch
 Patch1004: 0001-scsi-target-Fix-XCOPY-NAA-identifier-lookup.patch
+Patch1005: 0001-ext4-fix-off-by-one-error-in-do_split.patch
 
 %description
 The kernel package contains the Linux kernel (vmlinuz), the core of any
@@ -1085,6 +1086,7 @@ fi
 %changelog
 * Fri Mar 20 2026 Thierry Escande <thierry.escande@vates.tech> - 4.19.19-8.0.45.1
 - Sync with 4.19.19-8.0.45
+- Add missing patch for CVE-2020-14314 (use-after-free detected by Syzkaller)
 - *** Upstream changelog ***
   * Fri Feb 27 2026 Frediano Ziglio <frediano.ziglio@citrix.com> - 4.19.19-8.0.45
   - CA-400357: Use the correct MAC for rndis_host interfaces
