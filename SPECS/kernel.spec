@@ -734,6 +734,7 @@ Patch1002: 0001-perf-probe-Fix-getting-the-kernel-map.patch
 Patch1003: 0001-ACPI-processor-idle-Check-acpi_bus_get_device-return.patch
 Patch1004: 0001-scsi-target-Fix-XCOPY-NAA-identifier-lookup.patch
 Patch1005: 0001-ext4-fix-off-by-one-error-in-do_split.patch
+Patch1006: 0001-SUNRPC-Restore-missing-call-to-cancel_work_sync.patch
 
 %description
 The kernel package contains the Linux kernel (vmlinuz), the core of any
@@ -1090,6 +1091,7 @@ fi
 %changelog
 * Fri Mar 27 2026 Thierry Escande <thierry.escande@vates.tech> - 4.19.19-8.0.46.1
 - Sync with 4.19.19-8.0.46
+- SUNRPC: Restore call to cancel_work_sync()
 - *** Upstream changelog ***
   * Thu Mar 19 2026 Frediano Ziglio <frediano.ziglio@citrix.com> - 4.19.19-8.0.46
   - XSI-2150: Avoid deadlocks on NFS spinlocks

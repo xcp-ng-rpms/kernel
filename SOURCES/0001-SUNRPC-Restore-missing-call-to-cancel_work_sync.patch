@@ -1,0 +1,34 @@
+From 421283b8c094cc241773081ef3bbac65f7b2477e Mon Sep 17 00:00:00 2001
+From: Thierry Escande <thierry.escande@vates.tech>
+Date: Fri, 27 Mar 2026 13:59:09 +0100
+Subject: [PATCH] SUNRPC: Restore missing call to cancel_work_sync()
+Content-Type: text/plain; charset = "utf-8"
+Content-Transfert-Encoding: 8bit
+
+This fix was introduced in an unrelated upstream commit (SUNRPC: Remove
+the bh-safe lock requirement on xprt->transport_lock [1]) backported in
+XS release 8.0.44 and removed in 8.0.46, and thus the call to
+cancel_work_sync(), that is an actual fix, was removed.
+
+This patch restore the missing call to cancel_work_sync().
+
+[1] https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/commit/?id=b5e924191f87239e555f3ef3b8d8e697bb95e7dc
+
+Reported-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+Signed-off-by: Thierry Escande <thierry.escande@vates.tech>
+---
+ net/sunrpc/xprtsock.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/net/sunrpc/xprtsock.c b/net/sunrpc/xprtsock.c
+index 834e2b8be72b..68dc23792f87 100644
+--- a/net/sunrpc/xprtsock.c
++++ b/net/sunrpc/xprtsock.c
+@@ -930,6 +930,7 @@ static void xs_destroy(struct rpc_xprt *xprt)
+ 	cancel_delayed_work_sync(&transport->connect_worker);
+ 	xs_close(xprt);
+ 	cancel_work_sync(&transport->recv_worker);
++	cancel_work_sync(&transport->error_worker);
+ 	xs_xprt_free(xprt);
+ 	module_put(THIS_MODULE);
+ }
