@@ -227,12 +227,12 @@ pushd tools/perf/Documentation/
 make %{?_smp_mflags} man
 popd
 
-# # eBPF support: pahole encodes the type infos into a small (3MB) .BTF section:
-# cp vmlinux                                     tmp-vmlinux-with-btf
-# LLVM_OBJCOPY=objcopy pahole %{?_smp_mflags} -J tmp-vmlinux-with-btf
-# # Copy the BTF section into a new BTF file which eBPF tools to get kernel types:
-# objcopy --only-section .BTF                    tmp-vmlinux-with-btf vmlinux.btf
-# rm                                             tmp-vmlinux-with-btf
+# eBPF support: pahole encodes the type infos into a small (3MB) .BTF section:
+cp vmlinux                                     tmp-vmlinux-with-btf
+LLVM_OBJCOPY=objcopy pahole %{?_smp_mflags} -J tmp-vmlinux-with-btf
+# Copy the BTF section into a new BTF file which eBPF tools to get kernel types:
+objcopy --only-section .BTF                    tmp-vmlinux-with-btf vmlinux.btf
+rm                                             tmp-vmlinux-with-btf
 
 %install
 cd linux-%{usver}
@@ -359,12 +359,12 @@ install -m 644 vmlinux %{buildroot}%{lp_devel_dir}
 # Using /usr/lib/debug/lib/modules/4.19.0+1/vmlinux for symbols (file from kernel-debuginfo)
 # Open Debuginfo file: /usr/lib/debug/lib/modules/4.19.0+1/vmlinux
 
-# # Thus, we can install it here (/lib/.../build is an absolute symlink to this path)
-# install -m 644 vmlinux.btf %{buildroot}/usr/src/kernels/%{uname}-%{_arch}/vmlinux
+# Thus, we can install it here (/lib/.../build is an absolute symlink to this path)
+install -m 644 vmlinux.btf %{buildroot}/usr/src/kernels/%{uname}-%{_arch}/vmlinux
 
 %check
-# # Check that the .BTF section is present at the start of the file:
-# objdump -h %{buildroot}/usr/src/kernels/%{uname}-%{_arch}/vmlinux|grep " 0 .BTF"
+# Check that the .BTF section is present at the start of the file:
+objdump -h %{buildroot}/usr/src/kernels/%{uname}-%{_arch}/vmlinux|grep " 0 .BTF"
 
 %post
 > %{_localstatedir}/lib/rpm-state/regenerate-initrd-%{uname}
@@ -444,6 +444,7 @@ fi
 * Mon Apr 13 2026 Corentin Oparowski <corentin.oparowski@vates.tech> - 6.12.0-UEK8.cop.1
 - WIP - Change source getter to use a git repo directly 
 - Switch to UEK8 with XS9 rebased patches
+- re-enable BTF usage
 
 * Wed Jan 21 2026 Yann Dirson <yann.dirson@vates.tech> - 6.12.66-0.ydi.2
 - Test-switch to linux-stable
