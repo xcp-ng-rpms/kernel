@@ -1,0 +1,1029 @@
+From 9c43f11c1cf1ff701f1c2e792b21c57132d477ea Mon Sep 17 00:00:00 2001
+From: Corentin Oparowski <corentin.oparowski@vates.tech>
+Date: Fri, 18 Jul 2025 18:02:35 +0800
+Subject: [PATCH 28/35] CP-46343: common data structure padding
+
+Signed-off-by: Chunjie Zhu <chunjie.zhu@cloud.com>
+
+[ Corentin: rebase from XS-9 kernel (v6.6.98 based) to UEK8 kernel (v6.12 based):
+Dropped xs_kabi_padding evry time UEK_KABI_RESERVE(n) was already present, keeped the hunks that were missing]
+---
+ block/elevator.h                    |  4 ++++
+ drivers/char/ipmi/ipmi_si.h         |  2 ++
+ drivers/char/ipmi/ipmi_si_sm.h      |  2 ++
+ drivers/char/ipmi/kcs_bmc_client.h  |  2 ++
+ drivers/pci/pci.h                   |  1 +
+ drivers/scsi/sd.h                   |  2 ++
+ include/linux/backing-dev-defs.h    |  2 ++
+ include/linux/blk-mq.h              |  8 ++++++++
+ include/linux/blk_types.h           |  2 ++
+ include/linux/blkdev.h              | 10 ++++++++++
+ include/linux/bsg-lib.h             |  2 ++
+ include/linux/device/bus.h          |  2 ++
+ include/linux/device/class.h        |  2 ++
+ include/linux/fs.h                  |  2 ++
+ include/linux/fwnode.h              |  1 +
+ include/linux/ipmi.h                |  4 ++++
+ include/linux/ipmi_smi.h            |  3 +++
+ include/linux/irq.h                 |  1 +
+ include/linux/irq_work.h            |  1 +
+ include/linux/irqdesc.h             |  1 +
+ include/linux/irqdomain.h           |  2 ++
+ include/linux/mempolicy.h           |  1 +
+ include/linux/mempool.h             |  2 ++
+ include/linux/memremap.h            |  2 ++
+ include/linux/mm.h                  |  1 +
+ include/linux/mm_types.h            |  1 +
+ include/linux/net.h                 |  2 ++
+ include/linux/nvme-fc-driver.h      |  2 ++
+ include/linux/pagemap.h             |  1 +
+ include/linux/pci.h                 |  1 +
+ include/linux/sched.h               |  6 ++++++
+ include/linux/sched/topology.h      |  2 ++
+ include/linux/shrinker.h            |  1 +
+ include/linux/skbuff.h              |  2 ++
+ include/linux/swap.h                |  1 +
+ include/linux/timer_types.h         |  1 +
+ include/linux/trace_events.h        |  3 +++
+ include/linux/usb/hcd.h             |  2 ++
+ include/net/dst_ops.h               |  2 ++
+ include/net/genetlink.h             |  4 ++++
+ include/net/ip6_fib.h               |  3 +++
+ include/net/ip_fib.h                |  6 ++++++
+ include/net/macsec.h                |  2 ++
+ include/net/netlink.h               |  2 ++
+ include/net/nexthop.h               |  2 ++
+ include/net/sch_generic.h           |  3 +++
+ include/net/tls.h                   |  4 ++++
+ include/net/udp_tunnel.h            |  6 ++++++
+ include/net/xsk_buff_pool.h         |  1 +
+ include/scsi/scsi_cmnd.h            |  2 ++
+ include/scsi/scsi_device.h          |  6 ++++++
+ include/scsi/scsi_host.h            |  3 +++
+ include/scsi/scsi_transport.h       |  2 ++
+ include/scsi/scsi_transport_fc.h    |  2 ++
+ include/scsi/scsi_transport_iscsi.h |  2 ++
+ include/scsi/scsi_transport_sas.h   |  2 ++
+ kernel/sched/sched.h                |  5 +++++
+ net/devlink/devl_internal.h         |  3 +++
+ 58 files changed, 149 insertions(+)
+
+diff --git a/block/elevator.h b/block/elevator.h
+index 2a78544bf201..aae3b8daf1e7 100644
+--- a/block/elevator.h
++++ b/block/elevator.h
+@@ -48,6 +48,8 @@ struct elevator_mq_ops {
+ 	struct request *(*next_request)(struct request_queue *, struct request *);
+ 	void (*init_icq)(struct io_cq *);
+ 	void (*exit_icq)(struct io_cq *);
++
++	void	*xs_kabi_padding;
+ };
+ 
+ #define ELV_NAME_MAX	(16)
+@@ -83,6 +85,8 @@ struct elevator_type
+ 	/* managed by elevator core */
+ 	char icq_cache_name[ELV_NAME_MAX + 6];	/* elvname + "_io_cq" */
+ 	struct list_head list;
++
++	void	*xs_kabi_padding;
+ };
+ 
+ static inline bool elevator_tryget(struct elevator_type *e)
+diff --git a/drivers/char/ipmi/ipmi_si.h b/drivers/char/ipmi/ipmi_si.h
+index a7ead2a4c753..c8780586b004 100644
+--- a/drivers/char/ipmi/ipmi_si.h
++++ b/drivers/char/ipmi/ipmi_si.h
+@@ -66,6 +66,8 @@ struct si_sm_io {
+ 	u8 slave_addr;
+ 	enum si_type si_type;
+ 	struct device *dev;
++
++	void *xs_kabi_padding;
+ };
+ 
+ int ipmi_si_add_smi(struct si_sm_io *io);
+diff --git a/drivers/char/ipmi/ipmi_si_sm.h b/drivers/char/ipmi/ipmi_si_sm.h
+index c3cdbcab0f77..a6522a651806 100644
+--- a/drivers/char/ipmi/ipmi_si_sm.h
++++ b/drivers/char/ipmi/ipmi_si_sm.h
+@@ -94,6 +94,8 @@ struct si_sm_handlers {
+ 
+ 	/* Return the size of the SMI structure in bytes. */
+ 	int (*size)(void);
++
++	void *xs_kabi_padding;
+ };
+ 
+ /* Current state machines that we can use. */
+diff --git a/drivers/char/ipmi/kcs_bmc_client.h b/drivers/char/ipmi/kcs_bmc_client.h
+index 6fdcde0a7169..b5901be63fbf 100644
+--- a/drivers/char/ipmi/kcs_bmc_client.h
++++ b/drivers/char/ipmi/kcs_bmc_client.h
+@@ -11,6 +11,7 @@
+ struct kcs_bmc_driver_ops {
+ 	int (*add_device)(struct kcs_bmc_device *kcs_bmc);
+ 	int (*remove_device)(struct kcs_bmc_device *kcs_bmc);
++	void *xs_kabi_padding;
+ };
+ 
+ struct kcs_bmc_driver {
+@@ -21,6 +22,7 @@ struct kcs_bmc_driver {
+ 
+ struct kcs_bmc_client_ops {
+ 	irqreturn_t (*event)(struct kcs_bmc_client *client);
++	void *xs_kabi_padding;
+ };
+ 
+ struct kcs_bmc_client {
+diff --git a/drivers/pci/pci.h b/drivers/pci/pci.h
+index 8ccfaacb59f2..ecbd1de71f92 100644
+--- a/drivers/pci/pci.h
++++ b/drivers/pci/pci.h
+@@ -405,6 +405,7 @@ struct pci_sriov {
+ 	u16		subsystem_device; /* VF subsystem device */
+ 	resource_size_t	barsz[PCI_SRIOV_NUM_BARS];	/* VF BAR size */
+ 	bool		drivers_autoprobe; /* Auto probing of VFs by driver */
++	void		*xs_kabi_padding;
+ };
+ 
+ #ifdef CONFIG_PCI_DOE
+diff --git a/drivers/scsi/sd.h b/drivers/scsi/sd.h
+index 36382eca941c..ccb819e79431 100644
+--- a/drivers/scsi/sd.h
++++ b/drivers/scsi/sd.h
+@@ -156,6 +156,8 @@ struct scsi_disk {
+ 	unsigned	ignore_medium_access_errors : 1;
+ 	unsigned	rscs : 1; /* reduced stream control support */
+ 	unsigned	use_atomic_write_boundary : 1;
++
++	void		*xs_kabi_padding;
+ };
+ #define to_scsi_disk(obj) container_of(obj, struct scsi_disk, disk_dev)
+ 
+diff --git a/include/linux/backing-dev-defs.h b/include/linux/backing-dev-defs.h
+index 2ad261082bba..e8e4818905b0 100644
+--- a/include/linux/backing-dev-defs.h
++++ b/include/linux/backing-dev-defs.h
+@@ -158,6 +158,8 @@ struct bdi_writeback {
+ 		struct rcu_head rcu;
+ 	};
+ #endif
++
++	void *xs_kabi_padding;
+ };
+ 
+ struct backing_dev_info {
+diff --git a/include/linux/blk-mq.h b/include/linux/blk-mq.h
+index 7b5e5388c380..a315ba13d61d 100644
+--- a/include/linux/blk-mq.h
++++ b/include/linux/blk-mq.h
+@@ -445,6 +445,8 @@ struct blk_mq_hw_ctx {
+ 	struct dentry		*sched_debugfs_dir;
+ #endif
+ 
++	void	*xs_kabi_padding;
++
+ 	/**
+ 	 * @hctx_list: if this hctx is not in use, this is an entry in
+ 	 * q->unused_hctx_list.
+@@ -536,6 +538,8 @@ struct blk_mq_tag_set {
+ 	struct mutex		tag_list_lock;
+ 	struct list_head	tag_list;
+ 	struct srcu_struct	*srcu;
++
++	void	*xs_kabi_padding;
+ };
+ 
+ /**
+@@ -547,6 +551,8 @@ struct blk_mq_tag_set {
+ struct blk_mq_queue_data {
+ 	struct request *rq;
+ 	bool last;
++
++	void	*xs_kabi_padding;
+ };
+ 
+ typedef bool (busy_tag_iter_fn)(struct request *, void *);
+@@ -666,6 +672,8 @@ struct blk_mq_ops {
+ 	 */
+ 	void (*show_rq)(struct seq_file *m, struct request *rq);
+ #endif
++
++	void	*xs_kabi_padding;
+ };
+ 
+ /* Keep hctx_flag_name[] in sync with the definitions below */
+diff --git a/include/linux/blk_types.h b/include/linux/blk_types.h
+index 0874218454d7..f36ab5b0e2ed 100644
+--- a/include/linux/blk_types.h
++++ b/include/linux/blk_types.h
+@@ -270,6 +270,8 @@ struct bio {
+ 
+ 	struct bio_set		*bi_pool;
+ 
++	void				*xs_kabi_padding;
++
+ 	/*
+ 	 * We can inline a number of vecs at the end of the bio, to avoid
+ 	 * double allocations for a small number of bio_vecs. This member
+diff --git a/include/linux/blkdev.h b/include/linux/blkdev.h
+index b8471a49fd1a..0d1616bd2316 100644
+--- a/include/linux/blkdev.h
++++ b/include/linux/blkdev.h
+@@ -120,6 +120,8 @@ struct blk_integrity {
+ 	unsigned char				pi_offset;
+ 	unsigned char				interval_exp;
+ 	unsigned char				tag_size;
++
++	void	*xs_kabi_padding;
+ };
+ 
+ typedef unsigned int __bitwise blk_mode_t;
+@@ -218,6 +220,8 @@ struct gendisk {
+ 	 * devices that do not have multiple independent access ranges.
+ 	 */
+ 	struct blk_independent_access_ranges *ia_ranges;
++
++	void	*xs_kabi_padding;
+ };
+ 
+ /**
+@@ -406,6 +410,8 @@ struct queue_limits {
+ 	unsigned int		dma_pad_mask;
+ 
+ 	struct blk_integrity	integrity;
++
++	void	*xs_kabi_padding;
+ };
+ 
+ typedef int (*report_zones_cb)(struct blk_zone *zone, unsigned int idx,
+@@ -598,6 +604,8 @@ struct request_queue {
+ 	struct mutex		debugfs_mutex;
+ 
+ 	bool			mq_sysfs_init_done;
++
++	void	*xs_kabi_padding;
+ };
+ 
+ /* Keep blk_queue_flag_name[] in sync with the definitions below */
+@@ -1572,6 +1580,8 @@ struct block_device_operations {
+ 	 * driver.
+ 	 */
+ 	int (*alternative_gpt_sector)(struct gendisk *disk, sector_t *sector);
++
++	void	*xs_kabi_padding;
+ };
+ 
+ #ifdef CONFIG_COMPAT
+diff --git a/include/linux/bsg-lib.h b/include/linux/bsg-lib.h
+index 14fa93268630..c29b57dd4f67 100644
+--- a/include/linux/bsg-lib.h
++++ b/include/linux/bsg-lib.h
+@@ -60,6 +60,8 @@ struct bsg_job {
+ 	struct bio *bidi_bio;
+ 
+ 	void *dd_data;		/* Used for driver-specific storage */
++
++	void	*xs_kabi_padding;
+ };
+ 
+ void bsg_job_done(struct bsg_job *job, int result,
+diff --git a/include/linux/device/bus.h b/include/linux/device/bus.h
+index cdc4757217f9..0b18b503e216 100644
+--- a/include/linux/device/bus.h
++++ b/include/linux/device/bus.h
+@@ -102,6 +102,8 @@ struct bus_type {
+ 	const struct dev_pm_ops *pm;
+ 
+ 	bool need_parent_lock;
++
++	void	*xs_kabi_padding;
+ };
+ 
+ int __must_check bus_register(const struct bus_type *bus);
+diff --git a/include/linux/device/class.h b/include/linux/device/class.h
+index 518c9c83d64b..a2021265cbe1 100644
+--- a/include/linux/device/class.h
++++ b/include/linux/device/class.h
+@@ -67,6 +67,8 @@ struct class {
+ 	void (*get_ownership)(const struct device *dev, kuid_t *uid, kgid_t *gid);
+ 
+ 	const struct dev_pm_ops *pm;
++
++	void			*xs_kabi_padding;
+ };
+ 
+ struct class_dev_iter {
+diff --git a/include/linux/fs.h b/include/linux/fs.h
+index 7989a7bfe346..8c3dfd0ab632 100644
+--- a/include/linux/fs.h
++++ b/include/linux/fs.h
+@@ -483,6 +483,8 @@ struct address_space {
+ 	struct list_head	i_private_list;
+ 	struct rw_semaphore	i_mmap_rwsem;
+ 	void *			i_private_data;
++	void			*xs_kabi_padding;
++	
+ } __attribute__((aligned(sizeof(long)))) __randomize_layout;
+ 	/*
+ 	 * On most architectures that alignment is already the case; but
+diff --git a/include/linux/fwnode.h b/include/linux/fwnode.h
+index c7502d338023..77b0f1c0a174 100644
+--- a/include/linux/fwnode.h
++++ b/include/linux/fwnode.h
+@@ -53,6 +53,7 @@ struct fwnode_handle {
+ 	struct list_head suppliers;
+ 	struct list_head consumers;
+ 	u8 flags;
++	void *xs_kabi_padding;
+ };
+ 
+ /*
+diff --git a/include/linux/ipmi.h b/include/linux/ipmi.h
+index a1c9c0d48ebf..34c2bda08b9d 100644
+--- a/include/linux/ipmi.h
++++ b/include/linux/ipmi.h
+@@ -70,6 +70,8 @@ struct ipmi_recv_msg {
+ 	 * the size or existence of this, since it may change.
+ 	 */
+ 	unsigned char   msg_data[IPMI_MAX_MSG_LENGTH];
++
++	void *xs_kabi_padding;
+ };
+ 
+ #define INIT_IPMI_RECV_MSG(done_handler) \
+@@ -110,6 +112,8 @@ struct ipmi_user_hndl {
+ 	 * if it is not usable.
+ 	 */
+ 	void (*shutdown)(void *handler_data);
++
++	void *xs_kabi_padding;
+ };
+ 
+ /* Create a new user of the IPMI layer on the given interface number. */
+diff --git a/include/linux/ipmi_smi.h b/include/linux/ipmi_smi.h
+index 5d69820d8b02..7d763312a2a5 100644
+--- a/include/linux/ipmi_smi.h
++++ b/include/linux/ipmi_smi.h
+@@ -123,6 +123,7 @@ struct ipmi_smi_msg {
+ 	 * (presumably to free it).
+ 	 */
+ 	void (*done)(struct ipmi_smi_msg *msg);
++	void *xs_kabi_padding;
+ };
+ 
+ #define INIT_IPMI_SMI_MSG(done_handler) \
+@@ -218,6 +219,8 @@ struct ipmi_smi_handlers {
+ 	 * block.
+ 	 */
+ 	void (*set_maintenance_mode)(void *send_info, bool enable);
++
++	void *xs_kabi_padding;
+ };
+ 
+ struct ipmi_device_id {
+diff --git a/include/linux/irq.h b/include/linux/irq.h
+index fa711f80957b..e7f3dfa38f67 100644
+--- a/include/linux/irq.h
++++ b/include/linux/irq.h
+@@ -187,6 +187,7 @@ struct irq_data {
+ 	struct irq_data		*parent_data;
+ #endif
+ 	void			*chip_data;
++	void			*xs_kabi_padding;
+ };
+ 
+ /*
+diff --git a/include/linux/irq_work.h b/include/linux/irq_work.h
+index 136f2980cba3..679b9576a2ba 100644
+--- a/include/linux/irq_work.h
++++ b/include/linux/irq_work.h
+@@ -18,6 +18,7 @@ struct irq_work {
+ 	struct __call_single_node node;
+ 	void (*func)(struct irq_work *);
+ 	struct rcuwait irqwait;
++	void *xs_kabi_padding;
+ };
+ 
+ #define __IRQ_WORK_INIT(_func, _flags) (struct irq_work){	\
+diff --git a/include/linux/irqdesc.h b/include/linux/irqdesc.h
+index fd091c35d572..50d750f625e1 100644
+--- a/include/linux/irqdesc.h
++++ b/include/linux/irqdesc.h
+@@ -117,6 +117,7 @@ struct irq_desc {
+ #ifdef CONFIG_HARDIRQS_SW_RESEND
+ 	struct hlist_node	resend_node;
+ #endif
++	void		*xs_kabi_padding;
+ } ____cacheline_internodealigned_in_smp;
+ 
+ #ifdef CONFIG_SPARSE_IRQ
+diff --git a/include/linux/irqdomain.h b/include/linux/irqdomain.h
+index b3213a966256..4ea7c6d9d18b 100644
+--- a/include/linux/irqdomain.h
++++ b/include/linux/irqdomain.h
+@@ -194,6 +194,8 @@ struct irq_domain {
+ 	UEK_KABI_RESERVE(3)
+ 	UEK_KABI_RESERVE(4)
+ 
++	void *xs_kabi_padding;
++
+ 	/* reverse map data. The linear map gets appended to the irq_domain */
+ 	irq_hw_number_t			hwirq_max;
+ 	unsigned int			revmap_size;
+diff --git a/include/linux/mempolicy.h b/include/linux/mempolicy.h
+index 1add16f21612..8b85ac493770 100644
+--- a/include/linux/mempolicy.h
++++ b/include/linux/mempolicy.h
+@@ -54,6 +54,7 @@ struct mempolicy {
+ 		nodemask_t cpuset_mems_allowed;	/* relative to these nodes */
+ 		nodemask_t user_nodemask;	/* nodemask passed by user */
+ 	} w;
++	void *xs_kabi_padding;
+ };
+ 
+ /*
+diff --git a/include/linux/mempool.h b/include/linux/mempool.h
+index 7b151441341b..83f572249a46 100644
+--- a/include/linux/mempool.h
++++ b/include/linux/mempool.h
+@@ -25,6 +25,8 @@ typedef struct mempool_s {
+ 	mempool_alloc_t *alloc;
+ 	mempool_free_t *free;
+ 	wait_queue_head_t wait;
++
++	void	*xs_kabi_padding;
+ } mempool_t;
+ 
+ static inline bool mempool_initialized(mempool_t *pool)
+diff --git a/include/linux/memremap.h b/include/linux/memremap.h
+index 4d17053f6320..311cb14bb87f 100644
+--- a/include/linux/memremap.h
++++ b/include/linux/memremap.h
+@@ -27,6 +27,7 @@ struct vmem_altmap {
+ 	unsigned long align;
+ 	unsigned long alloc;
+ 	bool inaccessible;
++	void *xs_kabi_padding;
+ };
+ 
+ /*
+@@ -101,6 +102,7 @@ struct dev_pagemap_ops {
+ 	 */
+ 	int (*memory_failure)(struct dev_pagemap *pgmap, unsigned long pfn,
+ 			      unsigned long nr_pages, int mf_flags);
++	void *xs_kabi_padding;
+ };
+ 
+ #define PGMAP_ALTMAP_VALID	(1 << 0)
+diff --git a/include/linux/mm.h b/include/linux/mm.h
+index 337004a4db10..d1f944755055 100644
+--- a/include/linux/mm.h
++++ b/include/linux/mm.h
+@@ -602,6 +602,7 @@ struct vm_fault {
+ 					 * page table to avoid allocation from
+ 					 * atomic context.
+ 					 */
++	void *xs_kabi_padding;
+ };
+ 
+ /*
+diff --git a/include/linux/mm_types.h b/include/linux/mm_types.h
+index cdc651b6992f..bf4b832b9bd6 100644
+--- a/include/linux/mm_types.h
++++ b/include/linux/mm_types.h
+@@ -1085,6 +1085,7 @@ struct mm_struct {
+ #endif
+ 		} lru_gen;
+ #endif /* CONFIG_LRU_GEN_WALKS_MMU */
++		void	*xs_kabi_padding;
+ 	} __randomize_layout;
+ 
+ 	UEK_KABI_RESERVE(1)
+diff --git a/include/linux/net.h b/include/linux/net.h
+index 94660492e211..5e15a54d7744 100644
+--- a/include/linux/net.h
++++ b/include/linux/net.h
+@@ -103,6 +103,8 @@ struct socket_wq {
+ 	struct fasync_struct	*fasync_list;
+ 	unsigned long		flags; /* %SOCKWQ_ASYNC_NOSPACE, etc */
+ 	struct rcu_head		rcu;
++
++	void		*xs_kabi_padding;
+ } ____cacheline_aligned_in_smp;
+ 
+ /**
+diff --git a/include/linux/nvme-fc-driver.h b/include/linux/nvme-fc-driver.h
+index 9f6acadfe0c8..b8f89826ec39 100644
+--- a/include/linux/nvme-fc-driver.h
++++ b/include/linux/nvme-fc-driver.h
+@@ -511,6 +511,8 @@ struct nvme_fc_port_template {
+ 	u32	remote_priv_sz;
+ 	u32	lsrqst_priv_sz;
+ 	u32	fcprqst_priv_sz;
++
++	void	*xs_kabi_padding;
+ };
+ 
+ 
+diff --git a/include/linux/pagemap.h b/include/linux/pagemap.h
+index a72e04d87191..43019e2b2ca0 100644
+--- a/include/linux/pagemap.h
++++ b/include/linux/pagemap.h
+@@ -1369,6 +1369,7 @@ struct readahead_control {
+ 	struct file *file;
+ 	struct address_space *mapping;
+ 	struct file_ra_state *ra;
++	void *xs_kabi_padding;
+ /* private: use the readahead_* accessors instead */
+ 	pgoff_t _index;
+ 	unsigned int _nr_pages;
+diff --git a/include/linux/pci.h b/include/linux/pci.h
+index 9c3bb42d582f..b9d083464265 100644
+--- a/include/linux/pci.h
++++ b/include/linux/pci.h
+@@ -986,6 +986,7 @@ struct pci_driver {
+ 	struct device_driver	driver;
+ 	struct pci_dynids	dynids;
+ 	bool driver_managed_dma;
++	void	*xs_kabi_padding;
+ };
+ 
+ #define to_pci_driver(__drv)	\
+diff --git a/include/linux/sched.h b/include/linux/sched.h
+index 2ca95504ef41..8b4d0ae9e897 100644
+--- a/include/linux/sched.h
++++ b/include/linux/sched.h
+@@ -488,6 +488,7 @@ struct sched_avg {
+ 	unsigned long			runnable_avg;
+ 	unsigned long			util_avg;
+ 	unsigned int			util_est;
++	void	*xs_kabi_padding;
+ } ____cacheline_aligned;
+ 
+ /*
+@@ -613,6 +614,8 @@ struct sched_rt_entity {
+ 	/* rq "owned" by this entity/group: */
+ 	struct rt_rq			*my_q;
+ #endif
++
++	void	*xs_kabi_padding;
+ } __randomize_layout;
+ 
+ typedef bool (*dl_server_has_tasks_f)(struct sched_dl_entity *);
+@@ -761,6 +764,7 @@ struct uclamp_se {
+ 	unsigned int bucket_id		: bits_per(UCLAMP_BUCKETS);
+ 	unsigned int active		: 1;
+ 	unsigned int user_defined	: 1;
++	void	*xs_kabi_padding;
+ };
+ #endif /* CONFIG_UCLAMP_TASK */
+ 
+@@ -1635,6 +1639,8 @@ struct task_struct {
+ 	struct user_event_mm		*user_event_mm;
+ #endif
+ 
++	void	*xs_kabi_padding;
++
+ 	/*
+ 	 * New fields for task_struct should be added above here, so that
+ 	 * they are included in the randomized portion of task_struct.
+diff --git a/include/linux/sched/topology.h b/include/linux/sched/topology.h
+index debd549830cd..28451d6b7387 100644
+--- a/include/linux/sched/topology.h
++++ b/include/linux/sched/topology.h
+@@ -150,6 +150,8 @@ struct sched_domain {
+ 	};
+ 	struct sched_domain_shared *shared;
+ 
++	void *xs_kabi_padding;
++
+ 	unsigned int span_weight;
+ 	/*
+ 	 * Span of all CPUs in this domain.
+diff --git a/include/linux/shrinker.h b/include/linux/shrinker.h
+index 1a00be90d93a..8ed7fcee5b00 100644
+--- a/include/linux/shrinker.h
++++ b/include/linux/shrinker.h
+@@ -115,6 +115,7 @@ struct shrinker {
+ #endif
+ 	/* objs pending delete, per node */
+ 	atomic_long_t *nr_deferred;
++	void *xs_kabi_padding;
+ };
+ #define DEFAULT_SEEKS 2 /* A good number if you don't know better. */
+ 
+diff --git a/include/linux/skbuff.h b/include/linux/skbuff.h
+index 8dad9bb5de4f..daf0e8430ac3 100644
+--- a/include/linux/skbuff.h
++++ b/include/linux/skbuff.h
+@@ -1072,6 +1072,8 @@ struct sk_buff {
+ 	u64			kcov_handle;
+ #endif
+ 
++	void    *xs_kabi_padding;
++
+ 	); /* end headers group */
+ 
+ 	/* These elements must be at the end, see alloc_skb() for details.  */
+diff --git a/include/linux/swap.h b/include/linux/swap.h
+index 3f42b436e74e..6d0f16938509 100644
+--- a/include/linux/swap.h
++++ b/include/linux/swap.h
+@@ -350,6 +350,7 @@ struct swap_info_struct {
+ 	struct work_struct discard_work; /* discard worker */
+ 	struct work_struct reclaim_work; /* reclaim worker */
+ 	struct list_head discard_clusters; /* discard clusters list */
++	void *xs_kabi_padding;
+ 	struct plist_node avail_lists[]; /*
+ 					   * entries in swap_avail_heads, one
+ 					   * entry per node.
+diff --git a/include/linux/timer_types.h b/include/linux/timer_types.h
+index fae5a388f914..24254944685a 100644
+--- a/include/linux/timer_types.h
++++ b/include/linux/timer_types.h
+@@ -18,6 +18,7 @@ struct timer_list {
+ #ifdef CONFIG_LOCKDEP
+ 	struct lockdep_map	lockdep_map;
+ #endif
++	void	*xs_kabi_padding;
+ };
+ 
+ #endif /* _LINUX_TIMER_TYPES_H */
+diff --git a/include/linux/trace_events.h b/include/linux/trace_events.h
+index 3eceb5c08a80..8dbb45838a95 100644
+--- a/include/linux/trace_events.h
++++ b/include/linux/trace_events.h
+@@ -119,6 +119,8 @@ struct trace_iterator {
+ 	/* it's true when current open file is snapshot */
+ 	bool			snapshot;
+ 
++	void	*xs_kabi_padding;
++
+ 	/* The below is zeroed out in pipe_read */
+ 	struct trace_seq	seq;
+ 	struct trace_entry	*ent;
+@@ -688,6 +690,7 @@ struct trace_event_file {
+ 	refcount_t		ref;	/* ref count for opened files */
+ 	atomic_t		sm_ref;	/* soft-mode reference counter */
+ 	atomic_t		tm_ref;	/* trigger-mode reference counter */
++	void	*xs_kabi_padding;
+ };
+ 
+ #ifdef CONFIG_HIST_TRIGGERS
+diff --git a/include/linux/usb/hcd.h b/include/linux/usb/hcd.h
+index ac95e7c89df5..e9b36a55992c 100644
+--- a/include/linux/usb/hcd.h
++++ b/include/linux/usb/hcd.h
+@@ -213,6 +213,8 @@ struct usb_hcd {
+ 	 * (ohci 32, uhci 1024, ehci 256/512/1024).
+ 	 */
+ 
++	void *xs_kabi_padding;
++
+ 	/* The HC driver's private data is stored at the end of
+ 	 * this structure.
+ 	 */
+diff --git a/include/net/dst_ops.h b/include/net/dst_ops.h
+index 836e705d7b79..c59980f3864d 100644
+--- a/include/net/dst_ops.h
++++ b/include/net/dst_ops.h
+@@ -51,6 +51,8 @@ struct dst_ops {
+ 	UEK_KABI_RESERVE(8)
+ 
+ 	struct percpu_counter	pcpuc_entries ____cacheline_aligned_in_smp;
++
++	void			*xs_kabi_padding;
+ };
+ 
+ static inline int dst_entries_get_fast(struct dst_ops *dst)
+diff --git a/include/net/genetlink.h b/include/net/genetlink.h
+index fe7d309f3d22..40cc46436f91 100644
+--- a/include/net/genetlink.h
++++ b/include/net/genetlink.h
+@@ -201,6 +201,8 @@ struct genl_small_ops {
+ 	u8	internal_flags;
+ 	u8	flags;
+ 	u8	validate;
++
++	void *xs_kabi_padding;
+ };
+ 
+ /**
+@@ -289,6 +291,8 @@ struct genl_split_ops {
+ 	u8			internal_flags;
+ 	u8			flags;
+ 	u8			validate;
++
++	void			*xs_kabi_padding;
+ };
+ 
+ /**
+diff --git a/include/net/ip6_fib.h b/include/net/ip6_fib.h
+index 8d4ef809cacc..5f37b416a297 100644
+--- a/include/net/ip6_fib.h
++++ b/include/net/ip6_fib.h
+@@ -201,6 +201,9 @@ struct fib6_info {
+ 
+ 	struct rcu_head			rcu;
+ 	struct nexthop			*nh;
++
++	void			*xs_kabi_padding;
++
+ 	struct fib6_nh			fib6_nh[];
+ };
+ 
+diff --git a/include/net/ip_fib.h b/include/net/ip_fib.h
+index 967e4dc555fa..772e0f55fe24 100644
+--- a/include/net/ip_fib.h
++++ b/include/net/ip_fib.h
+@@ -159,6 +159,9 @@ struct fib_info {
+ 	bool			pfsrc_removed;
+ 	struct nexthop		*nh;
+ 	struct rcu_head		rcu;
++
++	void		*xs_kabi_padding;
++	
+ 	struct fib_nh		fib_nh[] __counted_by(fib_nhs);
+ };
+ 
+@@ -258,6 +261,9 @@ struct fib_table {
+ 	int			tb_num_default;
+ 	struct rcu_head		rcu;
+ 	unsigned long 		*tb_data;
++
++	void			*xs_kabi_padding;
++
+ 	unsigned long		__data[];
+ };
+ 
+diff --git a/include/net/macsec.h b/include/net/macsec.h
+index de216cbc6b05..b83a2ea47e27 100644
+--- a/include/net/macsec.h
++++ b/include/net/macsec.h
+@@ -354,6 +354,8 @@ struct macsec_ops {
+ 	unsigned int needed_headroom;
+ 	unsigned int needed_tailroom;
+ 	bool rx_uses_md_dst;
++
++	void *xs_kabi_padding;
+ };
+ 
+ void macsec_pn_wrapped(struct macsec_secy *secy, struct macsec_tx_sa *tx_sa);
+diff --git a/include/net/netlink.h b/include/net/netlink.h
+index db6af207287c..7d63c9f562de 100644
+--- a/include/net/netlink.h
++++ b/include/net/netlink.h
+@@ -373,6 +373,8 @@ struct nla_policy {
+ 		int (*validate)(const struct nlattr *attr,
+ 				struct netlink_ext_ack *extack);
+ 	};
++
++	void	*xs_kabi_padding;
+ };
+ 
+ #define NLA_POLICY_ETH_ADDR		NLA_POLICY_EXACT_LEN(ETH_ALEN)
+diff --git a/include/net/nexthop.h b/include/net/nexthop.h
+index d9fb44e8b321..e7e96ef5ee1d 100644
+--- a/include/net/nexthop.h
++++ b/include/net/nexthop.h
+@@ -135,6 +135,8 @@ struct nh_group {
+ 	bool			has_v4;
+ 	bool			hw_stats;
+ 
++	void			*xs_kabi_padding;
++
+ 	struct nh_res_table __rcu *res_table;
+ 	struct nh_grp_entry	nh_entries[] __counted_by(num_nh);
+ };
+diff --git a/include/net/sch_generic.h b/include/net/sch_generic.h
+index 2c002c0836cf..818e79d1cf87 100644
+--- a/include/net/sch_generic.h
++++ b/include/net/sch_generic.h
+@@ -130,6 +130,9 @@ struct Qdisc {
+ 	struct rcu_head		rcu;
+ 	netdevice_tracker	dev_tracker;
+ 	struct lock_class_key	root_lock_key;
++
++	void *xs_kabi_padding;
++
+ 	/* private data */
+ 	long privdata[] ____cacheline_aligned;
+ };
+diff --git a/include/net/tls.h b/include/net/tls.h
+index e618ea561cb5..adf20e31c7b1 100644
+--- a/include/net/tls.h
++++ b/include/net/tls.h
+@@ -205,6 +205,8 @@ union tls_crypto_context {
+ 		struct tls12_crypto_info_sm4_gcm sm4_gcm;
+ 		struct tls12_crypto_info_sm4_ccm sm4_ccm;
+ 	};
++
++	void *xs_kabi_padding;
+ };
+ 
+ struct tls_prot_info {
+@@ -282,6 +284,8 @@ struct tlsdev_ops {
+ 	int (*tls_dev_resync)(struct net_device *netdev,
+ 			      struct sock *sk, u32 seq, u8 *rcd_sn,
+ 			      enum tls_offload_ctx_dir direction);
++
++	void *xs_kabi_padding;
+ };
+ 
+ enum tls_offload_sync_type {
+diff --git a/include/net/udp_tunnel.h b/include/net/udp_tunnel.h
+index 2787b4eec8eb..9f49cea5157f 100644
+--- a/include/net/udp_tunnel.h
++++ b/include/net/udp_tunnel.h
+@@ -231,6 +231,8 @@ struct udp_tunnel_nic_shared {
+ 	struct udp_tunnel_nic *udp_tunnel_nic_info;
+ 
+ 	struct list_head devices;
++
++	void *xs_kabi_padding;
+ };
+ 
+ struct udp_tunnel_nic_shared_node {
+@@ -286,7 +288,11 @@ struct udp_tunnel_nic_info {
+ 	struct udp_tunnel_nic_table_info {
+ 		unsigned int n_entries;
+ 		unsigned int tunnel_types;
++
++		void *xs_kabi_padding;
+ 	} tables[UDP_TUNNEL_NIC_MAX_TABLES];
++
++	void *xs_kabi_padding;
+ };
+ 
+ /* UDP tunnel module dependencies
+diff --git a/include/net/xsk_buff_pool.h b/include/net/xsk_buff_pool.h
+index 823fd5c7a3b1..881cddb1094b 100644
+--- a/include/net/xsk_buff_pool.h
++++ b/include/net/xsk_buff_pool.h
+@@ -91,6 +91,7 @@ struct xsk_buff_pool {
+ 	 * sockets share a single cq when the same netdev and queue id is shared.
+ 	 */
+ 	spinlock_t cq_lock;
++	void *xs_kabi_padding;
+ 	struct xdp_buff_xsk *free_heads[];
+ };
+ 
+diff --git a/include/scsi/scsi_cmnd.h b/include/scsi/scsi_cmnd.h
+index 8ecfb94049db..5420cb6895fe 100644
+--- a/include/scsi/scsi_cmnd.h
++++ b/include/scsi/scsi_cmnd.h
+@@ -141,6 +141,8 @@ struct scsi_cmnd {
+ 					 * to be at an address < 16Mb). */
+ 
+ 	int result;		/* Status code from lower level driver */
++
++	void	*xs_kabi_padding;
+ };
+ 
+ /* Variant of blk_mq_rq_from_pdu() that verifies the type of its argument. */
+diff --git a/include/scsi/scsi_device.h b/include/scsi/scsi_device.h
+index 9c540f5468eb..ac401ba69a83 100644
+--- a/include/scsi/scsi_device.h
++++ b/include/scsi/scsi_device.h
+@@ -281,6 +281,9 @@ struct scsi_device {
+ 	struct mutex		state_mutex;
+ 	enum scsi_device_state sdev_state;
+ 	struct task_struct	*quiesced_by;
++
++	void				*xs_kabi_padding;
++
+ 	unsigned long		sdev_data[];
+ } __attribute__((aligned(sizeof(unsigned long))));
+ 
+@@ -367,6 +370,9 @@ struct scsi_target {
+ 	char			scsi_level;
+ 	enum scsi_target_state	state;
+ 	void 			*hostdata; /* available to low-level driver */
++
++	void			*xs_kabi_padding;
++
+ 	unsigned long		starget_data[]; /* for the transport */
+ 	/* starget_data must be the last element!!!! */
+ } __attribute__((aligned(sizeof(unsigned long))));
+diff --git a/include/scsi/scsi_host.h b/include/scsi/scsi_host.h
+index 2b4ab0369ffb..4f317f4dc784 100644
+--- a/include/scsi/scsi_host.h
++++ b/include/scsi/scsi_host.h
+@@ -503,6 +503,8 @@ struct scsi_host_template {
+ 	 *   scsi_netlink.h
+ 	 */
+ 	u64 vendor_id;
++
++	void	*xs_kabi_padding;
+ };
+ 
+ /*
+@@ -720,6 +722,7 @@ struct Scsi_Host {
+ 
+ 	/* Delay for runtime autosuspend */
+ 	int rpm_autosuspend_delay;
++	void	*xs_kabi_padding;
+ 
+ 	/*
+ 	 * We should ensure that this is aligned, both for better performance
+diff --git a/include/scsi/scsi_transport.h b/include/scsi/scsi_transport.h
+index 1394cf313bb3..81f57f458bd0 100644
+--- a/include/scsi/scsi_transport.h
++++ b/include/scsi/scsi_transport.h
+@@ -43,6 +43,8 @@ struct scsi_transport_template {
+ 	 * Allows a transport to override the default error handler.
+ 	 */
+ 	void (* eh_strategy_handler)(struct Scsi_Host *);
++
++	void	*xs_kabi_padding;
+ };
+ 
+ #define transport_class_to_shost(tc) \
+diff --git a/include/scsi/scsi_transport_fc.h b/include/scsi/scsi_transport_fc.h
+index d02b55261307..26bacfed398e 100644
+--- a/include/scsi/scsi_transport_fc.h
++++ b/include/scsi/scsi_transport_fc.h
+@@ -760,6 +760,8 @@ struct fc_function_template {
+ 	unsigned long	show_host_system_hostname:1;
+ 
+ 	unsigned long	disable_target_scan:1;
++
++	void	*xs_kabi_padding;
+ };
+ 
+ /**
+diff --git a/include/scsi/scsi_transport_iscsi.h b/include/scsi/scsi_transport_iscsi.h
+index bd1243657c01..daf821475f53 100644
+--- a/include/scsi/scsi_transport_iscsi.h
++++ b/include/scsi/scsi_transport_iscsi.h
+@@ -156,6 +156,8 @@ struct iscsi_transport {
+ 	int (*logout_flashnode_sid) (struct iscsi_cls_session *cls_sess);
+ 	int (*get_host_stats) (struct Scsi_Host *shost, char *buf, int len);
+ 	u8 (*check_protection)(struct iscsi_task *task, sector_t *sector);
++
++	void	*xs_kabi_padding;
+ };
+ 
+ /*
+diff --git a/include/scsi/scsi_transport_sas.h b/include/scsi/scsi_transport_sas.h
+index e3b6ce3cbf88..7000a8184531 100644
+--- a/include/scsi/scsi_transport_sas.h
++++ b/include/scsi/scsi_transport_sas.h
+@@ -182,6 +182,8 @@ struct sas_function_template {
+ 	int (*set_phy_speed)(struct sas_phy *, struct sas_phy_linkrates *);
+ 	void (*smp_handler)(struct bsg_job *, struct Scsi_Host *,
+ 			struct sas_rphy *);
++
++	void	*xs_kabi_padding;
+ };
+ 
+ 
+diff --git a/kernel/sched/sched.h b/kernel/sched/sched.h
+index f1ff9a17c5fc..123d5cd6f61a 100644
+--- a/kernel/sched/sched.h
++++ b/kernel/sched/sched.h
+@@ -470,6 +470,7 @@ struct cfs_bandwidth {
+ 	UEK_KABI_RESERVE(1)
+ 	UEK_KABI_RESERVE(2)
+ #endif
++	void			*xs_kabi_padding;
+ };
+ 
+ /* Task group related information */
+@@ -881,6 +882,8 @@ struct rt_rq {
+ 	struct rq		*rq;
+ 	struct task_group	*tg;
+ #endif
++
++	void		*xs_kabi_padding;
+ };
+ 
+ static inline bool rt_rq_is_runnable(struct rt_rq *rt_rq)
+@@ -948,6 +951,8 @@ struct dl_rq {
+ 	 * by the GRUB algorithm.
+ 	 */
+ 	u64			bw_ratio;
++
++	void			*xs_kabi_padding;
+ };
+ 
+ #ifdef CONFIG_FAIR_GROUP_SCHED
+diff --git a/net/devlink/devl_internal.h b/net/devlink/devl_internal.h
+index 4eee580614b6..f90058b6ff2a 100644
+--- a/net/devlink/devl_internal.h
++++ b/net/devlink/devl_internal.h
+@@ -60,6 +60,9 @@ struct devlink {
+ 	struct rcu_work rwork;
+ 	struct devlink_rel *rel;
+ 	struct xarray nested_rels;
++	
++	void	*xs_kabi_padding;
++
+ 	char priv[] __aligned(NETDEV_ALIGN);
+ };
+ 
+-- 
+2.47.3
+

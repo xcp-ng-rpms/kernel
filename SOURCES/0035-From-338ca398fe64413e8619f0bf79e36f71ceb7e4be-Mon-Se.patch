@@ -1,19 +1,20 @@
-From 338ca398fe64413e8619f0bf79e36f71ceb7e4be Mon Sep 17 00:00:00 2001
-From: Yann Dirson <yann.dirson@vates.tech>
-Date: Thu, 22 Jan 2026 14:07:17 +0100
-Subject: [PATCH] Force py2-compatible scripts to use py3 interpreter
+From 7e2531c58242678cd551982a4c16c29fea8e92a8 Mon Sep 17 00:00:00 2001
+From: Corentin Oparowski <corentin.oparowski@vates.tech>
+Date: Fri, 10 Apr 2026 10:40:55 +0200
+Subject: [PATCH 35/35] From 338ca398fe64413e8619f0bf79e36f71ceb7e4be Mon Sep
+ 17 00:00:00 2001 From: Yann Dirson <yann.dirson@vates.tech> Date: Thu, 22 Jan
+ 2026 14:07:17 +0100 Subject: [PATCH] Force py2-compatible scripts to use py3
+ interpreter
 
 This is an abusive change, but mandated by EL9's brp-mangle-shebangs,
 which otherwise causes packaging to fail with:
-
- ERROR: ambiguous python shebang in ...: #!/usr/bin/env python. Change it to python3 (or python2) explicitly.
 ---
  scripts/show_delta                | 2 +-
  scripts/tracing/draw_functrace.py | 2 +-
  2 files changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/scripts/show_delta b/scripts/show_delta
-index 291ad65e30894..3755b6c6e5570 100755
+index 291ad65e3089..3755b6c6e557 100755
 --- a/scripts/show_delta
 +++ b/scripts/show_delta
 @@ -1,4 +1,4 @@
@@ -23,7 +24,7 @@ index 291ad65e30894..3755b6c6e5570 100755
  #
  # show_deltas: Read list of printk messages instrumented with
 diff --git a/scripts/tracing/draw_functrace.py b/scripts/tracing/draw_functrace.py
-index 42fa873009416..97594b65f8ce9 100755
+index 42fa87300941..97594b65f8ce 100755
 --- a/scripts/tracing/draw_functrace.py
 +++ b/scripts/tracing/draw_functrace.py
 @@ -1,4 +1,4 @@

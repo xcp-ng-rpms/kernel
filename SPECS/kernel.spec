@@ -1,14 +1,14 @@
 %global package_speccommit ccb8ee3c01ade60b0ee7a22436d4b25d84702ae4
-%global usver 6.12.66
-%define uname 6.12.66
+%global usver 6.12.0
+%define uname 6.12.0
 %define short_uname 6.12
 %define srcpath /usr/src/kernels/%{uname}-%{_arch}
 
 # Control whether we perform a compat. check against published ABI.
 # Default enabled: (to override: --without kabichk)
-#%%define do_kabichk  %%{?_without_kabichk: 0} %%{?!_without_kabichk: 1}
+%define do_kabichk  %{?_without_kabichk: 0} %{?!_without_kabichk: 1}
 # Default disabled: (to override: --with kabichk)
-%define do_kabichk  %{?_with_kabichk: 1} %{?!_with_kabichk: 0}
+#%define do_kabichk  %{?_with_kabichk: 1} %{?!_with_kabichk: 0}
 
 #
 # Adjust debuginfo generation to suit building a kernel:
@@ -34,7 +34,7 @@
 Name: kernel
 License: GPLv2
 Version: %{usver}
-Release: 0.ydi.2
+Release: 0.1
 ExclusiveOS: Linux
 Summary: The Linux kernel
 BuildRequires: kmod
@@ -91,7 +91,41 @@ Source3: check-kabi
 Source4: Module.kabi
 %endif
 
-Patch0: 0001-Force-py2-compatible-scripts-to-use-py3-interpreter.patch
+Patch1: 0001-expose-xsversion.patch.patch
+Patch2: 0002-Write-each-kthread-s-pid-into-xenstore-so-that-it-ca.patch
+Patch3: 0003-Several-order-4-5-allocations-are-required-when-sett.patch
+Patch4: 0004-net-Do-not-scrub-ignore_df-within-the-same-name-spac.patch
+Patch5: 0005-enable-fragmention-gre-packets.patch.patch
+Patch6: 0006-At-some-point-since-kernel-4.19-the-preemption-of-hy.patch
+Patch7: 0007-skip-cpuidle-driver-init-if-cpuidle-function-disable.patch
+Patch8: 0008-CA-392853-fix-kdump-kernel-cannot-find-ACPI-RSDP.patch
+Patch9: 0009-CA-415346-export-module-symbol-offsets.patch
+Patch10: 0010-x86-xen-correct-dma_get_required_mask-for-Xen-PV-gue.patch
+Patch11: 0011-pci-export-pci_probe_reset_function.patch
+Patch12: 0012-Guests-can-potentially-disable-cause-the-PCI-device-.patch
+Patch13: 0013-pciback-mask-root-port-comp-timeout.patch.patch
+Patch14: 0014-Some-devices-advertise-FLReset-but-do-not-support-it.patch
+Patch15: 0015-CA-135938-nfs-disconnect-on-rpc-retry.patch.patch
+Patch16: 0016-sunrpc-force-disconnect-on-connection-timeout.patch.patch
+Patch17: 0017-xen-ioemu-inject-msi.patch.patch
+Patch18: 0018-0001-xen-swiotlb-size-128MiB.patch.patch
+Patch19: 0019-The-objective-is-to-ensure-we-have-a-large-enough-co.patch
+Patch20: 0020-Revert-to-use-num_online_cpus-for-default-rss-queues.patch
+Patch21: 0021-Add-SBAT-metadata-to-dom0-6.6-kernel.patch
+Patch22: 0022-Enable-lockdown-integrity-by-default.patch
+Patch23: 0023-For-XenServer-the-desired-behaviour-is-that-signatur.patch
+Patch24: 0024-Use-MoK-variable-fallback.patch
+Patch25: 0025-Allows-Xen-Netback-debug-ring-files-to-be-read-if-lo.patch
+Patch26: 0026-Import-the-Xen-public-headers-in-preparation-for-fil.patch
+Patch27: 0027-module-hash-revocation.patch.patch
+Patch28: 0028-CP-46343-common-data-structure-padding.patch
+Patch29: 0029-CP-46343-reserve-cpuid-leaves-for-future-use.patch
+Patch30: 0030-xen-pciback-provide-a-reset-sysfs-file-to-try-harder.patch
+Patch31: 0031-disable-mitigations-by-default.patch.patch
+Patch32: 0032-call-kexec-before-offlining-noncrashing-cpus.patch.patch
+Patch33: 0033-SDEV_EVT_LUN_CHANGE_REPORTED-events-should-only-be-r.patch
+Patch34: 0034-Filter-and-check-hypercalls-from-userspace.patch
+Patch35: 0035-From-338ca398fe64413e8619f0bf79e36f71ceb7e4be-Mon-Se.patch
 
 %description
 The kernel package contains the Linux kernel (vmlinuz), the core of any
@@ -224,12 +258,12 @@ pushd tools/perf/Documentation/
 make %{?_smp_mflags} man
 popd
 
-# # eBPF support: pahole encodes the type infos into a small (3MB) .BTF section:
-# cp vmlinux                                     tmp-vmlinux-with-btf
-# LLVM_OBJCOPY=objcopy pahole %{?_smp_mflags} -J tmp-vmlinux-with-btf
-# # Copy the BTF section into a new BTF file which eBPF tools to get kernel types:
-# objcopy --only-section .BTF                    tmp-vmlinux-with-btf vmlinux.btf
-# rm                                             tmp-vmlinux-with-btf
+# eBPF support: pahole encodes the type infos into a small (3MB) .BTF section:
+cp vmlinux                                     tmp-vmlinux-with-btf
+LLVM_OBJCOPY=objcopy pahole %{?_smp_mflags} -J tmp-vmlinux-with-btf
+# Copy the BTF section into a new BTF file which eBPF tools to get kernel types:
+objcopy --only-section .BTF                    tmp-vmlinux-with-btf vmlinux.btf
+rm                                             tmp-vmlinux-with-btf
 
 %install
 # Install kernel
@@ -355,12 +389,12 @@ install -m 644 vmlinux %{buildroot}%{lp_devel_dir}
 # Using /usr/lib/debug/lib/modules/4.19.0+1/vmlinux for symbols (file from kernel-debuginfo)
 # Open Debuginfo file: /usr/lib/debug/lib/modules/4.19.0+1/vmlinux
 
-# # Thus, we can install it here (/lib/.../build is an absolute symlink to this path)
-# install -m 644 vmlinux.btf %{buildroot}/usr/src/kernels/%{uname}-%{_arch}/vmlinux
+# Thus, we can install it here (/lib/.../build is an absolute symlink to this path)
+install -m 644 vmlinux.btf %{buildroot}/usr/src/kernels/%{uname}-%{_arch}/vmlinux
 
 %check
-# # Check that the .BTF section is present at the start of the file:
-# objdump -h %{buildroot}/usr/src/kernels/%{uname}-%{_arch}/vmlinux|grep " 0 .BTF"
+# Check that the .BTF section is present at the start of the file:
+objdump -h %{buildroot}/usr/src/kernels/%{uname}-%{_arch}/vmlinux|grep " 0 .BTF"
 
 %post
 > %{_localstatedir}/lib/rpm-state/regenerate-initrd-%{uname}
@@ -390,6 +424,7 @@ fi
 /lib/modules/%{uname}/kernel
 /lib/modules/%{uname}/modules.order
 /lib/modules/%{uname}/modules.builtin
+/lib/modules/%{uname}/modules.builtin.modinfo
 /lib/modules/%{uname}/updates
 /lib/modules/%{uname}/vdso
 %exclude /lib/modules/%{uname}/vdso/.build-id
@@ -397,7 +432,6 @@ fi
 %ghost /lib/modules/%{uname}/modules.alias.bin
 %ghost /lib/modules/%{uname}/modules.builtin.bin
 %ghost /lib/modules/%{uname}/modules.builtin.alias.bin
-%ghost /lib/modules/%{uname}/modules.builtin.modinfo
 %ghost /lib/modules/%{uname}/modules.dep
 %ghost /lib/modules/%{uname}/modules.dep.bin
 %ghost /lib/modules/%{uname}/modules.devname
@@ -437,6 +471,16 @@ fi
 %{?_cov_results_package}
 
 %changelog
+
+* Wed Apr 29 2026 Corentin Oparowski <corentin.oparowski@vates.tech> - 6.12.0-0.1
+- update filter-hypercall.patch to match XS lastest version
+- fixed release numbering for consistency
+- update to XS9 .config
+- re-enable config & kabi checks
+- Switch to UEK8 with XS9 rebased patches
+- re-enable BTF support
+- change release version
+
 * Wed Jan 21 2026 Yann Dirson <yann.dirson@vates.tech> - 6.12.66-0.ydi.2
 - Test-switch to linux-stable
 - Removed patches, XS- and RHELkernel-specificities

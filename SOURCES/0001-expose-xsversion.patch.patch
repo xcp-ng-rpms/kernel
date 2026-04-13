@@ -1,0 +1,97 @@
+From 74a13abbe04f3e900795216082626253a7602299 Mon Sep 17 00:00:00 2001
+From: Corentin Oparowski <corentin.oparowski@vates.tech>
+Date: Sat, 19 Sep 2015 08:09:42 +0200
+Subject: [PATCH 01/35] expose-xsversion.patch
+
+---
+ fs/proc/version.c      |  8 ++++++++
+ include/linux/printk.h |  1 +
+ init/version.c         |  5 +++++
+ scripts/mkcompile_h    | 13 +++++++++++++
+ 4 files changed, 27 insertions(+)
+
+diff --git a/fs/proc/version.c b/fs/proc/version.c
+index 02e3c3cd4a9a..d88a2f7f6749 100644
+--- a/fs/proc/version.c
++++ b/fs/proc/version.c
+@@ -16,12 +16,20 @@ static int version_proc_show(struct seq_file *m, void *v)
+ 	return 0;
+ }
+ 
++static int xsversion_proc_show(struct seq_file *m, void *v)
++{
++	seq_printf(m, xs_proc_banner);
++	return 0;
++}
++
+ static int __init proc_version_init(void)
+ {
+ 	struct proc_dir_entry *pde;
+ 
+ 	pde = proc_create_single("version", 0, NULL, version_proc_show);
+ 	pde_make_permanent(pde);
++	pde = proc_create_single("xsversion", 0, NULL, xsversion_proc_show);
++	pde_make_permanent(pde);
+ 	return 0;
+ }
+ fs_initcall(proc_version_init);
+diff --git a/include/linux/printk.h b/include/linux/printk.h
+index 0cb647ecd77f..4af4e009a8ef 100644
+--- a/include/linux/printk.h
++++ b/include/linux/printk.h
+@@ -13,6 +13,7 @@ struct console;
+ 
+ extern const char linux_banner[];
+ extern const char linux_proc_banner[];
++extern const char xs_proc_banner[];
+ 
+ extern int oops_in_progress;	/* If set, an oops, panic(), BUG() or die() is in progress */
+ 
+diff --git a/init/version.c b/init/version.c
+index 94c96f6fbfe6..4b391d8b7562 100644
+--- a/init/version.c
++++ b/init/version.c
+@@ -37,6 +37,11 @@ const char linux_proc_banner[] =
+ 	" (" LINUX_COMPILE_BY "@" LINUX_COMPILE_HOST ")"
+ 	" (" LINUX_COMPILER ") %s\n";
+ 
++const char xs_proc_banner[] =
++	"rpm_version " XS_VERSION "\n"
++	"base_commit " XS_BASE_COMMIT "\n"
++	"pq_commit   " XS_PQ_COMMIT "\n";
++
+ BUILD_SALT;
+ BUILD_LTO_INFO;
+ 
+diff --git a/scripts/mkcompile_h b/scripts/mkcompile_h
+index 2596f78e52ef..6d1c57991fa9 100755
+--- a/scripts/mkcompile_h
++++ b/scripts/mkcompile_h
+@@ -16,6 +16,14 @@ else
+ 	LINUX_COMPILE_HOST=$KBUILD_BUILD_HOST
+ fi
+ 
++if [ -f .xsversion ]; then
++    . ./.xsversion
++else
++    XS_VERSION=dev
++    XS_BASE_COMMIT=unknown
++    XS_PQ_COMMIT=unknown
++fi
++
+ LD_VERSION=$(LC_ALL=C $LD -v | head -n1 |
+ 		sed -e 's/(compatible with [^)]*)//' -e 's/[[:space:]]*$//')
+ 
+@@ -24,4 +32,9 @@ cat <<EOF
+ #define LINUX_COMPILE_BY	"${LINUX_COMPILE_BY}"
+ #define LINUX_COMPILE_HOST	"${LINUX_COMPILE_HOST}"
+ #define LINUX_COMPILER		"${CC_VERSION}, ${LD_VERSION}"
++
++#define XS_VERSION		"${XS_VERSION}"
++#define XS_BASE_COMMIT		"${XS_BASE_COMMIT}"
++#define XS_PQ_COMMIT		"${XS_PQ_COMMIT}"
++
+ EOF
+-- 
+2.47.3
+

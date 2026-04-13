@@ -1,0 +1,79 @@
+From 4cc22e4f4aa2d3e508d35d64a56ca867a06d9f0b Mon Sep 17 00:00:00 2001
+From: Corentin Oparowski <corentin.oparowski@vates.tech>
+Date: Sat, 19 Sep 2015 08:09:42 +0200
+Subject: [PATCH 32/35] call-kexec-before-offlining-noncrashing-cpus.patch
+
+---
+ arch/x86/include/asm/xen/hypercall.h |  7 +++++++
+ include/xen/interface/kexec.h        | 10 ++++++++++
+ kernel/panic.c                       | 12 ++++++++++++
+ 3 files changed, 29 insertions(+)
+ create mode 100644 include/xen/interface/kexec.h
+
+diff --git a/arch/x86/include/asm/xen/hypercall.h b/arch/x86/include/asm/xen/hypercall.h
+index 2759524b8ffc..b0dad0b4b099 100644
+--- a/arch/x86/include/asm/xen/hypercall.h
++++ b/arch/x86/include/asm/xen/hypercall.h
+@@ -493,6 +493,13 @@ HYPERVISOR_hvm_op(int op, void *arg)
+        return _hypercall2(unsigned long, hvm_op, op, arg);
+ }
+ 
++static inline int __must_check
++HYPERVISOR_kexec_op(
++        unsigned long op, void *args)
++{
++	return _hypercall2(int, kexec_op, op, args);
++}
++
+ static inline int
+ HYPERVISOR_xenpmu_op(unsigned int op, void *arg)
+ {
+diff --git a/include/xen/interface/kexec.h b/include/xen/interface/kexec.h
+new file mode 100644
+index 000000000000..443df8adf8df
+--- /dev/null
++++ b/include/xen/interface/kexec.h
+@@ -0,0 +1,10 @@
++#ifndef _XEN_KEXEC_H
++#define _XEN_KEXEC_H
++
++#define KEXEC_CMD_kexec                    0
++typedef struct xen_kexec_exec {
++	int type;
++} xen_kexec_exec_t;
++
++#endif
++
+diff --git a/kernel/panic.c b/kernel/panic.c
+index a0a17ffe005b..6d9e4c931ed2 100644
+--- a/kernel/panic.c
++++ b/kernel/panic.c
+@@ -39,6 +39,12 @@
+ #include <trace/events/error_report.h>
+ #include <asm/sections.h>
+ 
++#ifdef CONFIG_XEN
++#include <xen/xen.h>
++#include <asm/xen/hypercall.h>
++#include <xen/interface/kexec.h>
++#endif
++
+ #define PANIC_TIMER_STEP 100
+ #define PANIC_BLINK_SPD 18
+ 
+@@ -361,6 +367,12 @@ void panic(const char *fmt, ...)
+ 	 */
+ 	kgdb_panic(buf);
+ 
++#ifdef CONFIG_XEN
++	if (xen_initial_domain()) {
++		xen_kexec_exec_t xke = { KEXEC_TYPE_CRASH };
++		HYPERVISOR_kexec_op(KEXEC_CMD_kexec, &xke);
++	}
++#endif
+ 	/*
+ 	 * If we have crashed and we have a crash kernel loaded let it handle
+ 	 * everything else.
+-- 
+2.47.3
+

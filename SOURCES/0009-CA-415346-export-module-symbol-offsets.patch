@@ -1,0 +1,118 @@
+From 86c2cbe57be0568a70424743a973a9ac07bbec8a Mon Sep 17 00:00:00 2001
+From: Corentin Oparowski <corentin.oparowski@vates.tech>
+Date: Tue, 26 Aug 2025 13:34:44 +0800
+Subject: [PATCH 09/35] CA-415346: export module symbol offsets
+
+  crashdump needs it to navigate around vmcore to dump driver
+  information
+
+Signed-off-by: Chunjie Zhu <chunjie.zhu@cloud.com>
+
+[ Corentin: rebase from XS-9 kernel (v6.6.98 based) to UEK8 kernel (v6.12 based):
+re-introduce __counted_by(notes) annotation which
+was present on the original struct (removed in a subsequent hunk), as it
+allows runtime bounds checking on flexible arrays]
+---
+ arch/x86/kernel/asm-offsets.c | 18 ++++++++++++++++++
+ include/linux/module.h        | 13 +++++++++++++
+ kernel/module/sysfs.c         | 10 ----------
+ scripts/link-vmlinux.sh       |  4 ++++
+ 4 files changed, 35 insertions(+), 10 deletions(-)
+
+diff --git a/arch/x86/kernel/asm-offsets.c b/arch/x86/kernel/asm-offsets.c
+index 925adce6e2c7..bff59957cf1c 100644
+--- a/arch/x86/kernel/asm-offsets.c
++++ b/arch/x86/kernel/asm-offsets.c
+@@ -10,6 +10,7 @@
+ #include <crypto/aria.h>
+ #include <linux/sched.h>
+ #include <linux/stddef.h>
++#include <linux/list.h>
+ #include <linux/hardirq.h>
+ #include <linux/suspend.h>
+ #include <linux/kbuild.h>
+@@ -139,5 +140,22 @@ static void __used common(void)
+ 	OFFSET(SL_rlp_wakeup_addr, txt_sinit_mle_data, rlp_wakeup_addr);
+ 	OFFSET(SL_rlp_gdt_base, smx_rlp_mle_join, rlp_gdt_base);
+ 	OFFSET(SL_rlp_entry_point, smx_rlp_mle_join, rlp_entry_point);
++#endif
++	BLANK();
++	OFFSET(MODULE_LIST_HEAD_next, list_head, next);
++	OFFSET(MODULE_state, module, state);
++	OFFSET(MODULE_next, module, list);
++	OFFSET(MODULE_name, module, name);
++	DEFINE(MODULE_name_len, MODULE_NAME_LEN);
++#ifdef CONFIG_KALLSYMS
++	OFFSET(MODULE_notes_attrs, module, notes_attrs);
++	OFFSET(MODULE_notes_count, module_notes_attrs, notes);
++	OFFSET(MODULE_binattrs, module_notes_attrs, attrs);
++	DEFINE(SIZEOF_binattr, sizeof(struct bin_attribute));
++	OFFSET(MODULE_noteattr, bin_attribute, attr);
++	OFFSET(MODULE_notesize, bin_attribute, size);
++	OFFSET(MODULE_notedata, bin_attribute, private);
++	OFFSET(MODULE_notename, attribute, name);
++	DEFINE(MODULE_notename_len, PAGE_SIZE);
+ #endif
+ }
+diff --git a/include/linux/module.h b/include/linux/module.h
+index 4b75a2391285..ca7add3423f9 100644
+--- a/include/linux/module.h
++++ b/include/linux/module.h
+@@ -409,6 +409,19 @@ struct klp_modinfo {
+ };
+ #endif
+ 
++#ifdef CONFIG_KALLSYMS
++/*
++ * /sys/module/foo/notes/.section.name gives contents of SHT_NOTE sections.
++ */
++
++struct module_notes_attrs {
++	struct kobject *dir;
++	unsigned int notes;
++	struct bin_attribute attrs[]; __counted_by(notes);
++};
++
++#endif
++
+ struct module {
+ 	enum module_state state;
+ 
+diff --git a/kernel/module/sysfs.c b/kernel/module/sysfs.c
+index 456358e1fdc4..3b2955929878 100644
+--- a/kernel/module/sysfs.c
++++ b/kernel/module/sysfs.c
+@@ -141,16 +141,6 @@ static void remove_sect_attrs(struct module *mod)
+ 	}
+ }
+ 
+-/*
+- * /sys/module/foo/notes/.section.name gives contents of SHT_NOTE sections.
+- */
+-
+-struct module_notes_attrs {
+-	struct kobject *dir;
+-	unsigned int notes;
+-	struct bin_attribute attrs[] __counted_by(notes);
+-};
+-
+ static void free_notes_attrs(struct module_notes_attrs *notes_attrs,
+ 			     unsigned int i)
+ {
+diff --git a/scripts/link-vmlinux.sh b/scripts/link-vmlinux.sh
+index a9b3f34a78d2..eb8ed1b4eaf6 100755
+--- a/scripts/link-vmlinux.sh
++++ b/scripts/link-vmlinux.sh
+@@ -296,5 +296,9 @@ if is_enabled CONFIG_KALLSYMS; then
+ 	fi
+ fi
+ 
++# NOTE: above if-statement checks if System.map matches vmlinux symbols
++sed -n '/#define MODULE_LIST_HEAD_next/,$p' ${srctree}/include/generated/asm-offsets.h > output.txt
++awk '/^#define / { printf "%016x - +%s\n", $3, $2 }' output.txt >> System.map
++
+ # For fixdep
+ echo "vmlinux: $0" > .vmlinux.d
+-- 
+2.47.3
+
