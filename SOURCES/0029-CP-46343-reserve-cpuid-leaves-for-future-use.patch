@@ -1,0 +1,119 @@
+From e98eb1fb9d65e843425733f49bf782fd28a669ba Mon Sep 17 00:00:00 2001
+From: Corentin Oparowski <corentin.oparowski@vates.tech>
+Date: Fri, 18 Jul 2025 18:10:33 +0800
+Subject: [PATCH 29/35] CP-46343: reserve cpuid leaves for future use
+
+Signed-off-by: Chunjie Zhu <chunjie.zhu@cloud.com>
+---
+ arch/x86/include/asm/cpufeature.h              | 4 ++--
+ arch/x86/include/asm/cpufeatures.h             | 4 ++--
+ arch/x86/include/asm/disabled-features.h       | 2 +-
+ arch/x86/include/asm/required-features.h       | 2 +-
+ tools/arch/x86/include/asm/cpufeatures.h       | 4 ++--
+ tools/arch/x86/include/asm/disabled-features.h | 2 +-
+ tools/arch/x86/include/asm/required-features.h | 2 +-
+ 7 files changed, 10 insertions(+), 10 deletions(-)
+
+diff --git a/arch/x86/include/asm/cpufeature.h b/arch/x86/include/asm/cpufeature.h
+index b0eda0b50cac..01adf20857e8 100644
+--- a/arch/x86/include/asm/cpufeature.h
++++ b/arch/x86/include/asm/cpufeature.h
+@@ -99,7 +99,7 @@ extern const char * const x86_bug_flags[NBUGINTS*32];
+ 	   CHECK_BIT_IN_MASK_WORD(REQUIRED_MASK, 22, feature_bit) ||    \
+ 	   CHECK_BIT_IN_MASK_WORD(REQUIRED_MASK, 23, feature_bit) ||    \
+ 	   REQUIRED_MASK_CHECK					  ||	\
+-	   BUILD_BUG_ON_ZERO(NCAPINTS != 24))
++	   BUILD_BUG_ON_ZERO(NCAPINTS != 30))
+ 
+ #define DISABLED_MASK_BIT_SET(feature_bit)				\
+ 	 ( CHECK_BIT_IN_MASK_WORD(DISABLED_MASK,  0, feature_bit) ||	\
+@@ -127,7 +127,7 @@ extern const char * const x86_bug_flags[NBUGINTS*32];
+ 	   CHECK_BIT_IN_MASK_WORD(DISABLED_MASK, 22, feature_bit) ||    \
+ 	   CHECK_BIT_IN_MASK_WORD(DISABLED_MASK, 23, feature_bit) ||    \
+ 	   DISABLED_MASK_CHECK					  ||	\
+-	   BUILD_BUG_ON_ZERO(NCAPINTS != 24))
++	   BUILD_BUG_ON_ZERO(NCAPINTS != 30))
+ 
+ #define cpu_has(c, bit)							\
+ 	(__builtin_constant_p(bit) && REQUIRED_MASK_BIT_SET(bit) ? 1 :	\
+diff --git a/arch/x86/include/asm/cpufeatures.h b/arch/x86/include/asm/cpufeatures.h
+index 646b11f6c76e..778ff9102f90 100644
+--- a/arch/x86/include/asm/cpufeatures.h
++++ b/arch/x86/include/asm/cpufeatures.h
+@@ -13,8 +13,8 @@
+ /*
+  * Defines x86 CPU feature bits
+  */
+-#define NCAPINTS			24	   /* N 32-bit words worth of info */
+-#define NBUGINTS			3	   /* N 32-bit bug flags */
++#define NCAPINTS			30	   /* N 32-bit words worth of info */
++#define NBUGINTS			4	   /* N 32-bit bug flags */
+ 
+ /*
+  * Note: If the comment begins with a quoted string, that string is used
+diff --git a/arch/x86/include/asm/disabled-features.h b/arch/x86/include/asm/disabled-features.h
+index 89c777062ecc..16173f7da2e0 100644
+--- a/arch/x86/include/asm/disabled-features.h
++++ b/arch/x86/include/asm/disabled-features.h
+@@ -158,6 +158,6 @@
+ #define DISABLED_MASK21	0
+ #define DISABLED_MASK22	0
+ #define DISABLED_MASK23	0
+-#define DISABLED_MASK_CHECK BUILD_BUG_ON_ZERO(NCAPINTS != 24)
++#define DISABLED_MASK_CHECK BUILD_BUG_ON_ZERO(NCAPINTS != 30)
+ 
+ #endif /* _ASM_X86_DISABLED_FEATURES_H */
+diff --git a/arch/x86/include/asm/required-features.h b/arch/x86/include/asm/required-features.h
+index 6a3de575bec6..fdb08b1505f7 100644
+--- a/arch/x86/include/asm/required-features.h
++++ b/arch/x86/include/asm/required-features.h
+@@ -102,6 +102,6 @@
+ #define REQUIRED_MASK21	0
+ #define REQUIRED_MASK22	0
+ #define REQUIRED_MASK23	0
+-#define REQUIRED_MASK_CHECK BUILD_BUG_ON_ZERO(NCAPINTS != 24)
++#define REQUIRED_MASK_CHECK BUILD_BUG_ON_ZERO(NCAPINTS != 30)
+ 
+ #endif /* _ASM_X86_REQUIRED_FEATURES_H */
+diff --git a/tools/arch/x86/include/asm/cpufeatures.h b/tools/arch/x86/include/asm/cpufeatures.h
+index ebd3eed753cf..266b70f2e456 100644
+--- a/tools/arch/x86/include/asm/cpufeatures.h
++++ b/tools/arch/x86/include/asm/cpufeatures.h
+@@ -13,8 +13,8 @@
+ /*
+  * Defines x86 CPU feature bits
+  */
+-#define NCAPINTS			24	   /* N 32-bit words worth of info */
+-#define NBUGINTS			3	   /* N 32-bit bug flags */
++#define NCAPINTS			30	   /* N 32-bit words worth of info */
++#define NBUGINTS			4	   /* N 32-bit bug flags */
+ 
+ /*
+  * Note: If the comment begins with a quoted string, that string is used
+diff --git a/tools/arch/x86/include/asm/disabled-features.h b/tools/arch/x86/include/asm/disabled-features.h
+index 48d067b0a33a..16173f7da2e0 100644
+--- a/tools/arch/x86/include/asm/disabled-features.h
++++ b/tools/arch/x86/include/asm/disabled-features.h
+@@ -158,6 +158,6 @@
+ #define DISABLED_MASK21	0
+ #define DISABLED_MASK22	0
+ #define DISABLED_MASK23	0
+-#define DISABLED_MASK_CECK BUILD_BUG_ON_ZERO(NCAPINTS != 24)
++#define DISABLED_MASK_CHECK BUILD_BUG_ON_ZERO(NCAPINTS != 30)
+ 
+ #endif /* _ASM_X86_DISABLED_FEATURES_H */
+diff --git a/tools/arch/x86/include/asm/required-features.h b/tools/arch/x86/include/asm/required-features.h
+index 6a3de575bec6..fdb08b1505f7 100644
+--- a/tools/arch/x86/include/asm/required-features.h
++++ b/tools/arch/x86/include/asm/required-features.h
+@@ -102,6 +102,6 @@
+ #define REQUIRED_MASK21	0
+ #define REQUIRED_MASK22	0
+ #define REQUIRED_MASK23	0
+-#define REQUIRED_MASK_CHECK BUILD_BUG_ON_ZERO(NCAPINTS != 24)
++#define REQUIRED_MASK_CHECK BUILD_BUG_ON_ZERO(NCAPINTS != 30)
+ 
+ #endif /* _ASM_X86_REQUIRED_FEATURES_H */
+-- 
+2.47.3
+

@@ -1,0 +1,46 @@
+From c9576e3de118f56d791531f688ec5e1c75ced4f4 Mon Sep 17 00:00:00 2001
+From: Corentin Oparowski <corentin.oparowski@vates.tech>
+Date: Sat, 19 Sep 2015 08:09:42 +0200
+Subject: [PATCH 31/35] disable-mitigations-by-default.patch
+
+---
+ arch/x86/kernel/cpu/bugs.c | 9 +++------
+ 1 file changed, 3 insertions(+), 6 deletions(-)
+
+diff --git a/arch/x86/kernel/cpu/bugs.c b/arch/x86/kernel/cpu/bugs.c
+index 6956051754be..2ab97ca1ba83 100644
+--- a/arch/x86/kernel/cpu/bugs.c
++++ b/arch/x86/kernel/cpu/bugs.c
+@@ -253,8 +253,7 @@ static void x86_amd_ssb_disable(void)
+ #define pr_fmt(fmt)	"MDS: " fmt
+ 
+ /* Default mitigation for MDS-affected CPUs */
+-static enum mds_mitigations mds_mitigation __ro_after_init =
+-	IS_ENABLED(CONFIG_MITIGATION_MDS) ? MDS_MITIGATION_FULL : MDS_MITIGATION_OFF;
++static enum mds_mitigations mds_mitigation __ro_after_init = MDS_MITIGATION_OFF;
+ static bool mds_nosmt __ro_after_init = false;
+ 
+ static const char * const mds_strings[] = {
+@@ -314,8 +313,7 @@ enum taa_mitigations {
+ };
+ 
+ /* Default mitigation for TAA-affected CPUs */
+-static enum taa_mitigations taa_mitigation __ro_after_init =
+-	IS_ENABLED(CONFIG_MITIGATION_TAA) ? TAA_MITIGATION_VERW : TAA_MITIGATION_OFF;
++static enum taa_mitigations taa_mitigation __ro_after_init = TAA_MITIGATION_OFF;
+ static bool taa_nosmt __ro_after_init;
+ 
+ static const char * const taa_strings[] = {
+@@ -413,8 +411,7 @@ enum mmio_mitigations {
+ };
+ 
+ /* Default mitigation for Processor MMIO Stale Data vulnerabilities */
+-static enum mmio_mitigations mmio_mitigation __ro_after_init =
+-	IS_ENABLED(CONFIG_MITIGATION_MMIO_STALE_DATA) ? MMIO_MITIGATION_VERW : MMIO_MITIGATION_OFF;
++static enum mmio_mitigations mmio_mitigation __ro_after_init = MMIO_MITIGATION_OFF;
+ static bool mmio_nosmt __ro_after_init = false;
+ 
+ static const char * const mmio_strings[] = {
+-- 
+2.47.3
+

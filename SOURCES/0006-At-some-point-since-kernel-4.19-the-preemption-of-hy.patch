@@ -1,0 +1,104 @@
+From 3d6e36af6cea4513fb7f8ea137ed7d586bbaa154 Mon Sep 17 00:00:00 2001
+From: Corentin Oparowski <corentin.oparowski@vates.tech>
+Date: Sat, 19 Sep 2015 08:09:42 +0200
+Subject: [PATCH 06/35] At some point since kernel 4.19 the preemption of
+ hypercalls has fallen into a state of disrepair, partly due to dead code,
+ partly as a result of the dynamic preemption feature whereby kernel
+ preemption mode is selected at kernel boot time.  This patch re-enables
+ preemptible hypercalls and will do the following:
+
+1) Update specific feature selection from !PREEMPTION to !PREEMPT.
+The following table shows the relationship between different preemption
+features and their indicators/selectors (Y = "=Y", N = "is not set",
+. = absent):
+
+                            | np-s | np-d | vp-s | vp-d | fp-s | fp-d
+    CONFIG_PREEMPT_DYNAMIC      N      Y      N      Y      N      Y
+         CONFIG_PREEMPTION      .      Y      .      Y      Y      Y
+            CONFIG_PREEMPT      N      N      N      N      Y      Y
+  CONFIG_PREEMPT_VOLUNTARY      N      N      Y      Y      N      N
+       CONFIG_PREEMPT_NONE      Y      Y      N      N      N      N
+
+Unless PREEMPT is set, we need to enable the fixes.
+
+2) Update flag access from __this_cpu_XXX() to raw_cpu_XXX().
+The long-running hypercalls are flagged by way of a per-cpu variable
+which is set before and cleared after the relevant calls.  This elicits
+a warning "BUG: using __this_cpu_write() in preemptible [00000000] code",
+but xen_pv_evtchn_do_upcall() deals specifically with this.
+
+3) Update irqentry_exit_cond_resched() to raw_irqentry_exit_cond_resched().
+The code will call irqentry_exit_cond_resched() if the flag (as noted
+above) is set, but the dynamic preemption feature will livepatch that
+function to a no-op unless full preemption is selected.  The code is
+therefore updated to call raw_irqentry_exit_cond_resched().
+
+[ Corentin: rebase from XS-9 kernel (v6.6.98 based) to UEK8 kernel (v6.12 based):
+following commit d30f467 ("x86/xen: Move Xen upcall handler"),
+this code now lives in arch/x86/xen/enlighten_pv.c. The fix is applied
+there rather than arch/x86/entry/common.c where it originally resided.]
+---
+ arch/x86/xen/enlighten_pv.c | 4 ++--
+ include/xen/xen-ops.h       | 8 ++++----
+ 2 files changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/arch/x86/xen/enlighten_pv.c b/arch/x86/xen/enlighten_pv.c
+index bf750cd599b2..da3537ccf150 100644
+--- a/arch/x86/xen/enlighten_pv.c
++++ b/arch/x86/xen/enlighten_pv.c
+@@ -94,7 +94,7 @@ void *xen_initial_gdt;
+ static int xen_cpu_up_prepare_pv(unsigned int cpu);
+ static int xen_cpu_dead_pv(unsigned int cpu);
+ 
+-#ifndef CONFIG_PREEMPTION
++#ifndef CONFIG_PREEMPT
+ /*
+  * Some hypercalls issued by the toolstack can take many 10s of
+  * seconds. Allow tasks running hypercalls via the privcmd driver to
+@@ -746,7 +746,7 @@ __visible noinstr void xen_pv_evtchn_do_upcall(struct pt_regs *regs)
+ 
+ 	inhcall = get_and_clear_inhcall();
+ 	if (inhcall && !WARN_ON_ONCE(state.exit_rcu)) {
+-		irqentry_exit_cond_resched();
++		raw_irqentry_exit_cond_resched();
+ 		instrumentation_end();
+ 		restore_inhcall(inhcall);
+ 	} else {
+diff --git a/include/xen/xen-ops.h b/include/xen/xen-ops.h
+index 47f11bec5e90..7ff63c07c746 100644
+--- a/include/xen/xen-ops.h
++++ b/include/xen/xen-ops.h
+@@ -194,18 +194,18 @@ bool xen_running_on_version_or_later(unsigned int major, unsigned int minor);
+ void xen_efi_runtime_setup(void);
+ 
+ 
+-#if defined(CONFIG_XEN_PV) && !defined(CONFIG_PREEMPTION)
++#if defined(CONFIG_XEN_PV) && !defined(CONFIG_PREEMPT)
+ 
+ DECLARE_PER_CPU(bool, xen_in_preemptible_hcall);
+ 
+ static inline void xen_preemptible_hcall_begin(void)
+ {
+-	__this_cpu_write(xen_in_preemptible_hcall, true);
++	raw_cpu_write(xen_in_preemptible_hcall, true);
+ }
+ 
+ static inline void xen_preemptible_hcall_end(void)
+ {
+-	__this_cpu_write(xen_in_preemptible_hcall, false);
++	raw_cpu_write(xen_in_preemptible_hcall, false);
+ }
+ 
+ #else
+@@ -213,7 +213,7 @@ static inline void xen_preemptible_hcall_end(void)
+ static inline void xen_preemptible_hcall_begin(void) { }
+ static inline void xen_preemptible_hcall_end(void) { }
+ 
+-#endif /* CONFIG_XEN_PV && !CONFIG_PREEMPTION */
++#endif /* CONFIG_XEN_PV && !CONFIG_PREEMPT */
+ 
+ #ifdef CONFIG_XEN_GRANT_DMA_OPS
+ bool xen_virtio_restricted_mem_acc(struct virtio_device *dev);
+-- 
+2.47.3
+
