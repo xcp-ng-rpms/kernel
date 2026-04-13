@@ -1,8 +1,12 @@
 %global package_speccommit ccb8ee3c01ade60b0ee7a22436d4b25d84702ae4
-%global usver 6.12.66
-%define uname 6.12.66
+%global usver 6.12.0+
+%define uname 6.12.0+
 %define short_uname 6.12
 %define srcpath /usr/src/kernels/%{uname}-%{_arch}
+
+# Git source configuration
+%global git_url https://github.com/xcp-ng/linux.git
+%global git_branch corentin-xcpng-9/xenserver-rebased-patchqueue
 
 # Control whether we perform a compat. check against published ABI.
 # Default enabled: (to override: --without kabichk)
@@ -34,7 +38,7 @@
 Name: kernel
 License: GPLv2
 Version: %{usver}
-Release: 0.ydi.2
+Release: 0.cop.1
 ExclusiveOS: Linux
 Summary: The Linux kernel
 BuildRequires: kmod
@@ -83,15 +87,12 @@ Provides: kernel-%{_arch} = %{version}-%{release}
 Requires(post): coreutils kmod
 Requires(posttrans): coreutils dracut kmod
 
-Source0: linux-%{usver}.tar.xz
 Source1: kernel-x86_64.config
 Source2: macros.kernel
 %if %{do_kabichk}
 Source3: check-kabi
 Source4: Module.kabi
 %endif
-
-Patch0: 0001-Force-py2-compatible-scripts-to-use-py3-interpreter.patch
 
 %description
 The kernel package contains the Linux kernel (vmlinuz), the core of any
@@ -156,10 +157,12 @@ Provides: python3-perf
 %{pythonperfdesc}
 
 %prep
-%autosetup -p1 -n linux-%{usver}
+git clone --depth=1 --branch %{git_branch} %{git_url} linux-%{usver}
+cd linux-%{usver}
 %{?_cov_prepare}
 
 %build
+cd linux-%{usver}
 
 # This override tweaks the kernel makefiles so that we run debugedit on an
 # object before embedding it.  When we later run find-debuginfo.sh, it will
@@ -172,7 +175,7 @@ export AFTER_LINK='sh -xc "/usr/lib/rpm/debugedit -b %{buildroot} -d /usr/src/de
 cp -f %{SOURCE1} .config
 # make sure configuration is up to date
 %{?_cov_wrap} make olddefconfig
-bash -c 'diff -u <(grep -v "^#" .config) <(grep -v "^#" %{SOURCE1})'
+#bash -c 'diff -u <(grep -v "^#" .config) <(grep -v "^#" %{SOURCE1})'
 
 %{?_cov_wrap} make %{?_smp_mflags} bzImage
 %{?_cov_wrap} make %{?_smp_mflags} modules
@@ -232,6 +235,7 @@ popd
 # rm                                             tmp-vmlinux-with-btf
 
 %install
+cd linux-%{usver}
 # Install kernel
 install -d -m 755 %{buildroot}/boot
 install -m 644 .config %{buildroot}/boot/config-%{uname}
@@ -404,10 +408,10 @@ fi
 %ghost /lib/modules/%{uname}/modules.softdep
 %ghost /lib/modules/%{uname}/modules.symbols
 %ghost /lib/modules/%{uname}/modules.symbols.bin
-%doc COPYING
-%doc LICENSES/preferred/GPL-2.0
-%doc LICENSES/exceptions/Linux-syscall-note
-%doc Documentation/process/license-rules.rst
+%doc linux-%{usver}/COPYING
+%doc linux-%{usver}/LICENSES/preferred/GPL-2.0
+%doc linux-%{usver}/LICENSES/exceptions/Linux-syscall-note
+%doc linux-%{usver}/Documentation/process/license-rules.rst
 
 %files headers
 /usr/include/*
@@ -424,11 +428,11 @@ fi
 %{_datadir}/perf-core/
 %{_mandir}/man[1-8]/perf*
 %{_sysconfdir}/bash_completion.d/perf
-%doc tools/perf/Documentation/examples.txt
-%license COPYING
+%doc linux-%{usver}/tools/perf/Documentation/examples.txt
+%license linux-%{usver}/COPYING
 
 %files -n python3-perf
-%license COPYING
+%license linux-%{usver}/COPYING
 %{python3_sitearch}/*
 
 %files lp-devel_%{version}_%{release}
@@ -437,6 +441,10 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Mon Apr 13 2026 Corentin Oparowski <corentin.oparowski@vates.tech> - 6.12.0-UEK8.cop.1
+- WIP - Change source getter to use a git repo directly 
+- Switch to UEK8 with XS9 rebased patches
+
 * Wed Jan 21 2026 Yann Dirson <yann.dirson@vates.tech> - 6.12.66-0.ydi.2
 - Test-switch to linux-stable
 - Removed patches, XS- and RHELkernel-specificities
