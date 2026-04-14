@@ -441,10 +441,11 @@ fi
 %{?_cov_results_package}
 
 %changelog
-* Mon Apr 13 2026 Corentin Oparowski <corentin.oparowski@vates.tech> - 6.12.0-UEK8.cop.1
-- WIP - Change source getter to use a git repo directly 
+* Mon Apr 13 2026 Corentin Oparowski <corentin.oparowski@vates.tech> - 6.12.0.cop.1
+- Changed source code origin, use git instead of tarball + patchqueue
 - Switch to UEK8 with XS9 rebased patches
-- re-enable BTF usage
+- re-enable BTF support
+- change release version
 
 * Wed Jan 21 2026 Yann Dirson <yann.dirson@vates.tech> - 6.12.66-0.ydi.2
 - Test-switch to linux-stable
