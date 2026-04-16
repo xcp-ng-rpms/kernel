@@ -38,7 +38,7 @@
 Name: kernel
 License: GPLv2
 Version: %{usver}
-Release: 0.cop.1
+Release: 0.cop.2
 ExclusiveOS: Linux
 Summary: The Linux kernel
 BuildRequires: kmod
