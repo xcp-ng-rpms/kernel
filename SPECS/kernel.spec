@@ -455,6 +455,7 @@ fi
 /lib/modules/%{uname}/kernel
 /lib/modules/%{uname}/modules.order
 /lib/modules/%{uname}/modules.builtin
+/lib/modules/%{uname}/modules.builtin.modinfo
 /lib/modules/%{uname}/updates
 /lib/modules/%{uname}/vdso
 %exclude /lib/modules/%{uname}/vdso/.build-id
@@ -462,7 +463,6 @@ fi
 %ghost /lib/modules/%{uname}/modules.alias.bin
 %ghost /lib/modules/%{uname}/modules.builtin.bin
 %ghost /lib/modules/%{uname}/modules.builtin.alias.bin
-%ghost /lib/modules/%{uname}/modules.builtin.modinfo
 %ghost /lib/modules/%{uname}/modules.dep
 %ghost /lib/modules/%{uname}/modules.dep.bin
 %ghost /lib/modules/%{uname}/modules.devname
