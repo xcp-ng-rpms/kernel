@@ -34,7 +34,7 @@
 Name: kernel
 License: GPLv2
 Version: %{usver}
-Release: 9.0.1
+Release: 0.2
 ExclusiveOS: Linux
 Summary: The Linux kernel
 BuildRequires: kmod
@@ -502,17 +502,20 @@ fi
 %{?_cov_results_package}
 
 %changelog
-* Fri Apr 17 2026 Corentin Oparowski <corentin.oparowski@vates.tech> - 6.12.0-9.0.1
+* Fri Apr 24 2026 Yann Dirson <yann.dirson@vates.tech> - 6.12.0-0.2 WIP
+- Fixed release numbering for consistency
+
+* Fri Apr 17 2026 Corentin Oparowski <corentin.oparowski@vates.tech> - 6.12.0-0.1
 - Bumped release version to 9.0.1
 
-* Wed Apr 15 2026 Corentin Oparowski <corentin.oparowski@vates.tech> - 6.12.0.cop.2
+* Wed Apr 15 2026 Corentin Oparowski <corentin.oparowski@vates.tech> - 6.12.0-0.0.cop.2
 - add secureboot signing support (vmlinuz signing), module signing uses on-build generated key
 - add xcpsign-macros as a localrepo to hide signing logic
 - update .config 
 - re-enable config & kabi checks
 - revert to use tarball + patchqueue
 
-* Mon Apr 13 2026 Corentin Oparowski <corentin.oparowski@vates.tech> - 6.12.0.cop.1
+* Mon Apr 13 2026 Corentin Oparowski <corentin.oparowski@vates.tech> - 6.12.0-0.0.cop.1
 - Changed source code origin, use git instead of tarball + patchqueue
 - Switch to UEK8 with XS9 rebased patches
 - re-enable BTF support
