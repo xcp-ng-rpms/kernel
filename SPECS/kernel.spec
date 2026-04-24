@@ -34,7 +34,7 @@
 Name: kernel
 License: GPLv2
 Version: %{usver}
-Release: 0.2
+Release: 0.1.0.ydi.1
 ExclusiveOS: Linux
 Summary: The Linux kernel
 BuildRequires: kmod
@@ -471,7 +471,7 @@ fi
 %{?_cov_results_package}
 
 %changelog
-* Fri Apr 24 2026 Yann Dirson <yann.dirson@vates.tech> - 6.12.0-0.2 WIP
+* Fri Apr 24 2026 Yann Dirson <yann.dirson@vates.tech> - 6.12.0-0.1.0.ydi.1
 - Fixed release numbering for consistency
 - Revert SB support
 
