@@ -48,6 +48,8 @@ BuildRequires: openssl
 BuildRequires: rsync
 BuildRequires: systemtap-sdt-devel
 BuildRequires: perl-interpreter
+BuildRequires: xcpsign-macros-test
+BuildRequires: sbsigntools
 
 # These build dependencies are needed for building the main kernel and
 # modules as well live patches.
@@ -208,8 +210,23 @@ cp -f %{SOURCE1} .config
 %{?_cov_wrap} make olddefconfig
 bash -c 'diff -u <(grep -v "^#" .config) <(grep -v "^#" %{SOURCE1})'
 
+# Export certs for inclusion into the kernel's trusted keyring.
+> trusted_keys.pem
+for i in \
+    LINUX_SIGN_KEY_XCP9             $(: For verifying the kexec kernel ) \
+    LINUX_EXT_SIGN_KEY_XCP9         $(: For verifying out-of-tree modules built by XCP-ng ) \
+    LINUX_THIRD_PARTY_SIGN_KEY_XCP9 $(: For verifying modules built by third parties )
+do
+    %fetchcert -c "$i" -o cert-"$i".cert
+    openssl x509 -in cert-"$i".cert -inform der -out cert-"$i".pem -outform pem
+    cat cert-"$i".pem >> trusted_keys.pem
+    rm -f cert-"$i".cer cert-"$i".pem
+done
+
 %{?_cov_wrap} make %{?_smp_mflags} bzImage
 %{?_cov_wrap} make %{?_smp_mflags} modules
+
+%sign -c LINUX_SIGN_KEY_XCP9 -i arch/x86/boot/bzImage -o arch/x86/boot/bzImage.signed
 
 #
 # Check the kernel ABI (KABI) has not changed.
@@ -265,12 +282,24 @@ LLVM_OBJCOPY=objcopy pahole %{?_smp_mflags} -J tmp-vmlinux-with-btf
 objcopy --only-section .BTF                    tmp-vmlinux-with-btf vmlinux.btf
 rm                                             tmp-vmlinux-with-btf
 
+# Module signatures do not tolerate being stripped so signing needs to happen
+# _after_ the debuginfo is stripped in %%{__debug_install_post}. Therefore add
+# a dirty workaround to achieve this (inspired by the Fedora kernel spec file).
+%define __modsign_install_post \
+    find %{buildroot}/lib/modules/%{uname} -name "*.ko" -type f -exec scripts/sign-file sha256 certs/signing_key.pem certs/signing_key.pem {} \\;
+
+%define __spec_install_post \
+    %{?__debug_package:%{__debug_install_post}}\
+    %{__arch_install_post}\
+    %{__os_install_post}\
+    %{__modsign_install_post}
+
 %install
 # Install kernel
 install -d -m 755 %{buildroot}/boot
 install -m 644 .config %{buildroot}/boot/config-%{uname}
 install -m 644 System.map %{buildroot}/boot/System.map-%{uname}
-install -m 644 arch/x86/boot/bzImage %{buildroot}/boot/vmlinuz-%{uname}
+install -m 644 arch/x86/boot/bzImage.signed %{buildroot}/boot/vmlinuz-%{uname}
 truncate -s 20M %{buildroot}/boot/initrd-%{uname}.img
 ln -sf vmlinuz-%{uname} %{buildroot}/boot/vmlinuz-%{short_uname}-xen
 ln -sf initrd-%{uname}.img %{buildroot}/boot/initrd-%{short_uname}-xen.img
@@ -373,6 +402,7 @@ find %{buildroot} -name '.*.cmd' -type f -delete
 
 # Install files for building live patches
 install -m 644 vmlinux %{buildroot}%{lp_devel_dir}
+install -m 755 scripts/sign-file %{buildroot}%{lp_devel_dir}
 
 # eBPF support: Install the BTF file to /usr/src/kernels for kernel-devel
 # /usr/src/kernels is also used by `perf` to look for vmlinux files with
@@ -471,6 +501,10 @@ fi
 %{?_cov_results_package}
 
 %changelog
+
+* Wed Apr 29 2026 Corentin Oparowski <corentin.oparowski@vates.tech> - 6.12.0-1.cop.1
+- add secureboot signing support (vmlinuz signing), module signing uses on-build generated key (will need changes for SB)
+- add xcpsign-macros-test dependencies
 
 * Wed Apr 29 2026 Corentin Oparowski <corentin.oparowski@vates.tech> - 6.12.0-1.0
 - update filter-hypercall.patch to match XS lastest version

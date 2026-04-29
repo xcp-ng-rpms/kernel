@@ -17,3 +17,17 @@ if [ -e %{_localstatedir}/lib/rpm-state/regenerate-initrd-%{kernel_version} ]; t
     udevadm trigger --attr-nomatch=driver && udevadm settle -t 30 \
 fi \
 %{nil}
+%modsign_install_post() \
+%{expand:%global __modsign_install_post \\
+  sign_file=%(find /usr/src/ -name sign-file | tail -1) \\
+  find %{buildroot} -name "*.ko" -type f -exec sh -c " \\
+    %{get_module_signature -c %1 -i {} -o {}.sig} \\
+    ${sign_file} -s {}.sig sha256 unused {} \\
+    rm -f {}.sig" \\\\; } \
+\
+%{expand:%global __spec_install_post \\
+  %{?__debug_package:%{__debug_install_post}} \\
+  %{__arch_install_post} \\
+  %{__os_install_post} \\
+  %{__modsign_install_post}} \
+%{nil}
