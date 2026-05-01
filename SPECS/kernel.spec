@@ -42,7 +42,7 @@
 Name: kernel
 License: GPLv2
 Version: 4.19.19
-Release: %{?xsrel}.1%{?dist}
+Release: %{?xsrel}.2%{?dist}
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
@@ -735,6 +735,7 @@ Patch1003: 0001-ACPI-processor-idle-Check-acpi_bus_get_device-return.patch
 Patch1004: 0001-scsi-target-Fix-XCOPY-NAA-identifier-lookup.patch
 Patch1005: 0001-ext4-fix-off-by-one-error-in-do_split.patch
 Patch1006: 0001-SUNRPC-Restore-missing-call-to-cancel_work_sync.patch
+Patch1007: 0001-crypto-disable-authencesn-module-for-CVE-2026-31431.patch
 
 %description
 The kernel package contains the Linux kernel (vmlinuz), the core of any
@@ -1089,6 +1090,9 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Fri May 01 2026 Tu Dinh <ngoc-tu.dinh@vates.tech> - 4.19.19-8.0.46.2
+- Disable authencesn module for CVE-2026-31431
+
 * Fri Mar 27 2026 Thierry Escande <thierry.escande@vates.tech> - 4.19.19-8.0.46.1
 - Sync with 4.19.19-8.0.46
 - SUNRPC: Restore call to cancel_work_sync()
