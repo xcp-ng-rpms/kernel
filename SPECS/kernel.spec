@@ -41,7 +41,7 @@
 Name: kernel
 License: GPLv2
 Version: 4.19.19
-Release: %{?xsrel}.1%{?dist}
+Release: %{?xsrel}.2%{?dist}
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
@@ -734,6 +734,25 @@ Patch1003: 0001-ACPI-processor-idle-Check-acpi_bus_get_device-return.patch
 Patch1004: 0001-scsi-target-Fix-XCOPY-NAA-identifier-lookup.patch
 Patch1005: 0001-ext4-fix-off-by-one-error-in-do_split.patch
 Patch1006: 0001-SUNRPC-Restore-missing-call-to-cancel_work_sync.patch
+# Copy.fail
+Patch1101: 0001-crypto-skcipher-Introduce-crypto_sync_skcipher.patch
+Patch1102: 0002-crypto-algif_aead-Only-wake-up-when-ctx-more-is-zero.patch
+Patch1103: 0003-kabi-crypto-algif_aead-Only-wake-up-when-ctx-more-is.patch
+Patch1104: 0004-crypto-doc-fix-kernel-doc-notation-in-chacha.c-and-a.patch
+Patch1105: 0005-crypto-scatterwalk-Backport-memcpy_sglist.patch
+Patch1106: 0006-crypto-null-Remove-VLA-usage-of-skcipher.patch
+Patch1107: 0007-kabi-crypto-null-Remove-VLA-usage-of-skcipher.patch
+Patch1108: 0008-crypto-algif_aead-Do-not-set-MAY_BACKLOG-on-the-asyn.patch
+Patch1109: 0009-crypto-algif_aead-use-memcpy_sglist-instead-of-null-.patch
+Patch1110: 0010-crypto-algif_aead-Revert-to-operating-out-of-place.patch
+Patch1111: 0011-kabi-crypto-algif_aead-Revert-to-operating-out-of-pl.patch
+Patch1112: 0012-crypto-algif_aead-snapshot-IV-for-async-AEAD-request.patch
+Patch1113: 0013-crypto-authenc-use-memcpy_sglist-instead-of-null-skc.patch
+Patch1114: 0014-crypto-authencesn-reject-too-short-AAD-assoclen-8-to.patch
+Patch1115: 0015-crypto-authencesn-Do-not-place-hiseq-at-end-of-dst-f.patch
+Patch1116: 0016-crypto-authencesn-Fix-src-offset-when-decrypting-in-.patch
+Patch1117: 0017-crypto-af_alg-Fix-page-reassignment-overflow-in-af_a.patch
+Patch1118: 0018-crypto-algif_aead-Fix-minimum-RX-size-check-for-decr.patch
 
 %description
 The kernel package contains the Linux kernel (vmlinuz), the core of any
@@ -803,6 +822,8 @@ Provides: python2-perf
 %{?_cov_prepare}
 
 %build
+export KBUILD_SYMTYPES=y
+
 source %{SOURCE5}
 
 # This override tweaks the kernel makefiles so that we run debugedit on an
@@ -1088,6 +1109,9 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Mon May 04 2026 Quentin Casasnovas <quentin.casasnovas@vates.tech> - 4.19.19-8.0.46.2
+- Backports for CopyFail CVE-2026-31431 from linux-5.10.y
+
 * Fri Mar 27 2026 Thierry Escande <thierry.escande@vates.tech> - 4.19.19-8.0.46.1
 - Sync with 4.19.19-8.0.46
 - SUNRPC: Restore call to cancel_work_sync()

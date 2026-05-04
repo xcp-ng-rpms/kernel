@@ -1,0 +1,127 @@
+From d36771ce5971c500f0848d94b31b99883aa4ed37 Mon Sep 17 00:00:00 2001
+From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+Date: Mon, 4 May 2026 14:37:11 +0200
+Subject: [PATCH] !kabi crypto: algif_aead - Revert to operating out-of-place
+
+Instead of removing the offset/dst_offset from the exported functions,
+leave them in place to avoid kABI changes.
+
+Note that none of our binary kernel modules are using this ABI.
+
+Fixes: 727dcb837787 ("crypto: algif_aead - Revert to operating out-of-place")
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+---
+ crypto/af_alg.c         | 10 ++++++++--
+ crypto/algif_aead.c     |  6 +++---
+ crypto/algif_skcipher.c |  6 +++---
+ include/crypto/if_alg.h |  4 ++--
+ 4 files changed, 16 insertions(+), 10 deletions(-)
+
+diff --git a/crypto/af_alg.c b/crypto/af_alg.c
+index 1cf87382c5b4..7c79c71140ca 100644
+--- a/crypto/af_alg.c
++++ b/crypto/af_alg.c
+@@ -528,9 +528,12 @@ EXPORT_SYMBOL_GPL(af_alg_alloc_tsgl);
+  *
+  * @sk: socket of connection to user space
+  * @bytes: Count the number of SG entries holding given number of bytes.
++ * @offset: Ignored, kept for kABI invariance to fix CopyFail with backport
++ * of 893d22e0135f ("crypto: algif_aead - Revert to operating
++ * out-of-place")
+  * Return: Number of TX SG entries found given the constraints
+  */
+-unsigned int af_alg_count_tsgl(struct sock *sk, size_t bytes)
++unsigned int af_alg_count_tsgl(struct sock *sk, size_t bytes, size_t offset)
+ {
+ 	struct alg_sock *ask = alg_sk(sk);
+ 	struct af_alg_ctx *ctx = ask->private;
+@@ -567,8 +570,11 @@ EXPORT_SYMBOL_GPL(af_alg_count_tsgl);
+  * @used: Number of bytes to pull from TX SGL
+  * @dst: If non-NULL, buffer is reassigned to dst SGL instead of releasing. The
+  *	 caller must release the buffers in dst.
++ * @dst_offset: Ignored, kept for kABI invariance to fix CopyFail with backport
++ * of 893d22e0135f ("crypto: algif_aead - Revert to operating
++ * out-of-place")
+  */
+-void af_alg_pull_tsgl(struct sock *sk, size_t used, struct scatterlist *dst)
++void af_alg_pull_tsgl(struct sock *sk, size_t used, struct scatterlist *dst, size_t dst_offset)
+ {
+ 	struct alg_sock *ask = alg_sk(sk);
+ 	struct af_alg_ctx *ctx = ask->private;
+diff --git a/crypto/algif_aead.c b/crypto/algif_aead.c
+index 045e8e8c6a06..cb88da5a39ff 100644
+--- a/crypto/algif_aead.c
++++ b/crypto/algif_aead.c
+@@ -161,7 +161,7 @@ static int _aead_recvmsg(struct socket *sock, struct msghdr *msg,
+ 	 * SG entries from the global TX SGL.
+ 	 */
+ 	processed = used + ctx->aead_assoclen;
+-	areq->tsgl_entries = af_alg_count_tsgl(sk, processed);
++	areq->tsgl_entries = af_alg_count_tsgl(sk, processed, 0);
+ 	if (!areq->tsgl_entries)
+ 		areq->tsgl_entries = 1;
+ 	areq->tsgl = sock_kmalloc(sk, array_size(sizeof(*areq->tsgl),
+@@ -172,7 +172,7 @@ static int _aead_recvmsg(struct socket *sock, struct msghdr *msg,
+ 		goto free;
+ 	}
+ 	sg_init_table(areq->tsgl, areq->tsgl_entries);
+-	af_alg_pull_tsgl(sk, processed, areq->tsgl);
++	af_alg_pull_tsgl(sk, processed, areq->tsgl, 0);
+ 	tsgl_src = areq->tsgl;
+ 
+ 	/*
+@@ -413,7 +413,7 @@ static void aead_sock_destruct(struct sock *sk)
+ 	struct crypto_aead *tfm = pask->private;
+ 	unsigned int ivlen = crypto_aead_ivsize(tfm);
+ 
+-	af_alg_pull_tsgl(sk, ctx->used, NULL);
++	af_alg_pull_tsgl(sk, ctx->used, NULL, 0);
+ 	sock_kzfree_s(sk, ctx->iv, ivlen);
+ 	sock_kfree_s(sk, ctx, ctx->len);
+ 	af_alg_release_parent(sk);
+diff --git a/crypto/algif_skcipher.c b/crypto/algif_skcipher.c
+index c42e260e5ec0..ba2a96cdcdae 100644
+--- a/crypto/algif_skcipher.c
++++ b/crypto/algif_skcipher.c
+@@ -97,7 +97,7 @@ static int _skcipher_recvmsg(struct socket *sock, struct msghdr *msg,
+ 	 * Create a per request TX SGL for this request which tracks the
+ 	 * SG entries from the global TX SGL.
+ 	 */
+-	areq->tsgl_entries = af_alg_count_tsgl(sk, len);
++	areq->tsgl_entries = af_alg_count_tsgl(sk, len, 0);
+ 	if (!areq->tsgl_entries)
+ 		areq->tsgl_entries = 1;
+ 	areq->tsgl = sock_kmalloc(sk, array_size(sizeof(*areq->tsgl),
+@@ -108,7 +108,7 @@ static int _skcipher_recvmsg(struct socket *sock, struct msghdr *msg,
+ 		goto free;
+ 	}
+ 	sg_init_table(areq->tsgl, areq->tsgl_entries);
+-	af_alg_pull_tsgl(sk, len, areq->tsgl);
++	af_alg_pull_tsgl(sk, len, areq->tsgl, 0);
+ 
+ 	/* Initialize the crypto operation */
+ 	skcipher_request_set_tfm(&areq->cra_u.skcipher_req, tfm);
+@@ -328,7 +328,7 @@ static void skcipher_sock_destruct(struct sock *sk)
+ 	struct alg_sock *pask = alg_sk(psk);
+ 	struct crypto_skcipher *tfm = pask->private;
+ 
+-	af_alg_pull_tsgl(sk, ctx->used, NULL);
++	af_alg_pull_tsgl(sk, ctx->used, NULL, 0);
+ 	sock_kzfree_s(sk, ctx->iv, crypto_skcipher_ivsize(tfm));
+ 	sock_kfree_s(sk, ctx, ctx->len);
+ 	af_alg_release_parent(sk);
+diff --git a/include/crypto/if_alg.h b/include/crypto/if_alg.h
+index 20a8fd53e189..9d3ea37547fb 100644
+--- a/include/crypto/if_alg.h
++++ b/include/crypto/if_alg.h
+@@ -241,8 +241,8 @@ static inline bool af_alg_readable(struct sock *sk)
+ }
+ 
+ int af_alg_alloc_tsgl(struct sock *sk);
+-unsigned int af_alg_count_tsgl(struct sock *sk, size_t bytes);
+-void af_alg_pull_tsgl(struct sock *sk, size_t used, struct scatterlist *dst);
++unsigned int af_alg_count_tsgl(struct sock *sk, size_t bytes, size_t offset);
++void af_alg_pull_tsgl(struct sock *sk, size_t used, struct scatterlist *dst, size_t offset);
+ void af_alg_free_areq_sgls(struct af_alg_async_req *areq);
+ int af_alg_wait_for_wmem(struct sock *sk, unsigned int flags);
+ void af_alg_wmem_wakeup(struct sock *sk);
