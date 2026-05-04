@@ -1,0 +1,153 @@
+From 655460b84ad0cc90b0931d479508c17bc78f29d7 Mon Sep 17 00:00:00 2001
+From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+Date: Mon, 4 May 2026 14:43:59 +0200
+Subject: [PATCH] !kabi crypto: algif_aead - Only wake up when ctx->more is
+ zero
+
+Two things to take care here regarding kABI invariance:
+
+- struct af_alg_ctx got a new field, `init`, luckily, it ends up right in a
+struct hole:
+
+struct af_alg_ctx {
+	struct list_head           tsgl_list;            /*     0    16 */
+	void *                     iv;                   /*    16     8 */
+	size_t                     aead_assoclen;        /*    24     8 */
+	struct crypto_wait         wait;                 /*    32    40 */
+
+	/* XXX last struct has 4 bytes of padding */
+
+	/* --- cacheline 1 boundary (64 bytes) was 8 bytes ago --- */
+	size_t                     used;                 /*    72     8 */
+	atomic_t                   rcvused;              /*    80     4 */
+	bool                       more;                 /*    84     1 */
+	bool                       merge;                /*    85     1 */
+	bool                       enc;                  /*    86     1 */
+
+	/* XXX 1 byte hole, try to pack */
+
+So simply hide the new field from genksyms and make sure to add a compile
+time assert verifying the struct hasn't changed.
+
+- af_alg_wait_for_data, which is exported, now has an optional `min`
+argument.  Instead, rename the function to af_alg_wait_for_data_with_min,
+and keep the prior function af_alg_wait_for_data that calls into it with a
+default `min=0` input argument.
+
+Fixes: c191f457864e ("crypto: algif_aead - Only wake up when ctx->more is zero")
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+---
+ crypto/af_alg.c         | 30 +++++++++++++++++++++++++++++-
+ crypto/algif_aead.c     |  2 +-
+ crypto/algif_skcipher.c |  2 +-
+ include/crypto/if_alg.h | 11 ++++++++++-
+ 4 files changed, 41 insertions(+), 4 deletions(-)
+
+diff --git a/crypto/af_alg.c b/crypto/af_alg.c
+index b90d3613e4df..9629bbde493b 100644
+--- a/crypto/af_alg.c
++++ b/crypto/af_alg.c
+@@ -751,7 +751,7 @@ EXPORT_SYMBOL_GPL(af_alg_wmem_wakeup);
+  * @min Set to minimum request size if partial requests are allowed.
+  * @return 0 when writable memory is available, < 0 upon error
+  */
+-int af_alg_wait_for_data(struct sock *sk, unsigned flags, unsigned min)
++int af_alg_wait_for_data_with_min(struct sock *sk, unsigned flags, unsigned min)
+ {
+ 	DEFINE_WAIT_FUNC(wait, woken_wake_function);
+ 	struct alg_sock *ask = alg_sk(sk);
+@@ -783,6 +783,12 @@ int af_alg_wait_for_data(struct sock *sk, unsigned flags, unsigned min)
+ 
+ 	return err;
+ }
++EXPORT_SYMBOL_GPL(af_alg_wait_for_data_with_min);
++
++int af_alg_wait_for_data(struct sock *sk, unsigned flags)
++{
++	return af_alg_wait_for_data_with_min(sk, flags, 0);
++}
+ EXPORT_SYMBOL_GPL(af_alg_wait_for_data);
+ 
+ /**
+@@ -1230,3 +1236,25 @@ void kabi_check_struct_alg_sock(void)
+ 	BUILD_BUG_ON(sizeof(struct old_alg_sock) != sizeof(struct alg_sock));
+ 	BUILD_BUG_ON(offsetof(struct old_alg_sock, type) != offsetof(struct alg_sock, type));
+ }
++
++void kabi_check_struct_af_alg_ctx(void)
++{
++	struct old_af_alg_ctx {
++		struct list_head tsgl_list;
++
++		void *iv;
++		size_t aead_assoclen;
++
++		struct crypto_wait wait;
++
++		size_t used;
++		atomic_t rcvused;
++
++		bool more;
++		bool merge;
++		bool enc;
++		unsigned int len;
++	};
++	BUILD_BUG_ON(sizeof(struct old_af_alg_ctx) != sizeof(struct af_alg_ctx));
++	BUILD_BUG_ON(offsetof(struct old_af_alg_ctx, len) != offsetof(struct af_alg_ctx, len));
++}
+diff --git a/crypto/algif_aead.c b/crypto/algif_aead.c
+index c437ed26719c..1eadb3491ad2 100644
+--- a/crypto/algif_aead.c
++++ b/crypto/algif_aead.c
+@@ -111,7 +111,7 @@ static int _aead_recvmsg(struct socket *sock, struct msghdr *msg,
+ 	size_t processed = 0;		/* [in]  TX bufs to be consumed */
+ 
+ 	if (!ctx->init || ctx->more) {
+-		err = af_alg_wait_for_data(sk, flags, 0);
++		err = af_alg_wait_for_data_with_min(sk, flags, 0);
+ 		if (err)
+ 			return err;
+ 	}
+diff --git a/crypto/algif_skcipher.c b/crypto/algif_skcipher.c
+index 7a6afe4b3b70..9a06cf60bffa 100644
+--- a/crypto/algif_skcipher.c
++++ b/crypto/algif_skcipher.c
+@@ -66,7 +66,7 @@ static int _skcipher_recvmsg(struct socket *sock, struct msghdr *msg,
+ 	size_t len = 0;
+ 
+ 	if (!ctx->init || (ctx->more && ctx->used < bs)) {
+-		err = af_alg_wait_for_data(sk, flags, bs);
++		err = af_alg_wait_for_data_with_min(sk, flags, bs);
+ 		if (err)
+ 			return err;
+ 	}
+diff --git a/include/crypto/if_alg.h b/include/crypto/if_alg.h
+index 78a5dd172f4f..eddbbf0b1e4c 100644
+--- a/include/crypto/if_alg.h
++++ b/include/crypto/if_alg.h
+@@ -166,7 +166,15 @@ struct af_alg_ctx {
+ 	bool more;
+ 	bool merge;
+ 	bool enc;
++#ifndef __GENKSYMS__
++	/**
++	 * Backports of f3c802a1f300 ("crypto: algif_aead - Only wake up
++	 * when ctx->more is zero") adds this field, which changes the
++	 * kABI.  We can hide it because it fits in a hole.  Verified with
++	 * kabi_check_af_alg_ctx.
++	 */
+ 	bool init;
++#endif
+ 
+ 	unsigned int len;
+ };
+@@ -248,7 +256,8 @@ void af_alg_pull_tsgl(struct sock *sk, size_t used, struct scatterlist *dst,
+ void af_alg_free_areq_sgls(struct af_alg_async_req *areq);
+ int af_alg_wait_for_wmem(struct sock *sk, unsigned int flags);
+ void af_alg_wmem_wakeup(struct sock *sk);
+-int af_alg_wait_for_data(struct sock *sk, unsigned flags, unsigned min);
++int af_alg_wait_for_data_with_min(struct sock *sk, unsigned flags, unsigned min);
++int af_alg_wait_for_data(struct sock *sk, unsigned flags);
+ void af_alg_data_wakeup(struct sock *sk);
+ int af_alg_sendmsg(struct socket *sock, struct msghdr *msg, size_t size,
+ 		   unsigned int ivsize);

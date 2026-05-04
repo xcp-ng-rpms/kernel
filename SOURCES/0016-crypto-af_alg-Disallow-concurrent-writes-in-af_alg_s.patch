@@ -1,0 +1,78 @@
+From 6b1b329b6ff91a91e3d96515e3481628541a4b44 Mon Sep 17 00:00:00 2001
+From: Herbert Xu <herbert@gondor.apana.org.au>
+Date: Tue, 16 Sep 2025 17:20:59 +0800
+Subject: [PATCH] crypto: af_alg - Disallow concurrent writes in af_alg_sendmsg
+
+[ Upstream commit 1b34cbbf4f011a121ef7b2d7d6e6920a036d5285 ]
+
+Issuing two writes to the same af_alg socket is bogus as the
+data will be interleaved in an unpredictable fashion.  Furthermore,
+concurrent writes may create inconsistencies in the internal
+socket state.
+
+Disallow this by adding a new ctx->write field that indiciates
+exclusive ownership for writing.
+
+Fixes: 8ff590903d5 ("crypto: algif_skcipher - User-space interface for skcipher operations")
+Reported-by: Muhammad Alifa Ramdhan <ramdhan@starlabs.sg>
+Reported-by: Bing-Jhong Billy Jheng <billy@starlabs.sg>
+Signed-off-by: Herbert Xu <herbert@gondor.apana.org.au>
+Signed-off-by: Sasha Levin <sashal@kernel.org>
+
+(cherry picked from 0f28c4adbc4a97437874c9b669fd7958a8c6d6ce)
+
+Conflict due to our kABI neutralization of the fiield init.  Changed the
+patch to only add the write bitfield instead of changing all prior ones.  A
+subsequent patch will handle the kABI fixing for this new write field.
+
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+---
+ crypto/af_alg.c         | 7 +++++++
+ include/crypto/if_alg.h | 2 ++
+ 2 files changed, 9 insertions(+)
+
+diff --git a/crypto/af_alg.c b/crypto/af_alg.c
+index c6cfd4c547e7..f31abea43ea7 100644
+--- a/crypto/af_alg.c
++++ b/crypto/af_alg.c
+@@ -869,6 +869,12 @@ int af_alg_sendmsg(struct socket *sock, struct msghdr *msg, size_t size,
+ 	}
+ 
+ 	lock_sock(sk);
++	if (ctx->write) {
++		release_sock(sk);
++		return -EBUSY;
++	}
++	ctx->write = true;
++
+ 	if (ctx->init && !ctx->more) {
+ 		if (ctx->used) {
+ 			err = -EINVAL;
+@@ -976,6 +982,7 @@ int af_alg_sendmsg(struct socket *sock, struct msghdr *msg, size_t size,
+ 
+ unlock:
+ 	af_alg_data_wakeup(sk);
++	ctx->write = false;
+ 	release_sock(sk);
+ 
+ 	return copied ?: err;
+diff --git a/include/crypto/if_alg.h b/include/crypto/if_alg.h
+index 10151c3f73c8..3e2700b2e5e9 100644
+--- a/include/crypto/if_alg.h
++++ b/include/crypto/if_alg.h
+@@ -149,6 +149,7 @@ struct af_alg_async_req {
+  *			SG?
+  * @enc:		Cryptographic operation to be performed when
+  *			recvmsg is invoked.
++ * @write:		True if we are in the middle of a write.
+  * @init:		True if metadata has been sent.
+  * @len:		Length of memory allocated for this data structure.
+  * @inflight:		Non-zero when AIO requests are in flight.
+@@ -184,6 +185,7 @@ struct af_alg_ctx {
+ 	 */
+ 	bool inflight:1;
+ #endif
++	u32 write:1;
+ 
+ 	unsigned int len;
+ 

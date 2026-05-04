@@ -42,7 +42,7 @@
 Name: kernel
 License: GPLv2
 Version: 4.19.19
-Release: %{?xsrel}.2%{?dist}
+Release: %{?xsrel}.3%{?dist}
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
@@ -735,7 +735,42 @@ Patch1003: 0001-ACPI-processor-idle-Check-acpi_bus_get_device-return.patch
 Patch1004: 0001-scsi-target-Fix-XCOPY-NAA-identifier-lookup.patch
 Patch1005: 0001-ext4-fix-off-by-one-error-in-do_split.patch
 Patch1006: 0001-SUNRPC-Restore-missing-call-to-cancel_work_sync.patch
+# Copyfail mitigation
 Patch1007: 0001-crypto-disable-authencesn-module-for-CVE-2026-31431.patch
+# Copyfail fixes
+Patch1101: 0001-crypto-skcipher-Introduce-crypto_sync_skcipher.patch
+Patch1102: 0002-crypto-null-Remove-VLA-usage-of-skcipher.patch
+Patch1103: 0003-kabi-crypto-null-Remove-VLA-usage-of-skcipher.patch
+Patch1104: 0004-crypto-algif_skcipher-Cap-recv-SG-list-at-ctx-used.patch
+Patch1105: 0005-crypto-af_alg-Use-bh_lock_sock-in-sk_destruct.patch
+Patch1106: 0006-crypto-af_alg-fix-use-after-free-in-af_alg_accept-du.patch
+Patch1107: 0007-kabi-crypto-af_alg-fix-use-after-free-in-af_alg_acce.patch
+Patch1108: 0008-crypto-algif_aead-Only-wake-up-when-ctx-more-is-zero.patch
+Patch1109: 0009-kabi-crypto-algif_aead-Only-wake-up-when-ctx-more-is.patch
+Patch1110: 0010-crypto-algif_aead-fix-uninitialized-ctx-init.patch
+Patch1111: 0011-crypto-algif_skcipher-EBUSY-on-aio-should-be-an-erro.patch
+Patch1112: 0012-crypto-algif_aead-Do-not-set-MAY_BACKLOG-on-the-asyn.patch
+Patch1113: 0013-crypto-af_alg-Disallow-multiple-in-flight-AIO-reques.patch
+Patch1114: 0014-kabi-crypto-af_alg-Disallow-multiple-in-flight-AIO-r.patch
+Patch1115: 0015-crypto-af_alg-Work-around-empty-control-messages-wit.patch
+Patch1116: 0016-crypto-af_alg-Disallow-concurrent-writes-in-af_alg_s.patch
+Patch1117: 0017-crypto-af_alg-Fix-incorrect-boolean-values-in-af_alg.patch
+Patch1118: 0018-kabi-crypto-af_alg-Fix-incorrect-boolean-values-in-a.patch
+Patch1119: 0019-crypto-authencesn-reject-too-short-AAD-assoclen-8-to.patch
+Patch1120: 0020-crypto-af-alg-fix-NULL-pointer-dereference-in-scatte.patch
+Patch1121: 0021-crypto-authenc-use-memcpy_sglist-instead-of-null-skc.patch
+Patch1122: 0022-crypto-authencesn-Do-not-place-hiseq-at-end-of-dst-f.patch
+Patch1123: 0023-crypto-doc-fix-kernel-doc-notation-in-chacha.c-and-a.patch
+Patch1124: 0024-crypto-algif_aead-use-memcpy_sglist-instead-of-null-.patch
+Patch1125: 0025-crypto-algif_aead-Revert-to-operating-out-of-place.patch
+Patch1126: 0026-kabi-crypto-algif_aead-Revert-to-operating-out-of-pl.patch
+Patch1127: 0027-crypto-algif_aead-snapshot-IV-for-async-AEAD-request.patch
+Patch1128: 0028-crypto-scatterwalk-Backport-memcpy_sglist.patch
+Patch1129: 0029-crypto-algif_aead-Fix-minimum-RX-size-check-for-decr.patch
+Patch1130: 0030-crypto-af_alg-Fix-page-reassignment-overflow-in-af_a.patch
+Patch1131: 0031-crypto-authencesn-Fix-src-offset-when-decrypting-in-.patch
+# DirtyFrag / CopyFail2
+Patch1132: 0032-xfrm-esp-avoid-in-place-decrypt-on-shared-skb-frags.patch
 
 %description
 The kernel package contains the Linux kernel (vmlinuz), the core of any
@@ -805,6 +840,8 @@ Provides: python2-perf
 %{?_cov_prepare}
 
 %build
+export KBUILD_SYMTYPES=y
+
 source %{SOURCE5}
 
 # This override tweaks the kernel makefiles so that we run debugedit on an
@@ -1090,6 +1127,10 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Mon May 11 2026 Quentin Casasnovas <quentin.casasnovas@vates.tech> - 4.19.19-8.0.46.3
+- Backports for CopyFail CVE-2026-31431 from linux-5.10.y
+- Backports for CVE-2026-43284 (DirtyFrag, XFRM-ESP path)from linux-5.10.y
+
 * Fri May 01 2026 Tu Dinh <ngoc-tu.dinh@vates.tech> - 4.19.19-8.0.46.2
 - Disable authencesn module for CVE-2026-31431
 

@@ -1,0 +1,38 @@
+From 981e3da1587d79c6c538c35fa2ece8c2d368a4a1 Mon Sep 17 00:00:00 2001
+From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+Date: Mon, 11 May 2026 16:38:29 +0200
+Subject: [PATCH] !kabi crypto: af_alg - Disallow multiple in-flight AIO
+ requests
+
+Fixes: 33af820bb46a ("crypto: af_alg - Disallow multiple in-flight AIO requests")
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+---
+ include/crypto/if_alg.h | 11 +++++++++--
+ 1 file changed, 9 insertions(+), 2 deletions(-)
+
+diff --git a/include/crypto/if_alg.h b/include/crypto/if_alg.h
+index ff885432ec84..10151c3f73c8 100644
+--- a/include/crypto/if_alg.h
++++ b/include/crypto/if_alg.h
+@@ -174,12 +174,19 @@ struct af_alg_ctx {
+ 	 * kABI.  We can hide it because it fits in a hole.  Verified with
+ 	 * kabi_check_af_alg_ctx.
+ 	 */
+-	bool init;
++	bool init:1;
++	/**
++	 * Backport of 67b164a871af ("crypto: af_alg - Disallow multiple
++	 * in-flight AIO requests") added a new inflight field as unsigned
++	 * int.  Convert it to bool:1 such that it can fit in the same hole
++	 * used by the init field above.  Note that init is also converted
++	 * to a bool:1 from bool, otherwise we can't fit both.
++	 */
++	bool inflight:1;
+ #endif
+ 
+ 	unsigned int len;
+ 
+-	unsigned int inflight;
+ };
+ 
+ int af_alg_register_type(const struct af_alg_type *type);

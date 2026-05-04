@@ -1,0 +1,34 @@
+From 9ea3e02e1b88e27b902aa705acf151ce3312c54f Mon Sep 17 00:00:00 2001
+From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+Date: Mon, 11 May 2026 16:31:00 +0200
+Subject: [PATCH] !kabi crypto: af_alg - Fix incorrect boolean values in
+ af_alg_ctx
+
+Fixes: 89f45308f42d ("crypto: af_alg - Fix incorrect boolean values in af_alg_ctx")
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+---
+ include/crypto/if_alg.h | 10 +++++++++-
+ 1 file changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/include/crypto/if_alg.h b/include/crypto/if_alg.h
+index 1e70cde85f4c..e178090808c6 100644
+--- a/include/crypto/if_alg.h
++++ b/include/crypto/if_alg.h
+@@ -184,8 +184,16 @@ struct af_alg_ctx {
+ 	 * to a bool:1 from bool, otherwise we can't fit both.
+ 	 */
+ 	bool inflight:1;
+-#endif
++	/**
++	 * Backport of 3a21698ace91 ("crypto: af_alg - Fix incorrect
++	 * boolean values in af_alg_ctx") + 1b34cbbf4f01 ("crypto: af_alg -
++	 * Disallow concurrent writes in af_alg_sendmsg") added this field
++	 * (first as u32:1 then as bool:1).  Luckily the above init and
++	 * inflight fields were also added in this branch as bool:1, so
++	 * convert write to bool:1 too so it can fit in the hole.
++	 */
+ 	bool write:1;
++#endif
+ 
+ 	unsigned int len;
+ 

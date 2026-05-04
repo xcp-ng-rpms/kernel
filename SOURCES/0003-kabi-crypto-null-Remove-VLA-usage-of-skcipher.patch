@@ -1,0 +1,35 @@
+From d06506f7c8ba498532d2ac0cf3fd68d88e2e8739 Mon Sep 17 00:00:00 2001
+From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+Date: Mon, 4 May 2026 14:26:23 +0200
+Subject: [PATCH] !kabi crypto: null - Remove VLA usage of skcipher
+
+Fixes: e45745e9a5e9 (\"crypto: null - Remove VLA usage of skcipher\")
+
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+---
+ include/crypto/null.h | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/include/crypto/null.h b/include/crypto/null.h
+index 0ef577cc00e3..22c3f2274b65 100644
+--- a/include/crypto/null.h
++++ b/include/crypto/null.h
+@@ -9,7 +9,18 @@
+ #define NULL_DIGEST_SIZE	0
+ #define NULL_IV_SIZE		0
+ 
++#ifndef __GENKSYMS__
++/**
++ * Backport of 8d6053984258 ("crypto: null - Remove VLA usage of skcipher")
++ * changed the return type from crypto_skcipher to crypto_sync_skcipher,
++ * but the later is pretty much an alias to the former, used to know which
++ * sub-system are still using Variable Length Arrays stack allocations.
++ */
+ struct crypto_sync_skcipher *crypto_get_default_null_skcipher(void);
++#else
++struct crypto_skcipher *crypto_get_default_null_skcipher(void);
++#endif
++
+ void crypto_put_default_null_skcipher(void);
+ 
+ #endif

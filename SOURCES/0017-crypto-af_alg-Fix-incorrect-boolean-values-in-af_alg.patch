@@ -1,0 +1,52 @@
+From 87694056e6dcbae97503b970864147471825eb18 Mon Sep 17 00:00:00 2001
+From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+Date: Thu, 7 May 2026 11:03:13 +0200
+Subject: [PATCH] crypto: af_alg - Fix incorrect boolean values in af_alg_ctx
+
+[ Upstream commit d0ca0df179c4b21e2a6c4a4fb637aa8fa14575cb ]
+
+Commit 1b34cbbf4f01 ("crypto: af_alg - Disallow concurrent writes in
+af_alg_sendmsg") changed some fields from bool to 1-bit bitfields of
+type u32.
+
+However, some assignments to these fields, specifically 'more' and
+'merge', assign values greater than 1.  These relied on C's implicit
+conversion to bool, such that zero becomes false and nonzero becomes
+true.
+
+With a 1-bit bitfields of type u32 instead, mod 2 of the value is taken
+instead, resulting in 0 being assigned in some cases when 1 was intended.
+
+Fix this by restoring the bool type.
+
+Fixes: 1b34cbbf4f01 ("crypto: af_alg - Disallow concurrent writes in af_alg_sendmsg")
+Cc: stable@vger.kernel.org
+Signed-off-by: Eric Biggers <ebiggers@kernel.org>
+Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+Signed-off-by: Sasha Levin <sashal@kernel.org>
+
+(cherry picked from 3a21698ace915a445bce2d0dcfc84b6d2199baf7)
+
+Again, conflict due to our prior kABI neutralization of the init field, so
+converting back to bool only the 'write' field, although not really
+necessary because it was only ever assigned 0 or 1 unlike some other
+fields, this just make it obvious that we're not missing a patch here.
+
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+---
+ include/crypto/if_alg.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/include/crypto/if_alg.h b/include/crypto/if_alg.h
+index 3e2700b2e5e9..1e70cde85f4c 100644
+--- a/include/crypto/if_alg.h
++++ b/include/crypto/if_alg.h
+@@ -185,7 +185,7 @@ struct af_alg_ctx {
+ 	 */
+ 	bool inflight:1;
+ #endif
+-	u32 write:1;
++	bool write:1;
+ 
+ 	unsigned int len;
+ 
