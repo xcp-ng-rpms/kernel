@@ -1129,7 +1129,7 @@ fi
 %changelog
 * Mon May 11 2026 Quentin Casasnovas <quentin.casasnovas@vates.tech> - 4.19.19-8.0.46.3
 - Backports for CopyFail CVE-2026-31431 from linux-5.10.y
-- Backports for CVE-2026-43284 (DirtyFrag, XFRM-ESP path)from linux-5.10.y
+- Backports for CVE-2026-43284 (DirtyFrag, XFRM-ESP path or CopyFail2) from linux-5.10.y
 
 * Fri May 01 2026 Tu Dinh <ngoc-tu.dinh@vates.tech> - 4.19.19-8.0.46.2
 - Disable authencesn module for CVE-2026-31431
