@@ -42,7 +42,7 @@
 Name: kernel
 License: GPLv2
 Version: 4.19.19
-Release: %{?xsrel}.2%{?dist}
+Release: %{?xsrel}.3%{?dist}
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
@@ -736,6 +736,7 @@ Patch1004: 0001-scsi-target-Fix-XCOPY-NAA-identifier-lookup.patch
 Patch1005: 0001-ext4-fix-off-by-one-error-in-do_split.patch
 Patch1006: 0001-SUNRPC-Restore-missing-call-to-cancel_work_sync.patch
 Patch1007: 0001-crypto-disable-authencesn-module-for-CVE-2026-31431.patch
+Patch1008: 0001-xfrm-esp-avoid-in-place-decrypt-on-shared-skb-frags.patch
 
 %description
 The kernel package contains the Linux kernel (vmlinuz), the core of any
@@ -1090,6 +1091,9 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Tue May 12 2026 Thierry Escande <thierry.escande@vates.tech> - 4.19.19-8.0.46.3
+- Backport for CVE-2026-43284 (DirtyFrag, XFRM-ESP path or CopyFail2) from linux-5.10.y
+
 * Fri May 01 2026 Tu Dinh <ngoc-tu.dinh@vates.tech> - 4.19.19-8.0.46.2
 - Disable authencesn module for CVE-2026-31431
 
