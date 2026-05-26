@@ -42,7 +42,7 @@
 Name: kernel
 License: GPLv2
 Version: 4.19.19
-Release: %{?xsrel}.4%{?dist}
+Release: %{?xsrel}.5%{?dist}
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
@@ -735,8 +735,19 @@ Patch1003: 0001-ACPI-processor-idle-Check-acpi_bus_get_device-return.patch
 Patch1004: 0001-scsi-target-Fix-XCOPY-NAA-identifier-lookup.patch
 Patch1005: 0001-ext4-fix-off-by-one-error-in-do_split.patch
 Patch1006: 0001-SUNRPC-Restore-missing-call-to-cancel_work_sync.patch
+# CVE-2026-31431 (used by CopyFail v1)
 Patch1007: 0001-crypto-disable-authencesn-module-for-CVE-2026-31431.patch
+# CVE-2026-43284 (used by DirtyFrag, DirtyFail, CopyFail v2 Electric Boogaloo)
 Patch1008: 0001-xfrm-esp-avoid-in-place-decrypt-on-shared-skb-frags.patch
+# CVE-2026-46333 (used by ssh-keysign-pwn, ptrace_may_dream)
+Patch1009: 0001-ptrace-restore-smp_rmb-in-__ptrace_may_access.patch
+Patch1010: 0002-ptrace-slightly-saner-get_dumpable-logic.patch
+Patch1011: 0003-kabi-ptrace-slightly-saner-get_dumpable-logic.patch
+# CVE-2026-46300 (used by fragnesia), iterative fixes to CVE-2026-43284
+Patch1012: 0004-net-skbuff-preserve-shared-frag-marker-during-coales.patch
+Patch1013: 0005-net-skbuff-propagate-shared-frag-marker-through-frag.patch
+# CVE-2026-43494 (used by pintheft)
+Patch1014: 0006-net-rds-reset-op_nents-when-zerocopy-page-pin-fails.patch
 
 %description
 The kernel package contains the Linux kernel (vmlinuz), the core of any
@@ -1091,6 +1102,11 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Tue May 26 2026 Quentin Casasnovas <quentin.casasnovas@vates.tech> - 4.19.19-8.0.46.5
+- Backport for CVE-2026-46300 (Fragnesia), iterative fixes to CVE-2026-43284
+- Backport for CVE-2026-46333 (ssh-key-sign, ptrace_may_dream)
+- Backport for CVE-2026-43494 (pintheft)
+
 * Wed May 13 2026 Yann Dirson <yann.dirson@vates.tech> - 4.19.19-8.0.46.4
 - Use short flag and short path to patch command to avoid overflowing a rpm limitation
 
