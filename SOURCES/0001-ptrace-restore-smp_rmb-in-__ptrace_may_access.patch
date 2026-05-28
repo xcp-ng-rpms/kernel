@@ -1,0 +1,67 @@
+From c8d4c97047d2f7c8d0492e648cb023e313bf211e Mon Sep 17 00:00:00 2001
+From: Jann Horn <jannh@google.com>
+Date: Wed, 29 May 2019 13:31:57 +0200
+Subject: [PATCH] ptrace: restore smp_rmb() in __ptrace_may_access()
+
+commit f6581f5b55141a95657ef5742cf6a6bfa20a109f upstream.
+
+Restore the read memory barrier in __ptrace_may_access() that was deleted
+a couple years ago. Also add comments on this barrier and the one it pairs
+with to explain why they're there (as far as I understand).
+
+Fixes: bfedb589252c ("mm: Add a user_ns owner to mm_struct and fix ptrace permission checks")
+Cc: stable@vger.kernel.org
+Acked-by: Kees Cook <keescook@chromium.org>
+Acked-by: Oleg Nesterov <oleg@redhat.com>
+Signed-off-by: Jann Horn <jannh@google.com>
+Signed-off-by: Eric W. Biederman <ebiederm@xmission.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+
+(cherry picked from commit 31e216cf9dc2346a20e8361b55807ef7135459c6)
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+---
+ kernel/cred.c   |  9 +++++++++
+ kernel/ptrace.c | 10 ++++++++++
+ 2 files changed, 19 insertions(+)
+
+diff --git a/kernel/cred.c b/kernel/cred.c
+index ecf03657e71c..efd04b2ec84c 100644
+--- a/kernel/cred.c
++++ b/kernel/cred.c
+@@ -448,6 +448,15 @@ int commit_creds(struct cred *new)
+ 		if (task->mm)
+ 			set_dumpable(task->mm, suid_dumpable);
+ 		task->pdeath_signal = 0;
++		/*
++		 * If a task drops privileges and becomes nondumpable,
++		 * the dumpability change must become visible before
++		 * the credential change; otherwise, a __ptrace_may_access()
++		 * racing with this change may be able to attach to a task it
++		 * shouldn't be able to attach to (as if the task had dropped
++		 * privileges without becoming nondumpable).
++		 * Pairs with a read barrier in __ptrace_may_access().
++		 */
+ 		smp_wmb();
+ 	}
+ 
+diff --git a/kernel/ptrace.c b/kernel/ptrace.c
+index 21fec73d45d4..79a0eb0d0a21 100644
+--- a/kernel/ptrace.c
++++ b/kernel/ptrace.c
+@@ -322,6 +322,16 @@ static int __ptrace_may_access(struct task_struct *task, unsigned int mode)
+ 	return -EPERM;
+ ok:
+ 	rcu_read_unlock();
++	/*
++	 * If a task drops privileges and becomes nondumpable (through a syscall
++	 * like setresuid()) while we are trying to access it, we must ensure
++	 * that the dumpability is read after the credentials; otherwise,
++	 * we may be able to attach to a task that we shouldn't be able to
++	 * attach to (as if the task had dropped privileges without becoming
++	 * nondumpable).
++	 * Pairs with a write barrier in commit_creds().
++	 */
++	smp_rmb();
+ 	mm = task->mm;
+ 	if (mm &&
+ 	    ((get_dumpable(mm) != SUID_DUMP_USER) &&
