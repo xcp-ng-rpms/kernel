@@ -36,13 +36,13 @@
 
 # Be strict when applying patches
 %if 0%{?xenserver} < 9
-%global __patch /usr/bin/patch --fuzz=0
+%global __patch /bin/patch -F0
 %endif
 
 Name: kernel
 License: GPLv2
 Version: 4.19.19
-Release: %{?xsrel}.3%{?dist}
+Release: %{?xsrel}.4%{?dist}
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
@@ -1091,6 +1091,9 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Wed May 13 2026 Yann Dirson <yann.dirson@vates.tech> - 4.19.19-8.0.46.4
+- Use short flag and short path to patch command to avoid overflowing a rpm limitation
+
 * Tue May 12 2026 Thierry Escande <thierry.escande@vates.tech> - 4.19.19-8.0.46.3
 - Backport for CVE-2026-43284 (DirtyFrag, XFRM-ESP path or CopyFail2) from linux-5.10.y
 
