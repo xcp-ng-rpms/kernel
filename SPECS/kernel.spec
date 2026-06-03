@@ -42,7 +42,7 @@
 Name: kernel
 License: GPLv2
 Version: 4.19.19
-Release: %{?xsrel}.5%{?dist}
+Release: %{?xsrel}.6%{?dist}
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
@@ -748,6 +748,8 @@ Patch1012: 0004-net-skbuff-preserve-shared-frag-marker-during-coales.patch
 Patch1013: 0005-net-skbuff-propagate-shared-frag-marker-through-frag.patch
 # CVE-2026-43494 (used by pintheft)
 Patch1014: 0006-net-rds-reset-op_nents-when-zerocopy-page-pin-fails.patch
+# CVE-2026-46243 (cifswitch)
+Patch1015: 0007-smb-client-reject-userspace-cifs-spnego-descriptions.patch
 
 %description
 The kernel package contains the Linux kernel (vmlinuz), the core of any
@@ -1102,6 +1104,9 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Wed Jun 03 2026 Lucas Ravagnier <lucas.ravagnier@vates.tech> - 4.19.19-8.0.46.6
+- Backport for CVE-2026-46243 (cifswitch)
+
 * Tue May 26 2026 Quentin Casasnovas <quentin.casasnovas@vates.tech> - 4.19.19-8.0.46.5
 - Backport for CVE-2026-46300 (Fragnesia), iterative fixes to CVE-2026-43284
 - Backport for CVE-2026-46333 (ssh-key-sign, ptrace_may_dream)
