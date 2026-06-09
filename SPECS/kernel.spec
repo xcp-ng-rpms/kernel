@@ -338,6 +338,7 @@ cp .config %{buildroot}%{srcpath}
 cp -a scripts %{buildroot}%{srcpath}
 find %{buildroot}%{srcpath}/scripts -type f -name '*.o' -delete
 cp -a tools/objtool/objtool %{buildroot}%{srcpath}/tools/objtool
+cp -a tools/bpf/resolve_btfids/resolve_btfids %{buildroot}%{srcpath}/tools/bpf/resolve_btfids/resolve_btfids
 
 cp -a --parents arch/x86/include %{buildroot}%{srcpath}
 cp -a include %{buildroot}%{srcpath}/include
@@ -362,8 +363,7 @@ cp -a --parents arch/x86/boot/string.h %{buildroot}%{srcpath}
 cp -a --parents arch/x86/boot/string.c %{buildroot}%{srcpath}
 cp -a --parents arch/x86/boot/ctype.h %{buildroot}%{srcpath}
 
-# Copy .config to include/config/auto.conf so "make prepare" is unnecessary.
-cp -a %{buildroot}%{srcpath}/.config %{buildroot}%{srcpath}/include/config/auto.conf
+cp -a include/config/auto.conf %{buildroot}%{srcpath}/include/config/
 
 # Make sure the Makefile and version.h have a matching timestamp so that
 # external modules can be built
