@@ -34,7 +34,7 @@
 Name: kernel
 License: GPLv2
 Version: %{usver}
-Release: 0.1
+Release: 0.1.cop.2
 ExclusiveOS: Linux
 Summary: The Linux kernel
 BuildRequires: kmod
@@ -472,7 +472,7 @@ fi
 
 %changelog
 
-* Wed Apr 29 2026 Corentin Oparowski <corentin.oparowski@vates.tech> - 6.12.0-0.1
+* Wed Apr 29 2026 Corentin Oparowski <corentin.oparowski@vates.tech> - 6.12.0-0.1.cop.2
 - update filter-hypercall.patch to match XS lastest version
 - fixed release numbering for consistency
 - update to XS9 .config
