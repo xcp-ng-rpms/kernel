@@ -1,0 +1,40 @@
+From 5465203d72be6a5721c3e5d0964e5e241de9ea06 Mon Sep 17 00:00:00 2001
+From: Corentin Oparowski <corentin.oparowski@vates.tech>
+Date: Thu, 23 May 2024 09:02:43 +0000
+Subject: [PATCH 08/35] CA-392853: fix kdump kernel cannot find ACPI RSDP
+
+kexec/kdump must pass acpi_rsdp (physical address of ACPI RSDP table) to the
+crash kernel, especially in EFI case, otherwise, the crash kernel fails to
+locate ACPI RSDP table. Consequently, ACPI init runs into error, and APIC
+mmio read page fault happens, finally crash kernel gets stuck.
+
+Signed-off-by: Chunjie Zhu <chunjie.zhu@cloud.com>
+---
+ drivers/acpi/osl.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/acpi/osl.c b/drivers/acpi/osl.c
+index 70af3fbbebe5..14c80789d3ab 100644
+--- a/drivers/acpi/osl.c
++++ b/drivers/acpi/osl.c
+@@ -174,7 +174,7 @@ void __printf(1, 0) acpi_os_vprintf(const char *fmt, va_list args)
+ #endif
+ }
+ 
+-#ifdef CONFIG_KEXEC
++#ifdef CONFIG_KEXEC_CORE
+ static unsigned long acpi_rsdp;
+ static int __init setup_acpi_rsdp(char *arg)
+ {
+@@ -187,7 +187,7 @@ acpi_physical_address __init acpi_os_get_root_pointer(void)
+ {
+ 	acpi_physical_address pa;
+ 
+-#ifdef CONFIG_KEXEC
++#ifdef CONFIG_KEXEC_CORE
+ 	/*
+ 	 * We may have been provided with an RSDP on the command line,
+ 	 * but if a malicious user has done so they may be pointing us
+-- 
+2.47.3
+

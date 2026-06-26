@@ -1,0 +1,64 @@
+From 1011e1ab8124f255585552153893906176dfcb61 Mon Sep 17 00:00:00 2001
+From: Corentin Oparowski <corentin.oparowski@vates.tech>
+Date: Sat, 19 Sep 2015 08:09:42 +0200
+Subject: [PATCH 13/35] pciback-mask-root-port-comp-timeout.patch
+
+---
+ drivers/xen/xen-pciback/pci_stub.c | 34 ++++++++++++++++++++++++++++++
+ 1 file changed, 34 insertions(+)
+
+diff --git a/drivers/xen/xen-pciback/pci_stub.c b/drivers/xen/xen-pciback/pci_stub.c
+index bdbf9ff8324a..400406d24adf 100644
+--- a/drivers/xen/xen-pciback/pci_stub.c
++++ b/drivers/xen/xen-pciback/pci_stub.c
+@@ -394,6 +394,9 @@ static int pcistub_match(struct pci_dev *dev)
+ 	return found;
+ }
+ 
++#define INTEL_RP_UNCEDMASK 0x218
++#define INTEL_RP_COMP_TIME_OUT (1 << 14)
++
+ static int pcistub_init_device(struct pcistub_device *psdev)
+ {
+ 	struct xen_pcibk_dev_data *dev_data;
+@@ -491,6 +494,37 @@ static int pcistub_init_device(struct pcistub_device *psdev)
+ 					   PCI_EXP_RTCTL_SECEE);
+ 			}
+ 		}
++		if (tmp->vendor == PCI_VENDOR_ID_INTEL) {
++			u32 uncedmask;
++			switch (tmp->device)
++			{
++				/* Tylersburg (EP)/Boxboro (MP) chipsets (NHM-EP/EX, WSM-EP/EX) */
++				case 0x3408 ... 0x3411: case 0x3420 ... 0x3421: /* root ports */
++				/* JasperForest (Intel Xeon Processor C5500/C3500 */
++				case 0x3720 ... 0x3724: /* root ports */
++				/* Sandybridge-EP (Romley) */
++				case 0x3c01 ... 0x3c0b: /* root ports */
++				/* Ivy Bridge-EP (Romley) */
++				case 0x0e01 ... 0x0e0b: /* root ports */
++				/* Haswell-EP (Grantley) */
++				case 0x2f01 ... 0x2f0b: /* root ports */
++				/* Broadwell-EP (Grantley) */
++				case 0x6f01 ... 0x6f0b: /* root ports */
++				{
++					pci_read_config_dword(tmp, INTEL_RP_UNCEDMASK, &uncedmask);
++					/* Mask completion time out detect */
++					if (!(uncedmask & INTEL_RP_COMP_TIME_OUT)) {
++						uncedmask |= INTEL_RP_COMP_TIME_OUT;
++						pci_write_config_dword(tmp, INTEL_RP_UNCEDMASK, uncedmask);
++						dev_info(&dev->dev,
++						"Masking Uncorrectable error Completion time-"
++						"out on root port %02x:%02x.%d\n",
++						tmp->bus->number, PCI_SLOT(tmp->devfn),
++						PCI_FUNC(tmp->devfn));
++					}
++				}
++			}
++		}
+ 	}
+ 
+ 	/* We need the device active to save the state. */
+-- 
+2.47.3
+

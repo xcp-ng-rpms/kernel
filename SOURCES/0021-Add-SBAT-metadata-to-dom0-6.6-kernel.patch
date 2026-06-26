@@ -1,0 +1,300 @@
+From 9436d6eba59680adf37e2fb2391395db12d97296 Mon Sep 17 00:00:00 2001
+From: Corentin Oparowski <corentin.oparowski@vates.tech>
+Date: Sat, 19 Sep 2015 08:09:42 +0200
+Subject: [PATCH 21/35] Add SBAT metadata to dom0 6.6 kernel
+
+After some recent upstream changes a lot of what used to be done in build.c is
+now done in header.S and setup.ld.
+
+The existing code lays out the PE header like this
+
+     CONFIG_EFI_MIXED=n                 CONFIG_EFI_MIXED=y
+```
+   0x0000 +--------+ ---             0x0000 +--------+ ---
+          |        |  |                     |        |  |
+   0x1000 +--------+  |              0x1000 +--------+  |
+          |        |  |                     |        |  |
+          | .setup |  |                     | .setup |  |
+          |        |  | setup_size          +--------+  | setup_size
+          |        |  |                     | .compat|  |
+   0x4000 +--------+ ---             0x4000 +--------+ ---
+          | .text  |                        | .text  |
+          |        |                        |        |
+             ...                               ...
+          |        |                        |        |
+ 0xabb000 +--------+               0xabb000 +--------+
+          | .data  |                        | .data  |
+          +--------+                        +--------+
+```
+The .text section doesn't move and compat eats backwards into .setup. This
+looks a little weird to me but ok. The code in build.c typically copies more
+than 0x3000 bytes of setup data so it sure looks like putting .compat at 0x3000
+is causing something to be overwritten. But I have left this behavior alone.
+
+The changes in this PR extend setup_size defined in setup.ld by 0x1000 bytes
+and then puts .sbat in the resulting gap between .setup and .text or .compat
+and .text.
+
+     CONFIG_EFI_MIXED=n                 CONFIG_EFI_MIXED=y
+```
+   0x0000 +--------+ ---             0x0000 +--------+ ---
+          |        |  |                     |        |  |
+   0x1000 +--------+  |              0x1000 +--------+  |
+          |        |  |                     |        |  |
+          | .setup |  |                     | .setup |  |
+          |        |  | setup_size          +--------+  | setup_size
+          |        |  |                     | .compat|  |
+   0x5000 +--------+  |              0x5000 +--------+  |
+          | .sbat  |  |                     | .sbat  |  |
+   0x6000 +--------+ ---             0x6000 +--------+ ---
+          | .text  |                        | .text  |
+          |        |                        |        |
+             ...                               ...
+          |        |                        |        |
+ 0xabb000 +--------+               0xabb000 +--------+
+          | .data  |                        | .data  |
+          +--------+                        +--------+
+```
+This change is careful to allocate new space for .sbat and to leave .compat to
+continue doing what it did before.
+
+Even though the .sbat data will be much smaller than 0x1000 bytes, the UEFI
+standard apparently wants each section to be 4kB aligned with no gaps between
+sections so the size of each section except the last needs to be a multiple of
+0x1000.
+
+With CONFIG_EFI_MIXED=n (XenServer default)
+```
+$ objdump -s -j .sbat arch/x86/boot/bzImage
+  0 .setup        00004000  0000000000001000  0000000000001000  00001000  2**2
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+  1 .sbat         00001000  0000000000005000  0000000000005000  00005000  2**4
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+  2 .text         00ab5000  0000000000006000  0000000000006000  00006000  2**4
+                  CONTENTS, ALLOC, LOAD, READONLY, CODE
+  3 .data         00000400  0000000000abb000  0000000000abb000  00abb000  2**4
+                  CONTENTS, ALLOC, LOAD, DATA
+```
+
+```
+$ objdump -s -j .sbat arch/x86/boot/bzImage
+
+arch/x86/boot/bzImage:     file format pei-x86-64
+
+Contents of section .sbat:
+ 5000 73626174 2c312c53 42415420 56657273  sbat,1,SBAT Vers
+ 5010 696f6e2c 73626174 2c312c68 74747073  ion,sbat,1,https
+ 5020 3a2f2f67 69746875 622e636f 6d2f7268  ://github.com/rh
+ 5030 626f6f74 2f736869 6d2f626c 6f622f6d  boot/shim/blob/m
+ 5040 61696e2f 53424154 2e6d640a 6c696e75  ain/SBAT.md.linu
+ 5050 782e7873 2c312c43 6c6f7564 20536f66  x.xs,1,Cloud Sof
+ 5060 74776172 65204772 6f75702c 6c696e75  tware Group,linu
+ 5070 782c312c 6d61696c 746f3a73 65637572  x,1,mailto:secur
+ 5080 65406369 74726978 2e636f6d 0a000000  e@citrix.com....
+ 5090 00000000 00000000 00000000 00000000  ................
+ 50a0 00000000 00000000 00000000 00000000  ................
+ 50b0 00000000 00000000 00000000 00000000  ................
+...
+ 5fd0 00000000 00000000 00000000 00000000  ................
+ 5fe0 00000000 00000000 00000000 00000000  ................
+ 5ff0 00000000 00000000 00000000 00000000  ................
+ ```
+
+With CONFIG_EFI_MIXED=y
+```
+Sections:
+Idx Name          Size      VMA               LMA               File off  Algn
+  0 .setup        00003000  0000000000001000  0000000000001000  00001000  2**2
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+  1 .compat       00001000  0000000000004000  0000000000004000  00004000  2**2
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+  2 .sbat         00001000  0000000000005000  0000000000005000  00005000  2**4
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+  3 .text         00ab9000  0000000000006000  0000000000006000  00006000  2**4
+                  CONTENTS, ALLOC, LOAD, READONLY, CODE
+  4 .data         00000400  0000000000abf000  0000000000abf000  00abf000  2**4
+                  CONTENTS, ALLOC, LOAD, DATA
+```
+
+I have tested that kernels built with CONFIG_EFI_MIXED=y and CONFIG_EFI_MIXED=n
+both boot fine.
+
+Signed-off-by: Kevin Lampis <klampis@cloud.com>
+---
+ arch/x86/boot/Makefile      |  4 ++--
+ arch/x86/boot/header.S      | 16 ++++++++++++++-
+ arch/x86/boot/sbat.csv      |  2 ++
+ arch/x86/boot/setup.ld      |  9 +++++++--
+ arch/x86/boot/tools/build.c | 40 ++++++++++++++++++++++++++++++++++++-
+ 5 files changed, 65 insertions(+), 6 deletions(-)
+ create mode 100644 arch/x86/boot/sbat.csv
+
+diff --git a/arch/x86/boot/Makefile b/arch/x86/boot/Makefile
+index 9cc0ff6e9067..a1c35c2f31ff 100644
+--- a/arch/x86/boot/Makefile
++++ b/arch/x86/boot/Makefile
+@@ -63,7 +63,7 @@ $(obj)/bzImage: asflags-y  := $(SVGA_MODE)
+ quiet_cmd_image = BUILD   $@
+ silent_redirect_image = >/dev/null
+ cmd_image = $(obj)/tools/build $(obj)/setup.bin $(obj)/vmlinux.bin \
+-			       $(obj)/zoffset.h $@ $($(quiet)redirect_image)
++			       $(obj)/zoffset.h $@ $($(quiet)redirect_image) $(srctree)/arch/x86/boot/sbat.csv
+ 
+ $(obj)/bzImage: $(obj)/setup.bin $(obj)/vmlinux.bin $(obj)/tools/build FORCE
+ 	$(call if_changed,image)
+@@ -88,7 +88,7 @@ $(obj)/zoffset.h: $(obj)/compressed/vmlinux FORCE
+ AFLAGS_header.o += -I$(objtree)/$(obj)
+ $(obj)/header.o: $(obj)/zoffset.h
+ 
+-LDFLAGS_setup.elf	:= -m elf_i386 -z noexecstack -T
++LDFLAGS_setup.elf	:= --defsym CONFIG_EFI_STUB=$(if $(CONFIG_EFI_STUB),1,0) -m elf_i386 -z noexecstack -T
+ $(obj)/setup.elf: $(src)/setup.ld $(SETUP_OBJS) FORCE
+ 	$(call if_changed,ld)
+ 
+diff --git a/arch/x86/boot/header.S b/arch/x86/boot/header.S
+index b5c79f43359b..d520ab1a11ab 100644
+--- a/arch/x86/boot/header.S
++++ b/arch/x86/boot/header.S
+@@ -177,8 +177,22 @@ pecompat_fstart:
+ 	.byte	0x0				# Sentinel
+ 	.popsection
+ #else
+-	.set	pecompat_fstart, setup_size
++	.set	pecompat_fstart, sbat_fstart
+ #endif
++
++	.ascii	".sbat\0\0\0"
++	.long	sbat_fsize	                    # VirtualSize
++	.long	sbat_fstart	                    # VirtualAddress
++	.long	sbat_fsize	                    # SizeOfRawData
++	.long	sbat_fstart	                    # PointerToRawData
++	.long	0	                              # PointerToRelocations
++	.long	0	                              # PointerToLineNumbers
++	.word	0	                              # NumberOfRelocations
++	.word	0	                              # NumberOfLineNumbers
++	.long	IMAGE_SCN_CNT_INITIALIZED_DATA	| \
++		IMAGE_SCN_MEM_READ                  | \
++		IMAGE_SCN_ALIGN_16BYTES             # Characteristics
++
+ 	.ascii	".text"
+ 	.byte	0
+ 	.byte	0
+diff --git a/arch/x86/boot/sbat.csv b/arch/x86/boot/sbat.csv
+new file mode 100644
+index 000000000000..65efc83cbec3
+--- /dev/null
++++ b/arch/x86/boot/sbat.csv
+@@ -0,0 +1,2 @@
++sbat,1,SBAT Version,sbat,1,https://github.com/rhboot/shim/blob/main/SBAT.md
++linux.xs,1,Cloud Software Group,linux,1,mailto:security@xenserver.com
+diff --git a/arch/x86/boot/setup.ld b/arch/x86/boot/setup.ld
+index 3a2d1360abb0..fcff2c31b070 100644
+--- a/arch/x86/boot/setup.ld
++++ b/arch/x86/boot/setup.ld
+@@ -25,7 +25,11 @@ SECTIONS
+ 	.text32		: { *(.text32) }
+ 
+ 	.pecompat	: { *(.pecompat) }
+-	PROVIDE(pecompat_fsize = setup_size - pecompat_fstart);
++	PROVIDE(pecompat_fsize = sbat_fstart - pecompat_fstart);
++
++	.sbat	: { *(.sbat) }
++	PROVIDE(sbat_fsize = 0x1000);
++	PROVIDE(sbat_fstart = CONFIG_EFI_STUB == 1 ? setup_size - sbat_fsize : setup_size);
+ 
+ 	. = ALIGN(16);
+ 	.rodata		: { *(.rodata*) }
+@@ -43,7 +47,8 @@ SECTIONS
+ 		setup_sig = .;
+ 		LONG(0x5a5aaa55)
+ 
+-		setup_size = ALIGN(ABSOLUTE(.), 4096);
++		setup_size = ALIGN(ABSOLUTE(.) + (CONFIG_EFI_STUB == 1 ? sbat_fsize : 0), 4096);
++
+ 		setup_sects = ABSOLUTE(setup_size / 512);
+ 	}
+ 
+diff --git a/arch/x86/boot/tools/build.c b/arch/x86/boot/tools/build.c
+index 10311d77c67f..aed3ebaf4e3a 100644
+--- a/arch/x86/boot/tools/build.c
++++ b/arch/x86/boot/tools/build.c
+@@ -47,6 +47,8 @@ typedef unsigned int   u32;
+ /* This must be large enough to hold the entire setup */
+ u8 buf[SETUP_SECT_MAX*512];
+ 
++#define SBAT_FSIZE 0x1000
++
+ static unsigned long _edata;
+ 
+ /*----------------------------------------------------------------------*/
+@@ -130,7 +132,11 @@ static void die(const char * str, ...)
+ 
+ static void usage(void)
+ {
++#ifdef CONFIG_EFI_STUB
++	die("Usage: build setup system zoffset.h image sbat");
++#else
+ 	die("Usage: build setup system zoffset.h image");
++#endif
+ }
+ 
+ /*
+@@ -178,8 +184,15 @@ int main(int argc, char ** argv)
+ 	int fd;
+ 	void *kernel;
+ 	u32 crc = 0xffffffffUL;
++	int expect_argc;
++
++#ifdef CONFIG_EFI_STUB
++	expect_argc = 6;
++#else
++	expect_argc = 5;
++#endif
+ 
+-	if (argc != 5)
++	if (argc < expect_argc)
+ 		usage();
+ 	parse_zoffset(argv[3]);
+ 
+@@ -200,6 +213,11 @@ int main(int argc, char ** argv)
+ 		die("Boot block hasn't got boot flag (0xAA55)");
+ 	fclose(file);
+ 
++#if CONFIG_EFI_STUB
++	/* Reserve space for .sbat section */
++	c += SBAT_FSIZE;
++#endif
++
+ 	/* Pad unused space with zeros */
+ 	setup_sectors = (c + 4095) / 4096;
+ 	setup_sectors *= 8;
+@@ -208,6 +226,26 @@ int main(int argc, char ** argv)
+ 	i = setup_sectors*512;
+ 	memset(buf+c, 0, i-c);
+ 
++#if CONFIG_EFI_STUB
++	{
++		const char *sbat_filename = argv[5];
++		const unsigned int sbat_section_offset = i - SBAT_FSIZE;
++
++		FILE *file = fopen(sbat_filename, "rb");
++		if (!file)
++			die("Unable to open '%s': %m", sbat_filename);
++
++		fread(buf + sbat_section_offset, 1, SBAT_FSIZE-1, file);
++		if (ferror(file))
++			die("read-error on '%s'", sbat_filename);
++
++		if (!feof(file))
++			die("SBAT file too large '%s'", sbat_filename);
++
++		fclose(file);
++	}
++#endif
++
+ 	/* Open and stat the kernel file */
+ 	fd = open(argv[2], O_RDONLY);
+ 	if (fd < 0)
+-- 
+2.47.3
+
