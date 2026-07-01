@@ -1,0 +1,20 @@
+From fbc13ac6b68adeed71cbef815107871d94109a85 Mon Sep 17 00:00:00 2001
+From: Corentin Oparowski <corentin.oparowski@vates.tech>
+Date: Wed, 1 Jul 2026 16:51:37 +0200
+Subject: [PATCH] Update SBAT data for xcp-ng
+
+---
+ arch/x86/boot/sbat.csv | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/x86/boot/sbat.csv b/arch/x86/boot/sbat.csv
+index 65efc83cbec3..9b9d80654cbe 100644
+--- a/arch/x86/boot/sbat.csv
++++ b/arch/x86/boot/sbat.csv
+@@ -1,2 +1,2 @@
+ sbat,1,SBAT Version,sbat,1,https://github.com/rhboot/shim/blob/main/SBAT.md
+-linux.xs,1,Cloud Software Group,linux,1,mailto:security@xenserver.com
++linux.xcp-ng,1,Vates,linux,1,https://github.com/xcp-ng-rpms/kernel
+-- 
+2.47.3
+
