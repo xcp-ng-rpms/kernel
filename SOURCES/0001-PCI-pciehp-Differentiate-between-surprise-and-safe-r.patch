@@ -1,0 +1,201 @@
+From 1ca654f73ce93962521c194c5a24abc32d24a3b4 Mon Sep 17 00:00:00 2001
+From: Lukas Wunner <lukas@wunner.de>
+Date: Tue, 31 Jul 2018 07:50:37 +0200
+Subject: PCI: pciehp: Differentiate between surprise and safe removal
+Content-Type: text/plain; charset = "utf-8"
+Content-Transfert-Encoding: 8bit
+
+When removing PCI devices below a hotplug bridge, pciehp marks them as
+disconnected if the card is no longer present in the slot or it quiesces
+them if the card is still present (by disabling INTx interrupts, bus
+mastering and SERR# reporting).
+
+To detect whether the card is still present, pciehp checks the Presence
+Detect State bit in the Slot Status register.  The problem with this
+approach is that even if the card is present, the link to it may be
+down, and it that case it would be better to mark the devices as
+disconnected instead of trying to quiesce them.  Moreover, if the card
+in the slot was quickly replaced by another one, the Presence Detect
+State bit would be set, yet trying to quiesce the new card's devices
+would be wrong and the correct thing to do is to mark the previous
+card's devices as disconnected.
+
+Instead of looking at the Presence Detect State bit, it is better to
+differentiate whether the card was surprise removed versus safely
+removed (via sysfs or an Attention Button press).  On surprise removal,
+the devices should be marked as disconnected, whereas on safe removal it
+is correct to quiesce the devices.
+
+The knowledge whether a surprise removal or a safe removal is at hand
+does exist further up in the call stack:  A surprise removal is
+initiated by pciehp_handle_presence_or_link_change(), a safe removal by
+pciehp_handle_disable_request().
+
+Pass that information down to pciehp_unconfigure_device() and use it in
+lieu of the Presence Detect State bit.  While there, add kernel-doc to
+pciehp_unconfigure_device() and pciehp_configure_device().
+
+Tested-by: Alexandru Gagniuc <mr.nuke.me@gmail.com>
+Signed-off-by: Lukas Wunner <lukas@wunner.de>
+Signed-off-by: Bjorn Helgaas <bhelgaas@google.com>
+Cc: Keith Busch <keith.busch@intel.com>
+
+(cherry picked from commit 11e87702be65780be92fb1f0a5b7b293954185f7)
+
+Backported-by: Thierry Escande <thierry.escande@vates.tech>
+No conflict
+---
+ drivers/pci/hotplug/pciehp.h      |  2 +-
+ drivers/pci/hotplug/pciehp_ctrl.c | 22 +++++++++++++---------
+ drivers/pci/hotplug/pciehp_pci.c  | 23 ++++++++++++++++++++---
+ 3 files changed, 34 insertions(+), 13 deletions(-)
+
+diff --git a/drivers/pci/hotplug/pciehp.h b/drivers/pci/hotplug/pciehp.h
+index 811cf83f956de..39c9c8815a355 100644
+--- a/drivers/pci/hotplug/pciehp.h
++++ b/drivers/pci/hotplug/pciehp.h
+@@ -181,7 +181,7 @@ void pciehp_handle_button_press(struct slot *slot);
+ void pciehp_handle_disable_request(struct slot *slot);
+ void pciehp_handle_presence_or_link_change(struct slot *slot, u32 events);
+ int pciehp_configure_device(struct slot *p_slot);
+-void pciehp_unconfigure_device(struct slot *p_slot);
++void pciehp_unconfigure_device(struct slot *p_slot, bool presence);
+ void pciehp_queue_pushbutton_work(struct work_struct *work);
+ struct controller *pcie_init(struct pcie_device *dev);
+ int pcie_init_notification(struct controller *ctrl);
+diff --git a/drivers/pci/hotplug/pciehp_ctrl.c b/drivers/pci/hotplug/pciehp_ctrl.c
+index da7c72372ffcf..c283253d2cd78 100644
+--- a/drivers/pci/hotplug/pciehp_ctrl.c
++++ b/drivers/pci/hotplug/pciehp_ctrl.c
+@@ -26,6 +26,9 @@
+    hotplug controller logic
+  */
+ 
++#define SAFE_REMOVAL	 true
++#define SURPRISE_REMOVAL false
++
+ static void set_slot_off(struct controller *ctrl, struct slot *pslot)
+ {
+ 	/* turn off slot, turn on Amber LED, turn off Green LED if supported*/
+@@ -101,12 +104,13 @@ static int board_added(struct slot *p_slot)
+ /**
+  * remove_board - Turns off slot and LEDs
+  * @p_slot: slot where board is being removed
++ * @safe_removal: whether the board is safely removed (versus surprise removed)
+  */
+-static void remove_board(struct slot *p_slot)
++static void remove_board(struct slot *p_slot, bool safe_removal)
+ {
+ 	struct controller *ctrl = p_slot->ctrl;
+ 
+-	pciehp_unconfigure_device(p_slot);
++	pciehp_unconfigure_device(p_slot, safe_removal);
+ 
+ 	if (POWER_CTRL(ctrl)) {
+ 		pciehp_power_off_slot(p_slot);
+@@ -124,7 +128,7 @@ static void remove_board(struct slot *p_slot)
+ }
+ 
+ static int pciehp_enable_slot(struct slot *slot);
+-static int pciehp_disable_slot(struct slot *slot);
++static int pciehp_disable_slot(struct slot *slot, bool safe_removal);
+ 
+ void pciehp_request(struct controller *ctrl, int action)
+ {
+@@ -216,7 +220,7 @@ void pciehp_handle_disable_request(struct slot *slot)
+ 	slot->state = POWEROFF_STATE;
+ 	mutex_unlock(&slot->lock);
+ 
+-	ctrl->request_result = pciehp_disable_slot(slot);
++	ctrl->request_result = pciehp_disable_slot(slot, SAFE_REMOVAL);
+ }
+ 
+ void pciehp_handle_presence_or_link_change(struct slot *slot, u32 events)
+@@ -243,7 +247,7 @@ void pciehp_handle_presence_or_link_change(struct slot *slot, u32 events)
+ 		if (events & PCI_EXP_SLTSTA_PDC)
+ 			ctrl_info(ctrl, "Slot(%s): Card not present\n",
+ 				  slot_name(slot));
+-		pciehp_disable_slot(slot);
++		pciehp_disable_slot(slot, SURPRISE_REMOVAL);
+ 		break;
+ 	default:
+ 		mutex_unlock(&slot->lock);
+@@ -329,7 +333,7 @@ static int pciehp_enable_slot(struct slot *slot)
+ 	return ret;
+ }
+ 
+-static int __pciehp_disable_slot(struct slot *p_slot)
++static int __pciehp_disable_slot(struct slot *p_slot, bool safe_removal)
+ {
+ 	u8 getstatus = 0;
+ 	struct controller *ctrl = p_slot->ctrl;
+@@ -343,17 +347,17 @@ static int __pciehp_disable_slot(struct slot *p_slot)
+ 		}
+ 	}
+ 
+-	remove_board(p_slot);
++	remove_board(p_slot, safe_removal);
+ 	return 0;
+ }
+ 
+-static int pciehp_disable_slot(struct slot *slot)
++static int pciehp_disable_slot(struct slot *slot, bool safe_removal)
+ {
+ 	struct controller *ctrl = slot->ctrl;
+ 	int ret;
+ 
+ 	pm_runtime_get_sync(&ctrl->pcie->port->dev);
+-	ret = __pciehp_disable_slot(slot);
++	ret = __pciehp_disable_slot(slot, safe_removal);
+ 	pm_runtime_put(&ctrl->pcie->port->dev);
+ 
+ 	mutex_lock(&slot->lock);
+diff --git a/drivers/pci/hotplug/pciehp_pci.c b/drivers/pci/hotplug/pciehp_pci.c
+index a32023afa25bc..642b57c4e0b69 100644
+--- a/drivers/pci/hotplug/pciehp_pci.c
++++ b/drivers/pci/hotplug/pciehp_pci.c
+@@ -20,6 +20,14 @@
+ #include "../pci.h"
+ #include "pciehp.h"
+ 
++/**
++ * pciehp_configure_device() - enumerate PCI devices below a hotplug bridge
++ * @p_slot: PCIe hotplug slot
++ *
++ * Enumerate PCI devices below a hotplug bridge and add them to the system.
++ * Return 0 on success, %-EEXIST if the devices are already enumerated or
++ * %-ENODEV if enumeration failed.
++ */
+ int pciehp_configure_device(struct slot *p_slot)
+ {
+ 	struct pci_dev *dev;
+@@ -69,9 +77,19 @@ int pciehp_configure_device(struct slot *p_slot)
+ 	return ret;
+ }
+ 
+-void pciehp_unconfigure_device(struct slot *p_slot)
++/**
++ * pciehp_unconfigure_device() - remove PCI devices below a hotplug bridge
++ * @p_slot: PCIe hotplug slot
++ * @presence: whether the card is still present in the slot;
++ *	true for safe removal via sysfs or an Attention Button press,
++ *	false for surprise removal
++ *
++ * Unbind PCI devices below a hotplug bridge from their drivers and remove
++ * them from the system.  Safely removed devices are quiesced.  Surprise
++ * removed devices are marked as such to prevent further accesses.
++ */
++void pciehp_unconfigure_device(struct slot *p_slot, bool presence)
+ {
+-	u8 presence = 0;
+ 	struct pci_dev *dev, *temp;
+ 	struct pci_bus *parent = p_slot->ctrl->pcie->port->subordinate;
+ 	u16 command;
+@@ -79,7 +97,6 @@ void pciehp_unconfigure_device(struct slot *p_slot)
+ 
+ 	ctrl_dbg(ctrl, "%s: domain:bus:dev = %04x:%02x:00\n",
+ 		 __func__, pci_domain_nr(parent), parent->number);
+-	pciehp_get_adapter_status(p_slot, &presence);
+ 
+ 	pci_lock_rescan_remove();
+ 
