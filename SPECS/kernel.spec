@@ -91,6 +91,7 @@ Source2: macros.kernel
 %if %{do_kabichk}
 Source3: check-kabi
 Source4: Module.kabi
+Source5: module-hash-list.csv
 %endif
 
 Patch1: 0001-expose-xsversion.patch.patch
@@ -207,6 +208,7 @@ Provides: python3-perf
 export AFTER_LINK='sh -xc "/usr/lib/rpm/debugedit -b %{buildroot} -d /usr/src/debug -i $@ > $@.id"'
 
 cp -f %{SOURCE1} .config
+cp -f %{SOURCE5} .
 # make sure configuration is up to date
 %{?_cov_wrap} make olddefconfig
 bash -c 'diff -u <(grep -v "^#" .config) <(grep -v "^#" %{SOURCE1})'
@@ -507,6 +509,7 @@ fi
 - add secureboot signing support (vmlinuz signing), module signing uses on-build generated key (will need changes for SB)
 - add xcpsign-macros-test dependencies
 - update SBAT data for xcp-ng
+- Enable out-of-tree modules revocation by hash 
 
 * Wed Apr 29 2026 Corentin Oparowski <corentin.oparowski@vates.tech> - 6.12.0-1.0
 - update filter-hypercall.patch to match XS lastest version
