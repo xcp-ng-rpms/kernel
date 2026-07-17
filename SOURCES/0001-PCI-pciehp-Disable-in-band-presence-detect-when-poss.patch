@@ -1,0 +1,128 @@
+From 88cb09000d8044bf3c447629e60c8d781ddaef30 Mon Sep 17 00:00:00 2001
+From: Alexandru Gagniuc <mr.nuke.me@gmail.com>
+Date: Fri, 25 Oct 2019 15:00:45 -0400
+Subject: PCI: pciehp: Disable in-band presence detect when possible
+Content-Type: text/plain; charset = "utf-8"
+Content-Transfert-Encoding: 8bit
+
+The presence detect state (PDS) is normally a logical OR of in-band and
+out-of-band (OOB) presence detect.  As of PCIe 4.0, there is the option to
+disable in-band presence so that the PDS bit always reflects the state of
+the out-of-band presence.
+
+The recommendation of the PCIe spec is to disable in-band presence whenever
+supported (PCIe r5.0, appendix I implementation note):
+
+  Due to architectural issues, the in-band (Physical-Layer-based) portion
+  of the PD mechanism is deprecated for use with async hot-plug. One issue
+  is that in-band PD as architected does not detect adapter removal during
+  certain LTSSM states, notably the L1 and Disabled States.  Another issue
+  is that when both in-band and OOB PD are being used together, the
+  Presence Detect State bit and its associated interrupt mechanism always
+  reflect the logical OR of the inband and OOB PD states, and with some
+  hot-plug hardware configurations, it is important for software to detect
+  and respond to in-band and OOB PD events independently.  If OOB PD is
+  being used and the associated DSP supports In-Band PD Disable, it is
+  recommended that the In-Band PD Disable bit be Set, and the Presence
+  Detect State bit and its associated interrupt mechanism be used
+  exclusively for OOB PD.  As a substitute for in-band PD with async
+  hot-plug, the reference model uses either the DPC or the DLL Link Active
+  mechanism.
+
+Link: https://lore.kernel.org/r/20191025190047.38130-2-stuart.w.hayes@gmail.com
+[bhelgaas: move PCI_EXP_SLTCAP2 read earlier & print PCI_EXP_SLTCAP2_IBPD
+value (suggested by Lukas)]
+Signed-off-by: Alexandru Gagniuc <mr.nuke.me@gmail.com>
+Signed-off-by: Bjorn Helgaas <bhelgaas@google.com>
+Reviewed-by: Andy Shevchenko <andy.shevchenko@gmail.com>
+Reviewed-by: Lukas Wunner <lukas@wunner.de>
+(cherry picked from commit 202853595e53f981c86656c49fc1cc1e3620f558)
+
+Backported-by: Thierry Escande <thierry.escande@vates.tech>
+Backport notes:
+ Move the inband_presence_disabled field at the bottom of the controller
+ structure for conflict resolution. Since fields have been shuffled in
+ this structure by previous commits, there was no obvious place for it
+ so I arbitrary put it at the bottom.
+---
+ drivers/pci/hotplug/pciehp.h     |  1 +
+ drivers/pci/hotplug/pciehp_hpc.c | 12 ++++++++++--
+ include/uapi/linux/pci_regs.h    |  2 ++
+ 3 files changed, 13 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/pci/hotplug/pciehp.h b/drivers/pci/hotplug/pciehp.h
+index a4b294fddc939..fbb908d7f094c 100644
+--- a/drivers/pci/hotplug/pciehp.h
++++ b/drivers/pci/hotplug/pciehp.h
+@@ -127,6 +127,7 @@ struct controller {
+ 	atomic_t pending_events;
+ 	int request_result;
+ 	wait_queue_head_t requester;
++	unsigned int inband_presence_disabled:1;
+ };
+ 
+ /**
+diff --git a/drivers/pci/hotplug/pciehp_hpc.c b/drivers/pci/hotplug/pciehp_hpc.c
+index 61a2e2c0e217b..c7e27d871de2d 100644
+--- a/drivers/pci/hotplug/pciehp_hpc.c
++++ b/drivers/pci/hotplug/pciehp_hpc.c
+@@ -870,7 +870,7 @@ static inline void dbg_ctrl(struct controller *ctrl)
+ struct controller *pcie_init(struct pcie_device *dev)
+ {
+ 	struct controller *ctrl;
+-	u32 slot_cap, link_cap;
++	u32 slot_cap, slot_cap2, link_cap;
+ 	u8 poweron;
+ 	struct pci_dev *pdev = dev->port;
+ 
+@@ -898,6 +898,13 @@ struct controller *pcie_init(struct pcie_device *dev)
+ 	init_waitqueue_head(&ctrl->queue);
+ 	dbg_ctrl(ctrl);
+ 
++	pcie_capability_read_dword(pdev, PCI_EXP_SLTCAP2, &slot_cap2);
++	if (slot_cap2 & PCI_EXP_SLTCAP2_IBPD) {
++		pcie_write_cmd_nowait(ctrl, PCI_EXP_SLTCTL_IBPD_DISABLE,
++				      PCI_EXP_SLTCTL_IBPD_DISABLE);
++		ctrl->inband_presence_disabled = 1;
++	}
++
+ 	/* Check if Data Link Layer Link Active Reporting is implemented */
+ 	pcie_capability_read_dword(pdev, PCI_EXP_LNKCAP, &link_cap);
+ 	if (link_cap & PCI_EXP_LNKCAP_DLLLARC)
+@@ -909,7 +916,7 @@ struct controller *pcie_init(struct pcie_device *dev)
+ 		PCI_EXP_SLTSTA_MRLSC | PCI_EXP_SLTSTA_CC |
+ 		PCI_EXP_SLTSTA_DLLSC | PCI_EXP_SLTSTA_PDC);
+ 
+-	ctrl_info(ctrl, "Slot #%d AttnBtn%c PwrCtrl%c MRL%c AttnInd%c PwrInd%c HotPlug%c Surprise%c Interlock%c NoCompl%c LLActRep%c%s\n",
++	ctrl_info(ctrl, "Slot #%d AttnBtn%c PwrCtrl%c MRL%c AttnInd%c PwrInd%c HotPlug%c Surprise%c Interlock%c NoCompl%c IbPresDis%c LLActRep%c%s\n",
+ 		(slot_cap & PCI_EXP_SLTCAP_PSN) >> 19,
+ 		FLAG(slot_cap, PCI_EXP_SLTCAP_ABP),
+ 		FLAG(slot_cap, PCI_EXP_SLTCAP_PCP),
+@@ -920,6 +927,7 @@ struct controller *pcie_init(struct pcie_device *dev)
+ 		FLAG(slot_cap, PCI_EXP_SLTCAP_HPS),
+ 		FLAG(slot_cap, PCI_EXP_SLTCAP_EIP),
+ 		FLAG(slot_cap, PCI_EXP_SLTCAP_NCCS),
++		FLAG(slot_cap2, PCI_EXP_SLTCAP2_IBPD),
+ 		FLAG(link_cap, PCI_EXP_LNKCAP_DLLLARC),
+ 		pdev->broken_cmd_compl ? " (with Cmd Compl erratum)" : "");
+ 
+diff --git a/include/uapi/linux/pci_regs.h b/include/uapi/linux/pci_regs.h
+index ee556ccc93f48..46711a1897a3c 100644
+--- a/include/uapi/linux/pci_regs.h
++++ b/include/uapi/linux/pci_regs.h
+@@ -596,6 +596,7 @@
+ #define  PCI_EXP_SLTCTL_PWR_OFF        0x0400 /* Power Off */
+ #define  PCI_EXP_SLTCTL_EIC	0x0800	/* Electromechanical Interlock Control */
+ #define  PCI_EXP_SLTCTL_DLLSCE	0x1000	/* Data Link Layer State Changed Enable */
++#define  PCI_EXP_SLTCTL_IBPD_DISABLE	0x4000 /* In-band PD disable */
+ #define PCI_EXP_SLTSTA		26	/* Slot Status */
+ #define  PCI_EXP_SLTSTA_ABP	0x0001	/* Attention Button Pressed */
+ #define  PCI_EXP_SLTSTA_PFD	0x0002	/* Power Fault Detected */
+@@ -666,6 +667,7 @@
+ #define PCI_EXP_LNKSTA2		50	/* Link Status 2 */
+ #define PCI_CAP_EXP_ENDPOINT_SIZEOF_V2	52	/* v2 endpoints with link end here */
+ #define PCI_EXP_SLTCAP2		52	/* Slot Capabilities 2 */
++#define  PCI_EXP_SLTCAP2_IBPD	0x00000001 /* In-band PD Disable Supported */
+ #define PCI_EXP_SLTCTL2		56	/* Slot Control 2 */
+ #define PCI_EXP_SLTSTA2		58	/* Slot Status 2 */
+ 

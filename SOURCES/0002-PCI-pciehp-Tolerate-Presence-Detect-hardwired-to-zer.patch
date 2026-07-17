@@ -1,0 +1,200 @@
+From faf6e731ded45dfa2269bf17a76406940845fb18 Mon Sep 17 00:00:00 2001
+From: Lukas Wunner <lukas@wunner.de>
+Date: Sat, 8 Sep 2018 09:59:01 +0200
+Subject: PCI: pciehp: Tolerate Presence Detect hardwired to zero
+Content-Type: text/plain; charset = "utf-8"
+Content-Transfert-Encoding: 8bit
+
+The WiGig Bus Extension (WBE) specification allows tunneling PCIe over
+IEEE 802.11.  A product implementing this spec is the wil6210 from
+Wilocity (now part of Qualcomm Atheros).  It integrates a PCIe switch
+with a wireless network adapter:
+
+  00.0-+              [1ae9:0101]  Upstream Port
+       +-00.0-+       [1ae9:0200]  Downstream Port
+       |      +-00.0  [168c:0034]  Atheros AR9462 Wireless Network
+Adapter
+       +-02.0         [1ae9:0201]  Downstream Port
+       +-03.0         [1ae9:0201]  Downstream Port
+
+Wirelessly attached devices presumably appear below the hotplug ports
+with device ID [1ae9:0201].  Oddly, the Downstream Port [1ae9:0200]
+leading to the wireless network adapter is likewise Hotplug Capable,
+but has its Presence Detect State bit hardwired to zero.  Even if the
+Link Active bit is set, Presence Detect is zero, so this cannot be
+caused by in-band presence detection but only by broken hardware.
+
+pciehp assumes an empty slot if Presence Detect State is zero,
+regardless of Link Active being one.  Consequently, up until v4.18 it
+removes the wireless network adapter in pciehp_resume().  From v4.19 it
+already does so in pciehp_probe().
+
+Be lenient towards broken hardware and assume the slot is occupied if
+Link Active is set:  Introduce pciehp_card_present_or_link_active()
+and use it in lieu of pciehp_get_adapter_status() everywhere, except
+in pciehp_handle_presence_or_link_change() whose log messages depend
+on which of Presence Detect State or Link Active is set.
+
+Remove the Presence Detect State check from __pciehp_enable_slot()
+because it is only called if either of Presence Detect State or Link
+Active is set.
+
+Caution: There is a possibility that broken hardware exists which has
+working Presence Detect but hardwires Link Active to one.  On such
+hardware the slot will now incorrectly be considered always occupied.
+If such hardware is discovered, this commit can be rolled back and a
+quirk can be added which sets is_hotplug_bridge = 0 for [1ae9:0200].
+
+Link: https://bugzilla.kernel.org/show_bug.cgi?id=200839
+Reported-and-tested-by: David Yang <mmyangfl@gmail.com>
+Signed-off-by: Lukas Wunner <lukas@wunner.de>
+Signed-off-by: Bjorn Helgaas <bhelgaas@google.com>
+Cc: Rajat Jain <rajatja@google.com>
+Cc: Ashok Raj <ashok.raj@intel.com>
+
+(cherry picked from commit 80696f991424d05a784c0cf9c314ac09ac280406)
+Backported-by: Thierry Escande <thierry.escande@vates.tech>
+No conflict
+---
+ drivers/pci/hotplug/pciehp.h      |  3 ++-
+ drivers/pci/hotplug/pciehp_core.c |  6 +++---
+ drivers/pci/hotplug/pciehp_ctrl.c | 10 ++--------
+ drivers/pci/hotplug/pciehp_hpc.c  | 25 +++++++++++++++++++------
+ 4 files changed, 26 insertions(+), 18 deletions(-)
+
+diff --git a/drivers/pci/hotplug/pciehp.h b/drivers/pci/hotplug/pciehp.h
+index 39c9c8815a355..a4b294fddc939 100644
+--- a/drivers/pci/hotplug/pciehp.h
++++ b/drivers/pci/hotplug/pciehp.h
+@@ -194,11 +194,12 @@ void pciehp_get_attention_status(struct slot *slot, u8 *status);
+ 
+ void pciehp_set_attention_status(struct slot *slot, u8 status);
+ void pciehp_get_latch_status(struct slot *slot, u8 *status);
+-void pciehp_get_adapter_status(struct slot *slot, u8 *status);
+ int pciehp_query_power_fault(struct slot *slot);
+ void pciehp_green_led_on(struct slot *slot);
+ void pciehp_green_led_off(struct slot *slot);
+ void pciehp_green_led_blink(struct slot *slot);
++bool pciehp_card_present(struct controller *ctrl);
++bool pciehp_card_present_or_link_active(struct controller *ctrl);
+ int pciehp_check_link_status(struct controller *ctrl);
+ bool pciehp_check_link_active(struct controller *ctrl);
+ void pciehp_release_ctrl(struct controller *ctrl);
+diff --git a/drivers/pci/hotplug/pciehp_core.c b/drivers/pci/hotplug/pciehp_core.c
+index ec48c9433ae50..fddd376f9e9b4 100644
+--- a/drivers/pci/hotplug/pciehp_core.c
++++ b/drivers/pci/hotplug/pciehp_core.c
+@@ -188,7 +188,7 @@ static int get_adapter_status(struct hotplug_slot *hotplug_slot, u8 *value)
+ 	struct pci_dev *pdev = slot->ctrl->pcie->port;
+ 
+ 	pci_config_pm_runtime_get(pdev);
+-	pciehp_get_adapter_status(slot, value);
++	*value = pciehp_card_present_or_link_active(slot->ctrl);
+ 	pci_config_pm_runtime_put(pdev);
+ 	return 0;
+ }
+@@ -213,12 +213,12 @@ static int reset_slot(struct hotplug_slot *hotplug_slot, int probe)
+ static void pciehp_check_presence(struct controller *ctrl)
+ {
+ 	struct slot *slot = ctrl->slot;
+-	u8 occupied;
++	bool occupied;
+ 
+ 	down_read(&ctrl->reset_lock);
+ 	mutex_lock(&slot->lock);
+ 
+-	pciehp_get_adapter_status(slot, &occupied);
++	occupied = pciehp_card_present_or_link_active(ctrl);
+ 	if ((occupied && (slot->state == OFF_STATE ||
+ 			  slot->state == BLINKINGON_STATE)) ||
+ 	    (!occupied && (slot->state == ON_STATE ||
+diff --git a/drivers/pci/hotplug/pciehp_ctrl.c b/drivers/pci/hotplug/pciehp_ctrl.c
+index c283253d2cd78..1fb9ba0ac3a53 100644
+--- a/drivers/pci/hotplug/pciehp_ctrl.c
++++ b/drivers/pci/hotplug/pciehp_ctrl.c
+@@ -226,8 +226,7 @@ void pciehp_handle_disable_request(struct slot *slot)
+ void pciehp_handle_presence_or_link_change(struct slot *slot, u32 events)
+ {
+ 	struct controller *ctrl = slot->ctrl;
+-	bool link_active;
+-	u8 present;
++	bool present, link_active;
+ 
+ 	/*
+ 	 * If the slot is on and presence or link has changed, turn it off.
+@@ -256,7 +255,7 @@ void pciehp_handle_presence_or_link_change(struct slot *slot, u32 events)
+ 
+ 	/* Turn the slot on if it's occupied or link is up */
+ 	mutex_lock(&slot->lock);
+-	pciehp_get_adapter_status(slot, &present);
++	present = pciehp_card_present(ctrl);
+ 	link_active = pciehp_check_link_active(ctrl);
+ 	if (!present && !link_active) {
+ 		mutex_unlock(&slot->lock);
+@@ -289,11 +288,6 @@ static int __pciehp_enable_slot(struct slot *p_slot)
+ 	u8 getstatus = 0;
+ 	struct controller *ctrl = p_slot->ctrl;
+ 
+-	pciehp_get_adapter_status(p_slot, &getstatus);
+-	if (!getstatus) {
+-		ctrl_info(ctrl, "Slot(%s): No adapter\n", slot_name(p_slot));
+-		return -ENODEV;
+-	}
+ 	if (MRL_SENS(p_slot->ctrl)) {
+ 		pciehp_get_latch_status(p_slot, &getstatus);
+ 		if (getstatus) {
+diff --git a/drivers/pci/hotplug/pciehp_hpc.c b/drivers/pci/hotplug/pciehp_hpc.c
+index a938abdb41cee..61a2e2c0e217b 100644
+--- a/drivers/pci/hotplug/pciehp_hpc.c
++++ b/drivers/pci/hotplug/pciehp_hpc.c
+@@ -389,13 +389,27 @@ void pciehp_get_latch_status(struct slot *slot, u8 *status)
+ 	*status = !!(slot_status & PCI_EXP_SLTSTA_MRLSS);
+ }
+ 
+-void pciehp_get_adapter_status(struct slot *slot, u8 *status)
++bool pciehp_card_present(struct controller *ctrl)
+ {
+-	struct pci_dev *pdev = ctrl_dev(slot->ctrl);
++	struct pci_dev *pdev = ctrl_dev(ctrl);
+ 	u16 slot_status;
+ 
+ 	pcie_capability_read_word(pdev, PCI_EXP_SLTSTA, &slot_status);
+-	*status = !!(slot_status & PCI_EXP_SLTSTA_PDS);
++	return slot_status & PCI_EXP_SLTSTA_PDS;
++}
++
++/**
++ * pciehp_card_present_or_link_active() - whether given slot is occupied
++ * @ctrl: PCIe hotplug controller
++ *
++ * Unlike pciehp_card_present(), which determines presence solely from the
++ * Presence Detect State bit, this helper also returns true if the Link Active
++ * bit is set.  This is a concession to broken hotplug ports which hardwire
++ * Presence Detect State to zero, such as Wilocity's [1ae9:0200].
++ */
++bool pciehp_card_present_or_link_active(struct controller *ctrl)
++{
++	return pciehp_card_present(ctrl) || pciehp_check_link_active(ctrl);
+ }
+ 
+ int pciehp_query_power_fault(struct slot *slot)
+@@ -857,7 +871,7 @@ struct controller *pcie_init(struct pcie_device *dev)
+ {
+ 	struct controller *ctrl;
+ 	u32 slot_cap, link_cap;
+-	u8 occupied, poweron;
++	u8 poweron;
+ 	struct pci_dev *pdev = dev->port;
+ 
+ 	ctrl = kzalloc(sizeof(*ctrl), GFP_KERNEL);
+@@ -917,9 +931,8 @@ struct controller *pcie_init(struct pcie_device *dev)
+ 	 * requested yet, so avoid triggering a notification with this command.
+ 	 */
+ 	if (POWER_CTRL(ctrl)) {
+-		pciehp_get_adapter_status(ctrl->slot, &occupied);
+ 		pciehp_get_power_status(ctrl->slot, &poweron);
+-		if (!occupied && poweron) {
++		if (!pciehp_card_present_or_link_active(ctrl) && poweron) {
+ 			pcie_disable_notification(ctrl);
+ 			pciehp_power_off_slot(ctrl->slot);
+ 		}
