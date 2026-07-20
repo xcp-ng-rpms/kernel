@@ -1,0 +1,40 @@
+From d633aca42b2d89f22c9d84cfac16da1197e976f1 Mon Sep 17 00:00:00 2001
+From: Corentin Oparowski <corentin.oparowski@vates.tech>
+Date: Mon, 20 Jul 2026 12:26:20 +0200
+Subject: [PATCH] identify XCP-ng PRIVCMD_FILTERING_ABI_VERSION
+
+Add the XCP-ng vendor identifier in the reserved upper bits of the
+PRIVCMD_FILTERING_ABI_VERSION ELF note.
+
+Keep the existing 0x90001 ABI value used for XenServer hypercall
+filtering compatibility, but mark the note as XCP-ng-specific to prevent
+confusion between downstream ABI implementations.
+
+The vendor namespace is independent from the ABI version and allows
+future XCP-ng-specific filtering changes without conflicting with other
+downstream users.
+---
+ include/xen/filter-hypercall.h | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/include/xen/filter-hypercall.h b/include/xen/filter-hypercall.h
+index c06ddde6a6ca..7efafa9a3553 100644
+--- a/include/xen/filter-hypercall.h
++++ b/include/xen/filter-hypercall.h
+@@ -20,7 +20,12 @@ int post_hypercall(struct filtercall *fc);
+ #endif /* !__ASSEMBLY__ */
+ 
+ /* Current filter code uses 9.0 XS ABI compatibility */
+-#define PRIVCMD_FILTERING_ABI_VERSION _AC(0x90001,UL)
++
++/* XCP-ng vendor ID */
++#define FILTER_VENDOR_XCPNG   (1UL << 31)
++
++#define PRIVCMD_FILTERING_ABI_VERSION \
++    (FILTER_VENDOR_XCPNG | _AC(0x90001, UL))
+ 
+ #endif
+ 
+-- 
+2.47.3
+

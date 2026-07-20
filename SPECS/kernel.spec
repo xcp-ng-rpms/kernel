@@ -130,6 +130,7 @@ Patch33: 0033-SDEV_EVT_LUN_CHANGE_REPORTED-events-should-only-be-r.patch
 Patch34: 0034-Filter-and-check-hypercalls-from-userspace.patch
 Patch35: 0035-From-338ca398fe64413e8619f0bf79e36f71ceb7e4be-Mon-Se.patch
 Patch36: 0036-Update-SBAT-data-for-xcp-ng.patch
+Patch37: 0037-identify-XCP-ng-PRIVCMD_FILTERING_ABI_VERSION.patch
 
 %description
 The kernel package contains the Linux kernel (vmlinuz), the core of any
@@ -510,6 +511,7 @@ fi
 - add xcpsign-macros-test dependencies
 - update SBAT data for xcp-ng
 - Enable out-of-tree modules revocation by hash 
+- add filter-elf-note xcp-ng identification 
 
 * Wed Apr 29 2026 Corentin Oparowski <corentin.oparowski@vates.tech> - 6.12.0-1.0
 - update filter-hypercall.patch to match XS lastest version
