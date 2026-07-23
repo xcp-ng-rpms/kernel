@@ -472,7 +472,7 @@ fi
 
 %changelog
 
-* Wed Apr 29 2026 Corentin Oparowski <corentin.oparowski@vates.tech> - 6.12.0-1.0
+* Wed Apr 29 2026 Corentin Oparowski <corentin.oparowski@vates.tech> - 6.12.0-1
 - update filter-hypercall.patch to match XS lastest version
 - update to XS9 .config
 - Switch to UEK8 with XS9 rebased patches
