@@ -114,7 +114,7 @@ Patch19: 0019-The-objective-is-to-ensure-we-have-a-large-enough-co.patch
 Patch20: 0020-Revert-to-use-num_online_cpus-for-default-rss-queues.patch
 Patch21: 0021-Add-SBAT-metadata-to-dom0-6.6-kernel.patch
 Patch22: 0022-Enable-lockdown-integrity-by-default.patch
-Patch23: 0023-For-XenServer-the-desired-behaviour-is-that-signatur.patch
+#Patch23: 0023-For-XenServer-the-desired-behaviour-is-that-signatur.patch
 Patch24: 0024-Use-MoK-variable-fallback.patch
 Patch25: 0025-Allows-Xen-Netback-debug-ring-files-to-be-read-if-lo.patch
 Patch26: 0026-Import-the-Xen-public-headers-in-preparation-for-fil.patch
@@ -474,6 +474,8 @@ fi
 %changelog
 * Fri Aug 07 2026 Yann Dirson <yann.dirson@vates.tech> - 6.12.0-2
 - Add "Provides: kernel-xcpng" so the installer can be sure to pull this kernel not Alma's
+- Disable XS modification of CONFIG_MODULE_SIG_FORCE behaviour
+- Disable CONFIG_MODULE_SIG_FORCE in config
 
 * Wed Apr 29 2026 Corentin Oparowski <corentin.oparowski@vates.tech> - 6.12.0-1
 - update filter-hypercall.patch to match XS lastest version
