@@ -34,7 +34,7 @@
 Name: kernel
 License: GPLv2
 Version: %{usver}
-Release: 1%{dist}
+Release: 2%{dist}
 ExclusiveOS: Linux
 Summary: The Linux kernel
 BuildRequires: kmod
@@ -80,6 +80,7 @@ AutoReqProv: no
 Provides: kernel-uname-r = %{uname}
 Provides: kernel = %{version}-%{release}
 Provides: kernel-%{_arch} = %{version}-%{release}
+Provides: kernel-xcpng
 Requires(post): coreutils kmod
 Requires(posttrans): coreutils dracut kmod
 
@@ -471,6 +472,8 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Fri Aug 07 2026 Yann Dirson <yann.dirson@vates.tech> - 6.12.0-2
+- Add "Provides: kernel-xcpng" so the installer can be sure to pull this kernel not Alma's
 
 * Wed Apr 29 2026 Corentin Oparowski <corentin.oparowski@vates.tech> - 6.12.0-1
 - update filter-hypercall.patch to match XS lastest version
