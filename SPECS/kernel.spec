@@ -42,7 +42,7 @@
 Name: kernel
 License: GPLv2
 Version: 4.19.19
-Release: %{?xsrel}.7%{?dist}
+Release: %{?xsrel}.8%{?dist}
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
@@ -759,6 +759,11 @@ Patch1022: 0001-PCI-pciehp-Disable-in-band-presence-detect-when-poss.patch
 Patch1023: 0002-PCI-pciehp-Wait-for-PDS-if-in-band-presence-is-disab.patch
 Patch1024: 0003-PCI-pciehp-Add-DMI-table-for-in-band-presence-detect.patch
 
+# CVE-2026-45840 (openvswitch: cap upcall PID array size and pre-size vport replies)
+Patch1025: 0656-openvswitch-cap-upcall-PID-array-size-and-pre-size-v.patch
+# CVE-2026-53227 (net: openvswitch: fix possible kfree_skb of ERR_PTR)
+Patch1026: 0657-net-openvswitch-fix-possible-kfree_skb-of-ERR_PTR.patch
+
 %description
 The kernel package contains the Linux kernel (vmlinuz), the core of any
 Linux operating system. The kernel handles the basic functions of the operating
@@ -1112,6 +1117,10 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Fri Jul 24 2026 Sebastien Rodot <sebastien.rodot@vates.tech> - 4.19.19-8.0.46.8
+- Backport fixes for CVE-2026-45840 (openvswitch: cap upcall PID array size and pre-size vport replies)
+- Backport fixes for CVE-2026-53227 (net: openvswitch: fix possible kfree_skb of ERR_PTR)
+
 * Thu Jul 02 2026 Thierry Escande <thierry.escande@vates.tech> - 4.19.19-8.0.46.7
 - Backport fixes in pcieport driver for hotplug hardware detection
 
