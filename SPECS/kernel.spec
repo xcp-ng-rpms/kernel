@@ -42,7 +42,7 @@
 Name: kernel
 License: GPLv2
 Version: 4.19.19
-Release: %{?xsrel}.8%{?dist}
+Release: %{?xsrel}.9%{?dist}
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
@@ -1117,6 +1117,9 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Tue Aug 04 2026 Philippe Coval <philippe.coval@vates.tech> - 4.19.19-8.0.46.9
+- Rebuild against OpenSSL 3.0
+
 * Fri Jul 24 2026 Sebastien Rodot <sebastien.rodot@vates.tech> - 4.19.19-8.0.46.8
 - Backport fixes for CVE-2026-45840 (openvswitch: cap upcall PID array size and pre-size vport replies)
 - Backport fixes for CVE-2026-53227 (net: openvswitch: fix possible kfree_skb of ERR_PTR)
