@@ -1,0 +1,69 @@
+From 631db14ddefbda08eb5e6bf7b8589271f4852631 Mon Sep 17 00:00:00 2001
+From: Xie Yongji <xieyongji@bytedance.com>
+Date: Fri, 13 Aug 2021 23:13:30 +0800
+Subject: [PATCH] nbd: Aovid double completion of a request
+
+There is a race between iterating over requests in
+nbd_clear_que() and completing requests in recv_work(),
+which can lead to double completion of a request.
+
+To fix it, flush the recv worker before iterating over
+the requests and don't abort the completed request
+while iterating.
+
+Fixes: 96d97e17828f ("nbd: clear_sock on netlink disconnect")
+Reported-by: Jiang Yadong <jiangyadong@bytedance.com>
+Signed-off-by: Xie Yongji <xieyongji@bytedance.com>
+Reviewed-by: Josef Bacik <josef@toxicpanda.com>
+Link: https://lore.kernel.org/r/20210813151330.96-1-xieyongji@bytedance.com
+Signed-off-by: Jens Axboe <axboe@kernel.dk>
+(cherry picked from commit 7a6db5acd75028c0c091dc089d62f429697e2539)
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+
+[Quentin: rebase from v4.19.19 to v4.19.325 conflicts:
+ - drivers/block/nbd.c: context changes due to 9f0f39c92e4f ("nbd: fix max
+   number of supported devs")]
+
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+---
+ drivers/block/nbd.c | 10 +++++++++-
+ 1 file changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/block/nbd.c b/drivers/block/nbd.c
+index c1871fe284cc..2ac0bcc43a14 100644
+--- a/drivers/block/nbd.c
++++ b/drivers/block/nbd.c
+@@ -752,6 +752,10 @@ static void nbd_clear_req(struct request *req, void *data, bool reserved)
+ {
+ 	struct nbd_cmd *cmd = blk_mq_rq_to_pdu(req);
+ 
++	/* don't abort one completed request */
++	if (READ_ONCE(req->state) == MQ_RQ_COMPLETE)
++		return;
++
+ 	mutex_lock(&cmd->lock);
+ 	cmd->status = BLK_STS_IOERR;
+ 	mutex_unlock(&cmd->lock);
+@@ -1929,14 +1933,18 @@ static void nbd_disconnect_and_put(struct nbd_device *nbd)
+ {
+ 	mutex_lock(&nbd->config_lock);
+ 	nbd_disconnect(nbd);
+-	nbd_clear_sock(nbd);
++	sock_shutdown(nbd);
++	nbd_clear_que(nbd);
++	nbd->task_setup = NULL;
+ 	mutex_unlock(&nbd->config_lock);
++
+ 	/*
+ 	 * Make sure recv thread has finished, so it does not drop the last
+ 	 * config ref and try to destroy the workqueue from inside the work
+ 	 * queue.
+ 	 */
+ 	flush_workqueue(nbd->recv_workq);
++
+ 	if (test_and_clear_bit(NBD_HAS_CONFIG_REF,
+ 			       &nbd->config->runtime_flags))
+ 		nbd_config_put(nbd);
+-- 
+2.43.0
+

@@ -1,0 +1,34 @@
+From 38c1aa513794e10609c6783d5de2aa5ab9777b05 Mon Sep 17 00:00:00 2001
+From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+Date: Mon, 5 Jan 2026 19:49:44 +0100
+Subject: [PATCH] CA-285778-emulex-nic-ip-hdr-len.patch
+
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+
+[Quentin: rebase from v4.19.19 to v4.19.325 conflicts:
+ - drivers/net/ethernet/emulex/benet/be_main.c: extra conditional
+   expression due to 66b53bcf99a2 ("be2net: Extend xmit workaround to BE3
+   chip")]
+
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+---
+ drivers/net/ethernet/emulex/benet/be_main.c | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/drivers/net/ethernet/emulex/benet/be_main.c b/drivers/net/ethernet/emulex/benet/be_main.c
+index 8215bd1ca022..8220f7f47a7b 100644
+--- a/drivers/net/ethernet/emulex/benet/be_main.c
++++ b/drivers/net/ethernet/emulex/benet/be_main.c
+@@ -1136,8 +1136,7 @@ static struct sk_buff *be_lancer_xmit_workarounds(struct be_adapter *adapter,
+ 	eth_hdr_len = ntohs(skb->protocol) == ETH_P_8021Q ?
+ 						VLAN_ETH_HLEN : ETH_HLEN;
+ 	if (skb->len <= 60 &&
+-	    (lancer_chip(adapter) || BE3_chip(adapter) ||
+-	     skb_vlan_tag_present(skb)) && is_ipv4_pkt(skb)) {
++	    is_ipv4_pkt(skb)) {
+ 		ip = (struct iphdr *)ip_hdr(skb);
+ 		if (unlikely(pskb_trim(skb, eth_hdr_len + ntohs(ip->tot_len))))
+ 			goto tx_drop;
+-- 
+2.43.0
+
