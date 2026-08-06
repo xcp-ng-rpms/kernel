@@ -1,0 +1,176 @@
+From 05223ab1ea2d636a00a62abafb48d3c7b4b42b17 Mon Sep 17 00:00:00 2001
+From: Andreas Gruenbacher <agruenba@redhat.com>
+Date: Fri, 5 Apr 2019 12:16:14 +0100
+Subject: [PATCH] gfs2: Rename sd_log_le_{revoke,ordered}
+
+Rename sd_log_le_revoke to sd_log_revokes and sd_log_le_ordered to
+sd_log_ordered: not sure what le stands for here, but it doesn't add
+clarity, and if it stands for list entry, it's actually confusing as
+those are both list heads but not list entries.
+
+Signed-off-by: Andreas Gruenbacher <agruenba@redhat.com>
+
+[quentin: conflict due to removal of c9d1cef44d40 ("gfs2: Replace
+gl_revokes with a GLF flag") which was added/reverted in the
+patch-queue (easier to simply not apply both)]
+
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+---
+ fs/gfs2/incore.h     |  4 ++--
+ fs/gfs2/log.c        | 14 +++++++-------
+ fs/gfs2/log.h        |  2 +-
+ fs/gfs2/lops.c       |  9 ++++-----
+ fs/gfs2/ops_fstype.c |  4 ++--
+ fs/gfs2/trans.c      |  2 +-
+ 6 files changed, 17 insertions(+), 18 deletions(-)
+
+diff --git a/fs/gfs2/incore.h b/fs/gfs2/incore.h
+index 86840a70ee1a..58dc4d19b890 100644
+--- a/fs/gfs2/incore.h
++++ b/fs/gfs2/incore.h
+@@ -809,8 +809,8 @@ struct gfs2_sbd {
+ 	atomic_t sd_log_pinned;
+ 	unsigned int sd_log_num_revoke;
+ 
+-	struct list_head sd_log_le_revoke;
+-	struct list_head sd_log_le_ordered;
++	struct list_head sd_log_revokes;
++	struct list_head sd_log_ordered;
+ 	spinlock_t sd_ordered_lock;
+ 
+ 	atomic_t sd_log_thresh1;
+diff --git a/fs/gfs2/log.c b/fs/gfs2/log.c
+index 973df4023dff..bcd963215783 100644
+--- a/fs/gfs2/log.c
++++ b/fs/gfs2/log.c
+@@ -551,9 +551,9 @@ static void gfs2_ordered_write(struct gfs2_sbd *sdp)
+ 	LIST_HEAD(written);
+ 
+ 	spin_lock(&sdp->sd_ordered_lock);
+-	list_sort(NULL, &sdp->sd_log_le_ordered, &ip_cmp);
+-	while (!list_empty(&sdp->sd_log_le_ordered)) {
+-		ip = list_entry(sdp->sd_log_le_ordered.next, struct gfs2_inode, i_ordered);
++	list_sort(NULL, &sdp->sd_log_ordered, &ip_cmp);
++	while (!list_empty(&sdp->sd_log_ordered)) {
++		ip = list_entry(sdp->sd_log_ordered.next, struct gfs2_inode, i_ordered);
+ 		if (ip->i_inode.i_mapping->nrpages == 0) {
+ 			test_and_clear_bit(GIF_ORDERED, &ip->i_flags);
+ 			list_del(&ip->i_ordered);
+@@ -564,7 +564,7 @@ static void gfs2_ordered_write(struct gfs2_sbd *sdp)
+ 		filemap_fdatawrite(ip->i_inode.i_mapping);
+ 		spin_lock(&sdp->sd_ordered_lock);
+ 	}
+-	list_splice(&written, &sdp->sd_log_le_ordered);
++	list_splice(&written, &sdp->sd_log_ordered);
+ 	spin_unlock(&sdp->sd_ordered_lock);
+ }
+ 
+@@ -573,8 +573,8 @@ static void gfs2_ordered_wait(struct gfs2_sbd *sdp)
+ 	struct gfs2_inode *ip;
+ 
+ 	spin_lock(&sdp->sd_ordered_lock);
+-	while (!list_empty(&sdp->sd_log_le_ordered)) {
+-		ip = list_entry(sdp->sd_log_le_ordered.next, struct gfs2_inode, i_ordered);
++	while (!list_empty(&sdp->sd_log_ordered)) {
++		ip = list_entry(sdp->sd_log_ordered.next, struct gfs2_inode, i_ordered);
+ 		list_del(&ip->i_ordered);
+ 		WARN_ON(!test_and_clear_bit(GIF_ORDERED, &ip->i_flags));
+ 		if (ip->i_inode.i_mapping->nrpages == 0)
+@@ -609,7 +609,7 @@ void gfs2_add_revoke(struct gfs2_sbd *sdp, struct gfs2_bufdata *bd)
+ 	if (atomic_inc_return(&gl->gl_revokes) == 1)
+ 		gfs2_glock_hold(gl);
+ 	set_bit(GLF_LFLUSH, &gl->gl_flags);
+-	list_add(&bd->bd_list, &sdp->sd_log_le_revoke);
++	list_add(&bd->bd_list, &sdp->sd_log_revokes);
+ }
+ 
+ void gfs2_glock_remove_revoke(struct gfs2_glock *gl)
+diff --git a/fs/gfs2/log.h b/fs/gfs2/log.h
+index 907bb3f66038..de5530b998b2 100644
+--- a/fs/gfs2/log.h
++++ b/fs/gfs2/log.h
+@@ -59,7 +59,7 @@ static inline void gfs2_ordered_add_inode(struct gfs2_inode *ip)
+ 	if (!test_bit(GIF_ORDERED, &ip->i_flags)) {
+ 		spin_lock(&sdp->sd_ordered_lock);
+ 		if (!test_and_set_bit(GIF_ORDERED, &ip->i_flags))
+-			list_add(&ip->i_ordered, &sdp->sd_log_le_ordered);
++			list_add(&ip->i_ordered, &sdp->sd_log_ordered);
+ 		spin_unlock(&sdp->sd_ordered_lock);
+ 	}
+ }
+diff --git a/fs/gfs2/lops.c b/fs/gfs2/lops.c
+index 42b97ea6f7b1..f94a7db18e9a 100644
+--- a/fs/gfs2/lops.c
++++ b/fs/gfs2/lops.c
+@@ -316,7 +316,7 @@ static struct bio *gfs2_log_get_bio(struct gfs2_sbd *sdp, u64 blkno,
+  * @sdp: the filesystem
+  * @page: the page to write
+  * @size: the size of the data to write
+- * @offset: the offset within the page 
++ * @offset: the offset within the page
+  * @blkno: block number of the log entry
+  *
+  * Try and add the page segment to the current bio. If that fails,
+@@ -345,7 +345,7 @@ void gfs2_log_write(struct gfs2_sbd *sdp, struct page *page,
+  * gfs2_log_write_bh - write a buffer's content to the log
+  * @sdp: The super block
+  * @bh: The buffer pointing to the in-place location
+- * 
++ *
+  * This writes the content of the buffer to the next available location
+  * in the log. The buffer will be unlocked once the i/o to the log has
+  * completed.
+@@ -621,7 +621,7 @@ static void revoke_lo_before_commit(struct gfs2_sbd *sdp, struct gfs2_trans *tr)
+ {
+ 	struct gfs2_meta_header *mh;
+ 	unsigned int offset;
+-	struct list_head *head = &sdp->sd_log_le_revoke;
++	struct list_head *head = &sdp->sd_log_revokes;
+ 	struct gfs2_bufdata *bd;
+ 	struct page *page;
+ 	unsigned int length;
+@@ -659,7 +659,7 @@ static void revoke_lo_before_commit(struct gfs2_sbd *sdp, struct gfs2_trans *tr)
+ 
+ static void revoke_lo_after_commit(struct gfs2_sbd *sdp, struct gfs2_trans *tr)
+ {
+-	struct list_head *head = &sdp->sd_log_le_revoke;
++	struct list_head *head = &sdp->sd_log_revokes;
+ 	struct gfs2_bufdata *bd;
+ 	struct gfs2_glock *gl;
+ 
+@@ -882,4 +882,3 @@ const struct gfs2_log_operations *gfs2_log_ops[] = {
+ 	&gfs2_revoke_lops,
+ 	NULL,
+ };
+-
+diff --git a/fs/gfs2/ops_fstype.c b/fs/gfs2/ops_fstype.c
+index e5e7a8101aa6..c7563f906f71 100644
+--- a/fs/gfs2/ops_fstype.c
++++ b/fs/gfs2/ops_fstype.c
+@@ -117,8 +117,8 @@ static struct gfs2_sbd *init_sbd(struct super_block *sb)
+ 
+ 	spin_lock_init(&sdp->sd_log_lock);
+ 	atomic_set(&sdp->sd_log_pinned, 0);
+-	INIT_LIST_HEAD(&sdp->sd_log_le_revoke);
+-	INIT_LIST_HEAD(&sdp->sd_log_le_ordered);
++	INIT_LIST_HEAD(&sdp->sd_log_revokes);
++	INIT_LIST_HEAD(&sdp->sd_log_ordered);
+ 	spin_lock_init(&sdp->sd_ordered_lock);
+ 
+ 	init_waitqueue_head(&sdp->sd_log_waitq);
+diff --git a/fs/gfs2/trans.c b/fs/gfs2/trans.c
+index 391afd4362f8..6773c45b9d75 100644
+--- a/fs/gfs2/trans.c
++++ b/fs/gfs2/trans.c
+@@ -262,7 +262,7 @@ void gfs2_trans_add_unrevoke(struct gfs2_sbd *sdp, u64 blkno, unsigned int len)
+ 	unsigned int n = len;
+ 
+ 	gfs2_log_lock(sdp);
+-	list_for_each_entry_safe(bd, tmp, &sdp->sd_log_le_revoke, bd_list) {
++	list_for_each_entry_safe(bd, tmp, &sdp->sd_log_revokes, bd_list) {
+ 		if ((bd->bd_blkno >= blkno) && (bd->bd_blkno < (blkno + len))) {
+ 			list_del_init(&bd->bd_list);
+ 			gfs2_assert_withdraw(sdp, sdp->sd_log_num_revoke);
+-- 
+2.43.0
+
