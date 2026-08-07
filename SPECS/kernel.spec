@@ -817,6 +817,10 @@ Patch1026: 0657-net-openvswitch-fix-possible-kfree_skb-of-ERR_PTR.patch
 # CVE-2026-64600 (RefluXFS)
 Patch1027: 0001-xfs-resample-the-data-fork-mapping-after-cycling-ILO.patch
 
+# Perf build error
+Patch1028: 0001-tools-headers-Grab-copy-of-linux-const.h-needed-by-l.patch
+Patch1029: 0001-tools-headers-UAPI-Sync-linux-const.h-with-the-kerne.patch
+
 %description
 The kernel package contains the Linux kernel (vmlinuz), the core of any
 Linux operating system. The kernel handles the basic functions of the operating
