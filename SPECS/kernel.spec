@@ -811,6 +811,9 @@ Patch1034: xen-blkback-Avoid-UAF-when-reading-I-O-statistics.patch
 # XSA-526 iterative fix, called XSA-531 / CVE-2026-99286
 Patch1036: xen-netback-Fix-XenBus-connection-failure-cleanup.patch
 
+# Perf build errors on linux-4.19.325-cip
+Patch1037: tools-headers-Grab-copy-of-linux-const.h-needed-by-l.patch
+Patch1038: tools-headers-UAPI-Sync-linux-const.h-with-the-kerne.patch
 
 %description
 The kernel package contains the Linux kernel (vmlinuz), the core of any
