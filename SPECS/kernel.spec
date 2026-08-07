@@ -829,6 +829,10 @@ Patch1027: 0001-xfs-resample-the-data-fork-mapping-after-cycling-ILO.patch
 # Patch1029: 0002-SUNRPC-use-_bh-spinlocking-on-transport_lock.patch: bcab4d551a3d SUNRPC: use _bh spinlocking on ->transport_lock
 Patch1030: 0003-Revert-XSI-2150-Avoid-deadlocks-on-NFS-spinlocks.patch
 
+# Perf build error
+Patch1031: 0001-tools-headers-Grab-copy-of-linux-const.h-needed-by-l.patch
+Patch1032: 0001-tools-headers-UAPI-Sync-linux-const.h-with-the-kerne.patch
+
 %description
 The kernel package contains the Linux kernel (vmlinuz), the core of any
 Linux operating system. The kernel handles the basic functions of the operating
