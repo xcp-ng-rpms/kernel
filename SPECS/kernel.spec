@@ -81,6 +81,59 @@ Provides: kernel-%{_arch} = %{version}-%{release}
 Requires(post): coreutils kmod
 Requires(posttrans): coreutils dracut kmod
 
+# This ensures the kernel gets updated if a newly built driver gets
+# updated.  It is not required to change on future changes going forward,
+# as we will preserve the kABI.
+Provides: xcpng-kernel-kabi = 4.19.325-cip134+
+
+# Make sure any installed drivers gets updated if they were built against a
+# prior kernel
+Conflicts: aqc111u-module < 1.3.3.0-3
+Conflicts: atlantic-module-alt < 2.5.12-2
+Conflicts: avago-megaraid-sas < 07.713.01.00+rc1-3.1
+Conflicts: avago-mpt3sas < 38.00.00.00-1.1
+Conflicts: broadcom-bnxt-en < 1.10.3_237.1.20.0-8.1.1
+Conflicts: broadcom-bnxt-en-alt < 1.10.3_232.0.155.5-2
+Conflicts: chelsio-cxgb4 < 1.0.1-4.1
+Conflicts: cisco-enic < 4.5.0.7-1.1
+Conflicts: cisco-enic-alt < 4.4.0.1-2
+Conflicts: cisco-fnic < 2.0.0.90-1.2
+Conflicts: cisco-fnic-alt < 2.0.0.89-2
+Conflicts: coretemp-module-alt < 1.0-5
+Conflicts: dell-rbu-module < 4.19.0+1-4
+Conflicts: emulex-lpfc < 12.0.0.10-3.1
+Conflicts: emulex-lpfc-alt < 14.4.393.31-1.2
+Conflicts: intel-e1000e < 5.10.179-3
+Conflicts: intel-e1000e-alt < 3.8.7-2
+Conflicts: intel-fm10k < 0.26.1-3.1
+Conflicts: intel-i40e < 2.25.11-4.1
+Conflicts: intel-i40e-alt < 2.26.8-2
+Conflicts: intel-ice < 2.4.5-8.1.2
+Conflicts: intel-ice-alt < 1.17.2-2
+Conflicts: intel-igb < 5.13.20-2.1
+Conflicts: intel-igb-alt < 5.4.6-3
+Conflicts: intel-igc < 5.10.226-3
+Conflicts: intel-ixgbe < 6.2.5-1.1
+Conflicts: intel-ixgbe-alt < 5.9.4-3
+Conflicts: mellanox-mlnxen < 5.9_0.5.5.0-3.2
+Conflicts: mellanox-mlnxen-alt < 5.4_1.0.3.0-4
+Conflicts: microsemi-aacraid < 1.2.1.60001-1.1
+Conflicts: microsemi-smartpqi < 2.1.30_031-1.1
+Conflicts: microsemi-smartpqi-alt < 2.1.28_025-2
+Conflicts: mlx4-modules-alt < 4.9_7.1.0.0-2
+Conflicts: mpi3mr-module < 8.17.1.0.0-2
+Conflicts: qlogic-fastlinq < 8.74.0.2-1.1
+Conflicts: qlogic-fastlinq-alt < 8.74.6.0-2
+Conflicts: qlogic-fastlinq-alt_8_42 < 8.42.10.0-3
+Conflicts: qlogic-netxtreme2 < 7.14.76-2.2
+Conflicts: qlogic-netxtreme2-alt < 7.15.24-2
+Conflicts: qlogic-qla2xxx < 10.02.13.00_k-1.1
+Conflicts: qlogic-qla2xxx-alt < 10.02.14.01_k-2
+Conflicts: r8125-module < 9.012.04-3
+Conflicts: r8169-module-alt < 4.19.128-4
+Conflicts: sfc-module-alt < 5.3.18.1012-2
+Conflicts: tg3-module-alt < 3.139j-2
+
 Source0: linux-cip-4.19.325-cip134.tar.gz
 Source1: kernel-x86_64.config
 Source2: macros.kernel
