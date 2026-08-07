@@ -42,7 +42,7 @@
 Name: kernel
 License: GPLv2
 Version: 4.19.19
-Release: %{?xsrel}.9%{?dist}
+Release: %{?xsrel}.9.foreigncopy.2%{?dist}
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
@@ -764,6 +764,9 @@ Patch1025: 0656-openvswitch-cap-upcall-PID-array-size-and-pre-size-v.patch
 # CVE-2026-53227 (net: openvswitch: fix possible kfree_skb of ERR_PTR)
 Patch1026: 0657-net-openvswitch-fix-possible-kfree_skb-of-ERR_PTR.patch
 
+# Test new foreign copy ABI
+Patch1027: foreigncopy-privcmd.patch
+
 %description
 The kernel package contains the Linux kernel (vmlinuz), the core of any
 Linux operating system. The kernel handles the basic functions of the operating
@@ -1117,6 +1120,9 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Fri Aug 14 2026 Lucas Pottier <lucas.pottier@vates.tech> - 4.19.19-8.0.46.9.foreigncopy.2
+- Test new ABI to allow copying foreign memory
+
 * Tue Aug 04 2026 Philippe Coval <philippe.coval@vates.tech> - 4.19.19-8.0.46.9
 - Rebuild against OpenSSL 3.0
 

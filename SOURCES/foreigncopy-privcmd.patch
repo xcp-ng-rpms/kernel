@@ -1,0 +1,187 @@
+diff --git a/arch/x86/include/asm/xen/interface.h b/arch/x86/include/asm/xen/interface.h
+index 62ca03ef5c65..b3aa21d3344a 100644
+--- a/arch/x86/include/asm/xen/interface.h
++++ b/arch/x86/include/asm/xen/interface.h
+@@ -59,6 +59,7 @@
+ #elif defined(__x86_64__)
+ #define set_xen_guest_handle(hnd, val)	do { (hnd).p = val; } while (0)
+ #endif
++#define get_xen_guest_handle(hnd) ((hnd).p)
+ #else
+ #if defined(__i386__)
+ #define set_xen_guest_handle(hnd, val)			\
+@@ -70,6 +71,7 @@
+ #elif defined(__x86_64__)
+ #define set_xen_guest_handle(hnd, val)	do { (hnd) = val; } while (0)
+ #endif
++#define get_xen_guest_handle(hnd) (hnd)
+ #endif
+ 
+ #ifndef __ASSEMBLY__
+@@ -91,6 +93,7 @@ DEFINE_GUEST_HANDLE(int);
+ DEFINE_GUEST_HANDLE(void);
+ DEFINE_GUEST_HANDLE(uint64_t);
+ DEFINE_GUEST_HANDLE(uint32_t);
++DEFINE_GUEST_HANDLE(uint8_t);
+ DEFINE_GUEST_HANDLE(xen_pfn_t);
+ DEFINE_GUEST_HANDLE(xen_ulong_t);
+ #endif
+diff --git a/drivers/xen/privcmd.c b/drivers/xen/privcmd.c
+index 7e6e682104dc..78950f5862a3 100644
+--- a/drivers/xen/privcmd.c
++++ b/drivers/xen/privcmd.c
+@@ -851,6 +851,50 @@ static long privcmd_ioctl_mmap_resource(struct file *file, void __user *udata)
+ 	return rc;
+ }
+ 
++static long privcmd_ioctl_foreigncopy(struct file *file, void __user *udata)
++{
++	const struct privcmd_data *const data = file->private_data;
++	long ret;
++	struct privcmd_foreigncopy copy;
++	struct xen_foreigncopy xcopy;
++
++	if (copy_from_user(&copy, udata, sizeof(copy)))
++		return -EFAULT;
++	if (copy.dir & ~1u)
++		return -EINVAL;
++	if (copy.num >= U32_MAX >> PAGE_SHIFT)
++		return -EINVAL;
++	if (!access_ok(VERIFY_WRITE, copy.pfns, copy.num * sizeof(*copy.pfns)))
++		return -EFAULT;
++	if (!access_ok(VERIFY_WRITE, copy.buffer, copy.num << PAGE_SHIFT))
++		return -EFAULT;
++
++	/* If restriction is in place, check the domid matches */
++	if (data->domid != DOMID_INVALID && data->domid != copy.dom)
++		return -EPERM;
++
++	xcopy.domid = copy.dom;
++	xcopy.flags = copy.dir;
++	xcopy.nr_frames = copy.num;
++	set_xen_guest_handle(xcopy.frame_list,  (__force xen_pfn_t *)copy.pfns);
++	set_xen_guest_handle(xcopy.buffer, (__force uint8_t *)copy.buffer);
++
++	xen_preemptible_hcall_begin();
++	ret = HYPERVISOR_memory_op(XENMEM_foreigncopy, &xcopy);
++	xen_preemptible_hcall_end();
++
++	/* copy values back in case of error */
++	if (ret) {
++		copy.num = xcopy.nr_frames;
++		copy.pfns = get_xen_guest_handle(xcopy.frame_list);
++		copy.buffer = get_xen_guest_handle(xcopy.buffer);
++		if (__copy_to_user(udata, &copy, sizeof(copy)))
++			ret = -EFAULT;
++	}
++
++	return ret;
++}
++
+ static long privcmd_ioctl(struct file *file,
+ 			  unsigned int cmd, unsigned long data)
+ {
+@@ -885,6 +929,10 @@ static long privcmd_ioctl(struct file *file,
+ 	case IOCTL_PRIVCMD_MMAP_RESOURCE:
+ 		ret = privcmd_ioctl_mmap_resource(file, udata);
+ 		break;
++	
++	case IOCTL_PRIVCMD_FOREIGNCOPY:
++		ret = privcmd_ioctl_foreigncopy(file, udata);
++		break;
+ 
+ 	default:
+ 		break;
+diff --git a/include/uapi/xen/privcmd.h b/include/uapi/xen/privcmd.h
+index d2029556083e..a383f624cb73 100644
+--- a/include/uapi/xen/privcmd.h
++++ b/include/uapi/xen/privcmd.h
+@@ -98,6 +98,14 @@ struct privcmd_mmap_resource {
+ 	__u64 addr;
+ };
+ 
++struct privcmd_foreigncopy {
++	domid_t dom;		/* foreign domain */
++	__u16 dir;		/* direction,  0 from, 1 to */
++	__u32 num;		/* number of pages to copy */
++	const xen_pfn_t __user *pfns;	/* array of pfns */
++	void __user *buffer;	/* buffer to copy to/from */
++};
++
+ /*
+  * @cmd: IOCTL_PRIVCMD_HYPERCALL
+  * @arg: &privcmd_hypercall_t
+@@ -125,5 +133,7 @@ struct privcmd_mmap_resource {
+ 	_IOC(_IOC_NONE, 'P', 6, sizeof(domid_t))
+ #define IOCTL_PRIVCMD_MMAP_RESOURCE				\
+ 	_IOC(_IOC_NONE, 'P', 7, sizeof(struct privcmd_mmap_resource))
++#define IOCTL_PRIVCMD_FOREIGNCOPY				\
++	_IOWR('P', 8, struct privcmd_foreigncopy)
+ 
+ #endif /* __LINUX_PUBLIC_PRIVCMD_H__ */
+diff --git a/include/xen/arm/interface.h b/include/xen/arm/interface.h
+index c3eada2642aa..b9068195c60c 100644
+--- a/include/xen/arm/interface.h
++++ b/include/xen/arm/interface.h
+@@ -27,6 +27,7 @@
+ 			*(uint64_t *)&(hnd) = 0;	\
+ 		(hnd).p = val;				\
+ 	} while (0)
++#define get_xen_guest_handle(hnd) ((hnd).p)
+ 
+ #define __HYPERVISOR_platform_op_raw __HYPERVISOR_platform_op
+ 
+@@ -53,6 +54,7 @@ DEFINE_GUEST_HANDLE(int);
+ DEFINE_GUEST_HANDLE(void);
+ DEFINE_GUEST_HANDLE(uint64_t);
+ DEFINE_GUEST_HANDLE(uint32_t);
++DEFINE_GUEST_HANDLE(uint8_t);
+ DEFINE_GUEST_HANDLE(xen_pfn_t);
+ DEFINE_GUEST_HANDLE(xen_ulong_t);
+ 
+diff --git a/include/xen/interface/memory.h b/include/xen/interface/memory.h
+index 4c5751c26f87..77d8e0a7a669 100644
+--- a/include/xen/interface/memory.h
++++ b/include/xen/interface/memory.h
+@@ -331,4 +331,41 @@ struct xen_mem_acquire_resource {
+ };
+ DEFINE_GUEST_HANDLE_STRUCT(xen_mem_acquire_resource);
+ 
++/*
++ * Copy memory from/to a given domain.
++ */
++#define XENMEM_foreigncopy 29
++struct xen_foreigncopy {
++    /* IN - The domain whose resource is to be copied */
++    domid_t domid;
++
++    /* IN - Flags */
++#define XENMEM_foreigncopy_from 0
++#define XENMEM_foreigncopy_to 1
++#define XENMEM_foreigncopy_direction 1
++    uint16_t flags;
++
++    /*
++     * IN
++     *
++     * As an IN parameter number of frames of the domain to be copied.
++     */
++    uint32_t nr_frames;
++
++    /*
++     * IN
++     *
++     * Frames to be copied.
++     */
++    GUEST_HANDLE(xen_pfn_t) frame_list;
++
++    /*
++     * IN/OUT
++     *
++     * Userspace buffer to read/write from.
++     */
++    GUEST_HANDLE(uint8_t) buffer;
++};
++DEFINE_GUEST_HANDLE_STRUCT(xen_foreigncopy);
++
+ #endif /* __XEN_PUBLIC_MEMORY_H__ */
