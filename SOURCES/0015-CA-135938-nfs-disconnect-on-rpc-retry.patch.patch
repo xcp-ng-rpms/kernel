@@ -1,7 +1,7 @@
-From c341e36aebab29ea3d681b91234ca235df302fde Mon Sep 17 00:00:00 2001
+From 58bf2eeef7ac9da246b859718446d4c5ad101c95 Mon Sep 17 00:00:00 2001
 From: Corentin Oparowski <corentin.oparowski@vates.tech>
 Date: Sat, 19 Sep 2015 08:09:42 +0200
-Subject: [PATCH 15/35] CA-135938-nfs-disconnect-on-rpc-retry.patch
+Subject: [PATCH 15/36] CA-135938-nfs-disconnect-on-rpc-retry.patch
 
 ---
  fs/nfs/client.c       | 1 +
@@ -10,7 +10,7 @@ Subject: [PATCH 15/35] CA-135938-nfs-disconnect-on-rpc-retry.patch
  3 files changed, 5 insertions(+), 2 deletions(-)
 
 diff --git a/fs/nfs/client.c b/fs/nfs/client.c
-index 5fe20936e145..fbc3780c1b3f 100644
+index 8bdde6cc873f1..89bd800765dc9 100644
 --- a/fs/nfs/client.c
 +++ b/fs/nfs/client.c
 @@ -742,6 +742,7 @@ static int nfs_init_server(struct nfs_server *server,
@@ -22,10 +22,10 @@ index 5fe20936e145..fbc3780c1b3f 100644
  	/* Allocate or find a client reference we can use */
  	clp = nfs_get_client(&cl_init);
 diff --git a/net/sunrpc/clnt.c b/net/sunrpc/clnt.c
-index 7bad92c25a6f..262db4517016 100644
+index 4541d4ca84674..dd3b1e4a3f884 100644
 --- a/net/sunrpc/clnt.c
 +++ b/net/sunrpc/clnt.c
-@@ -2458,6 +2458,10 @@ call_status(struct rpc_task *task)
+@@ -2473,6 +2473,10 @@ call_status(struct rpc_task *task)
  		rpc_delay(task, 3*HZ);
  		fallthrough;
  	case -ETIMEDOUT:
@@ -37,7 +37,7 @@ index 7bad92c25a6f..262db4517016 100644
  	case -ECONNREFUSED:
  	case -ECONNRESET:
 diff --git a/net/sunrpc/xprtsock.c b/net/sunrpc/xprtsock.c
-index b78f1aae9e80..9a9b7a05b338 100644
+index 56819b6a7bde2..74a5bc2a9c946 100644
 --- a/net/sunrpc/xprtsock.c
 +++ b/net/sunrpc/xprtsock.c
 @@ -2262,8 +2262,6 @@ static void xs_tcp_shutdown(struct rpc_xprt *xprt)

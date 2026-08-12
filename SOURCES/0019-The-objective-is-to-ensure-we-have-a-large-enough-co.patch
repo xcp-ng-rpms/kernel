@@ -1,7 +1,7 @@
-From e983fcfd7e07b3f268d7291c18ea5de31a91efb9 Mon Sep 17 00:00:00 2001
+From a0a75ba749554a290955469b620fb1817852ab32 Mon Sep 17 00:00:00 2001
 From: Corentin Oparowski <corentin.oparowski@vates.tech>
 Date: Sat, 19 Sep 2015 08:09:42 +0200
-Subject: [PATCH 19/35] The objective is to ensure we have a large enough
+Subject: [PATCH 19/36] The objective is to ensure we have a large enough
  collection of 2M "slabs", each of which is physically contiguous, in 32-bit
  address space, to service DMA for devices that are limited to a 32-bit
  address space. Ideally we want a total of 128M (a separate patch updates this
@@ -30,7 +30,7 @@ down to 1/8th of the default request is OK) we take it and run.
  4 files changed, 105 insertions(+), 24 deletions(-)
 
 diff --git a/arch/x86/include/asm/xen/swiotlb-xen.h b/arch/x86/include/asm/xen/swiotlb-xen.h
-index abde0f44df57..f6793aa5eebf 100644
+index abde0f44df57d..f6793aa5eebf5 100644
 --- a/arch/x86/include/asm/xen/swiotlb-xen.h
 +++ b/arch/x86/include/asm/xen/swiotlb-xen.h
 @@ -2,7 +2,8 @@
@@ -44,7 +44,7 @@ index abde0f44df57..f6793aa5eebf 100644
  				unsigned int address_bits,
  				dma_addr_t *dma_handle);
 diff --git a/drivers/xen/swiotlb-xen.c b/drivers/xen/swiotlb-xen.c
-index 534faa440f71..53ef1d28f54c 100644
+index 534faa440f713..53ef1d28f54ce 100644
 --- a/drivers/xen/swiotlb-xen.c
 +++ b/drivers/xen/swiotlb-xen.c
 @@ -113,7 +113,8 @@ static struct io_tlb_pool *xen_swiotlb_find_pool(struct device *dev,
@@ -67,7 +67,7 @@ index 534faa440f71..53ef1d28f54c 100644
  		if (rc)
  			return rc;
 diff --git a/include/linux/swiotlb.h b/include/linux/swiotlb.h
-index f9a0bf692c9f..b33a008da601 100644
+index f9a0bf692c9fd..b33a008da6012 100644
 --- a/include/linux/swiotlb.h
 +++ b/include/linux/swiotlb.h
 @@ -38,9 +38,11 @@ struct scatterlist;
@@ -85,10 +85,10 @@ index f9a0bf692c9f..b33a008da601 100644
  
  #ifdef CONFIG_SWIOTLB
 diff --git a/kernel/dma/swiotlb.c b/kernel/dma/swiotlb.c
-index 993b0bb3d49a..1c4c6c3854eb 100644
+index 90c4778490add..95777434f978c 100644
 --- a/kernel/dma/swiotlb.c
 +++ b/kernel/dma/swiotlb.c
-@@ -49,6 +49,8 @@
+@@ -50,6 +50,8 @@
  #include <linux/slab.h>
  #endif
  
@@ -97,7 +97,7 @@ index 993b0bb3d49a..1c4c6c3854eb 100644
  #define CREATE_TRACE_POINTS
  #include <trace/events/swiotlb.h>
  
-@@ -58,8 +60,13 @@
+@@ -59,8 +61,13 @@
   * Minimum IO TLB size to bother booting with.  Systems with mainly
   * 64bit capable cards will only lightly use the swiotlb.  If we can't
   * allocate a contiguous 1MB, we're probably in trouble anyway.
@@ -111,7 +111,7 @@ index 993b0bb3d49a..1c4c6c3854eb 100644
  
  #define INVALID_PHYS_ADDR (~(phys_addr_t)0)
  
-@@ -321,7 +328,8 @@ static void add_mem_pool(struct io_tlb_mem *mem, struct io_tlb_pool *pool)
+@@ -322,7 +329,8 @@ static void add_mem_pool(struct io_tlb_mem *mem, struct io_tlb_pool *pool)
  
  static void __init *swiotlb_memblock_alloc(unsigned long nslabs,
  		unsigned int flags,
@@ -121,7 +121,7 @@ index 993b0bb3d49a..1c4c6c3854eb 100644
  {
  	size_t bytes = PAGE_ALIGN(nslabs << IO_TLB_SHIFT);
  	void *tlb;
-@@ -342,7 +350,7 @@ static void __init *swiotlb_memblock_alloc(unsigned long nslabs,
+@@ -343,7 +351,7 @@ static void __init *swiotlb_memblock_alloc(unsigned long nslabs,
  		return NULL;
  	}
  
@@ -130,7 +130,7 @@ index 993b0bb3d49a..1c4c6c3854eb 100644
  		memblock_free(tlb, PAGE_ALIGN(bytes));
  		pr_warn("%s: Failed to remap %zu bytes\n", __func__, bytes);
  		return NULL;
-@@ -356,7 +364,8 @@ static void __init *swiotlb_memblock_alloc(unsigned long nslabs,
+@@ -357,7 +365,8 @@ static void __init *swiotlb_memblock_alloc(unsigned long nslabs,
   * structures for the software IO TLB used to implement the DMA API.
   */
  void __init swiotlb_init_remap(bool addressing_limit, unsigned int flags,
@@ -140,7 +140,7 @@ index 993b0bb3d49a..1c4c6c3854eb 100644
  {
  	struct io_tlb_pool *mem = &io_tlb_default_mem.defpool;
  	unsigned long nslabs;
-@@ -385,32 +394,72 @@ void __init swiotlb_init_remap(bool addressing_limit, unsigned int flags,
+@@ -386,32 +395,72 @@ void __init swiotlb_init_remap(bool addressing_limit, unsigned int flags,
  		swiotlb_adjust_nareas(num_possible_cpus());
  
  	nslabs = default_nslabs;
@@ -227,7 +227,7 @@ index 993b0bb3d49a..1c4c6c3854eb 100644
  		return;
  	}
  
-@@ -432,7 +481,8 @@ void __init swiotlb_init(bool addressing_limit, unsigned int flags)
+@@ -433,7 +482,8 @@ void __init swiotlb_init(bool addressing_limit, unsigned int flags)
   * This should be just like above, but with some error catching.
   */
  int swiotlb_init_late(size_t size, gfp_t gfp_mask,
@@ -237,7 +237,7 @@ index 993b0bb3d49a..1c4c6c3854eb 100644
  {
  	struct io_tlb_pool *mem = &io_tlb_default_mem.defpool;
  	unsigned long nslabs = ALIGN(size >> IO_TLB_SHIFT, IO_TLB_SEGSIZE);
-@@ -481,8 +531,33 @@ int swiotlb_init_late(size_t size, gfp_t gfp_mask,
+@@ -482,8 +532,33 @@ int swiotlb_init_late(size_t size, gfp_t gfp_mask,
  	if (!vstart)
  		return -ENOMEM;
  

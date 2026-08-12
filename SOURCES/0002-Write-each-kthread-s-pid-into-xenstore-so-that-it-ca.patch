@@ -1,7 +1,7 @@
-From 26c7f252906895a0b4d29016262f45121a99b66b Mon Sep 17 00:00:00 2001
+From f6ba4d90b400112edb86127c997f605e7d1e8e22 Mon Sep 17 00:00:00 2001
 From: Corentin Oparowski <corentin.oparowski@vates.tech>
 Date: Sat, 19 Sep 2015 08:09:42 +0200
-Subject: [PATCH 02/35] Write each kthread's pid into xenstore so that it can
+Subject: [PATCH 02/36] Write each kthread's pid into xenstore so that it can
  be ioniced by the toolstack.  Relative to the VBD, the xenstore key is:
  queue-NNN/kthread-pid where NNN is the queue number starting from 0.
 
@@ -12,7 +12,7 @@ Signed-off-by: Ross Lagerwall <ross.lagerwall@citrix.com>
  2 files changed, 66 insertions(+), 12 deletions(-)
 
 diff --git a/drivers/block/xen-blkback/common.h b/drivers/block/xen-blkback/common.h
-index b427d54bc120..87a37c149813 100644
+index b427d54bc1205..87a37c149813e 100644
 --- a/drivers/block/xen-blkback/common.h
 +++ b/drivers/block/xen-blkback/common.h
 @@ -233,7 +233,14 @@ struct xen_vbd {
@@ -47,7 +47,7 @@ index b427d54bc120..87a37c149813 100644
  
  struct phys_req {
 diff --git a/drivers/block/xen-blkback/xenbus.c b/drivers/block/xen-blkback/xenbus.c
-index 0621878940ae..db75a3f57e44 100644
+index 0621878940ae5..db75a3f57e447 100644
 --- a/drivers/block/xen-blkback/xenbus.c
 +++ b/drivers/block/xen-blkback/xenbus.c
 @@ -18,15 +18,6 @@

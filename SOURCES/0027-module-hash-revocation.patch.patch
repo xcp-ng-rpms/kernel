@@ -1,7 +1,7 @@
-From 773ec25b1b39bc2bfb87b94d98d5dd8517214499 Mon Sep 17 00:00:00 2001
+From 22d076f784f2cc9650501f475869cc688b8de699 Mon Sep 17 00:00:00 2001
 From: Corentin Oparowski <corentin.oparowski@vates.tech>
 Date: Sat, 19 Sep 2015 08:09:42 +0200
-Subject: [PATCH 27/35] module-hash-revocation.patch
+Subject: [PATCH 27/36] module-hash-revocation.patch
 
 ---
  kernel/module/Kconfig |  1 +
@@ -9,7 +9,7 @@ Subject: [PATCH 27/35] module-hash-revocation.patch
  2 files changed, 22 insertions(+)
 
 diff --git a/kernel/module/Kconfig b/kernel/module/Kconfig
-index b998149e437b..48b6071bedf3 100644
+index b998149e437b6..48b6071bedf3c 100644
 --- a/kernel/module/Kconfig
 +++ b/kernel/module/Kconfig
 @@ -3,6 +3,7 @@ menuconfig MODULES
@@ -21,10 +21,10 @@ index b998149e437b..48b6071bedf3 100644
  	  Kernel modules are small pieces of compiled code which can
  	  be inserted in the running kernel, rather than being
 diff --git a/kernel/module/main.c b/kernel/module/main.c
-index 4511d0a4762a..4508151bce22 100644
+index 961612dcc095b..5b0c88d497328 100644
 --- a/kernel/module/main.c
 +++ b/kernel/module/main.c
-@@ -62,9 +62,13 @@
+@@ -63,9 +63,13 @@
  #include <uapi/linux/module.h>
  #include "internal.h"
  
@@ -38,7 +38,7 @@ index 4511d0a4762a..4508151bce22 100644
  /*
   * Mutex protects:
   * 1) List of modules (also safely readable with preempt_disable),
-@@ -1666,6 +1670,19 @@ static int validate_section_offset(struct load_info *info, Elf_Shdr *shdr)
+@@ -1674,6 +1678,19 @@ static int validate_section_offset(struct load_info *info, Elf_Shdr *shdr)
  	return 0;
  }
  
@@ -58,7 +58,7 @@ index 4511d0a4762a..4508151bce22 100644
  /*
   * Check userspace passed ELF module against our expectations, and cache
   * useful variables for further processing as we go.
-@@ -2862,6 +2879,10 @@ static int load_module(struct load_info *info, const char __user *uargs,
+@@ -2896,6 +2913,10 @@ static int _load_module(struct load_info *info, const char __user *uargs,
  	long err = 0;
  	char *after_dashes;
  
@@ -67,8 +67,8 @@ index 4511d0a4762a..4508151bce22 100644
 +		goto free_copy;
 +
  	/*
- 	 * Do the signature check (if any) first. All that
- 	 * the signature check needs is info->len, it does
+ 	 * Do basic sanity checks against the ELF header and
+ 	 * sections. Cache useful sections and set the
 -- 
 2.47.3
 

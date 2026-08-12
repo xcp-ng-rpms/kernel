@@ -1,7 +1,7 @@
-From 19f5f475b268b1a4242ceebea887a7173ad7e0d7 Mon Sep 17 00:00:00 2001
+From 6a824f3bbd0106ad2b21025f81100cc53aafc033 Mon Sep 17 00:00:00 2001
 From: Corentin Oparowski <corentin.oparowski@vates.tech>
 Date: Thu, 10 Jul 2014 13:09:25 +0100
-Subject: [PATCH 30/35] xen-pciback: provide a "reset" sysfs file to try harder
+Subject: [PATCH 30/36] xen-pciback: provide a "reset" sysfs file to try harder
  at an SBR
 
 The standard implementation of pci_reset_function() does not try an
@@ -31,7 +31,7 @@ commit 88801d0 ("xen/pci: Add a function to reset device for xen") slightly rewo
  2 files changed, 132 insertions(+), 13 deletions(-)
 
 diff --git a/drivers/xen/xen-pciback/pci_stub.c b/drivers/xen/xen-pciback/pci_stub.c
-index 400406d24adf..5ba353a08194 100644
+index 3d095f83c29e5..fc80d0fa66b2e 100644
 --- a/drivers/xen/xen-pciback/pci_stub.c
 +++ b/drivers/xen/xen-pciback/pci_stub.c
 @@ -18,6 +18,7 @@
@@ -225,7 +225,7 @@ index 400406d24adf..5ba353a08194 100644
  	pci_set_dev_assigned(dev);
  	return 0;
  
-@@ -738,6 +854,8 @@ static void pcistub_remove(struct pci_dev *dev)
+@@ -740,6 +856,8 @@ static void pcistub_remove(struct pci_dev *dev)
  
  	dev_dbg(&dev->dev, "removing\n");
  
@@ -235,7 +235,7 @@ index 400406d24adf..5ba353a08194 100644
  
  	xen_pcibk_config_quirk_release(dev);
 diff --git a/drivers/xen/xen-pciback/pciback.h b/drivers/xen/xen-pciback/pciback.h
-index f9599ed2f2e2..950c7a28db5e 100644
+index f9599ed2f2e2d..950c7a28db5e2 100644
 --- a/drivers/xen/xen-pciback/pciback.h
 +++ b/drivers/xen/xen-pciback/pciback.h
 @@ -47,6 +47,7 @@ struct xen_pcibk_device {

@@ -1,7 +1,7 @@
-From 3d8469d200c8ff235ee59150c437ed87959a7c2c Mon Sep 17 00:00:00 2001
+From 64a73c3c085ddc4c8bdcda9fb68db88f3da9e7ea Mon Sep 17 00:00:00 2001
 From: Corentin Oparowski <corentin.oparowski@vates.tech>
 Date: Fri, 9 May 2014 11:40:46 +0100
-Subject: [PATCH 10/35] x86,xen: correct dma_get_required_mask() for Xen PV
+Subject: [PATCH 10/36] x86,xen: correct dma_get_required_mask() for Xen PV
  guests
 
 On systems where DMA addresses and physical addresses are not 1:1
@@ -23,7 +23,7 @@ Signed-off-by: David Vrabel <david.vrabel@citrix.com>
  1 file changed, 7 insertions(+)
 
 diff --git a/drivers/xen/swiotlb-xen.c b/drivers/xen/swiotlb-xen.c
-index ef56a2500ed6..534faa440f71 100644
+index ef56a2500ed69..534faa440f713 100644
 --- a/drivers/xen/swiotlb-xen.c
 +++ b/drivers/xen/swiotlb-xen.c
 @@ -404,6 +404,12 @@ xen_swiotlb_dma_supported(struct device *hwdev, u64 mask)

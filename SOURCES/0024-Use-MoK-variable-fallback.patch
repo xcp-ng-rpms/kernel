@@ -1,7 +1,7 @@
-From 06d030d6688b50ecc3067054b42a779a741de16c Mon Sep 17 00:00:00 2001
+From f763867e9a384d6cc37e1374161dc906ea1dd9e0 Mon Sep 17 00:00:00 2001
 From: Corentin Oparowski <corentin.oparowski@vates.tech>
 Date: Sat, 19 Sep 2015 08:09:42 +0200
-Subject: [PATCH 24/35] Use MoK variable fallback
+Subject: [PATCH 24/36] Use MoK variable fallback
 
 Shim is supposed to create an EFI table containing the MoK configuration which
 the kernel accesses via the efi_mokvar_* functions. In some cases (possibly due
@@ -20,7 +20,7 @@ Signed-off-by: Ross Lagerwall <ross.lagerwall@citrix.com>
  1 file changed, 6 insertions(+), 1 deletion(-)
 
 diff --git a/security/integrity/platform_certs/machine_keyring.c b/security/integrity/platform_certs/machine_keyring.c
-index a401640a63cd..2084bdfd3f3f 100644
+index a401640a63cd1..2084bdfd3f3f3 100644
 --- a/security/integrity/platform_certs/machine_keyring.c
 +++ b/security/integrity/platform_certs/machine_keyring.c
 @@ -52,13 +52,18 @@ void __init add_to_machine_keyring(const char *source, const void *data, size_t

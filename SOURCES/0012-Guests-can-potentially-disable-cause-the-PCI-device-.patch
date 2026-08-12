@@ -1,7 +1,7 @@
-From 01bf4305b80b7f43e507a5444adc748cdf937c6e Mon Sep 17 00:00:00 2001
+From 2b490729812c18b868ab5e1b23a512526d1b4a30 Mon Sep 17 00:00:00 2001
 From: Corentin Oparowski <corentin.oparowski@vates.tech>
 Date: Sat, 19 Sep 2015 08:09:42 +0200
-Subject: [PATCH 12/35] Guests can potentially disable/cause the PCI device to
+Subject: [PATCH 12/36] Guests can potentially disable/cause the PCI device to
  stop responding at any time.
 
 Any access by Dom0, DomU or Xen to the PCI device may cause a Fatal PCI Express
@@ -23,7 +23,7 @@ triggering host crashes.
  1 file changed, 35 insertions(+)
 
 diff --git a/drivers/xen/xen-pciback/pci_stub.c b/drivers/xen/xen-pciback/pci_stub.c
-index b616b7768c3b..bdbf9ff8324a 100644
+index 8b3006078d003..279609cf03f75 100644
 --- a/drivers/xen/xen-pciback/pci_stub.c
 +++ b/drivers/xen/xen-pciback/pci_stub.c
 @@ -40,6 +40,9 @@ wait_queue_head_t xen_pcibk_aer_wait_queue;

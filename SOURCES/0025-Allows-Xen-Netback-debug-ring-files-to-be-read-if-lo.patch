@@ -1,7 +1,7 @@
-From 290adb056d68ab3a19cabe9a991cef25d896a145 Mon Sep 17 00:00:00 2001
+From 470bdd6a1a9a0df0242ee7e29f30379a2fbb2fde Mon Sep 17 00:00:00 2001
 From: Corentin Oparowski <corentin.oparowski@vates.tech>
 Date: Sat, 19 Sep 2015 08:09:42 +0200
-Subject: [PATCH 25/35] Allows Xen Netback debug ring files to be read if
+Subject: [PATCH 25/36] Allows Xen Netback debug ring files to be read if
  lockdown mode is enabled. By default the kernel does not allow to access
  (read and/or write) any writeable file in debugfs filesystem. However is
  useful for user space to access these file for statistics and debugging
@@ -14,7 +14,7 @@ Signed-off-by: Frediano Ziglio <frediano.ziglio@cloud.com>
  1 file changed, 4 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/net/xen-netback/xenbus.c b/drivers/net/xen-netback/xenbus.c
-index a78a25b87240..781cfdcbdd2b 100644
+index 61b547aab286a..6fb69012c3d43 100644
 --- a/drivers/net/xen-netback/xenbus.c
 +++ b/drivers/net/xen-netback/xenbus.c
 @@ -9,6 +9,7 @@

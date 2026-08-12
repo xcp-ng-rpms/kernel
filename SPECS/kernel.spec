@@ -6,9 +6,9 @@
 
 # Control whether we perform a compat. check against published ABI.
 # Default enabled: (to override: --without kabichk)
-%define do_kabichk  %{?_without_kabichk: 0} %{?!_without_kabichk: 1}
+#%%define do_kabichk  %%{?_without_kabichk: 0} %%{?!_without_kabichk: 1}
 # Default disabled: (to override: --with kabichk)
-#%%define do_kabichk  %%{?_with_kabichk: 1} %%{?!_with_kabichk: 0}
+%define do_kabichk  %{?_with_kabichk: 1} %{?!_with_kabichk: 0}
 
 #
 # Adjust debuginfo generation to suit building a kernel:
@@ -34,7 +34,7 @@
 Name: kernel
 License: GPLv2
 Version: %{usver}
-Release: 2%{dist}
+Release: 2.1%{dist}
 ExclusiveOS: Linux
 Summary: The Linux kernel
 BuildRequires: kmod
@@ -472,6 +472,10 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Wed Aug 12 2026 Corentin Oparowski <corentin.oparowski@vates.tech> - 6.12.0-3
+- Rebase on top of 6.12.0-206-100.3.1
+- Disable KABI check until OOT modules are build 
+
 * Fri Aug 07 2026 Yann Dirson <yann.dirson@vates.tech> - 6.12.0-2
 - Add "Provides: kernel-xcpng" so the installer can be sure to pull this kernel not Alma's
 - Disable XS modification of CONFIG_MODULE_SIG_FORCE behaviour

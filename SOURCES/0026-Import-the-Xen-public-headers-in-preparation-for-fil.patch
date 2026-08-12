@@ -1,7 +1,7 @@
-From 0c566fbc919a1cbf8ae283806b37451209fc9caa Mon Sep 17 00:00:00 2001
+From a1737d77cf9e1c6bc8b7d730234c4843114f5850 Mon Sep 17 00:00:00 2001
 From: Corentin Oparowski <corentin.oparowski@vates.tech>
 Date: Sat, 19 Sep 2015 08:09:42 +0200
-Subject: [PATCH 26/35] Import the Xen public headers in preparation for
+Subject: [PATCH 26/36] Import the Xen public headers in preparation for
  filtering hypercalls
 
 These hypercall filter should build against these headers. If the version of
@@ -170,7 +170,7 @@ Signed-off-by: Ross Lagerwall <ross.lagerwall@citrix.com>
 
 diff --git a/drivers/xen/public-xen/COPYING b/drivers/xen/public-xen/COPYING
 new file mode 100644
-index 000000000000..ffc6d6166ffc
+index 0000000000000..ffc6d6166ffc5
 --- /dev/null
 +++ b/drivers/xen/public-xen/COPYING
 @@ -0,0 +1,38 @@
@@ -214,7 +214,7 @@ index 000000000000..ffc6d6166ffc
 +DEALINGS IN THE SOFTWARE.
 diff --git a/drivers/xen/public-xen/arch-arm.h b/drivers/xen/public-xen/arch-arm.h
 new file mode 100644
-index 000000000000..e2412a17474e
+index 0000000000000..e2412a17474ef
 --- /dev/null
 +++ b/drivers/xen/public-xen/arch-arm.h
 @@ -0,0 +1,555 @@
@@ -775,7 +775,7 @@ index 000000000000..e2412a17474e
 + */
 diff --git a/drivers/xen/public-xen/arch-arm/hvm/save.h b/drivers/xen/public-xen/arch-arm/hvm/save.h
 new file mode 100644
-index 000000000000..fc1b28f59b43
+index 0000000000000..fc1b28f59b43a
 --- /dev/null
 +++ b/drivers/xen/public-xen/arch-arm/hvm/save.h
 @@ -0,0 +1,22 @@
@@ -803,7 +803,7 @@ index 000000000000..fc1b28f59b43
 + */
 diff --git a/drivers/xen/public-xen/arch-arm/smccc.h b/drivers/xen/public-xen/arch-arm/smccc.h
 new file mode 100644
-index 000000000000..8a9321ebed0a
+index 0000000000000..8a9321ebed0a6
 --- /dev/null
 +++ b/drivers/xen/public-xen/arch-arm/smccc.h
 @@ -0,0 +1,49 @@
@@ -858,7 +858,7 @@ index 000000000000..8a9321ebed0a
 + */
 diff --git a/drivers/xen/public-xen/arch-ppc.h b/drivers/xen/public-xen/arch-ppc.h
 new file mode 100644
-index 000000000000..4ca453a2841e
+index 0000000000000..4ca453a2841e3
 --- /dev/null
 +++ b/drivers/xen/public-xen/arch-ppc.h
 @@ -0,0 +1,107 @@
@@ -971,7 +971,7 @@ index 000000000000..4ca453a2841e
 +#endif /* __XEN_PUBLIC_ARCH_PPC_H__ */
 diff --git a/drivers/xen/public-xen/arch-riscv.h b/drivers/xen/public-xen/arch-riscv.h
 new file mode 100644
-index 000000000000..168263b92074
+index 0000000000000..168263b920744
 --- /dev/null
 +++ b/drivers/xen/public-xen/arch-riscv.h
 @@ -0,0 +1,93 @@
@@ -1070,7 +1070,7 @@ index 000000000000..168263b92074
 + */
 diff --git a/drivers/xen/public-xen/arch-x86/cpufeatureset.h b/drivers/xen/public-xen/arch-x86/cpufeatureset.h
 new file mode 100644
-index 000000000000..4f94342ad633
+index 0000000000000..4f94342ad633b
 --- /dev/null
 +++ b/drivers/xen/public-xen/arch-x86/cpufeatureset.h
 @@ -0,0 +1,409 @@
@@ -1485,7 +1485,7 @@ index 000000000000..4f94342ad633
 + */
 diff --git a/drivers/xen/public-xen/arch-x86/cpuid.h b/drivers/xen/public-xen/arch-x86/cpuid.h
 new file mode 100644
-index 000000000000..3bb0dd249ff9
+index 0000000000000..3bb0dd249ff98
 --- /dev/null
 +++ b/drivers/xen/public-xen/arch-x86/cpuid.h
 @@ -0,0 +1,122 @@
@@ -1613,7 +1613,7 @@ index 000000000000..3bb0dd249ff9
 +#endif /* __XEN_PUBLIC_ARCH_X86_CPUID_H__ */
 diff --git a/drivers/xen/public-xen/arch-x86/guest-acpi.h b/drivers/xen/public-xen/arch-x86/guest-acpi.h
 new file mode 100644
-index 000000000000..de40259b6ad9
+index 0000000000000..de40259b6ad93
 --- /dev/null
 +++ b/drivers/xen/public-xen/arch-x86/guest-acpi.h
 @@ -0,0 +1,33 @@
@@ -1652,7 +1652,7 @@ index 000000000000..de40259b6ad9
 + */
 diff --git a/drivers/xen/public-xen/arch-x86/hvm/save.h b/drivers/xen/public-xen/arch-x86/hvm/save.h
 new file mode 100644
-index 000000000000..9c4bfc7ebdac
+index 0000000000000..9c4bfc7ebdac9
 --- /dev/null
 +++ b/drivers/xen/public-xen/arch-x86/hvm/save.h
 @@ -0,0 +1,645 @@
@@ -2303,7 +2303,7 @@ index 000000000000..9c4bfc7ebdac
 + */
 diff --git a/drivers/xen/public-xen/arch-x86/hvm/start_info.h b/drivers/xen/public-xen/arch-x86/hvm/start_info.h
 new file mode 100644
-index 000000000000..e33557c0b4e9
+index 0000000000000..e33557c0b4e98
 --- /dev/null
 +++ b/drivers/xen/public-xen/arch-x86/hvm/start_info.h
 @@ -0,0 +1,142 @@
@@ -2451,7 +2451,7 @@ index 000000000000..e33557c0b4e9
 +#endif /* __XEN_PUBLIC_ARCH_X86_HVM_START_INFO_H__ */
 diff --git a/drivers/xen/public-xen/arch-x86/pmu.h b/drivers/xen/public-xen/arch-x86/pmu.h
 new file mode 100644
-index 000000000000..d0a99268af5f
+index 0000000000000..d0a99268af5fe
 --- /dev/null
 +++ b/drivers/xen/public-xen/arch-x86/pmu.h
 @@ -0,0 +1,142 @@
@@ -2599,7 +2599,7 @@ index 000000000000..d0a99268af5f
 +
 diff --git a/drivers/xen/public-xen/arch-x86/xen-mca.h b/drivers/xen/public-xen/arch-x86/xen-mca.h
 new file mode 100644
-index 000000000000..bb1b12f14fae
+index 0000000000000..bb1b12f14fae5
 --- /dev/null
 +++ b/drivers/xen/public-xen/arch-x86/xen-mca.h
 @@ -0,0 +1,438 @@
@@ -3043,7 +3043,7 @@ index 000000000000..bb1b12f14fae
 +#endif /* __XEN_PUBLIC_ARCH_X86_MCA_H__ */
 diff --git a/drivers/xen/public-xen/arch-x86/xen-x86_32.h b/drivers/xen/public-xen/arch-x86/xen-x86_32.h
 new file mode 100644
-index 000000000000..9e3bf06b121e
+index 0000000000000..9e3bf06b121e7
 --- /dev/null
 +++ b/drivers/xen/public-xen/arch-x86/xen-x86_32.h
 @@ -0,0 +1,177 @@
@@ -3226,7 +3226,7 @@ index 000000000000..9e3bf06b121e
 + */
 diff --git a/drivers/xen/public-xen/arch-x86/xen-x86_64.h b/drivers/xen/public-xen/arch-x86/xen-x86_64.h
 new file mode 100644
-index 000000000000..43f6e3d22001
+index 0000000000000..43f6e3d22001f
 --- /dev/null
 +++ b/drivers/xen/public-xen/arch-x86/xen-x86_64.h
 @@ -0,0 +1,224 @@
@@ -3456,7 +3456,7 @@ index 000000000000..43f6e3d22001
 + */
 diff --git a/drivers/xen/public-xen/arch-x86/xen.h b/drivers/xen/public-xen/arch-x86/xen.h
 new file mode 100644
-index 000000000000..fc2487986642
+index 0000000000000..fc2487986642a
 --- /dev/null
 +++ b/drivers/xen/public-xen/arch-x86/xen.h
 @@ -0,0 +1,376 @@
@@ -3838,7 +3838,7 @@ index 000000000000..fc2487986642
 + */
 diff --git a/drivers/xen/public-xen/arch-x86_32.h b/drivers/xen/public-xen/arch-x86_32.h
 new file mode 100644
-index 000000000000..c0cf8c7bcd36
+index 0000000000000..c0cf8c7bcd36b
 --- /dev/null
 +++ b/drivers/xen/public-xen/arch-x86_32.h
 @@ -0,0 +1,10 @@
@@ -3854,7 +3854,7 @@ index 000000000000..c0cf8c7bcd36
 +#include "arch-x86/xen.h"
 diff --git a/drivers/xen/public-xen/arch-x86_64.h b/drivers/xen/public-xen/arch-x86_64.h
 new file mode 100644
-index 000000000000..acf705f25e7a
+index 0000000000000..acf705f25e7a4
 --- /dev/null
 +++ b/drivers/xen/public-xen/arch-x86_64.h
 @@ -0,0 +1,26 @@
@@ -3886,7 +3886,7 @@ index 000000000000..acf705f25e7a
 + */
 diff --git a/drivers/xen/public-xen/argo.h b/drivers/xen/public-xen/argo.h
 new file mode 100644
-index 000000000000..84a4cb118b77
+index 0000000000000..84a4cb118b77b
 --- /dev/null
 +++ b/drivers/xen/public-xen/argo.h
 @@ -0,0 +1,238 @@
@@ -4130,7 +4130,7 @@ index 000000000000..84a4cb118b77
 +#endif
 diff --git a/drivers/xen/public-xen/callback.h b/drivers/xen/public-xen/callback.h
 new file mode 100644
-index 000000000000..7f13be66f378
+index 0000000000000..7f13be66f378f
 --- /dev/null
 +++ b/drivers/xen/public-xen/callback.h
 @@ -0,0 +1,104 @@
@@ -4240,7 +4240,7 @@ index 000000000000..7f13be66f378
 + */
 diff --git a/drivers/xen/public-xen/device_tree_defs.h b/drivers/xen/public-xen/device_tree_defs.h
 new file mode 100644
-index 000000000000..9e80d0499dc3
+index 0000000000000..9e80d0499dc32
 --- /dev/null
 +++ b/drivers/xen/public-xen/device_tree_defs.h
 @@ -0,0 +1,49 @@
@@ -4295,7 +4295,7 @@ index 000000000000..9e80d0499dc3
 +#endif
 diff --git a/drivers/xen/public-xen/dom0_ops.h b/drivers/xen/public-xen/dom0_ops.h
 new file mode 100644
-index 000000000000..9fba71d3a821
+index 0000000000000..9fba71d3a821a
 --- /dev/null
 +++ b/drivers/xen/public-xen/dom0_ops.h
 @@ -0,0 +1,103 @@
@@ -4404,7 +4404,7 @@ index 000000000000..9fba71d3a821
 + */
 diff --git a/drivers/xen/public-xen/domctl.h b/drivers/xen/public-xen/domctl.h
 new file mode 100644
-index 000000000000..39a287d38acc
+index 0000000000000..39a287d38acce
 --- /dev/null
 +++ b/drivers/xen/public-xen/domctl.h
 @@ -0,0 +1,1517 @@
@@ -5927,7 +5927,7 @@ index 000000000000..39a287d38acc
 + */
 diff --git a/drivers/xen/public-xen/elfnote.h b/drivers/xen/public-xen/elfnote.h
 new file mode 100644
-index 000000000000..e2743f74c195
+index 0000000000000..e2743f74c1950
 --- /dev/null
 +++ b/drivers/xen/public-xen/elfnote.h
 @@ -0,0 +1,298 @@
@@ -6231,7 +6231,7 @@ index 000000000000..e2743f74c195
 + */
 diff --git a/drivers/xen/public-xen/errno.h b/drivers/xen/public-xen/errno.h
 new file mode 100644
-index 000000000000..b9fc6762fbb6
+index 0000000000000..b9fc6762fbb6c
 --- /dev/null
 +++ b/drivers/xen/public-xen/errno.h
 @@ -0,0 +1,130 @@
@@ -6367,7 +6367,7 @@ index 000000000000..b9fc6762fbb6
 +#endif /* XEN_ERRNO_DEFAULT_INCLUDE */
 diff --git a/drivers/xen/public-xen/event_channel.h b/drivers/xen/public-xen/event_channel.h
 new file mode 100644
-index 000000000000..0d91a1c4afab
+index 0000000000000..0d91a1c4afab6
 --- /dev/null
 +++ b/drivers/xen/public-xen/event_channel.h
 @@ -0,0 +1,371 @@
@@ -6744,7 +6744,7 @@ index 000000000000..0d91a1c4afab
 + */
 diff --git a/drivers/xen/public-xen/features.h b/drivers/xen/public-xen/features.h
 new file mode 100644
-index 000000000000..880193094713
+index 0000000000000..8801930947131
 --- /dev/null
 +++ b/drivers/xen/public-xen/features.h
 @@ -0,0 +1,143 @@
@@ -6893,7 +6893,7 @@ index 000000000000..880193094713
 + */
 diff --git a/drivers/xen/public-xen/grant_table.h b/drivers/xen/public-xen/grant_table.h
 new file mode 100644
-index 000000000000..1dfa17a6d02a
+index 0000000000000..1dfa17a6d02a3
 --- /dev/null
 +++ b/drivers/xen/public-xen/grant_table.h
 @@ -0,0 +1,669 @@
@@ -7568,7 +7568,7 @@ index 000000000000..1dfa17a6d02a
 + */
 diff --git a/drivers/xen/public-xen/hvm/dm_op.h b/drivers/xen/public-xen/hvm/dm_op.h
 new file mode 100644
-index 000000000000..2bf0fdc1ae1c
+index 0000000000000..2bf0fdc1ae1c7
 --- /dev/null
 +++ b/drivers/xen/public-xen/hvm/dm_op.h
 @@ -0,0 +1,506 @@
@@ -8080,7 +8080,7 @@ index 000000000000..2bf0fdc1ae1c
 + */
 diff --git a/drivers/xen/public-xen/hvm/e820.h b/drivers/xen/public-xen/hvm/e820.h
 new file mode 100644
-index 000000000000..5879b8ff7bf4
+index 0000000000000..5879b8ff7bf49
 --- /dev/null
 +++ b/drivers/xen/public-xen/hvm/e820.h
 @@ -0,0 +1,21 @@
@@ -8107,7 +8107,7 @@ index 000000000000..5879b8ff7bf4
 +#endif /* __XEN_PUBLIC_HVM_E820_H__ */
 diff --git a/drivers/xen/public-xen/hvm/hvm_info_table.h b/drivers/xen/public-xen/hvm/hvm_info_table.h
 new file mode 100644
-index 000000000000..a885f356db56
+index 0000000000000..a885f356db56e
 --- /dev/null
 +++ b/drivers/xen/public-xen/hvm/hvm_info_table.h
 @@ -0,0 +1,65 @@
@@ -8178,7 +8178,7 @@ index 000000000000..a885f356db56
 +#endif /* __XEN_PUBLIC_HVM_HVM_INFO_TABLE_H__ */
 diff --git a/drivers/xen/public-xen/hvm/hvm_op.h b/drivers/xen/public-xen/hvm/hvm_op.h
 new file mode 100644
-index 000000000000..e22adf031980
+index 0000000000000..e22adf0319809
 --- /dev/null
 +++ b/drivers/xen/public-xen/hvm/hvm_op.h
 @@ -0,0 +1,378 @@
@@ -8562,7 +8562,7 @@ index 000000000000..e22adf031980
 + */
 diff --git a/drivers/xen/public-xen/hvm/hvm_vcpu.h b/drivers/xen/public-xen/hvm/hvm_vcpu.h
 new file mode 100644
-index 000000000000..4a434011443f
+index 0000000000000..4a434011443fa
 --- /dev/null
 +++ b/drivers/xen/public-xen/hvm/hvm_vcpu.h
 @@ -0,0 +1,129 @@
@@ -8697,7 +8697,7 @@ index 000000000000..4a434011443f
 + */
 diff --git a/drivers/xen/public-xen/hvm/hvm_xs_strings.h b/drivers/xen/public-xen/hvm/hvm_xs_strings.h
 new file mode 100644
-index 000000000000..e977d5a8b186
+index 0000000000000..e977d5a8b1866
 --- /dev/null
 +++ b/drivers/xen/public-xen/hvm/hvm_xs_strings.h
 @@ -0,0 +1,74 @@
@@ -8777,7 +8777,7 @@ index 000000000000..e977d5a8b186
 +#endif /* __XEN_PUBLIC_HVM_HVM_XS_STRINGS_H__ */
 diff --git a/drivers/xen/public-xen/hvm/ioreq.h b/drivers/xen/public-xen/hvm/ioreq.h
 new file mode 100644
-index 000000000000..7a6bc760d02b
+index 0000000000000..7a6bc760d02b3
 --- /dev/null
 +++ b/drivers/xen/public-xen/hvm/ioreq.h
 @@ -0,0 +1,126 @@
@@ -8909,7 +8909,7 @@ index 000000000000..7a6bc760d02b
 + */
 diff --git a/drivers/xen/public-xen/hvm/params.h b/drivers/xen/public-xen/hvm/params.h
 new file mode 100644
-index 000000000000..99c40b4287f1
+index 0000000000000..99c40b4287f18
 --- /dev/null
 +++ b/drivers/xen/public-xen/hvm/params.h
 @@ -0,0 +1,296 @@
@@ -9211,7 +9211,7 @@ index 000000000000..99c40b4287f1
 +#endif /* __XEN_PUBLIC_HVM_PARAMS_H__ */
 diff --git a/drivers/xen/public-xen/hvm/pvdrivers.h b/drivers/xen/public-xen/hvm/pvdrivers.h
 new file mode 100644
-index 000000000000..62252db62690
+index 0000000000000..62252db626907
 --- /dev/null
 +++ b/drivers/xen/public-xen/hvm/pvdrivers.h
 @@ -0,0 +1,32 @@
@@ -9249,7 +9249,7 @@ index 000000000000..62252db62690
 +#endif /* _XEN_PUBLIC_PVDRIVERS_H_ */
 diff --git a/drivers/xen/public-xen/hvm/save.h b/drivers/xen/public-xen/hvm/save.h
 new file mode 100644
-index 000000000000..72e16ab5bc19
+index 0000000000000..72e16ab5bc196
 --- /dev/null
 +++ b/drivers/xen/public-xen/hvm/save.h
 @@ -0,0 +1,98 @@
@@ -9353,7 +9353,7 @@ index 000000000000..72e16ab5bc19
 +#endif /* __XEN_PUBLIC_HVM_SAVE_H__ */
 diff --git a/drivers/xen/public-xen/hypfs.h b/drivers/xen/public-xen/hypfs.h
 new file mode 100644
-index 000000000000..70047e17622a
+index 0000000000000..70047e17622ad
 --- /dev/null
 +++ b/drivers/xen/public-xen/hypfs.h
 @@ -0,0 +1,113 @@
@@ -9472,7 +9472,7 @@ index 000000000000..70047e17622a
 +#endif /* __XEN_PUBLIC_HYPFS_H__ */
 diff --git a/drivers/xen/public-xen/io/9pfs.h b/drivers/xen/public-xen/io/9pfs.h
 new file mode 100644
-index 000000000000..ac4bf0434bab
+index 0000000000000..ac4bf0434bab1
 --- /dev/null
 +++ b/drivers/xen/public-xen/io/9pfs.h
 @@ -0,0 +1,242 @@
@@ -9720,7 +9720,7 @@ index 000000000000..ac4bf0434bab
 + */
 diff --git a/drivers/xen/public-xen/io/blkif.h b/drivers/xen/public-xen/io/blkif.h
 new file mode 100644
-index 000000000000..84074533248b
+index 0000000000000..84074533248ba
 --- /dev/null
 +++ b/drivers/xen/public-xen/io/blkif.h
 @@ -0,0 +1,739 @@
@@ -10465,7 +10465,7 @@ index 000000000000..84074533248b
 + */
 diff --git a/drivers/xen/public-xen/io/cameraif.h b/drivers/xen/public-xen/io/cameraif.h
 new file mode 100644
-index 000000000000..a389443769ca
+index 0000000000000..a389443769ca2
 --- /dev/null
 +++ b/drivers/xen/public-xen/io/cameraif.h
 @@ -0,0 +1,1357 @@
@@ -11828,7 +11828,7 @@ index 000000000000..a389443769ca
 + */
 diff --git a/drivers/xen/public-xen/io/console.h b/drivers/xen/public-xen/io/console.h
 new file mode 100644
-index 000000000000..4509b4b689ea
+index 0000000000000..4509b4b689ea1
 --- /dev/null
 +++ b/drivers/xen/public-xen/io/console.h
 @@ -0,0 +1,39 @@
@@ -11873,7 +11873,7 @@ index 000000000000..4509b4b689ea
 + */
 diff --git a/drivers/xen/public-xen/io/displif.h b/drivers/xen/public-xen/io/displif.h
 new file mode 100644
-index 000000000000..132c96fa5c6c
+index 0000000000000..132c96fa5c6c6
 --- /dev/null
 +++ b/drivers/xen/public-xen/io/displif.h
 @@ -0,0 +1,940 @@
@@ -12819,7 +12819,7 @@ index 000000000000..132c96fa5c6c
 + */
 diff --git a/drivers/xen/public-xen/io/fbif.h b/drivers/xen/public-xen/io/fbif.h
 new file mode 100644
-index 000000000000..93c73195d893
+index 0000000000000..93c73195d8934
 --- /dev/null
 +++ b/drivers/xen/public-xen/io/fbif.h
 @@ -0,0 +1,159 @@
@@ -12984,7 +12984,7 @@ index 000000000000..93c73195d893
 + */
 diff --git a/drivers/xen/public-xen/io/fsif.h b/drivers/xen/public-xen/io/fsif.h
 new file mode 100644
-index 000000000000..dcade1c69876
+index 0000000000000..dcade1c69876a
 --- /dev/null
 +++ b/drivers/xen/public-xen/io/fsif.h
 @@ -0,0 +1,175 @@
@@ -13165,7 +13165,7 @@ index 000000000000..dcade1c69876
 +#endif
 diff --git a/drivers/xen/public-xen/io/kbdif.h b/drivers/xen/public-xen/io/kbdif.h
 new file mode 100644
-index 000000000000..4bde6b382155
+index 0000000000000..4bde6b3821555
 --- /dev/null
 +++ b/drivers/xen/public-xen/io/kbdif.h
 @@ -0,0 +1,559 @@
@@ -13730,7 +13730,7 @@ index 000000000000..4bde6b382155
 + */
 diff --git a/drivers/xen/public-xen/io/libxenvchan.h b/drivers/xen/public-xen/io/libxenvchan.h
 new file mode 100644
-index 000000000000..2eab65cb1954
+index 0000000000000..2eab65cb19546
 --- /dev/null
 +++ b/drivers/xen/public-xen/io/libxenvchan.h
 @@ -0,0 +1,84 @@
@@ -13820,7 +13820,7 @@ index 000000000000..2eab65cb1954
 +
 diff --git a/drivers/xen/public-xen/io/netif.h b/drivers/xen/public-xen/io/netif.h
 new file mode 100644
-index 000000000000..c13b85061dfb
+index 0000000000000..c13b85061dfb5
 --- /dev/null
 +++ b/drivers/xen/public-xen/io/netif.h
 @@ -0,0 +1,1091 @@
@@ -14917,7 +14917,7 @@ index 000000000000..c13b85061dfb
 + */
 diff --git a/drivers/xen/public-xen/io/pciif.h b/drivers/xen/public-xen/io/pciif.h
 new file mode 100644
-index 000000000000..dbe825ecc353
+index 0000000000000..dbe825ecc3535
 --- /dev/null
 +++ b/drivers/xen/public-xen/io/pciif.h
 @@ -0,0 +1,108 @@
@@ -15031,7 +15031,7 @@ index 000000000000..dbe825ecc353
 + */
 diff --git a/drivers/xen/public-xen/io/protocols.h b/drivers/xen/public-xen/io/protocols.h
 new file mode 100644
-index 000000000000..7815e1ff0fbc
+index 0000000000000..7815e1ff0fbcc
 --- /dev/null
 +++ b/drivers/xen/public-xen/io/protocols.h
 @@ -0,0 +1,25 @@
@@ -15062,7 +15062,7 @@ index 000000000000..7815e1ff0fbc
 +#endif
 diff --git a/drivers/xen/public-xen/io/pvcalls.h b/drivers/xen/public-xen/io/pvcalls.h
 new file mode 100644
-index 000000000000..c8c76024708a
+index 0000000000000..c8c76024708a5
 --- /dev/null
 +++ b/drivers/xen/public-xen/io/pvcalls.h
 @@ -0,0 +1,143 @@
@@ -15211,7 +15211,7 @@ index 000000000000..c8c76024708a
 + */
 diff --git a/drivers/xen/public-xen/io/ring.h b/drivers/xen/public-xen/io/ring.h
 new file mode 100644
-index 000000000000..a79d913142b9
+index 0000000000000..a79d913142b9d
 --- /dev/null
 +++ b/drivers/xen/public-xen/io/ring.h
 @@ -0,0 +1,504 @@
@@ -15721,7 +15721,7 @@ index 000000000000..a79d913142b9
 + */
 diff --git a/drivers/xen/public-xen/io/sndif.h b/drivers/xen/public-xen/io/sndif.h
 new file mode 100644
-index 000000000000..cce1459b7b2d
+index 0000000000000..cce1459b7b2d6
 --- /dev/null
 +++ b/drivers/xen/public-xen/io/sndif.h
 @@ -0,0 +1,1074 @@
@@ -16801,7 +16801,7 @@ index 000000000000..cce1459b7b2d
 + */
 diff --git a/drivers/xen/public-xen/io/tpmif.h b/drivers/xen/public-xen/io/tpmif.h
 new file mode 100644
-index 000000000000..ad02dbaf1a31
+index 0000000000000..ad02dbaf1a312
 --- /dev/null
 +++ b/drivers/xen/public-xen/io/tpmif.h
 @@ -0,0 +1,126 @@
@@ -16933,7 +16933,7 @@ index 000000000000..ad02dbaf1a31
 + */
 diff --git a/drivers/xen/public-xen/io/usbif.h b/drivers/xen/public-xen/io/usbif.h
 new file mode 100644
-index 000000000000..875af0dc7cdc
+index 0000000000000..875af0dc7cdcc
 --- /dev/null
 +++ b/drivers/xen/public-xen/io/usbif.h
 @@ -0,0 +1,408 @@
@@ -17347,7 +17347,7 @@ index 000000000000..875af0dc7cdc
 +#endif /* __XEN_PUBLIC_IO_USBIF_H__ */
 diff --git a/drivers/xen/public-xen/io/vscsiif.h b/drivers/xen/public-xen/io/vscsiif.h
 new file mode 100644
-index 000000000000..f5fc7de7256c
+index 0000000000000..f5fc7de7256c8
 --- /dev/null
 +++ b/drivers/xen/public-xen/io/vscsiif.h
 @@ -0,0 +1,364 @@
@@ -17717,7 +17717,7 @@ index 000000000000..f5fc7de7256c
 + */
 diff --git a/drivers/xen/public-xen/io/xenbus.h b/drivers/xen/public-xen/io/xenbus.h
 new file mode 100644
-index 000000000000..9cd0cd7c6709
+index 0000000000000..9cd0cd7c67096
 --- /dev/null
 +++ b/drivers/xen/public-xen/io/xenbus.h
 @@ -0,0 +1,63 @@
@@ -17786,7 +17786,7 @@ index 000000000000..9cd0cd7c6709
 + */
 diff --git a/drivers/xen/public-xen/io/xs_wire.h b/drivers/xen/public-xen/io/xs_wire.h
 new file mode 100644
-index 000000000000..04e6849feb18
+index 0000000000000..04e6849feb18f
 --- /dev/null
 +++ b/drivers/xen/public-xen/io/xs_wire.h
 @@ -0,0 +1,147 @@
@@ -17939,7 +17939,7 @@ index 000000000000..04e6849feb18
 + */
 diff --git a/drivers/xen/public-xen/kexec.h b/drivers/xen/public-xen/kexec.h
 new file mode 100644
-index 000000000000..d7f86bd97283
+index 0000000000000..d7f86bd97283d
 --- /dev/null
 +++ b/drivers/xen/public-xen/kexec.h
 @@ -0,0 +1,279 @@
@@ -18224,7 +18224,7 @@ index 000000000000..d7f86bd97283
 + */
 diff --git a/drivers/xen/public-xen/memory.h b/drivers/xen/public-xen/memory.h
 new file mode 100644
-index 000000000000..bd9fc37b5297
+index 0000000000000..bd9fc37b5297d
 --- /dev/null
 +++ b/drivers/xen/public-xen/memory.h
 @@ -0,0 +1,755 @@
@@ -18985,7 +18985,7 @@ index 000000000000..bd9fc37b5297
 + */
 diff --git a/drivers/xen/public-xen/nmi.h b/drivers/xen/public-xen/nmi.h
 new file mode 100644
-index 000000000000..5900703f5f65
+index 0000000000000..5900703f5f655
 --- /dev/null
 +++ b/drivers/xen/public-xen/nmi.h
 @@ -0,0 +1,68 @@
@@ -19059,7 +19059,7 @@ index 000000000000..5900703f5f65
 + */
 diff --git a/drivers/xen/public-xen/physdev.h b/drivers/xen/public-xen/physdev.h
 new file mode 100644
-index 000000000000..3149049a9a57
+index 0000000000000..3149049a9a57f
 --- /dev/null
 +++ b/drivers/xen/public-xen/physdev.h
 @@ -0,0 +1,386 @@
@@ -19451,7 +19451,7 @@ index 000000000000..3149049a9a57
 + */
 diff --git a/drivers/xen/public-xen/platform.h b/drivers/xen/public-xen/platform.h
 new file mode 100644
-index 000000000000..2725b8d1044f
+index 0000000000000..2725b8d1044f3
 --- /dev/null
 +++ b/drivers/xen/public-xen/platform.h
 @@ -0,0 +1,689 @@
@@ -20146,7 +20146,7 @@ index 000000000000..2725b8d1044f
 + */
 diff --git a/drivers/xen/public-xen/pmu.h b/drivers/xen/public-xen/pmu.h
 new file mode 100644
-index 000000000000..af8b7babddbf
+index 0000000000000..af8b7babddbfb
 --- /dev/null
 +++ b/drivers/xen/public-xen/pmu.h
 @@ -0,0 +1,130 @@
@@ -20282,7 +20282,7 @@ index 000000000000..af8b7babddbf
 + */
 diff --git a/drivers/xen/public-xen/pv-iommu.h b/drivers/xen/public-xen/pv-iommu.h
 new file mode 100644
-index 000000000000..ec71f4d42a24
+index 0000000000000..ec71f4d42a248
 --- /dev/null
 +++ b/drivers/xen/public-xen/pv-iommu.h
 @@ -0,0 +1,88 @@
@@ -20376,7 +20376,7 @@ index 000000000000..ec71f4d42a24
 + */
 diff --git a/drivers/xen/public-xen/sched.h b/drivers/xen/public-xen/sched.h
 new file mode 100644
-index 000000000000..b4362c6a1d60
+index 0000000000000..b4362c6a1d608
 --- /dev/null
 +++ b/drivers/xen/public-xen/sched.h
 @@ -0,0 +1,185 @@
@@ -20567,7 +20567,7 @@ index 000000000000..b4362c6a1d60
 + */
 diff --git a/drivers/xen/public-xen/sysctl.h b/drivers/xen/public-xen/sysctl.h
 new file mode 100644
-index 000000000000..4fc2eac9c349
+index 0000000000000..4fc2eac9c349c
 --- /dev/null
 +++ b/drivers/xen/public-xen/sysctl.h
 @@ -0,0 +1,1348 @@
@@ -21921,7 +21921,7 @@ index 000000000000..4fc2eac9c349
 + */
 diff --git a/drivers/xen/public-xen/tmem.h b/drivers/xen/public-xen/tmem.h
 new file mode 100644
-index 000000000000..da68de76fe5f
+index 0000000000000..da68de76fe5fa
 --- /dev/null
 +++ b/drivers/xen/public-xen/tmem.h
 @@ -0,0 +1,105 @@
@@ -22032,7 +22032,7 @@ index 000000000000..da68de76fe5f
 + */
 diff --git a/drivers/xen/public-xen/trace.h b/drivers/xen/public-xen/trace.h
 new file mode 100644
-index 000000000000..141efa0ea7b9
+index 0000000000000..141efa0ea7b97
 --- /dev/null
 +++ b/drivers/xen/public-xen/trace.h
 @@ -0,0 +1,326 @@
@@ -22364,7 +22364,7 @@ index 000000000000..141efa0ea7b9
 + */
 diff --git a/drivers/xen/public-xen/vcpu.h b/drivers/xen/public-xen/vcpu.h
 new file mode 100644
-index 000000000000..f7445ac0b08a
+index 0000000000000..f7445ac0b08a4
 --- /dev/null
 +++ b/drivers/xen/public-xen/vcpu.h
 @@ -0,0 +1,256 @@
@@ -22626,7 +22626,7 @@ index 000000000000..f7445ac0b08a
 + */
 diff --git a/drivers/xen/public-xen/version.h b/drivers/xen/public-xen/version.h
 new file mode 100644
-index 000000000000..1022604daa41
+index 0000000000000..1022604daa412
 --- /dev/null
 +++ b/drivers/xen/public-xen/version.h
 @@ -0,0 +1,185 @@
@@ -22817,7 +22817,7 @@ index 000000000000..1022604daa41
 + */
 diff --git a/drivers/xen/public-xen/vm_event.h b/drivers/xen/public-xen/vm_event.h
 new file mode 100644
-index 000000000000..3a86f0e208f1
+index 0000000000000..3a86f0e208f15
 --- /dev/null
 +++ b/drivers/xen/public-xen/vm_event.h
 @@ -0,0 +1,453 @@
@@ -23276,7 +23276,7 @@ index 000000000000..3a86f0e208f1
 + */
 diff --git a/drivers/xen/public-xen/xen-compat.h b/drivers/xen/public-xen/xen-compat.h
 new file mode 100644
-index 000000000000..078b796664c3
+index 0000000000000..078b796664c33
 --- /dev/null
 +++ b/drivers/xen/public-xen/xen-compat.h
 @@ -0,0 +1,29 @@
@@ -23311,7 +23311,7 @@ index 000000000000..078b796664c3
 +#endif /* __XEN_PUBLIC_XEN_COMPAT_H__ */
 diff --git a/drivers/xen/public-xen/xen.h b/drivers/xen/public-xen/xen.h
 new file mode 100644
-index 000000000000..f4fedc386f49
+index 0000000000000..f4fedc386f49e
 --- /dev/null
 +++ b/drivers/xen/public-xen/xen.h
 @@ -0,0 +1,1037 @@
@@ -24354,7 +24354,7 @@ index 000000000000..f4fedc386f49
 + */
 diff --git a/drivers/xen/public-xen/xencomm.h b/drivers/xen/public-xen/xencomm.h
 new file mode 100644
-index 000000000000..a441f3e27093
+index 0000000000000..a441f3e270936
 --- /dev/null
 +++ b/drivers/xen/public-xen/xencomm.h
 @@ -0,0 +1,24 @@
@@ -24384,7 +24384,7 @@ index 000000000000..a441f3e27093
 +#endif /* _XEN_XENCOMM_H_ */
 diff --git a/drivers/xen/public-xen/xenoprof.h b/drivers/xen/public-xen/xenoprof.h
 new file mode 100644
-index 000000000000..2298b6759ed3
+index 0000000000000..2298b6759ed33
 --- /dev/null
 +++ b/drivers/xen/public-xen/xenoprof.h
 @@ -0,0 +1,135 @@
@@ -24525,7 +24525,7 @@ index 000000000000..2298b6759ed3
 + */
 diff --git a/drivers/xen/public-xen/xsm/flask_op.h b/drivers/xen/public-xen/xsm/flask_op.h
 new file mode 100644
-index 000000000000..7185e806212b
+index 0000000000000..7185e806212b1
 --- /dev/null
 +++ b/drivers/xen/public-xen/xsm/flask_op.h
 @@ -0,0 +1,212 @@

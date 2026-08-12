@@ -1,7 +1,7 @@
-From 577a19fa0b97b4e30dcf8ceb195bc4c4b407dc49 Mon Sep 17 00:00:00 2001
+From 7175ab4703787789dc627004799efa02ebc6bc7d Mon Sep 17 00:00:00 2001
 From: Corentin Oparowski <corentin.oparowski@vates.tech>
 Date: Sat, 19 Sep 2015 08:09:42 +0200
-Subject: [PATCH 33/35] SDEV_EVT_LUN_CHANGE_REPORTED events should only be
+Subject: [PATCH 33/36] SDEV_EVT_LUN_CHANGE_REPORTED events should only be
  reported when we're not expecting the LUN change. Lest it may trigger udev
  rules which in turn trigger more LUN change events.
 
@@ -11,10 +11,10 @@ Signed-off-by: Gerald Elder-Vass <gerald.elder-vass@cloud.com>
  1 file changed, 2 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/scsi/scsi_error.c b/drivers/scsi/scsi_error.c
-index 35b841515d1d..3078afa383ee 100644
+index 9a89a94784cd0..d610f212a58e4 100644
 --- a/drivers/scsi/scsi_error.c
 +++ b/drivers/scsi/scsi_error.c
-@@ -466,7 +466,8 @@ static void scsi_report_sense(struct scsi_device *sdev,
+@@ -475,7 +475,8 @@ static void scsi_report_sense(struct scsi_device *sdev,
  			sdev_printk(KERN_WARNING, sdev,
  				    "Inquiry data has changed");
  		} else if (sshdr->asc == 0x3f && sshdr->ascq == 0x0e) {

@@ -1,17 +1,17 @@
-From c7cdc3febf4b50633122c182a3de1b94d4547b70 Mon Sep 17 00:00:00 2001
+From a197a302cf5806013e84d699be9f3189b118a41f Mon Sep 17 00:00:00 2001
 From: Corentin Oparowski <corentin.oparowski@vates.tech>
 Date: Sat, 19 Sep 2015 08:09:42 +0200
-Subject: [PATCH 16/35] sunrpc-force-disconnect-on-connection-timeout.patch
+Subject: [PATCH 16/36] sunrpc-force-disconnect-on-connection-timeout.patch
 
 ---
  net/sunrpc/clnt.c | 11 +++++++++++
  1 file changed, 11 insertions(+)
 
 diff --git a/net/sunrpc/clnt.c b/net/sunrpc/clnt.c
-index 262db4517016..e4aaefcb9e78 100644
+index dd3b1e4a3f884..04f9c118cc7cf 100644
 --- a/net/sunrpc/clnt.c
 +++ b/net/sunrpc/clnt.c
-@@ -2207,6 +2207,17 @@ call_connect_status(struct rpc_task *task)
+@@ -2222,6 +2222,17 @@ call_connect_status(struct rpc_task *task)
  	case -ENOTCONN:
  	case -EAGAIN:
  	case -ETIMEDOUT:

@@ -1,7 +1,7 @@
-From 3d6e36af6cea4513fb7f8ea137ed7d586bbaa154 Mon Sep 17 00:00:00 2001
+From 1deddd3f7374618b0ba44f54b459ec24022d0d8c Mon Sep 17 00:00:00 2001
 From: Corentin Oparowski <corentin.oparowski@vates.tech>
 Date: Sat, 19 Sep 2015 08:09:42 +0200
-Subject: [PATCH 06/35] At some point since kernel 4.19 the preemption of
+Subject: [PATCH 06/36] At some point since kernel 4.19 the preemption of
  hypercalls has fallen into a state of disrepair, partly due to dead code,
  partly as a result of the dynamic preemption feature whereby kernel
  preemption mode is selected at kernel boot time.  This patch re-enables
@@ -43,7 +43,7 @@ there rather than arch/x86/entry/common.c where it originally resided.]
  2 files changed, 6 insertions(+), 6 deletions(-)
 
 diff --git a/arch/x86/xen/enlighten_pv.c b/arch/x86/xen/enlighten_pv.c
-index bf750cd599b2..da3537ccf150 100644
+index bf750cd599b22..da3537ccf150b 100644
 --- a/arch/x86/xen/enlighten_pv.c
 +++ b/arch/x86/xen/enlighten_pv.c
 @@ -94,7 +94,7 @@ void *xen_initial_gdt;
@@ -65,7 +65,7 @@ index bf750cd599b2..da3537ccf150 100644
  		restore_inhcall(inhcall);
  	} else {
 diff --git a/include/xen/xen-ops.h b/include/xen/xen-ops.h
-index 47f11bec5e90..7ff63c07c746 100644
+index 47f11bec5e90c..7ff63c07c7466 100644
 --- a/include/xen/xen-ops.h
 +++ b/include/xen/xen-ops.h
 @@ -194,18 +194,18 @@ bool xen_running_on_version_or_later(unsigned int major, unsigned int minor);

@@ -1,7 +1,7 @@
-From 9436d6eba59680adf37e2fb2391395db12d97296 Mon Sep 17 00:00:00 2001
+From ed750cda4d6b03bb5395dbd1a046637f9d7af54e Mon Sep 17 00:00:00 2001
 From: Corentin Oparowski <corentin.oparowski@vates.tech>
 Date: Sat, 19 Sep 2015 08:09:42 +0200
-Subject: [PATCH 21/35] Add SBAT metadata to dom0 6.6 kernel
+Subject: [PATCH 21/36] Add SBAT metadata to dom0 6.6 kernel
 
 After some recent upstream changes a lot of what used to be done in build.c is
 now done in header.S and setup.ld.
@@ -130,7 +130,7 @@ Signed-off-by: Kevin Lampis <klampis@cloud.com>
  create mode 100644 arch/x86/boot/sbat.csv
 
 diff --git a/arch/x86/boot/Makefile b/arch/x86/boot/Makefile
-index 9cc0ff6e9067..a1c35c2f31ff 100644
+index 9cc0ff6e9067d..a1c35c2f31ff0 100644
 --- a/arch/x86/boot/Makefile
 +++ b/arch/x86/boot/Makefile
 @@ -63,7 +63,7 @@ $(obj)/bzImage: asflags-y  := $(SVGA_MODE)
@@ -152,7 +152,7 @@ index 9cc0ff6e9067..a1c35c2f31ff 100644
  	$(call if_changed,ld)
  
 diff --git a/arch/x86/boot/header.S b/arch/x86/boot/header.S
-index b5c79f43359b..d520ab1a11ab 100644
+index b5c79f43359bc..d520ab1a11ab4 100644
 --- a/arch/x86/boot/header.S
 +++ b/arch/x86/boot/header.S
 @@ -177,8 +177,22 @@ pecompat_fstart:
@@ -181,14 +181,14 @@ index b5c79f43359b..d520ab1a11ab 100644
  	.byte	0
 diff --git a/arch/x86/boot/sbat.csv b/arch/x86/boot/sbat.csv
 new file mode 100644
-index 000000000000..65efc83cbec3
+index 0000000000000..65efc83cbec3a
 --- /dev/null
 +++ b/arch/x86/boot/sbat.csv
 @@ -0,0 +1,2 @@
 +sbat,1,SBAT Version,sbat,1,https://github.com/rhboot/shim/blob/main/SBAT.md
 +linux.xs,1,Cloud Software Group,linux,1,mailto:security@xenserver.com
 diff --git a/arch/x86/boot/setup.ld b/arch/x86/boot/setup.ld
-index 3a2d1360abb0..fcff2c31b070 100644
+index 3a2d1360abb01..fcff2c31b070a 100644
 --- a/arch/x86/boot/setup.ld
 +++ b/arch/x86/boot/setup.ld
 @@ -25,7 +25,11 @@ SECTIONS
@@ -215,7 +215,7 @@ index 3a2d1360abb0..fcff2c31b070 100644
  	}
  
 diff --git a/arch/x86/boot/tools/build.c b/arch/x86/boot/tools/build.c
-index 10311d77c67f..aed3ebaf4e3a 100644
+index 10311d77c67f8..aed3ebaf4e3ab 100644
 --- a/arch/x86/boot/tools/build.c
 +++ b/arch/x86/boot/tools/build.c
 @@ -47,6 +47,8 @@ typedef unsigned int   u32;

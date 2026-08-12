@@ -1,7 +1,7 @@
-From 86c2cbe57be0568a70424743a973a9ac07bbec8a Mon Sep 17 00:00:00 2001
+From 1eb80ec532b4ddf642686c1c0af13ba4ced8a842 Mon Sep 17 00:00:00 2001
 From: Corentin Oparowski <corentin.oparowski@vates.tech>
 Date: Tue, 26 Aug 2025 13:34:44 +0800
-Subject: [PATCH 09/35] CA-415346: export module symbol offsets
+Subject: [PATCH 09/36] CA-415346: export module symbol offsets
 
   crashdump needs it to navigate around vmcore to dump driver
   information
@@ -20,7 +20,7 @@ allows runtime bounds checking on flexible arrays]
  4 files changed, 35 insertions(+), 10 deletions(-)
 
 diff --git a/arch/x86/kernel/asm-offsets.c b/arch/x86/kernel/asm-offsets.c
-index 925adce6e2c7..bff59957cf1c 100644
+index 925adce6e2c73..bff59957cf1ce 100644
 --- a/arch/x86/kernel/asm-offsets.c
 +++ b/arch/x86/kernel/asm-offsets.c
 @@ -10,6 +10,7 @@
@@ -55,7 +55,7 @@ index 925adce6e2c7..bff59957cf1c 100644
  #endif
  }
 diff --git a/include/linux/module.h b/include/linux/module.h
-index 4b75a2391285..ca7add3423f9 100644
+index 2e9ff5688a301..e822260e57aa3 100644
 --- a/include/linux/module.h
 +++ b/include/linux/module.h
 @@ -409,6 +409,19 @@ struct klp_modinfo {
@@ -79,7 +79,7 @@ index 4b75a2391285..ca7add3423f9 100644
  	enum module_state state;
  
 diff --git a/kernel/module/sysfs.c b/kernel/module/sysfs.c
-index 456358e1fdc4..3b2955929878 100644
+index 456358e1fdc43..3b2955929878c 100644
 --- a/kernel/module/sysfs.c
 +++ b/kernel/module/sysfs.c
 @@ -141,16 +141,6 @@ static void remove_sect_attrs(struct module *mod)
@@ -100,10 +100,10 @@ index 456358e1fdc4..3b2955929878 100644
  			     unsigned int i)
  {
 diff --git a/scripts/link-vmlinux.sh b/scripts/link-vmlinux.sh
-index a9b3f34a78d2..eb8ed1b4eaf6 100755
+index 94f794ca11ca8..1fdf265d12cf6 100755
 --- a/scripts/link-vmlinux.sh
 +++ b/scripts/link-vmlinux.sh
-@@ -296,5 +296,9 @@ if is_enabled CONFIG_KALLSYMS; then
+@@ -298,5 +298,9 @@ if is_enabled CONFIG_KALLSYMS; then
  	fi
  fi
  

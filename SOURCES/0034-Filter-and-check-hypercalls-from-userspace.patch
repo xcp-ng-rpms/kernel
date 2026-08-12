@@ -1,7 +1,7 @@
-From a3c88e7c53fb235b518e60ff4d8e2e2be9b24b8d Mon Sep 17 00:00:00 2001
+From b07c370b59ec689be48cc5662b7b6ef40c4ee791 Mon Sep 17 00:00:00 2001
 From: Corentin Oparowski <corentin.oparowski@vates.tech>
 Date: Sat, 19 Sep 2015 08:09:42 +0200
-Subject: [PATCH 1/2] Filter and check hypercalls from userspace
+Subject: [PATCH 34/36] Filter and check hypercalls from userspace
 
 Xen cannot determine whether a hypercall originates from userspace or kernel
 space. A malicious userspace may use Xen to attack the dom0 kernel.
@@ -35,7 +35,7 @@ macro, so align our usage in `security_locked_down_nowarn()`]
  drivers/pci/pci.c                  |    2 +
  drivers/xen/Makefile               |    2 +-
  drivers/xen/filter-hypercall.c     | 1404 ++++++++++++++++++++++++++++
- drivers/xen/privcmd.c              |   42 +-
+ drivers/xen/privcmd.c              |   41 +-
  drivers/xen/public-xen/elfnote.h   |    9 +-
  drivers/xen/xen-pciback/pci_stub.c |    2 +
  include/linux/lsm_hook_defs.h      |    1 +
@@ -45,12 +45,12 @@ macro, so align our usage in `security_locked_down_nowarn()`]
  include/xen/interface/elfnote.h    |    9 +
  security/lockdown/lockdown.c       |   13 +
  security/security.c                |    7 +
- 14 files changed, 1523 insertions(+), 6 deletions(-)
+ 14 files changed, 1522 insertions(+), 6 deletions(-)
  create mode 100644 drivers/xen/filter-hypercall.c
  create mode 100644 include/xen/filter-hypercall.h
 
 diff --git a/arch/x86/xen/xen-head.S b/arch/x86/xen/xen-head.S
-index 55978e0dc175..05bcd5d86ef5 100644
+index 55978e0dc1755..05bcd5d86ef56 100644
 --- a/arch/x86/xen/xen-head.S
 +++ b/arch/x86/xen/xen-head.S
 @@ -21,6 +21,7 @@
@@ -69,10 +69,10 @@ index 55978e0dc175..05bcd5d86ef5 100644
  
  #endif /*CONFIG_XEN */
 diff --git a/drivers/pci/pci.c b/drivers/pci/pci.c
-index 828d37f38187..fe25958c58ae 100644
+index e4ed6c6253c99..8939baec9043a 100644
 --- a/drivers/pci/pci.c
 +++ b/drivers/pci/pci.c
-@@ -5458,6 +5458,8 @@ int pci_reset_function(struct pci_dev *dev)
+@@ -5342,6 +5342,8 @@ int pci_reset_function(struct pci_dev *dev)
  	pci_dev_save_and_disable(dev);
  
  	rc = __pci_reset_function_locked(dev);
@@ -82,7 +82,7 @@ index 828d37f38187..fe25958c58ae 100644
  	pci_dev_restore(dev);
  	pci_dev_unlock(dev);
 diff --git a/drivers/xen/Makefile b/drivers/xen/Makefile
-index aa7546375854..c4f902dbc61a 100644
+index aa75463758544..c4f902dbc61ac 100644
 --- a/drivers/xen/Makefile
 +++ b/drivers/xen/Makefile
 @@ -38,7 +38,7 @@ xen-evtchn-y				:= evtchn.o
@@ -96,7 +96,7 @@ index aa7546375854..c4f902dbc61a 100644
  obj-$(CONFIG_XEN_GRANT_DMA_OPS)		+= grant-dma-ops.o
 diff --git a/drivers/xen/filter-hypercall.c b/drivers/xen/filter-hypercall.c
 new file mode 100644
-index 000000000000..de1fe5ca1a8a
+index 0000000000000..de1fe5ca1a8a1
 --- /dev/null
 +++ b/drivers/xen/filter-hypercall.c
 @@ -0,0 +1,1404 @@
@@ -1505,26 +1505,18 @@ index 000000000000..de1fe5ca1a8a
 +	return __post_hypercall(fc, &fc->mc, &fc->mc_orig);
 +}
 diff --git a/drivers/xen/privcmd.c b/drivers/xen/privcmd.c
-index 4f75bc876454..8ec3c5e3a539 100644
+index 115b54c3805b0..892f1e7007b7b 100644
 --- a/drivers/xen/privcmd.c
 +++ b/drivers/xen/privcmd.c
-@@ -31,6 +31,7 @@
- #include <linux/miscdevice.h>
- #include <linux/moduleparam.h>
- #include <linux/virtio_mmio.h>
-+#include <linux/security.h>
- 
- #include <asm/xen/hypervisor.h>
- #include <asm/xen/hypercall.h>
-@@ -46,6 +47,7 @@
- #include <xen/page.h>
+@@ -51,6 +51,7 @@
  #include <xen/xen-ops.h>
  #include <xen/balloon.h>
+ #include <xen/xenbus.h>
 +#include <xen/filter-hypercall.h>
  #ifdef CONFIG_XEN_ACPI
  #include <xen/acpi.h>
  #endif
-@@ -82,6 +84,9 @@ static long privcmd_ioctl_hypercall(struct file *file, void __user *udata)
+@@ -97,6 +98,9 @@ static long privcmd_ioctl_hypercall(struct file *file, void __user *udata)
  	struct privcmd_data *data = file->private_data;
  	struct privcmd_hypercall hypercall;
  	long ret;
@@ -1534,7 +1526,7 @@ index 4f75bc876454..8ec3c5e3a539 100644
  
  	/* Disallow arbitrary hypercalls if restricted */
  	if (data->domid != DOMID_INVALID)
-@@ -90,13 +95,42 @@ static long privcmd_ioctl_hypercall(struct file *file, void __user *udata)
+@@ -105,13 +109,42 @@ static long privcmd_ioctl_hypercall(struct file *file, void __user *udata)
  	if (copy_from_user(&hypercall, udata, sizeof(hypercall)))
  		return -EFAULT;
  
@@ -1582,7 +1574,7 @@ index 4f75bc876454..8ec3c5e3a539 100644
  }
  
 diff --git a/drivers/xen/public-xen/elfnote.h b/drivers/xen/public-xen/elfnote.h
-index e2743f74c195..f7ee7c76af9d 100644
+index e2743f74c1950..f7ee7c76af9de 100644
 --- a/drivers/xen/public-xen/elfnote.h
 +++ b/drivers/xen/public-xen/elfnote.h
 @@ -283,7 +283,14 @@
@@ -1602,7 +1594,7 @@ index e2743f74c195..f7ee7c76af9d 100644
  #endif /* __XEN_PUBLIC_ELFNOTE_H__ */
  
 diff --git a/drivers/xen/xen-pciback/pci_stub.c b/drivers/xen/xen-pciback/pci_stub.c
-index 5ba353a08194..10c7b66d93af 100644
+index fc80d0fa66b2e..d9b513c8dddd1 100644
 --- a/drivers/xen/xen-pciback/pci_stub.c
 +++ b/drivers/xen/xen-pciback/pci_stub.c
 @@ -144,6 +144,8 @@ static int pcistub_reset_function(struct pci_dev *dev)
@@ -1615,10 +1607,10 @@ index 5ba353a08194..10c7b66d93af 100644
  
  	return ret;
 diff --git a/include/linux/lsm_hook_defs.h b/include/linux/lsm_hook_defs.h
-index 23041e1201d4..900d62f30961 100644
+index 068a7e1ca816f..95d8f5e0d873a 100644
 --- a/include/linux/lsm_hook_defs.h
 +++ b/include/linux/lsm_hook_defs.h
-@@ -438,6 +438,7 @@ LSM_HOOK(int, 0, bpf_token_capable, const struct bpf_token *token, int cap)
+@@ -443,6 +443,7 @@ LSM_HOOK(int, 0, bpf_token_capable, const struct bpf_token *token, int cap)
  #endif /* CONFIG_BPF_SYSCALL */
  
  LSM_HOOK(int, 0, locked_down, enum lockdown_reason what)
@@ -1627,10 +1619,10 @@ index 23041e1201d4..900d62f30961 100644
  
  #ifdef CONFIG_PERF_EVENTS
 diff --git a/include/linux/pci.h b/include/linux/pci.h
-index b9d083464265..b82ae571db77 100644
+index 8063550ba3781..a5f43b35ec20b 100644
 --- a/include/linux/pci.h
 +++ b/include/linux/pci.h
-@@ -418,6 +418,9 @@ struct pci_dev {
+@@ -425,6 +425,9 @@ struct pci_dev {
  	unsigned int	pasid_no_tlp:1;		/* PASID works without TLP Prefix */
  	unsigned int	eetlp_prefix_path:1;	/* End-to-End TLP Prefix */
  
@@ -1641,18 +1633,18 @@ index b9d083464265..b82ae571db77 100644
  	struct device	dev;			/* Generic device interface */
  
 diff --git a/include/linux/security.h b/include/linux/security.h
-index 94e63443b798..a50b8586b7e9 100644
+index c051d409efc73..ec42f18db73b9 100644
 --- a/include/linux/security.h
 +++ b/include/linux/security.h
-@@ -140,6 +140,7 @@ enum lockdown_reason {
- 	LOCKDOWN_BPF_WRITE_USER,
+@@ -141,6 +141,7 @@ enum lockdown_reason {
  	LOCKDOWN_DBG_WRITE_KERNEL,
  	LOCKDOWN_RTAS_ERROR_INJECTION,
+ 	LOCKDOWN_XEN_USER_ACTIONS,
 +	LOCKDOWN_XEN_HYPERCALL,
  	LOCKDOWN_INTEGRITY_MAX,
  	LOCKDOWN_KCORE,
  	LOCKDOWN_KPROBES,
-@@ -529,6 +530,8 @@ void security_bdev_free(struct block_device *bdev);
+@@ -536,6 +537,8 @@ void security_bdev_free(struct block_device *bdev);
  int security_bdev_setintegrity(struct block_device *bdev,
  			       enum lsm_integrity_type type, const void *value,
  			       size_t size);
@@ -1661,7 +1653,7 @@ index 94e63443b798..a50b8586b7e9 100644
  int security_lock_kernel_down(const char *where, enum lockdown_reason level);
  #else /* CONFIG_SECURITY */
  
-@@ -1505,6 +1508,10 @@ static inline int security_locked_down(enum lockdown_reason what)
+@@ -1528,6 +1531,10 @@ static inline int security_locked_down(enum lockdown_reason what)
  {
  	return 0;
  }
@@ -1674,7 +1666,7 @@ index 94e63443b798..a50b8586b7e9 100644
  				    u64 id, u64 flags)
 diff --git a/include/xen/filter-hypercall.h b/include/xen/filter-hypercall.h
 new file mode 100644
-index 000000000000..c06ddde6a6ca
+index 0000000000000..c06ddde6a6cac
 --- /dev/null
 +++ b/include/xen/filter-hypercall.h
 @@ -0,0 +1,26 @@
@@ -1705,7 +1697,7 @@ index 000000000000..c06ddde6a6ca
 +#endif
 +
 diff --git a/include/xen/interface/elfnote.h b/include/xen/interface/elfnote.h
-index 918f47d87d7a..7838a4c7c233 100644
+index 918f47d87d7a2..7838a4c7c2333 100644
 --- a/include/xen/interface/elfnote.h
 +++ b/include/xen/interface/elfnote.h
 @@ -273,4 +273,13 @@
@@ -1723,7 +1715,7 @@ index 918f47d87d7a..7838a4c7c233 100644
 +
  #endif /* __XEN_PUBLIC_ELFNOTE_H__ */
 diff --git a/security/lockdown/lockdown.c b/security/lockdown/lockdown.c
-index 7557405619eb..8a04a2f89a38 100644
+index 7557405619eb2..8a04a2f89a380 100644
 --- a/security/lockdown/lockdown.c
 +++ b/security/lockdown/lockdown.c
 @@ -73,8 +73,21 @@ static int lockdown_is_locked_down(enum lockdown_reason what)
@@ -1749,18 +1741,18 @@ index 7557405619eb..8a04a2f89a38 100644
  };
  
 diff --git a/security/security.c b/security/security.c
-index 76e01d81ee29..a62a6ed92209 100644
+index 99bea60ba59c8..063129fdb3025 100644
 --- a/security/security.c
 +++ b/security/security.c
-@@ -79,6 +79,7 @@ const char *const lockdown_reasons[LOCKDOWN_CONFIDENTIALITY_MAX + 1] = {
- 	[LOCKDOWN_BPF_WRITE_USER] = "use of bpf to write user RAM",
+@@ -80,6 +80,7 @@ const char *const lockdown_reasons[LOCKDOWN_CONFIDENTIALITY_MAX + 1] = {
  	[LOCKDOWN_DBG_WRITE_KERNEL] = "use of kgdb/kdb to write kernel RAM",
  	[LOCKDOWN_RTAS_ERROR_INJECTION] = "RTAS error injection",
+ 	[LOCKDOWN_XEN_USER_ACTIONS] = "Xen guest user action",
 +	[LOCKDOWN_XEN_HYPERCALL] = "raw Xen hypercall access",
  	[LOCKDOWN_INTEGRITY_MAX] = "integrity",
  	[LOCKDOWN_KCORE] = "/proc/kcore access",
  	[LOCKDOWN_KPROBES] = "use of kprobes",
-@@ -5775,6 +5776,12 @@ int security_lock_kernel_down(const char *where, enum lockdown_reason level)
+@@ -5885,6 +5886,12 @@ int security_lock_kernel_down(const char *where, enum lockdown_reason level)
  }
  EXPORT_SYMBOL(security_lock_kernel_down);
  

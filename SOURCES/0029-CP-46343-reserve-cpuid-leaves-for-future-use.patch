@@ -1,7 +1,7 @@
-From e98eb1fb9d65e843425733f49bf782fd28a669ba Mon Sep 17 00:00:00 2001
+From a1c7b93f0e7fee21c5d2312902fd6fbdc95a937a Mon Sep 17 00:00:00 2001
 From: Corentin Oparowski <corentin.oparowski@vates.tech>
 Date: Fri, 18 Jul 2025 18:10:33 +0800
-Subject: [PATCH 29/35] CP-46343: reserve cpuid leaves for future use
+Subject: [PATCH 29/36] CP-46343: reserve cpuid leaves for future use
 
 Signed-off-by: Chunjie Zhu <chunjie.zhu@cloud.com>
 ---
@@ -15,7 +15,7 @@ Signed-off-by: Chunjie Zhu <chunjie.zhu@cloud.com>
  7 files changed, 10 insertions(+), 10 deletions(-)
 
 diff --git a/arch/x86/include/asm/cpufeature.h b/arch/x86/include/asm/cpufeature.h
-index b0eda0b50cac..01adf20857e8 100644
+index b0eda0b50cac5..01adf20857e8c 100644
 --- a/arch/x86/include/asm/cpufeature.h
 +++ b/arch/x86/include/asm/cpufeature.h
 @@ -99,7 +99,7 @@ extern const char * const x86_bug_flags[NBUGINTS*32];
@@ -37,7 +37,7 @@ index b0eda0b50cac..01adf20857e8 100644
  #define cpu_has(c, bit)							\
  	(__builtin_constant_p(bit) && REQUIRED_MASK_BIT_SET(bit) ? 1 :	\
 diff --git a/arch/x86/include/asm/cpufeatures.h b/arch/x86/include/asm/cpufeatures.h
-index 646b11f6c76e..778ff9102f90 100644
+index 3e7ba285c2a6f..9e130ac588fde 100644
 --- a/arch/x86/include/asm/cpufeatures.h
 +++ b/arch/x86/include/asm/cpufeatures.h
 @@ -13,8 +13,8 @@
@@ -52,7 +52,7 @@ index 646b11f6c76e..778ff9102f90 100644
  /*
   * Note: If the comment begins with a quoted string, that string is used
 diff --git a/arch/x86/include/asm/disabled-features.h b/arch/x86/include/asm/disabled-features.h
-index 89c777062ecc..16173f7da2e0 100644
+index 89c777062ecc1..16173f7da2e03 100644
 --- a/arch/x86/include/asm/disabled-features.h
 +++ b/arch/x86/include/asm/disabled-features.h
 @@ -158,6 +158,6 @@
@@ -64,7 +64,7 @@ index 89c777062ecc..16173f7da2e0 100644
  
  #endif /* _ASM_X86_DISABLED_FEATURES_H */
 diff --git a/arch/x86/include/asm/required-features.h b/arch/x86/include/asm/required-features.h
-index 6a3de575bec6..fdb08b1505f7 100644
+index 6a3de575bec6a..fdb08b1505f7e 100644
 --- a/arch/x86/include/asm/required-features.h
 +++ b/arch/x86/include/asm/required-features.h
 @@ -102,6 +102,6 @@
@@ -76,7 +76,7 @@ index 6a3de575bec6..fdb08b1505f7 100644
  
  #endif /* _ASM_X86_REQUIRED_FEATURES_H */
 diff --git a/tools/arch/x86/include/asm/cpufeatures.h b/tools/arch/x86/include/asm/cpufeatures.h
-index ebd3eed753cf..266b70f2e456 100644
+index ebd3eed753cf7..266b70f2e4565 100644
 --- a/tools/arch/x86/include/asm/cpufeatures.h
 +++ b/tools/arch/x86/include/asm/cpufeatures.h
 @@ -13,8 +13,8 @@
@@ -91,7 +91,7 @@ index ebd3eed753cf..266b70f2e456 100644
  /*
   * Note: If the comment begins with a quoted string, that string is used
 diff --git a/tools/arch/x86/include/asm/disabled-features.h b/tools/arch/x86/include/asm/disabled-features.h
-index 48d067b0a33a..16173f7da2e0 100644
+index 48d067b0a33a2..16173f7da2e03 100644
 --- a/tools/arch/x86/include/asm/disabled-features.h
 +++ b/tools/arch/x86/include/asm/disabled-features.h
 @@ -158,6 +158,6 @@
@@ -103,7 +103,7 @@ index 48d067b0a33a..16173f7da2e0 100644
  
  #endif /* _ASM_X86_DISABLED_FEATURES_H */
 diff --git a/tools/arch/x86/include/asm/required-features.h b/tools/arch/x86/include/asm/required-features.h
-index 6a3de575bec6..fdb08b1505f7 100644
+index 6a3de575bec6a..fdb08b1505f7e 100644
 --- a/tools/arch/x86/include/asm/required-features.h
 +++ b/tools/arch/x86/include/asm/required-features.h
 @@ -102,6 +102,6 @@

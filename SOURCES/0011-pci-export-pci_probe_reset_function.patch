@@ -1,7 +1,7 @@
-From cfa0add2fcef355a981a63771e40d950d9e8a2cf Mon Sep 17 00:00:00 2001
+From 68b3d47a49ea8c7b0fc2458f74b35765b83b6085 Mon Sep 17 00:00:00 2001
 From: Corentin Oparowski <corentin.oparowski@vates.tech>
 Date: Thu, 10 Jul 2014 13:10:04 +0100
-Subject: [PATCH 11/35] pci: export pci_probe_reset_function()
+Subject: [PATCH 11/36] pci: export pci_probe_reset_function()
 
 The xen-pciback needs to test if a per-function reset is available so
 it can provide an interface for a safe bus reset instead.
@@ -14,7 +14,7 @@ Signed-off-by: David Vrabel <david.vrabel@citrix.com>
  3 files changed, 2 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/pci/pci.c b/drivers/pci/pci.c
-index 7e48d09efede..828d37f38187 100644
+index 1e3ba3d613e7a..e4ed6c6253c99 100644
 --- a/drivers/pci/pci.c
 +++ b/drivers/pci/pci.c
 @@ -95,6 +95,7 @@ bool pci_reset_supported(struct pci_dev *dev)
@@ -26,10 +26,10 @@ index 7e48d09efede..828d37f38187 100644
  #ifdef CONFIG_PCI_DOMAINS
  int pci_domains_supported = 1;
 diff --git a/drivers/pci/pci.h b/drivers/pci/pci.h
-index f9765bdf73e8..8ccfaacb59f2 100644
+index 3757747673d77..652e5223e0ce0 100644
 --- a/drivers/pci/pci.h
 +++ b/drivers/pci/pci.h
-@@ -100,7 +100,6 @@ enum pci_mmap_api {
+@@ -107,7 +107,6 @@ enum pci_mmap_api {
  int pci_mmap_fits(struct pci_dev *pdev, int resno, struct vm_area_struct *vmai,
  		  enum pci_mmap_api mmap_api);
  
@@ -38,10 +38,10 @@ index f9765bdf73e8..8ccfaacb59f2 100644
  int pci_bridge_secondary_bus_reset(struct pci_dev *dev);
  int pci_bus_error_reset(struct pci_dev *dev);
 diff --git a/include/linux/pci.h b/include/linux/pci.h
-index adbf0ba043d2..9c3bb42d582f 100644
+index 8eb0e424ad80a..b8f1d8834a02f 100644
 --- a/include/linux/pci.h
 +++ b/include/linux/pci.h
-@@ -1411,6 +1411,7 @@ int pcie_link_speed_mbps(struct pci_dev *pdev);
+@@ -1433,6 +1433,7 @@ int pcie_link_speed_mbps(struct pci_dev *pdev);
  void pcie_print_link_status(struct pci_dev *dev);
  int pcie_reset_flr(struct pci_dev *dev, bool probe);
  int pcie_flr(struct pci_dev *dev);

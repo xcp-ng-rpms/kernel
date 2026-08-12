@@ -1,7 +1,7 @@
-From 3bdb310647b868c6224d883e8a8662100ff4c6c7 Mon Sep 17 00:00:00 2001
+From 022f2762fd15c84431e8e0d79381539edaffcf9e Mon Sep 17 00:00:00 2001
 From: Corentin Oparowski <corentin.oparowski@vates.tech>
 Date: Sat, 19 Sep 2015 08:09:42 +0200
-Subject: [PATCH 18/35] 0001-xen-swiotlb-size-128MiB.patch
+Subject: [PATCH 18/36] 0001-xen-swiotlb-size-128MiB.patch
 
 ---
  include/linux/swiotlb.h | 1 +
@@ -9,7 +9,7 @@ Subject: [PATCH 18/35] 0001-xen-swiotlb-size-128MiB.patch
  2 files changed, 5 insertions(+)
 
 diff --git a/include/linux/swiotlb.h b/include/linux/swiotlb.h
-index 3dae0f592063..f9a0bf692c9f 100644
+index 3dae0f592063e..f9a0bf692c9fd 100644
 --- a/include/linux/swiotlb.h
 +++ b/include/linux/swiotlb.h
 @@ -34,6 +34,7 @@ struct scatterlist;
@@ -21,10 +21,10 @@ index 3dae0f592063..f9a0bf692c9f 100644
  unsigned long swiotlb_size_or_default(void);
  void __init swiotlb_init_remap(bool addressing_limit, unsigned int flags,
 diff --git a/kernel/dma/swiotlb.c b/kernel/dma/swiotlb.c
-index abcf3fa63a56..993b0bb3d49a 100644
+index e2445b3af7468..90c4778490add 100644
 --- a/kernel/dma/swiotlb.c
 +++ b/kernel/dma/swiotlb.c
-@@ -99,7 +99,11 @@ static struct io_tlb_mem io_tlb_default_mem;
+@@ -100,7 +100,11 @@ static struct io_tlb_mem io_tlb_default_mem;
  
  #endif	/* CONFIG_SWIOTLB_DYNAMIC */
  

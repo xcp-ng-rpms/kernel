@@ -1,7 +1,7 @@
-From 79ced0dd19534f696f311a9b035513e0ce3fdb13 Mon Sep 17 00:00:00 2001
+From faa496e26b27be981bba0d14ed7272e8895283e5 Mon Sep 17 00:00:00 2001
 From: Corentin Oparowski <corentin.oparowski@vates.tech>
 Date: Thu, 27 Jul 2017 16:25:54 +0100
-Subject: [PATCH 04/35] net: Do not scrub ignore_df within the same name space
+Subject: [PATCH 04/36] net: Do not scrub ignore_df within the same name space
 
 Commit 239c78db9c ("net: clear local_df when passing skb between namespaces")
 cleared local_df/ignore_df for tunnels. This broke, last resort, fragmentation
@@ -15,10 +15,10 @@ Signed-off-by: Anoob Soman <anoob.soman@citrix.com>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/net/core/skbuff.c b/net/core/skbuff.c
-index c3e1395d8ac5..b5f664ae2182 100644
+index 8a538aa53445a..1aa0fc5a235f4 100644
 --- a/net/core/skbuff.c
 +++ b/net/core/skbuff.c
-@@ -6107,7 +6107,6 @@ void skb_scrub_packet(struct sk_buff *skb, bool xnet)
+@@ -6156,7 +6156,6 @@ void skb_scrub_packet(struct sk_buff *skb, bool xnet)
  {
  	skb->pkt_type = PACKET_HOST;
  	skb->skb_iif = 0;
@@ -26,7 +26,7 @@ index c3e1395d8ac5..b5f664ae2182 100644
  	skb_dst_drop(skb);
  	skb_ext_reset(skb);
  	nf_reset_ct(skb);
-@@ -6124,6 +6123,7 @@ void skb_scrub_packet(struct sk_buff *skb, bool xnet)
+@@ -6173,6 +6172,7 @@ void skb_scrub_packet(struct sk_buff *skb, bool xnet)
  
  	skb->mark = 0;
  	skb_clear_tstamp(skb);

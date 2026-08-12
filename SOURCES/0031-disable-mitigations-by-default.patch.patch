@@ -1,14 +1,14 @@
-From c9576e3de118f56d791531f688ec5e1c75ced4f4 Mon Sep 17 00:00:00 2001
+From fbebf193d6493d6f6b634ba5cd3eb0d614adb497 Mon Sep 17 00:00:00 2001
 From: Corentin Oparowski <corentin.oparowski@vates.tech>
 Date: Sat, 19 Sep 2015 08:09:42 +0200
-Subject: [PATCH 31/35] disable-mitigations-by-default.patch
+Subject: [PATCH 31/36] disable-mitigations-by-default.patch
 
 ---
  arch/x86/kernel/cpu/bugs.c | 9 +++------
  1 file changed, 3 insertions(+), 6 deletions(-)
 
 diff --git a/arch/x86/kernel/cpu/bugs.c b/arch/x86/kernel/cpu/bugs.c
-index 6956051754be..2ab97ca1ba83 100644
+index 17d0c324fb57a..ca97bc621f6d5 100644
 --- a/arch/x86/kernel/cpu/bugs.c
 +++ b/arch/x86/kernel/cpu/bugs.c
 @@ -253,8 +253,7 @@ static void x86_amd_ssb_disable(void)

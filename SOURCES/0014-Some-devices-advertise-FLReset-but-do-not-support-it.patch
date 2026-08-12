@@ -1,7 +1,7 @@
-From aae18dc5762c6a790c0521d415be742f74f15c0b Mon Sep 17 00:00:00 2001
+From 8e46d70213eeb1cdfff06202c140f344c94c6387 Mon Sep 17 00:00:00 2001
 From: Corentin Oparowski <corentin.oparowski@vates.tech>
 Date: Sat, 19 Sep 2015 08:09:42 +0200
-Subject: [PATCH 14/35] Some devices advertise FLReset+ but do not support it.
+Subject: [PATCH 14/36] Some devices advertise FLReset+ but do not support it.
  Add a quirk for some devices to fallback to an alternate reset method.
 
 Signed-off-by: Ross Lagerwall <ross.lagerwall@citrix.com>
@@ -11,10 +11,10 @@ Signed-off-by: Ross Lagerwall <ross.lagerwall@citrix.com>
  2 files changed, 14 insertions(+)
 
 diff --git a/drivers/pci/quirks.c b/drivers/pci/quirks.c
-index 35c22e45edeb..889528e5a676 100644
+index 9ed71c38cd73e..f3b10eab6c2e6 100644
 --- a/drivers/pci/quirks.c
 +++ b/drivers/pci/quirks.c
-@@ -3825,6 +3825,18 @@ DECLARE_PCI_FIXUP_HEADER(PCI_VENDOR_ID_MELLANOX, 0xcf6c, quirk_no_pm_reset);
+@@ -3832,6 +3832,18 @@ DECLARE_PCI_FIXUP_HEADER(PCI_VENDOR_ID_MELLANOX, 0xcf6c, quirk_no_pm_reset);
  DECLARE_PCI_FIXUP_HEADER(PCI_VENDOR_ID_MELLANOX, 0xcf70, quirk_no_pm_reset);
  DECLARE_PCI_FIXUP_HEADER(PCI_VENDOR_ID_MELLANOX, 0xcf80, quirk_no_pm_reset);
  
@@ -34,7 +34,7 @@ index 35c22e45edeb..889528e5a676 100644
   * Thunderbolt controllers with broken MSI hotplug signaling:
   * Entire 1st generation (Light Ridge, Eagle Ridge, Light Peak) and part
 diff --git a/include/linux/pci_ids.h b/include/linux/pci_ids.h
-index 8ca328afb315..b7961c16b7b0 100644
+index 8971b8d21bb12..e781386cb89a5 100644
 --- a/include/linux/pci_ids.h
 +++ b/include/linux/pci_ids.h
 @@ -244,6 +244,8 @@
