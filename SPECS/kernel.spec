@@ -1057,7 +1057,10 @@ cp -a --parents arch/x86/tools/relocs.h %{buildroot}%{srcpath}
 cp -a --parents tools/include/tools/le_byteshift.h %{buildroot}%{srcpath}
 cp -a --parents arch/x86/purgatory/purgatory.c %{buildroot}%{srcpath}
 cp -a --parents arch/x86/purgatory/stack.S %{buildroot}%{srcpath}
-cp -a --parents arch/x86/purgatory/string.c %{buildroot}%{srcpath}
+
+## Removed in e0d262a57fc7 x86/purgatory: Do not use __builtin_memcpy and __builtin_memset
+# cp -a --parents arch/x86/purgatory/string.c %{buildroot}%{srcpath}
+
 cp -a --parents arch/x86/purgatory/setup-x86_64.S %{buildroot}%{srcpath}
 cp -a --parents arch/x86/purgatory/entry64.S %{buildroot}%{srcpath}
 cp -a --parents arch/x86/boot/string.h %{buildroot}%{srcpath}
