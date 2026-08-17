@@ -815,6 +815,9 @@ Patch1036: xen-netback-Fix-XenBus-connection-failure-cleanup.patch
 Patch1037: tools-headers-Grab-copy-of-linux-const.h-needed-by-l.patch
 Patch1038: tools-headers-UAPI-Sync-linux-const.h-with-the-kerne.patch
 
+# Remove extra localversion-st to avoid koji errors
+Patch1039: localversion-st-rm-to-avoid-conflicts-with-yum-s-rpm.patch
+
 %description
 The kernel package contains the Linux kernel (vmlinuz), the core of any
 Linux operating system. The kernel handles the basic functions of the operating
