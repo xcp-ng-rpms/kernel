@@ -1,0 +1,22 @@
+From 596ef5c61a082f582eda6fccda2af54c2183ee9a Mon Sep 17 00:00:00 2001
+From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+Date: Mon, 17 Aug 2026 15:37:12 +0200
+Subject: [PATCH] localversion-st: rm to avoid conflicts with yum's rpm version
+ constraints.
+
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+---
+ localversion-st | 1 -
+ 1 file changed, 1 deletion(-)
+ delete mode 100644 localversion-st
+
+diff --git a/localversion-st b/localversion-st
+deleted file mode 100644
+index b2de37a48f60..000000000000
+--- a/localversion-st
++++ /dev/null
+@@ -1 +0,0 @@
+--st18
+-- 
+2.43.0
+
