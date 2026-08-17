@@ -1,11 +1,10 @@
 %global package_speccommit ccb8ee3c01ade60b0ee7a22436d4b25d84702ae4
 %global usver 4.19.325
 %global cipver 134
-%global stver 18
 %global xsver 8.0.46
 %global xsrel cip%{cipver}.%{xsver}%{?xscount}%{?xshash}
 %global package_srccommit refs/tags/v4.19.325-cip%{cipver}
-%define uname 4.19.0+1-cip%{cipver}.st%{stver}
+%define uname 4.19.0+1-cip%{cipver}
 %define short_uname 4.19
 %define srcpath /usr/src/kernels/%{uname}-%{_arch}
 
@@ -821,6 +820,9 @@ Patch1027: 0001-xfs-resample-the-data-fork-mapping-after-cycling-ILO.patch
 Patch1028: 0001-tools-headers-Grab-copy-of-linux-const.h-needed-by-l.patch
 Patch1029: 0001-tools-headers-UAPI-Sync-linux-const.h-with-the-kerne.patch
 
+# Remove localversion-st to avoid koji errors.
+Patch1030: 0001-localversion-st-rm-to-avoid-conflicts-with-yum-s-rpm.patch
+
 %description
 The kernel package contains the Linux kernel (vmlinuz), the core of any
 Linux operating system. The kernel handles the basic functions of the operating
@@ -1177,7 +1179,7 @@ fi
 %{?_cov_results_package}
 
 %changelog
-* Mon Aug 17 2026 Quentin Casasnovas <quentin.casasnovas@vates.tech> - 4.19.325-cip134.st18-8.0.46.10
+* Mon Aug 17 2026 Quentin Casasnovas <quentin.casasnovas@vates.tech> - 4.19.325-cip134-8.0.46.10
 - Rebase to v4.19.325-cip134
 
 * Thu Aug 06 2026 Quentin Casasnovas <quentin.casasnovas@vates.tech> - 4.19.19-8.0.46.10
