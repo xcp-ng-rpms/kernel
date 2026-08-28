@@ -1,9 +1,10 @@
-%global package_speccommit ab0ac59fd53959995355c0cc3d845e75e7d60f94
-%global usver 4.19.19
+%global package_speccommit ccb8ee3c01ade60b0ee7a22436d4b25d84702ae4
+%global usver 4.19.325
+%global cipver 134
 %global xsver 8.0.46
-%global xsrel %{xsver}%{?xscount}%{?xshash}
-%global package_srccommit refs/tags/v4.19.19
-%define uname 4.19.0+1
+%global xsrel cip%{cipver}.%{xsver}%{?xscount}%{?xshash}
+%global package_srccommit refs/tags/v4.19.325-cip%{cipver}
+%define uname 4.19.0+1-cip%{cipver}
 %define short_uname 4.19
 %define srcpath /usr/src/kernels/%{uname}-%{_arch}
 
@@ -34,15 +35,10 @@
 %global __provides_exclude_from ^%{lp_devel_dir}/.*$
 %global __requires_exclude_from ^%{lp_devel_dir}/.*$
 
-# Be strict when applying patches
-%if 0%{?xenserver} < 9
-%global __patch /bin/patch -F0
-%endif
-
 Name: kernel
 License: GPLv2
-Version: 4.19.19
-Release: %{?xsrel}.10%{?dist}
+Version: %{usver}
+Release: %{?xsrel}.11%{?dist}
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
@@ -84,23 +80,76 @@ Provides: kernel-%{_arch} = %{version}-%{release}
 Requires(post): coreutils kmod
 Requires(posttrans): coreutils dracut kmod
 
-Source0: kernel-4.19.19.tar.gz
+# This ensures the kernel gets updated if a newly built driver gets
+# updated.  It is not required to change on future changes going forward,
+# as we will preserve the kABI.
+Provides: xcpng-kernel-kabi = 4.19.325-cip134+
+
+# Make sure any installed drivers gets updated if they were built against a
+# prior kernel
+Conflicts: aqc111u-module < 1.3.3.0-3
+Conflicts: atlantic-module-alt < 2.5.12-2
+Conflicts: avago-megaraid-sas < 07.713.01.00+rc1-3.1
+Conflicts: avago-mpt3sas < 38.00.00.00-1.1
+Conflicts: broadcom-bnxt-en < 1.10.3_237.1.20.0-8.1.1
+Conflicts: broadcom-bnxt-en-alt < 1.10.3_232.0.155.5-2
+Conflicts: chelsio-cxgb4 < 1.0.1-4.1
+Conflicts: cisco-enic < 4.5.0.7-1.1
+Conflicts: cisco-enic-alt < 4.4.0.1-2
+Conflicts: cisco-fnic < 2.0.0.90-1.2
+Conflicts: cisco-fnic-alt < 2.0.0.89-2
+Conflicts: coretemp-module-alt < 1.0-5
+Conflicts: dell-rbu-module < 4.19.0+1-4
+Conflicts: emulex-lpfc < 12.0.0.10-3.1
+Conflicts: emulex-lpfc-alt < 14.4.393.31-1.2
+Conflicts: intel-e1000e < 5.10.179-3
+Conflicts: intel-e1000e-alt < 3.8.7-2
+Conflicts: intel-fm10k < 0.26.1-3.1
+Conflicts: intel-i40e < 2.25.11-4.1
+Conflicts: intel-i40e-alt < 2.26.8-2
+Conflicts: intel-ice < 2.4.5-8.1.2
+Conflicts: intel-ice-alt < 1.17.2-2
+Conflicts: intel-igb < 5.13.20-2.1
+Conflicts: intel-igb-alt < 5.4.6-3
+Conflicts: intel-igc < 5.10.226-3
+Conflicts: intel-ixgbe < 6.2.5-1.1
+Conflicts: intel-ixgbe-alt < 5.9.4-3
+Conflicts: mellanox-mlnxen < 5.9_0.5.5.0-3.2
+Conflicts: mellanox-mlnxen-alt < 5.4_1.0.3.0-4
+Conflicts: microsemi-aacraid < 1.2.1.60001-1.1
+Conflicts: microsemi-smartpqi < 2.1.30_031-1.1
+Conflicts: microsemi-smartpqi-alt < 2.1.28_025-2
+Conflicts: mlx4-modules-alt < 4.9_7.1.0.0-2
+Conflicts: mpi3mr-module < 8.17.1.0.0-2
+Conflicts: qlogic-fastlinq < 8.74.0.2-1.1
+Conflicts: qlogic-fastlinq-alt < 8.74.6.0-2
+Conflicts: qlogic-fastlinq-alt_8_42 < 8.42.10.0-3
+Conflicts: qlogic-netxtreme2 < 7.14.76-2.2
+Conflicts: qlogic-netxtreme2-alt < 7.15.24-2
+Conflicts: qlogic-qla2xxx < 10.02.13.00_k-1.1
+Conflicts: qlogic-qla2xxx-alt < 10.02.14.01_k-2
+Conflicts: r8125-module < 9.012.04-3
+Conflicts: r8169-module-alt < 4.19.128-4
+Conflicts: sfc-module-alt < 5.3.18.1012-2
+Conflicts: tg3-module-alt < 3.139j-2
+
+Source0: linux-cip-4.19.325-cip134.tar.gz
 Source1: kernel-x86_64.config
 Source2: macros.kernel
-Patch0: 0001-Fix-net-ipv4-do-not-handle-duplicate-fragments-as-ov.patch
-Patch1: 0001-xen-privcmd-allow-fetching-resource-sizes.patch
-Patch2: 0001-block-genhd-add-groups-argument-to-device_add_disk.patch
-Patch3: 0002-nvme-register-ns_id-attributes-as-default-sysfs-grou.patch
-Patch4: 0001-mm-zero-remaining-unavailable-struct-pages.patch
-Patch5: 0002-mm-return-zero_resv_unavail-optimization.patch
-Patch6: 0001-mm-page_alloc.c-fix-uninitialized-memmaps-on-a-parti.patch
+# Patch0: 0001-Fix-net-ipv4-do-not-handle-duplicate-fragments-as-ov.patch: c763a3cf502 Fix "net: ipv4: do not handle duplicate fragments as overlapping"
+# Patch1: 0001-xen-privcmd-allow-fetching-resource-sizes.patch: d8099663adc9 xen/privcmd: allow fetching resource sizes
+# Patch2: 0001-block-genhd-add-groups-argument-to-device_add_disk.patch: 1bf6a186c452 block: genhd: add 'groups' argument to device_add_disk
+# Patch3: 0002-nvme-register-ns_id-attributes-as-default-sysfs-grou.patch: ea7ac82cf4d8 nvme: register ns_id attributes as default sysfs groups
+# Patch4: 0001-mm-zero-remaining-unavailable-struct-pages.patch: 9ac5917a1d28 mm: zero remaining unavailable struct pages
+# Patch5: 0002-mm-return-zero_resv_unavail-optimization.patch: f19a50c1e3ba mm: return zero_resv_unavail optimization
+# Patch6: 0001-mm-page_alloc.c-fix-uninitialized-memmaps-on-a-parti.patch: 0a69047d8235 mm/page_alloc.c: fix uninitialized memmaps on a partially populated last section
 Patch7: 0001-mtip32xx-fully-switch-to-the-generic-DMA-API.patch
 Patch8: 0002-mtip32xx-clean-an-indentation-issue-remove-extraneou.patch
-Patch9: 0001-GFS2-Flush-the-GFS2-delete-workqueue-before-stopping.patch
+# Patch9: 0001-GFS2-Flush-the-GFS2-delete-workqueue-before-stopping.patch: 4d7cf69b77ce GFS2: Flush the GFS2 delete workqueue before stopping the kernel threads
 Patch10: 0001-scsi-libfc-retry-PRLI-if-we-cannot-analyse-the-paylo.patch
 Patch11: 0001-gfs2-improve-debug-information-when-lvb-mismatches-a.patch
-Patch12: 0001-gfs2-Don-t-set-GFS2_RDF_UPTODATE-when-the-lvb-is-upd.patch
-Patch13: 0001-gfs2-slow-the-deluge-of-io-error-messages.patch
+# Patch12: 0001-gfs2-Don-t-set-GFS2_RDF_UPTODATE-when-the-lvb-is-upd.patch: 48b128cddb91 gfs2: Don't set GFS2_RDF_UPTODATE when the lvb is updated
+# Patch13: 0001-gfs2-slow-the-deluge-of-io-error-messages.patch: f3afad5d1eff gfs2: slow the deluge of io error messages
 Patch14: 0001-gfs2-Use-fs_-functions-instead-of-pr_-function-where.patch
 Patch15: 0001-gfs2-getlabel-support.patch
 Patch16: 0001-gfs2-Always-check-the-result-of-gfs2_rbm_from_block.patch
@@ -109,7 +158,7 @@ Patch18: 0001-gfs2-Move-rs_-sizehint-rgd_gh-fields-into-the-inode.patch
 Patch19: 0001-gfs2-Remove-unused-RGRP_RSRV_MINBYTES-definition.patch
 Patch20: 0001-gfs2-Rename-bitmap.bi_-len-bytes.patch
 Patch21: 0001-gfs2-Fix-some-minor-typos.patch
-Patch22: 0001-gfs2-Fix-marking-bitmaps-non-full.patch
+# Patch22: 0001-gfs2-Fix-marking-bitmaps-non-full.patch: fa3fe5f442ab gfs2: Fix marking bitmaps non-full
 Patch23: 0001-gfs2-Remove-unnecessary-gfs2_rlist_alloc-parameter.patch
 Patch24: 0001-gfs2-Pass-resource-group-to-rgblk_free.patch
 Patch25: 0001-gfs2-write-revokes-should-traverse-sd_ail1_list-in-r.patch
@@ -125,9 +174,9 @@ Patch34: 0010-mtip32xx-don-t-use-req-special.patch
 Patch35: 0011-mtip32xxx-use-for_each_sg.patch
 Patch36: 0012-mtip32xx-avoid-using-semaphores.patch
 Patch37: 0013-mtip32xx-use-BLK_STS_DEV_RESOURCE-for-device-resourc.patch
-Patch38: 0001-cifs-Limit-memory-used-by-lock-request-calls-to-a-pa.patch
-Patch39: 0001-always-clear-the-X2APIC_ENABLE-bit-for-PV-guest.patch
-Patch40: 0001-xen-pciback-Check-dev_data-before-using-it.patch
+# Patch38: 0001-cifs-Limit-memory-used-by-lock-request-calls-to-a-pa.patch: 63715c1f0a67 cifs: Limit memory used by lock request calls to a page
+# Patch39: 0001-always-clear-the-X2APIC_ENABLE-bit-for-PV-guest.patch: c818b5b47181 always clear the X2APIC_ENABLE bit for PV guest
+# Patch40: 0001-xen-pciback-Check-dev_data-before-using-it.patch: 73c1ca2dda37 xen/pciback: Check dev_data before using it
 Patch41: 0001-gfs2-changes-to-gfs2_log_XXX_bio.patch
 Patch42: 0001-gfs2-Remove-vestigial-bd_ops.patch
 Patch43: 0001-gfs2-properly-initial-file_lock-used-for-unlock.patch
@@ -136,36 +185,36 @@ Patch45: 0001-gfs2-Fix-the-gfs2_invalidatepage-description.patch
 Patch46: 0001-gfs2-add-more-timing-info-to-journal-recovery-proces.patch
 Patch47: 0001-gfs2-add-a-helper-function-to-get_log_header-that-ca.patch
 Patch48: 0001-gfs2-Dump-nrpages-for-inodes-and-their-glocks.patch
-Patch49: 0001-gfs2-take-jdata-unstuff-into-account-in-do_grow.patch
-Patch50: 0001-dlm-fix-invalid-free.patch
+# Patch49: 0001-gfs2-take-jdata-unstuff-into-account-in-do_grow.patch: 7baf8fd1ffff gfs2: take jdata unstuff into account in do_grow
+# Patch50: 0001-dlm-fix-invalid-free.patch: afb4717ab81b dlm: fix invalid free
 Patch51: 0001-dlm-don-t-allow-zero-length-names.patch
-Patch52: 0001-dlm-don-t-leak-kernel-pointer-to-userspace.patch
-Patch53: 0001-dlm-Don-t-swamp-the-CPU-with-callbacks-queued-during.patch
-Patch54: 0001-dlm-fix-possible-call-to-kfree-for-non-initialized-p.patch
-Patch55: 0001-dlm-fix-missing-idr_destroy-for-recover_idr.patch
-Patch56: 0001-dlm-NULL-check-before-kmem_cache_destroy-is-not-need.patch
+# Patch52: 0001-dlm-don-t-leak-kernel-pointer-to-userspace.patch: 5c2a3997ae5b dlm: don't leak kernel pointer to userspace
+# Patch53: 0001-dlm-Don-t-swamp-the-CPU-with-callbacks-queued-during.patch: ee9268a9b55b dlm: Don't swamp the CPU with callbacks queued during recovery
+# Patch54: 0001-dlm-fix-possible-call-to-kfree-for-non-initialized-p.patch: ed22415081ed dlm: fix possible call to kfree() for non-initialized pointer
+# Patch55: 0001-dlm-fix-missing-idr_destroy-for-recover_idr.patch: 1bcac298b943 dlm: fix missing idr_destroy for recover_idr
+# Patch56: 0001-dlm-NULL-check-before-kmem_cache_destroy-is-not-need.patch: 3b0107ca80fb dlm: NULL check before kmem_cache_destroy is not needed
 Patch57: 0001-dlm-NULL-check-before-some-freeing-functions-is-not-.patch
-Patch58: 0001-dlm-fix-invalid-cluster-name-warning.patch
-Patch59: gfs2-revert-fix-loop-in-gfs2_rbm_find.patch
-Patch60: 0001-scsi-libfc-free-skb-when-receiving-invalid-flogi-res.patch
-Patch61: 0001-Revert-scsi-libfc-Add-WARN_ON-when-deleting-rports.patch
-Patch62: 0001-net-crypto-set-sk-to-NULL-when-af_alg_release.patch
-Patch63: 0001-xen-netback-fix-occasional-leak-of-grant-ref-mapping.patch
-Patch64: 0002-xen-netback-don-t-populate-the-hash-cache-on-XenBus-.patch
-Patch65: 0001-gfs2-Fix-missed-wakeups-in-find_insert_glock.patch
+# Patch58: 0001-dlm-fix-invalid-cluster-name-warning.patch: 446a04d879a0 dlm: fix invalid cluster name warning
+# Patch59: gfs2-revert-fix-loop-in-gfs2_rbm_find.patch: 8b9be9db8a2a gfs2: Revert "Fix loop in gfs2_rbm_find"
+# Patch60: 0001-scsi-libfc-free-skb-when-receiving-invalid-flogi-res.patch: e546c8787e7b scsi: libfc: free skb when receiving invalid flogi resp
+# Patch61: 0001-Revert-scsi-libfc-Add-WARN_ON-when-deleting-rports.patch: 29f7b376d399 Revert "scsi: libfc: Add WARN_ON() when deleting rports"
+# Patch62: 0001-net-crypto-set-sk-to-NULL-when-af_alg_release.patch: eb5e6869125f net: crypto set sk to NULL when af_alg_release.
+# Patch63: 0001-xen-netback-fix-occasional-leak-of-grant-ref-mapping.patch: 947fc52b6bf4 xen-netback: fix occasional leak of grant ref mappings under memory pressure
+# Patch64: 0002-xen-netback-don-t-populate-the-hash-cache-on-XenBus-.patch: e5e5840183de xen-netback: don't populate the hash cache on XenBus disconnect
+# Patch65: 0001-gfs2-Fix-missed-wakeups-in-find_insert_glock.patch: 4f5a4c888106 gfs2: Fix missed wakeups in find_insert_glock
 Patch66: 0001-gfs2-Fix-an-incorrect-gfs2_assert.patch
 Patch67: 0001-ACPI-APEI-Fix-possible-out-of-bounds-access-to-BERT-.patch
-Patch68: 0001-efi-cper-Fix-possible-out-of-bounds-access.patch
+# Patch68: 0001-efi-cper-Fix-possible-out-of-bounds-access.patch: d60f458e4c4d efi: cper: Fix possible out-of-bounds access
 Patch69: 0001-gfs-no-need-to-check-return-value-of-debugfs_create-.patch
-Patch70: 0001-scsi-iscsi-flush-running-unbind-operations-when-remo.patch
-Patch71: 0001-xen-Prevent-buffer-overflow-in-privcmd-ioctl.patch
-Patch72: 0001-Revert-scsi-fcoe-clear-FC_RP_STARTED-flags-when-rece.patch
-Patch73: 0001-gfs2-Fix-lru_count-going-negative.patch
+# Patch70: 0001-scsi-iscsi-flush-running-unbind-operations-when-remo.patch: a629c32ac2d1 scsi: iscsi: flush running unbind operations when removing a session
+# Patch71: 0001-xen-Prevent-buffer-overflow-in-privcmd-ioctl.patch: ed3adb562fc8 xen: Prevent buffer overflow in privcmd ioctl
+# Patch72: 0001-Revert-scsi-fcoe-clear-FC_RP_STARTED-flags-when-rece.patch: ee4b8e266229 Revert "scsi: fcoe: clear FC_RP_STARTED flags when receiving a LOGO"
+# Patch73: 0001-gfs2-Fix-lru_count-going-negative.patch: bac852089281 gfs2: Fix lru_count going negative
 Patch74: 0002-gfs2-clean_journal-improperly-set-sd_log_flush_head.patch
-Patch75: 0003-gfs2-Fix-occasional-glock-use-after-free.patch
-Patch76: 0001-gfs2-Replace-gl_revokes-with-a-GLF-flag.patch
+# Patch75: 0003-gfs2-Fix-occasional-glock-use-after-free.patch: c4b51dbcccfc gfs2: Fix occasional glock use-after-free
+# Patch76: 0001-gfs2-Replace-gl_revokes-with-a-GLF-flag.patch: don't apply, it gets reverted down the line as Patch94.
 Patch77: 0005-gfs2-Remove-misleading-comments-in-gfs2_evict_inode.patch
-Patch78: 0006-gfs2-Rename-sd_log_le_-revoke-ordered.patch
+Patch78: 0001-gfs2-Rename-sd_log_le_-revoke-ordered-rebase-325.patch
 Patch79: 0007-gfs2-Rename-gfs2_trans_-add_unrevoke-remove_revoke.patch
 Patch80: 0001-iomap-Clean-up-__generic_write_end-calling.patch
 Patch81: 0002-fs-Turn-__generic_write_end-into-a-void-function.patch
@@ -179,9 +228,9 @@ Patch88: 0001-gfs2-fix-race-between-gfs2_freeze_func-and-unmount.patch
 Patch89: 0001-gfs2-read-journal-in-large-chunks.patch
 Patch90: 0001-gfs2-Fix-error-path-kobject-memory-leak.patch
 Patch91: 0009-SUNRPC-Ensure-that-the-transport-layer-respect-major.patch
-Patch92: 0011-SUNRPC-Start-the-first-major-timeout-calculation-at-.patch
-Patch93: 0001-gfs2-Fix-sign-extension-bug-in-gfs2_update_stats.patch
-Patch94: 0001-Revert-gfs2-Replace-gl_revokes-with-a-GLF-flag.patch
+Patch92: 0001-SUNRPC-Start-the-first-major-timeout-calculation-at-rebase-325.patch
+# Patch93: 0001-gfs2-Fix-sign-extension-bug-in-gfs2_update_stats.patch: fdc78eedc54d gfs2: Fix sign extension bug in gfs2_update_stats
+# Patch94: 0001-Revert-gfs2-Replace-gl_revokes-with-a-GLF-flag.patch: don't revert, simply remove the apply from Patch76
 Patch95: 0001-gfs2-Fix-rounding-error-in-gfs2_iomap_page_prepare.patch
 Patch96: 0001-iomap-don-t-mark-the-inode-dirty-in-iomap_write_end.patch
 Patch97: 0001-gfs2-Clean-up-freeing-struct-gfs2_sbd.patch
@@ -202,32 +251,32 @@ Patch111: 0001-gfs2-mark-stuffed_readpage-static.patch
 Patch112: 0001-gfs2-use-iomap_bmap-instead-of-generic_block_bmap.patch
 Patch113: 0001-gfs2-don-t-use-buffer_heads-in-gfs2_allocate_page_ba.patch
 Patch114: 0001-gfs2-Remove-unused-gfs2_iomap_alloc-argument.patch
-Patch115: 0001-dlm-check-if-workqueues-are-NULL-before-flushing-des.patch
+# Patch115: 0001-dlm-check-if-workqueues-are-NULL-before-flushing-des.patch: e7a41b276974 dlm: check if workqueues are NULL before flushing/destroying
 Patch116: 0001-dlm-no-need-to-check-return-value-of-debugfs_create-.patch
 Patch117: 0001-gfs2-Inode-dirtying-fix.patch
-Patch118: 0001-gfs2-gfs2_walk_metadata-fix.patch
-Patch119: 0001-nbd-add-missing-config-put.patch
-Patch120: 0001-xen-pci-reserve-MCFG-areas-earlier.patch
-Patch121: 0001-kernel-module.c-Only-return-EEXIST-for-modules-that-.patch
-Patch122: 0001-net-mlx5e-Force-CHECKSUM_UNNECESSARY-for-short-ether.patch
-Patch123: 0001-net-mlx4_en-Force-CHECKSUM_NONE-for-short-ethernet-f.patch
-Patch124: 0001-cifs-allow-calling-SMB2_xxx_free-NULL.patch
-Patch125: 0001-random-add-a-spinlock_t-to-struct-batched_entropy.patch
-Patch126: 0001-tcp-limit-payload-size-of-sacked-skbs.patch
-Patch127: 0002-tcp-tcp_fragment-should-apply-sane-memory-limits.patch
-Patch128: 0003-tcp-add-tcp_min_snd_mss-sysctl.patch
-Patch129: 0004-tcp-enforce-tcp_min_snd_mss-in-tcp_mtu_probing.patch
-Patch130: 0001-tcp-refine-memory-limit-test-in-tcp_fragment.patch
-Patch131: 0002-xen-events-fix-binding-user-event-channels-to-cpus.patch
-Patch132: 0003-xen-let-alloc_xenballooned_pages-fail-if-not-enough-.patch
-Patch133: 0001-tcp-be-more-careful-in-tcp_fragment.patch
-Patch134: 0001-random-always-use-batched-entropy-for-get_random_u-3.patch
-Patch135: 0001-xen-blkback-set-ring-xenblkd-to-NULL-after-kthread_s.patch
-Patch136: 0001-block-cleanup-__blkdev_issue_discard.patch
-Patch137: 0001-block-fix-32-bit-overflow-in-__blkdev_issue_discard.patch
-Patch138: 0001-scsi-libiscsi-Fix-race-between-iscsi_xmit_task-and-i.patch
-Patch139: 0001-xen-netback-Reset-nr_frags-before-freeing-skb.patch
-Patch140: 0001-openvswitch-change-type-of-UPCALL_PID-attribute-to-N.patch
+# Patch118: 0001-gfs2-gfs2_walk_metadata-fix.patch: 21344f0575f0 gfs2: gfs2_walk_metadata fix
+# Patch119: 0001-nbd-add-missing-config-put.patch: d093d3183ca2 nbd: add missing config put
+# Patch120: 0001-xen-pci-reserve-MCFG-areas-earlier.patch: 2bc2a90a083a xen/pci: reserve MCFG areas earlier
+# Patch121: 0001-kernel-module.c-Only-return-EEXIST-for-modules-that-.patch: 09ec6c6783ff kernel/module.c: Only return -EEXIST for modules that have finished loading
+# Patch122: 0001-net-mlx5e-Force-CHECKSUM_UNNECESSARY-for-short-ether.patch: b72ea6ec83be net/mlx5e: Force CHECKSUM_UNNECESSARY for short ethernet frames
+# Patch123: 0001-net-mlx4_en-Force-CHECKSUM_NONE-for-short-ethernet-f.patch: 4190a7bcd2af net/mlx4_en: Force CHECKSUM_NONE for short ethernet frames
+# Patch124: 0001-cifs-allow-calling-SMB2_xxx_free-NULL.patch: b4d965a37d89 cifs: allow calling SMB2_xxx_free(NULL)
+# Patch125: 0001-random-add-a-spinlock_t-to-struct-batched_entropy.patch: 944c58523731 random: add a spinlock_t to struct batched_entropy
+# Patch126: 0001-tcp-limit-payload-size-of-sacked-skbs.patch: c09be31461ed tcp: limit payload size of sacked skbs
+# Patch127: 0002-tcp-tcp_fragment-should-apply-sane-memory-limits.patch: ec83921899a5 tcp: tcp_fragment() should apply sane memory limits
+# Patch128: 0003-tcp-add-tcp_min_snd_mss-sysctl.patch: 7f9f8a37e563 tcp: add tcp_min_snd_mss sysctl
+# Patch129: 0004-tcp-enforce-tcp_min_snd_mss-in-tcp_mtu_probing.patch: 59222807fcc9 tcp: enforce tcp_min_snd_mss in tcp_mtu_probing()
+# Patch130: 0001-tcp-refine-memory-limit-test-in-tcp_fragment.patch: dad3a9314ac9 tcp: refine memory limit test in tcp_fragment()
+# Patch131: 0002-xen-events-fix-binding-user-event-channels-to-cpus.patch: 007e5aaf287c xen/events: fix binding user event channels to cpus
+# Patch132: 0003-xen-let-alloc_xenballooned_pages-fail-if-not-enough-.patch: e73db096691e xen: let alloc_xenballooned_pages() fail if not enough memory free
+# Patch133: 0001-tcp-be-more-careful-in-tcp_fragment.patch: 6323c238bb43 tcp: be more careful in tcp_fragment()
+# Patch134: 0001-random-always-use-batched-entropy-for-get_random_u-3.patch: 259f9d9a290e random: always use batched entropy for get_random_u{32,64}
+# Patch135: 0001-xen-blkback-set-ring-xenblkd-to-NULL-after-kthread_s.patch: 014ee1c7d184 xen-blkback: set ring->xenblkd to NULL after kthread_stop()
+# Patch136: 0001-block-cleanup-__blkdev_issue_discard.patch: b0be61a5a59e block: cleanup __blkdev_issue_discard()
+# Patch137: 0001-block-fix-32-bit-overflow-in-__blkdev_issue_discard.patch: f387897cf5b8 block: fix 32 bit overflow in __blkdev_issue_discard()
+# Patch138: 0001-scsi-libiscsi-Fix-race-between-iscsi_xmit_task-and-i.patch: 3491857f4292 scsi: libiscsi: Fix race between iscsi_xmit_task and iscsi_complete_task
+# Patch139: 0001-xen-netback-Reset-nr_frags-before-freeing-skb.patch: b3410f0f8505 xen/netback: Reset nr_frags before freeing skb
+# Patch140: 0001-openvswitch-change-type-of-UPCALL_PID-attribute-to-N.patch: 99952b08537c openvswitch: change type of UPCALL_PID attribute to NLA_UNSPEC
 Patch141: 0001-gfs2-gfs2_iomap_begin-cleanup.patch
 Patch142: 0001-gfs2-Add-support-for-IOMAP_ZERO.patch
 Patch143: 0001-gfs2-implement-gfs2_block_zero_range-using-iomap_zer.patch
@@ -242,9 +291,9 @@ Patch151: 0001-gfs2-separate-holder-for-rgrps-in-gfs2_rename.patch
 Patch152: 0001-gfs2-create-function-gfs2_glock_update_hold_time.patch
 Patch153: 0001-gfs2-Use-async-glocks-for-rename.patch
 Patch154: 0001-gfs2-Improve-mmap-write-vs.-truncate-consistency.patch
-Patch155: 0001-gfs2-clear-buf_in_tr-when-ending-a-transaction-in-sw.patch
-Patch156: 0001-xen-efi-Set-nonblocking-callbacks.patch
-Patch157: 0001-net-fix-sk_page_frag-recursion-from-memory-reclaim.patch
+# Patch155: 0001-gfs2-clear-buf_in_tr-when-ending-a-transaction-in-sw.patch: e0c1e6e55bca gfs2: clear buf_in_tr when ending a transaction in sweep_bh_for_rgrps
+# Patch156: 0001-xen-efi-Set-nonblocking-callbacks.patch: 90a886b68faa xen/efi: Set nonblocking callbacks
+# Patch157: 0001-net-fix-sk_page_frag-recursion-from-memory-reclaim.patch: 1d5cb12a2539 net: fix sk_page_frag() recursion from memory reclaim
 Patch158: 0001-drm-i915-gvt-Allow-F_CMD_ACCESS-on-mmio-0x21f0.patch
 Patch159: 0001-gfs2-add-compat_ioctl-support.patch
 Patch160: 0001-gfs2-removed-unnecessary-semicolon.patch
@@ -254,16 +303,16 @@ Patch163: 0001-gfs2-Multi-block-allocations-in-gfs2_page_mkwrite.patch
 Patch164: 0001-gfs2-Fix-end-of-file-handling-in-gfs2_page_mkwrite.patch
 Patch165: 0001-gfs2-Remove-active-journal-side-effect-from-gfs2_wri.patch
 Patch166: 0001-gfs2-make-gfs2_log_shutdown-static.patch
-Patch167: 0001-gfs2-fix-glock-reference-problem-in-gfs2_trans_remov.patch
+# Patch167: 0001-gfs2-fix-glock-reference-problem-in-gfs2_trans_remov.patch: 0809e1087c3d gfs2: fix glock reference problem in gfs2_trans_remove_revoke
 Patch168: 0001-gfs2-Introduce-function-gfs2_withdrawn.patch
 Patch169: 0001-gfs2-fix-infinite-loop-in-gfs2_ail1_flush-on-io-erro.patch
 Patch170: 0001-gfs2-Don-t-loop-forever-in-gfs2_freeze-if-withdrawn.patch
 Patch171: 0001-gfs2-Abort-gfs2_freeze-if-io-error-is-seen.patch
 Patch172: 0001-gfs2-Close-timing-window-with-GLF_INVALIDATE_IN_PROG.patch
-Patch173: 0001-gfs2-clean-up-iopen-glock-mess-in-gfs2_create_inode.patch
+# Patch173: 0001-gfs2-clean-up-iopen-glock-mess-in-gfs2_create_inode.patch: 19709adfd7cd gfs2: clean up iopen glock mess in gfs2_create_inode
 Patch174: 0001-gfs2-Remove-duplicate-call-from-gfs2_create_inode.patch
 Patch175: 0001-gfs2-Don-t-write-log-headers-after-file-system-withd.patch
-Patch176: 0001-xen-events-remove-event-handling-recursion-detection.patch
+Patch176: 0001-xen-events-remove-event-handling-recursion-detection-rebase-325.patch
 Patch177: 0001-gfs2-Another-gfs2_find_jhead-fix.patch
 Patch178: 0001-gfs2-eliminate-ssize-parameter-from-gfs2_struct2blk.patch
 Patch179: 0001-gfs2-minor-cleanup-remove-unneeded-variable-ret-in-g.patch
@@ -274,14 +323,14 @@ Patch183: 0001-fs-gfs2-remove-unused-IS_DINODE-and-IS_LEAF-macros.patch
 Patch184: 0001-gfs2-remove-unused-LBIT-macros.patch
 Patch185: 0001-Revert-gfs2-eliminate-tr_num_revoke_rm.patch
 Patch186: 0001-gfs2-fix-gfs2_find_jhead-that-returns-uninitialized-.patch
-Patch187: 0001-gfs2-move-setting-current-backing_dev_info.patch
-Patch188: 0001-gfs2-fix-O_SYNC-write-handling.patch
+# Patch187: 0001-gfs2-move-setting-current-backing_dev_info.patch: e57e77e9321c gfs2: move setting current->backing_dev_info
+# Patch188: 0001-gfs2-fix-O_SYNC-write-handling.patch: 4b67a516c63d gfs2: fix O_SYNC write handling
 Patch189: 0001-drm-i915-gvt-fix-high-order-allocation-failure-on-la.patch
 Patch190: 0001-drm-i915-gvt-Add-mutual-lock-for-ppgtt-mm-LRU-list.patch
 Patch191: 0002-drm-i915-gvt-more-locking-for-ppgtt-mm-LRU-list.patch
-Patch192: 0001-xenbus-req-body-should-be-updated-before-req-state.patch
-Patch193: 0002-xenbus-req-err-should-be-updated-before-req-state.patch
-Patch194: 0001-gfs2_atomic_open-fix-O_EXCL-O_CREAT-handling-on-cold.patch
+# Patch192: 0001-xenbus-req-body-should-be-updated-before-req-state.patch: d0f7d0913862 xenbus: req->body should be updated before req->state
+# Patch193: 0002-xenbus-req-err-should-be-updated-before-req-state.patch: c4e8290c6fdf xenbus: req->err should be updated before req->state
+# Patch194: 0001-gfs2_atomic_open-fix-O_EXCL-O_CREAT-handling-on-cold.patch: 777179200cb8 gfs2_atomic_open(): fix O_EXCL|O_CREAT handling on cold dcache
 Patch195: 0001-gfs2-Split-gfs2_lm_withdraw-into-two-functions.patch
 Patch196: 0001-gfs2-Report-errors-before-withdraw.patch
 Patch197: 0001-gfs2-Remove-usused-cluster_wide-arguments-of-gfs2_co.patch
@@ -304,7 +353,7 @@ Patch213: 0001-gfs2-Check-for-log-write-errors-before-telling-dlm-t.patch
 Patch214: 0001-gfs2-Do-log_flush-in-gfs2_ail_empty_gl-even-if-ail-l.patch
 Patch215: 0001-gfs2-Withdraw-in-gfs2_ail1_flush-if-write_cache_page.patch
 Patch216: 0001-gfs2-drain-the-ail2-list-after-io-errors.patch
-Patch217: 0001-gfs2-Don-t-demote-a-glock-until-its-revokes-are-writ.patch
+# Patch217: 0001-gfs2-Don-t-demote-a-glock-until-its-revokes-are-writ.patch: 09f8ac747f36 gfs2: Don't demote a glock until its revokes are written
 Patch218: 0001-gfs2-Do-proper-error-checking-for-go_sync-family-of-.patch
 Patch219: 0001-gfs2-flesh-out-delayed-withdraw-for-gfs2_log_flush.patch
 Patch220: 0001-gfs2-don-t-allow-releasepage-to-free-bd-still-used-f.patch
@@ -329,31 +378,31 @@ Patch238: 0003-net-add-sock_set_sndtimeo.patch
 Patch239: 0004-net-add-sock_set_keepalive.patch
 Patch240: 0005-net-add-sock_set_rcvbuf.patch
 Patch241: 0006-tcp-add-tcp_sock_set_nodelay.patch
-Patch242: 0007-sctp-add-sctp_sock_set_nodelay.patch
+Patch242: 0001-sctp-add-sctp_sock_set_nodelay-rebased-325.patch
 Patch243: 0009-dlm-dlm_internal-Replace-zero-length-array-with-flex.patch
 Patch244: 0010-dlm-user-Replace-zero-length-array-with-flexible-arr.patch
 Patch245: 0011-fs-dlm-remove-unneeded-semicolon-in-rcom.c.patch
-Patch246: 0012-dlm-remove-BUG-before-panic.patch
+# Patch246: 0012-dlm-remove-BUG-before-panic.patch: 68728008569c dlm: remove BUG() before panic()
 Patch247: 0001-gfs2-fix-withdraw-sequence-deadlock.patch
 Patch248: 0001-gfs2-Fix-error-exit-in-do_xmote.patch
 Patch249: 0001-gfs2-Fix-BUG-during-unmount-after-file-system-withdr.patch
 Patch250: 0001-gfs2-Fix-use-after-free-in-gfs2_logd-after-withdraw.patch
-Patch251: 0001-block-call-rq_qos_exit-after-queue-is-frozen.patch
-Patch252: 0001-scsi-libfc-free-response-frame-from-GPN_ID.patch
-Patch253: 0001-xen-xenbus-ensure-xenbus_map_ring_valloc-returns-pro.patch
-Patch254: 0013-treewide-Remove-uninitialized_var-usage.patch
-Patch255: 0014-dlm-Fix-kobject-memleak.patch
+# Patch251: 0001-block-call-rq_qos_exit-after-queue-is-frozen.patch: 9663d294ae28 block: call rq_qos_exit() after queue is frozen
+# Patch252: 0001-scsi-libfc-free-response-frame-from-GPN_ID.patch: 8343dffacc1b scsi: libfc: free response frame from GPN_ID
+# Patch253: 0001-xen-xenbus-ensure-xenbus_map_ring_valloc-returns-pro.patch: 41722344981f xen/xenbus: ensure xenbus_map_ring_valloc() returns proper grant status
+# Patch254: 0013-treewide-Remove-uninitialized_var-usage.patch: b7e389235cfe treewide: Remove uninitialized_var() usage
+# Patch255: 0014-dlm-Fix-kobject-memleak.patch: 6a2db034f9b3 dlm: Fix kobject memleak
 Patch256: 0001-net-sock-add-sock_set_mark.patch
 Patch257: 0015-fs-dlm-set-skb-mark-for-listen-socket.patch
 Patch258: 0016-fs-dlm-set-skb-mark-per-peer-socket.patch
 Patch259: 0017-fs-dlm-don-t-close-socket-on-invalid-message.patch
 Patch260: 0018-fs-dlm-change-handling-of-reconnects.patch
 Patch261: 0019-fs-dlm-implement-tcp-graceful-shutdown.patch
-Patch262: 0001-ext4-fix-potential-negative-array-index-in-do_split.patch
+# Patch262: 0001-ext4-fix-potential-negative-array-index-in-do_split.patch: TODO add upstream commit
 Patch263: 0021-fs-dlm-synchronize-dlm-before-shutdown.patch
 Patch264: 0022-fs-dlm-make-connection-hash-lockless.patch
 Patch265: 0023-fs-dlm-fix-dlm_local_addr-memory-leak.patch
-Patch266: 0024-fs-dlm-fix-configfs-memory-leak.patch
+# Patch266: 0024-fs-dlm-fix-configfs-memory-leak.patch: 13296b64a81c fs: dlm: fix configfs memory leak
 Patch267: 0025-fs-dlm-move-free-writequeue-into-con-free.patch
 Patch268: 0026-fs-dlm-handle-possible-othercon-writequeues.patch
 Patch269: 0027-fs-dlm-use-free_con-to-free-connection.patch
@@ -361,21 +410,21 @@ Patch270: 0028-fs-dlm-remove-lock-dependency-warning.patch
 Patch271: 0029-fs-dlm-fix-mark-per-nodeid-setting.patch
 Patch272: 0030-fs-dlm-handle-range-check-as-callback.patch
 Patch273: 0031-fs-dlm-disallow-buffer-size-below-default.patch
-Patch274: 0032-fs-dlm-rework-receive-handling.patch
+Patch274: 0001-fs-dlm-rework-receive-handling-rebased-325.patch
 Patch275: 0033-fs-dlm-fix-race-in-nodeid2con.patch
-Patch276: 0001-xen-events-avoid-removing-an-event-channel-while-han.patch
-Patch277: 0002-xen-events-add-a-proper-barrier-to-2-level-uevent-un.patch
-Patch278: 0003-xen-events-fix-race-in-evtchn_fifo_unmask.patch
-Patch279: 0004-xen-events-add-a-new-late-EOI-evtchn-framework.patch
-Patch280: 0005-xen-blkback-use-lateeoi-irq-binding.patch
-Patch281: 0006-xen-netback-use-lateeoi-irq-binding.patch
-Patch282: 0007-xen-scsiback-use-lateeoi-irq-binding.patch
-Patch283: 0008-xen-pvcallsback-use-lateeoi-irq-binding.patch
-Patch284: 0009-xen-pciback-use-lateeoi-irq-binding.patch
-Patch285: 0010-xen-events-switch-user-event-channels-to-lateeoi-mod.patch
-Patch286: 0011-xen-events-use-a-common-cpu-hotplug-hook-for-event-c.patch
-Patch287: 0012-xen-events-defer-eoi-in-case-of-excessive-number-of-.patch
-Patch288: 0013-xen-events-block-rogue-events-for-some-time.patch
+# TODELETE Patch275: 0001-xen-events-avoid-removing-an-event-channel-while-han.patch: 61d359d51a1c xen/events: avoid removing an event channel while handling it
+# Patch277: 0002-xen-events-add-a-proper-barrier-to-2-level-uevent-un.patch: 25f6b08895d5 xen/events: add a proper barrier to 2-level uevent unmasking
+# Patch278: 0003-xen-events-fix-race-in-evtchn_fifo_unmask.patch: c7f95d899f49 xen/events: fix race in evtchn_fifo_unmask()
+# Patch279: 0004-xen-events-add-a-new-late-EOI-evtchn-framework.patch: dea09436da03 xen/events: add a new "late EOI" evtchn framework
+# Patch280: 0005-xen-blkback-use-lateeoi-irq-binding.patch: 1506109a85c8 xen/blkback: use lateeoi irq binding
+# Patch281: 0006-xen-netback-use-lateeoi-irq-binding.patch: 6a052f3a6282 xen/netback: use lateeoi irq binding
+# Patch282: 0007-xen-scsiback-use-lateeoi-irq-binding.patch: fb22061b20ea xen/scsiback: use lateeoi irq binding
+# Patch283: 0008-xen-pvcallsback-use-lateeoi-irq-binding.patch: 128b11967a26 xen/pvcallsback: use lateeoi irq binding
+# Patch284: 0009-xen-pciback-use-lateeoi-irq-binding.patch: 4988884d53c0 xen/pciback: use lateeoi irq binding
+# Patch285: 0010-xen-events-switch-user-event-channels-to-lateeoi-mod.patch: 8363670c4d0b xen/events: switch user event channels to lateeoi model
+# Patch286: 0011-xen-events-use-a-common-cpu-hotplug-hook-for-event-c.patch: 536075098940 xen/events: use a common cpu hotplug hook for event channels
+# Patch287: 0012-xen-events-defer-eoi-in-case-of-excessive-number-of-.patch: 17ef715c0c88 xen/events: defer eoi in case of excessive number of events
+# Patch288: 0013-xen-events-block-rogue-events-for-some-time.patch: c1f90a9cd988 xen/events: block rogue events for some time
 Patch289: 0014-xen-events-unmask-a-fifo-event-channel-only-if-it-wa.patch
 Patch290: 0034-fs-dlm-fix-proper-srcu-api-call.patch
 Patch291: 0035-fs-dlm-define-max-send-buffer.patch
@@ -390,31 +439,31 @@ Patch299: 0043-fs-dlm-listen-socket-out-of-connection-hash.patch
 Patch300: 0044-fs-dlm-fix-check-for-multi-homed-hosts.patch
 Patch301: 0045-fs-dlm-constify-addr_compare.patch
 Patch302: 0046-fs-dlm-check-on-existing-node-address.patch
-Patch303: 0001-xen-netback-avoid-race-in-xenvif_rx_ring_slots_avail.patch
-Patch304: 0001-Xen-x86-don-t-bail-early-from-clear_foreign_p2m_mapp.patch
-Patch305: 0001-Xen-x86-also-check-kernel-mapping-in-set_foreign_p2m.patch
-Patch306: 0001-Xen-gntdev-correct-dev_bus_addr-handling-in-gntdev_m.patch
-Patch307: 0001-Xen-gntdev-correct-error-checking-in-gntdev_map_gran.patch
-Patch308: 0001-xen-blkback-don-t-handle-error-by-BUG.patch
-Patch309: 0001-xen-netback-don-t-handle-error-by-BUG.patch
-Patch310: 0001-xen-scsiback-don-t-handle-error-by-BUG.patch
-Patch311: 0001-xen-blkback-fix-error-handling-in-xen_blkbk_map.patch
-Patch312: 0001-xen-netback-fix-spurious-event-detection-for-common-.patch
+# Patch303: 0001-xen-netback-avoid-race-in-xenvif_rx_ring_slots_avail.patch: 7740c404d068 xen/netback: avoid race in xenvif_rx_ring_slots_available()
+# Patch304: 0001-Xen-x86-don-t-bail-early-from-clear_foreign_p2m_mapp.patch: dfed59ee4b41 Xen/x86: don't bail early from clear_foreign_p2m_mapping()
+# Patch305: 0001-Xen-x86-also-check-kernel-mapping-in-set_foreign_p2m.patch: c3d586afdb44 Xen/x86: also check kernel mapping in set_foreign_p2m_mapping()
+# Patch306: 0001-Xen-gntdev-correct-dev_bus_addr-handling-in-gntdev_m.patch: ba75f4393225 Xen/gntdev: correct dev_bus_addr handling in gntdev_map_grant_pages()
+# Patch307: 0001-Xen-gntdev-correct-error-checking-in-gntdev_map_gran.patch: e07f06f6bbee Xen/gntdev: correct error checking in gntdev_map_grant_pages()
+# Patch308: 0001-xen-blkback-don-t-handle-error-by-BUG.patch: a01b49a9bf91 xen-blkback: don't "handle" error by BUG()
+# Patch309: 0001-xen-netback-don-t-handle-error-by-BUG.patch: 717faa776ca2 xen-netback: don't "handle" error by BUG()
+# Patch310: 0001-xen-scsiback-don-t-handle-error-by-BUG.patch: f84c00fbd27b xen-scsiback: don't "handle" error by BUG()
+# Patch311: 0001-xen-blkback-fix-error-handling-in-xen_blkbk_map.patch: 98f16e171e28 xen-blkback: fix error handling in xen_blkbk_map()
+# Patch312: 0001-xen-netback-fix-spurious-event-detection-for-common-.patch: 135ba06d0bf8 xen/netback: fix spurious event detection for common event case
 Patch313: 0007-xen-evtchn-use-smp-barriers-for-user-event-ring.patch
 Patch314: 0008-xen-evtchn-use-READ-WRITE_ONCE-for-accessing-ring-in.patch
-Patch315: xen-events-reset-affinity-of-2-level-event-when-tearing-it-down.patch
-Patch316: xen-events-don-t-unmask-an-event-channel-when-an-eoi-is-pending.patch
-Patch317: xen-events-avoid-handling-the-same-event-on-two-cpus-at-the-same-time.patch
+# Patch315: xen-events-reset-affinity-of-2-level-event-when-tearing-it-down.patch: a6a76d7234cc xen/events: reset affinity of 2-level event when tearing it down
+# Patch316: xen-events-don-t-unmask-an-event-channel-when-an-eoi-is-pending.patch: 3a19f808cb2b xen/events: don't unmask an event channel when an eoi is pending
+# Patch317: xen-events-avoid-handling-the-same-event-on-two-cpus-at-the-same-time.patch: d8887e85efca xen/events: avoid handling the same event on two cpus at the same time
 Patch318: 0001-x86-ioperm-Add-new-paravirt-function-update_io_bitma.patch
-Patch319: 0001-Xen-gnttab-handle-p2m-update-errors-on-a-per-slot-ba.patch
-Patch320: 0002-xen-netback-respect-gnttab_map_refs-s-return-value.patch
-Patch321: 0001-xen-blkback-don-t-leak-persistent-grants-from-xen_bl.patch
-Patch322: 0001-bpf-x86-Validate-computation-of-branch-displacements.patch
-Patch323: 0002-bpf-x86-Validate-computation-of-branch-displacements.patch
-Patch324: 0001-xen-events-fix-setting-irq-affinity.patch
-Patch325: 0001-xen-netback-fix-rx-queue-stall-detection.patch
-Patch326: 0002-xen-netback-don-t-queue-unlimited-number-of-packages.patch
-Patch327: 0047-fs-dlm-fix-debugfs-dump.patch
+# Patch319: 0001-Xen-gnttab-handle-p2m-update-errors-on-a-per-slot-ba.patch: 1a999d25ef53 Xen/gnttab: handle p2m update errors on a per-slot basis
+# Patch320: 0002-xen-netback-respect-gnttab_map_refs-s-return-value.patch: b62d8b5c814b xen-netback: respect gnttab_map_refs()'s return value
+# Patch321: 0001-xen-blkback-don-t-leak-persistent-grants-from-xen_bl.patch: 16356ddb5878 xen-blkback: don't leak persistent grants from xen_blkbk_map()
+# Patch322: 0001-bpf-x86-Validate-computation-of-branch-displacements.patch: 5f26f1f838aa bpf, x86: Validate computation of branch displacements for x86-64
+# Patch323: 0002-bpf-x86-Validate-computation-of-branch-displacements.patch: 7b77ae2a0d6f bpf, x86: Validate computation of branch displacements for x86-32
+# Patch324: 0001-xen-events-fix-setting-irq-affinity.patch: d9ab90118cf9 xen/events: fix setting irq affinity
+# Patch325: 0001-xen-netback-fix-rx-queue-stall-detection.patch: 1de7644eac41 xen/netback: fix rx queue stall detection
+# Patch326: 0002-xen-netback-don-t-queue-unlimited-number-of-packages.patch: c9f17e92917f xen/netback: don't queue unlimited number of packages
+# Patch327: 0047-fs-dlm-fix-debugfs-dump.patch: 2efaecaf9603 fs: dlm: fix debugfs dump
 Patch328: 0048-fs-dlm-fix-mark-setting-deadlock.patch
 Patch329: 0049-fs-dlm-set-connected-bit-after-accept.patch
 Patch330: 0050-fs-dlm-set-subclass-for-othercon-sock_mutex.patch
@@ -428,14 +477,14 @@ Patch337: 0057-fs-dlm-remove-unaligned-memory-access-handling.patch
 Patch338: 0058-fs-dlm-flush-swork-on-shutdown.patch
 Patch339: 0059-fs-dlm-add-shutdown-hook.patch
 Patch340: 0060-fs-dlm-fix-missing-unlock-on-error-in-accept_from_so.patch
-Patch341: 0001-xen-events-reset-active-flag-for-lateeoi-events-late.patch
+# Patch341: 0001-xen-events-reset-active-flag-for-lateeoi-events-late.patch: cda326e5033f xen/events: reset active flag for lateeoi events later
 Patch342: 0001-gfs2-fix-a-deadlock-on-withdraw-during-mount.patch
 Patch343: 0061-fs-dlm-always-run-complete-for-possible-waiters.patch
 Patch344: 0062-fs-dlm-add-dlm-macros-for-ratelimit-log.patch
 Patch345: 0063-fs-dlm-fix-srcu-read-lock-usage.patch
 Patch346: 0064-fs-dlm-set-is-othercon-flag.patch
 Patch347: 0065-fs-dlm-reconnect-if-socket-error-report-occurs.patch
-Patch348: 0066-fs-dlm-cancel-work-sync-othercon.patch
+# Patch348: 0066-fs-dlm-cancel-work-sync-othercon.patch: d5473f43e4fb fs: dlm: cancel work sync othercon
 Patch349: 0067-fs-dlm-fix-connection-tcp-EOF-handling.patch
 Patch350: 0068-fs-dlm-public-header-in-out-utility.patch
 Patch351: 0069-fs-dlm-add-more-midcomms-hooks.patch
@@ -449,15 +498,15 @@ Patch358: 0076-fs-dlm-don-t-allow-half-transmitted-messages.patch
 Patch359: 0077-fs-dlm-Fix-memory-leak-of-object-mh.patch
 Patch360: 0078-fs-dlm-Fix-spelling-mistake-stucked-stuck.patch
 Patch361: 0079-fs-dlm-fix-lowcomms_start-error-case.patch
-Patch362: 0080-fs-dlm-fix-memory-leak-when-fenced.patch
+# Patch362: 0080-fs-dlm-fix-memory-leak-when-fenced.patch: af02ec6cf614 fs: dlm: fix memory leak when fenced
 Patch363: 0081-fs-dlm-use-alloc_ordered_workqueue.patch
 Patch364: 0082-fs-dlm-move-dlm-allow-conn.patch
 Patch365: 0083-fs-dlm-introduce-proto-values.patch
 Patch366: 0084-fs-dlm-rename-socket-and-app-buffer-defines.patch
 Patch367: 0085-fs-dlm-fix-race-in-mhandle-deletion.patch
 Patch368: 0086-fs-dlm-invalid-buffer-access-in-lookup-error.patch
-Patch369: 0001-seq_file-disallow-extremely-large-seq-buffer-allocat.patch
-Patch370: 0001-xen-events-Fix-race-in-set_evtchn_to_irq.patch
+# Patch369: 0001-seq_file-disallow-extremely-large-seq-buffer-allocat.patch: 6de9f0bf7cac seq_file: disallow extremely large seq buffer allocations
+# Patch370: 0001-xen-events-Fix-race-in-set_evtchn_to_irq.patch: 387635925cd0 xen/events: Fix race in set_evtchn_to_irq
 Patch371: 0087-fs-dlm-use-sk-sk_socket-instead-of-con-sock.patch
 Patch372: 0088-fs-dlm-use-READ_ONCE-for-config-var.patch
 Patch373: 0089-fs-dlm-fix-typo-in-tlv-prefix.patch
@@ -473,14 +522,14 @@ Patch382: 0098-fs-dlm-move-receive-loop-into-receive-handler.patch
 Patch383: 0099-fs-dlm-implement-delayed-ack-handling.patch
 Patch384: 0100-fs-dlm-fix-return-EINTR-on-recovery-stopped.patch
 Patch385: 0101-fs-dlm-avoid-comms-shutdown-delay-in-release_lockspa.patch
-Patch386: 0001-iommu-vt-d-Fix-agaw-for-a-supported-48-bit-guest-add.patch
-Patch387: 0001-bpf-Do-not-use-ax-register-in-interpreter-on-div-mod.patch
-Patch388: 0002-bpf-Fix-32-bit-src-register-truncation-on-div-mod.patch
-Patch389: 0003-bpf-Fix-truncation-handling-for-mod32-dst-reg-wrt-ze.patch
+# Patch386: 0001-iommu-vt-d-Fix-agaw-for-a-supported-48-bit-guest-add.patch: 6a9449e95688 iommu/vt-d: Fix agaw for a supported 48 bit guest address width
+# Patch387: 0001-bpf-Do-not-use-ax-register-in-interpreter-on-div-mod.patch: c348d806ed1d bpf: Do not use ax register in interpreter on div/mod
+# Patch388: 0002-bpf-Fix-32-bit-src-register-truncation-on-div-mod.patch: 8313432df224 bpf: Fix 32 bit src register truncation on div/mod
+# Patch389: 0003-bpf-Fix-truncation-handling-for-mod32-dst-reg-wrt-ze.patch: 39f74b7c81cc bpf: Fix truncation handling for mod32 dst reg wrt zero
 Patch390: 0001-x86-timer-Skip-PIT-initialization-on-modern-chipsets.patch
 Patch391: 0001-x86-timer-Force-PIT-initialization-when-X86_FEATURE_.patch
 Patch392: 0001-x86-timer-Don-t-skip-PIT-setup-when-APIC-is-disabled.patch
-Patch393: 0001-nbd-Fix-use-after-free-in-pid_show.patch
+Patch393: 0001-nbd-Fix-use-after-free-in-pid_show-rebase-325.patch
 Patch394: 0001-fs-dlm-remove-check-SCTP-is-loaded-message.patch
 Patch395: 0001-fs-dlm-let-handle-callback-data-as-void.patch
 Patch396: 0001-fs-dlm-remove-double-list_first_entry-call.patch
@@ -501,109 +550,109 @@ Patch410: 0001-fs-dlm-fix-race-in-lowcomms.patch
 Patch411: 0001-fs-dlm-relax-sending-to-allow-receiving.patch
 Patch412: 0001-fs-dlm-fix-sock-release-if-listen-fails.patch
 Patch413: 0002-fs-dlm-retry-accept-until-EAGAIN-or-error-returns.patch
-Patch414: 0003-fs-dlm-remove-send-repeat-remove-handling.patch
-Patch415: 0001-xen-pvh-set-xen_domain_type-to-HVM-in-xen_pvh_init.patch
-Patch416: 0001-xen-pvh-correctly-setup-the-PV-EFI-interface-for-dom.patch
-Patch417: 0001-PCI-pciehp-Fix-AB-BA-deadlock-between-reset_lock-and.patch
-Patch418: 0001-nvme_fc-add-nvme_discovery-sysfs-attribute-to-fc-tra.patch
+Patch414: 0001-fs-dlm-remove-send-repeat-remove-handling-rebase-325.patch
+# Patch415: 0001-xen-pvh-set-xen_domain_type-to-HVM-in-xen_pvh_init.patch: 756eda9bc8b7 xen/pvh: set xen_domain_type to HVM in xen_pvh_init
+# Patch416: 0001-xen-pvh-correctly-setup-the-PV-EFI-interface-for-dom.patch: 0c47135536b8 xen/pvh: correctly setup the PV EFI interface for dom0
+# Patch417: 0001-PCI-pciehp-Fix-AB-BA-deadlock-between-reset_lock-and.patch: 2a226e8ca951 PCI: pciehp: Fix AB-BA deadlock between reset_lock and device_lock
+Patch418: 0001-nvme_fc-add-nvme_discovery-sysfs-attribute-to-fc-tra-rebase-325.patch
 Patch419: 0001-ACPI-processor-Fix-evaluating-_PDC-method-when-runni.patch
-Patch420: 0001-SUNRPC-Always-drop-the-XPRT_LOCK-on-XPRT_CLOSE_WAIT.patch
-Patch421: 0001-xen-netback-use-default-TX-queue-size-for-vifs.patch
+# Patch420: 0001-SUNRPC-Always-drop-the-XPRT_LOCK-on-XPRT_CLOSE_WAIT.patch: 2440f3cebcb0 SUNRPC: Always drop the XPRT_LOCK on XPRT_CLOSE_WAIT
+# Patch421: 0001-xen-netback-use-default-TX-queue-size-for-vifs.patch: b42515434f8f xen-netback: use default TX queue size for vifs
 Patch422: 0001-gfs2-Expect-EBUSY-after-canceling-dlm-locking-reques.patch
 Patch423: 0001-gfs2-Clear-flags-when-withdraw-prevents-xmote.patch
-Patch424: 0002-fs-dlm-fix-race-between-test_bit-and-queue_work.patch
+# Patch424: 0002-fs-dlm-fix-race-between-test_bit-and-queue_work.patch: d1ae006b4851 fs: dlm: fix race between test_bit() and queue_work()
 Patch425: 0001-xhci-show-fault-reason-for-a-failed-enable-slot-comm.patch
 Patch426: 0001-gfs2-Fix-ignore-unlock-failures-after-withdraw.patch
 Patch427: 0001-gfs2-finish_xmote-cleanup.patch
 Patch428: 0001-gfs2-do_xmote-fixes.patch
 Patch429: 0001-x86-xen-time-Reduce-Xen-timer-tick.patch
-Patch430: 0001-decompress_bunzip2-fix-rare-decompression-failure.patch
-Patch431: 0002-scsi-scsi_dh_alua-Fix-possible-null-ptr-deref.patch
-Patch432: 0004-scsi-scsi_dh_alua-always-use-a-2-second-delay-before.patch
-Patch433: 0005-scsi-scsi_dh_alua-handle-RTPG-sense-code-correctly-d.patch
-Patch434: 0006-scsi-scsi_dh_alua-Avoid-crash-during-alua_bus_detach.patch
+# Patch430: 0001-decompress_bunzip2-fix-rare-decompression-failure.patch: 16b92b031b4d decompress_bunzip2: fix rare decompression failure
+# Patch431: 0002-scsi-scsi_dh_alua-Fix-possible-null-ptr-deref.patch: 89ede9d8b5b8 scsi: scsi_dh_alua: Fix possible null-ptr-deref
+# Patch432: 0004-scsi-scsi_dh_alua-always-use-a-2-second-delay-before.patch: cdd92ebe29c2 scsi: scsi_dh_alua: always use a 2 second delay before retrying RTPG
+# Patch433: 0005-scsi-scsi_dh_alua-handle-RTPG-sense-code-correctly-d.patch: cf372c60ed13 scsi: scsi_dh_alua: handle RTPG sense code correctly during state transitions
+# Patch434: 0006-scsi-scsi_dh_alua-Avoid-crash-during-alua_bus_detach.patch: 509e215d161e scsi: scsi_dh_alua: Avoid crash during alua_bus_detach()
 Patch435: 0008-scsi-scsi_dh_alua-Set-transitioning-state-on-Unit-At.patch
 Patch436: 0009-scsi-scsi_dh_alua-Prevent-duplicate-pg-info-print-in.patch
-Patch437: 0010-scsi-scsi_dh_alua-Remove-check-for-ASC-24h-in-alua_r.patch
+# Patch437: 0010-scsi-scsi_dh_alua-Remove-check-for-ASC-24h-in-alua_r.patch: 5fc6e73ba502 scsi: scsi_dh_alua: Remove check for ASC 24h in alua_rtpg()
 Patch438: 0012-scsi-scsi_dh_alua-Retry-RTPG-on-a-different-path-aft.patch
-Patch439: 0013-scsi-scsi_dh_alua-Check-for-negative-result-value.patch
-Patch440: 0014-scsi-scsi_dh_alua-Fix-signedness-bug-in-alua_rtpg.patch
-Patch441: 0001-scsi-scsi_dh_alua-Fix-memleak-for-qdata-in-alua_acti.patch
+# Patch439: 0013-scsi-scsi_dh_alua-Check-for-negative-result-value.patch: f4bde1d1bf90 scsi: scsi_dh_alua: Check for negative result value
+# Patch440: 0014-scsi-scsi_dh_alua-Fix-signedness-bug-in-alua_rtpg.patch: c021be62bbcb scsi: scsi_dh_alua: Fix signedness bug in alua_rtpg()
+# Patch441: 0001-scsi-scsi_dh_alua-Fix-memleak-for-qdata-in-alua_acti.patch: c110051d335e scsi: scsi_dh_alua: Fix memleak for 'qdata' in alua_activate()
 Patch442: 0001-scsi-core-alua-I-O-errors-for-ALUA-state-transitions.patch
 Patch443: 0002-scsi-scsi_dh_alua-Properly-handle-the-ALUA-transitio.patch
-Patch444: 0003-SUNRPC-Replace-direct-task-wakeups-from-softirq-cont.patch
+Patch444: 0001-SUNRPC-Replace-direct-task-wakeups-from-softirq-cont-rebase-325.patch
 Patch445: 0004-SUNRPC-Replace-the-queue-timer-with-a-delayed-work-f.patch
-Patch446: 0001-nbd-fix-possible-sysfs-duplicate-warning.patch
+# Patch446: 0001-nbd-fix-possible-sysfs-duplicate-warning.patch: cad4448dfc9c nbd: fix possible sysfs duplicate warning
 Patch447: 0007-SUNRPC-fix-race-to-sk_err-after-xs_error_report.patch
-Patch448: 0001-nbd-protect-cmd-status-with-cmd-lock.patch
-Patch449: 0001-nbd-handle-racing-with-error-ed-out-commands.patch
+# Patch448: 0001-nbd-protect-cmd-status-with-cmd-lock.patch: 82b7c99ee141 nbd: protect cmd->status with cmd->lock
+# Patch449: 0001-nbd-handle-racing-with-error-ed-out-commands.patch: 1f032ca298dd nbd: handle racing with error'ed out commands
 Patch450: 0015-SUNRPC-Fix-backchannel-RPC-soft-lockups.patch
-Patch451: 0001-nbd-fix-a-block_device-refcount-leak-in-nbd_release.patch
-Patch452: 0001-nbd-Aovid-double-completion-of-a-request.patch
+# Patch451: 0001-nbd-fix-a-block_device-refcount-leak-in-nbd_release.patch: d9f4534a9a28 nbd: fix a block_device refcount leak in nbd_release
+Patch452: 0001-nbd-Aovid-double-completion-of-a-request-rebase-325.patch
 Patch453: 0001-nbd-don-t-handle-response-without-a-corresponding-re.patch
 Patch454: 0001-nbd-make-sure-request-completion-won-t-concurrent.patch
 Patch455: 0001-cdc_ether-export-usbnet_cdc_zte_rx_fixup.patch
-Patch456: 0002-rndis_host-enable-the-bogus-MAC-fixup-for-ZTE-device.patch
+Patch456: 0001-rndis_host-enable-the-bogus-MAC-fixup-for-ZTE-device-rebased-cip134.patch
 Patch457: 0003-rndis_host-limit-scope-of-bogus-MAC-address-detectio.patch
 Patch458: 0001-SUNRPC-Move-reset-of-TCP-state-variables-into-the-re.patch
-Patch459: 0001-nvme-fabrics-reject-I-O-to-offline-device.patch
+Patch459: 0001-nvme-fabrics-reject-I-O-to-offline-device-rebase-325.patch
 Patch460: 0001-Add-shadow-variables-support-from-kpatch.patch
-Patch461: 0002-xen-xenbus-Allow-watches-discard-events-before-queue.patch
-Patch462: 0003-xen-xenbus-Add-will_handle-callback-support-in-xenbu.patch
-Patch463: 0004-xen-xenbus-xen_bus_type-Support-will_handle-watch-ca.patch
-Patch464: 0005-xen-xenbus-Count-pending-messages-for-each-watch.patch
-Patch465: 0006-xenbus-xenbus_backend-Disallow-pending-watch-message.patch
-Patch466: 0001-xen-xenbus-Fix-granting-of-vmalloc-d-memory.patch
-Patch467: 0001-xen-blkfront-switch-kcalloc-to-kvcalloc-for-large-ar.patch
-Patch468: 0002-xen-blkfront-Adjust-indentation-in-xlvbd_alloc_gendi.patch
-Patch469: 0003-xen-blkfront-fix-memory-allocation-flags-in-blkfront.patch
-Patch470: 0004-xen-blkfront-allow-discard-nodes-to-be-optional.patch
-Patch471: 0001-xen-sync-include-xen-interface-io-ring.h-with-Xen-s-.patch
-Patch472: 0005-xen-blkfront-read-response-from-backend-only-once.patch
-Patch473: 0006-xen-blkfront-don-t-take-local-copy-of-a-request-from.patch
-Patch474: 0007-xen-blkfront-don-t-trust-the-backend-response-data-b.patch
-Patch475: 0008-xen-blkfront-harden-blkfront-against-event-channel-s.patch
-Patch476: 0001-xen-netfront-do-not-assume-sk_buff_head-list-is-empt.patch
-Patch477: 0002-xen-netfront-do-not-use-0U-as-error-return-value-for.patch
-Patch478: 0003-xen-netfront-fix-potential-deadlock-in-xennet_remove.patch
-Patch479: 0004-xen-netfront-stop-tx-queues-during-live-migration.patch
-Patch480: 0005-xen-netfront-read-response-from-backend-only-once.patch
-Patch481: 0006-xen-netfront-don-t-read-data-from-request-on-the-rin.patch
-Patch482: 0007-xen-netfront-disentangle-tx_skb_freelist.patch
-Patch483: 0008-xen-netfront-don-t-trust-the-backend-response-data-b.patch
-Patch484: 0009-xen-netfront-harden-netfront-against-event-channel-s.patch
-Patch485: 0010-xen-netfront-destroy-queues-before-real_num_tx_queue.patch
-Patch486: 0001-pvcalls-front-read-all-data-before-closing-the-conne.patch
-Patch487: 0002-pvcalls-front-don-t-try-to-free-unallocated-rings.patch
-Patch488: 0003-pvcalls-front-properly-allocate-sk.patch
-Patch489: 0004-pvcalls-front-Avoid-get_free_pages-GFP_KERNEL-under-.patch
-Patch490: 0005-pvcalls-front-fix-potential-null-dereference.patch
-Patch491: 0006-xen-pvcalls-Remove-set-but-not-used-variable.patch
-Patch492: 0007-pvcalls-front-don-t-return-error-when-the-ring-is-fu.patch
-Patch493: 0001-xen-xenbus-don-t-let-xenbus_grant_ring-remove-grants.patch
-Patch494: 0002-xen-grant-table-add-gnttab_try_end_foreign_access.patch
-Patch495: 0003-xen-blkfront-don-t-use-gnttab_query_foreign_access-f.patch
-Patch496: 0004-xen-netfront-don-t-use-gnttab_query_foreign_access-f.patch
-Patch497: 0005-xen-scsifront-don-t-use-gnttab_query_foreign_access-.patch
-Patch498: 0006-xen-gntalloc-don-t-use-gnttab_query_foreign_access.patch
-Patch499: 0007-xen-remove-gnttab_query_foreign_access.patch
-Patch500: 0008-xen-9p-use-alloc-free_pages_exact.patch
-Patch501: 0009-xen-pvcalls-use-alloc-free_pages_exact.patch
-Patch502: 0010-xen-gnttab-fix-gnttab_end_foreign_access-without-pag.patch
-Patch503: 0011-xen-netfront-react-properly-to-failing-gnttab_end_fo.patch
-Patch504: 0001-xen-blkfront-fix-leaking-data-in-shared-pages.patch
-Patch505: 0002-xen-netfront-fix-leaking-data-in-shared-pages.patch
-Patch506: 0003-xen-netfront-force-data-bouncing-when-backend-is-unt.patch
-Patch507: 0004-xen-blkfront-force-data-bouncing-when-backend-is-unt.patch
-Patch508: xsa423-linux.patch
-Patch509: xsa424-linux.patch
+# Patch461: 0002-xen-xenbus-Allow-watches-discard-events-before-queue.patch: 9039eb22f995 xen/xenbus: Allow watches discard events before queueing
+# Patch462: 0003-xen-xenbus-Add-will_handle-callback-support-in-xenbu.patch: 3a36e4af694a xen/xenbus: Add 'will_handle' callback support in xenbus_watch_path()
+# Patch463: 0004-xen-xenbus-xen_bus_type-Support-will_handle-watch-ca.patch: b88c52d02e16 xen/xenbus/xen_bus_type: Support will_handle watch callback
+# Patch464: 0005-xen-xenbus-Count-pending-messages-for-each-watch.patch: 85597c4369c9 xen/xenbus: Count pending messages for each watch
+# Patch465: 0006-xenbus-xenbus_backend-Disallow-pending-watch-message.patch: be19047894c3 xenbus/xenbus_backend: Disallow pending watch messages
+# Patch466: 0001-xen-xenbus-Fix-granting-of-vmalloc-d-memory.patch: 47eb291ba65b xen/xenbus: Fix granting of vmalloc'd memory
+# Patch467: 0001-xen-blkfront-switch-kcalloc-to-kvcalloc-for-large-ar.patch: b9b75a460076 xen-blkfront: switch kcalloc to kvcalloc for large array allocation
+# Patch468: 0002-xen-blkfront-Adjust-indentation-in-xlvbd_alloc_gendi.patch: 041497b65eb0 xen/blkfront: Adjust indentation in xlvbd_alloc_gendisk
+# Patch469: 0003-xen-blkfront-fix-memory-allocation-flags-in-blkfront.patch: 5f547e7cbd84 xen/blkfront: fix memory allocation flags in blkfront_setup_indirect()
+# Patch470: 0004-xen-blkfront-allow-discard-nodes-to-be-optional.patch: a4af550350cc xen-blkfront: allow discard-* nodes to be optional
+# Patch471: 0001-xen-sync-include-xen-interface-io-ring.h-with-Xen-s-.patch: dcbfd3f13b13 xen: sync include/xen/interface/io/ring.h with Xen's newest version
+# Patch472: 0005-xen-blkfront-read-response-from-backend-only-once.patch: b647c449f166 xen/blkfront: read response from backend only once
+# Patch473: 0006-xen-blkfront-don-t-take-local-copy-of-a-request-from.patch: 80baa77511ee xen/blkfront: don't take local copy of a request from the ring page
+# Patch474: 0007-xen-blkfront-don-t-trust-the-backend-response-data-b.patch: f89a05402f74 xen/blkfront: don't trust the backend response data blindly
+# Patch475: 0008-xen-blkfront-harden-blkfront-against-event-channel-s.patch: 269d7124bcfa xen/blkfront: harden blkfront against event channel storms
+# Patch476: 0001-xen-netfront-do-not-assume-sk_buff_head-list-is-empt.patch: 47288968eebd xen-netfront: do not assume sk_buff_head list is empty in error handling
+# Patch477: 0002-xen-netfront-do-not-use-0U-as-error-return-value-for.patch: a1afd826e549 xen-netfront: do not use ~0U as error return value for xennet_fill_frags()
+# Patch478: 0003-xen-netfront-fix-potential-deadlock-in-xennet_remove.patch: 4b635fc2b349 xen-netfront: fix potential deadlock in xennet_remove()
+# Patch479: 0004-xen-netfront-stop-tx-queues-during-live-migration.patch: 274c04221d91 xen/netfront: stop tx queues during live migration
+# Patch480: 0005-xen-netfront-read-response-from-backend-only-once.patch: e7d1024f5b19 xen/netfront: read response from backend only once
+# Patch481: 0006-xen-netfront-don-t-read-data-from-request-on-the-rin.patch: 26509bb5dd2f xen/netfront: don't read data from request on the ring page
+# Patch482: 0007-xen-netfront-disentangle-tx_skb_freelist.patch: e52c0efbd23c xen/netfront: disentangle tx_skb_freelist
+# Patch483: 0008-xen-netfront-don-t-trust-the-backend-response-data-b.patch: e4e01b0e4b7f xen/netfront: don't trust the backend response data blindly
+# Patch484: 0009-xen-netfront-harden-netfront-against-event-channel-s.patch: 3559ca594f15 xen/netfront: harden netfront against event channel storms
+# Patch485: 0010-xen-netfront-destroy-queues-before-real_num_tx_queue.patch: 198cdc287769 xen/netfront: destroy queues before real_num_tx_queues is zeroed
+# Patch486: 0001-pvcalls-front-read-all-data-before-closing-the-conne.patch: 9699f7a70eb8 pvcalls-front: read all data before closing the connection
+# Patch487: 0002-pvcalls-front-don-t-try-to-free-unallocated-rings.patch: 81b8519de1b4 pvcalls-front: don't try to free unallocated rings
+# Patch488: 0003-pvcalls-front-properly-allocate-sk.patch: 05ac8a683962 pvcalls-front: properly allocate sk
+# Patch489: 0004-pvcalls-front-Avoid-get_free_pages-GFP_KERNEL-under-.patch: 06b919a51772 pvcalls-front: Avoid get_free_pages(GFP_KERNEL) under spinlock
+# Patch490: 0005-pvcalls-front-fix-potential-null-dereference.patch: 642e26628cf9 pvcalls-front: fix potential null dereference
+# Patch491: 0006-xen-pvcalls-Remove-set-but-not-used-variable.patch: 66f33b2bd2d8 xen/pvcalls: Remove set but not used variable
+# Patch492: 0007-pvcalls-front-don-t-return-error-when-the-ring-is-fu.patch: 36a2e9bf242b pvcalls-front: don't return error when the ring is full
+# Patch493: 0001-xen-xenbus-don-t-let-xenbus_grant_ring-remove-grants.patch: 8d521d960aef xen/xenbus: don't let xenbus_grant_ring() remove grants in error case
+# Patch494: 0002-xen-grant-table-add-gnttab_try_end_foreign_access.patch: 17659846fe33 xen/grant-table: add gnttab_try_end_foreign_access()
+# Patch495: 0003-xen-blkfront-don-t-use-gnttab_query_foreign_access-f.patch: 423a3a50dce9 xen/blkfront: don't use gnttab_query_foreign_access() for mapped status
+# Patch496: 0004-xen-netfront-don-t-use-gnttab_query_foreign_access-f.patch: 927e4eb8ddf4 xen/netfront: don't use gnttab_query_foreign_access() for mapped status
+# Patch497: 0005-xen-scsifront-don-t-use-gnttab_query_foreign_access-.patch: 62a696c15cfc xen/scsifront: don't use gnttab_query_foreign_access() for mapped status
+# Patch498: 0006-xen-gntalloc-don-t-use-gnttab_query_foreign_access.patch: fbc57368ea52 xen/gntalloc: don't use gnttab_query_foreign_access()
+# Patch499: 0007-xen-remove-gnttab_query_foreign_access.patch: c900f34fc134 xen: remove gnttab_query_foreign_access()
+# Patch500: 0008-xen-9p-use-alloc-free_pages_exact.patch: 2466bed361f3 xen/9p: use alloc/free_pages_exact()
+# Patch501: 0009-xen-pvcalls-use-alloc-free_pages_exact.patch: f85d03f0f482 xen/pvcalls: use alloc/free_pages_exact()
+# Patch502: 0010-xen-gnttab-fix-gnttab_end_foreign_access-without-pag.patch: 92dc0e4a2196 xen/gnttab: fix gnttab_end_foreign_access() without page specified
+# Patch503: 0011-xen-netfront-react-properly-to-failing-gnttab_end_fo.patch: c307029d811e xen/netfront: react properly to failing gnttab_end_foreign_access_ref()
+# Patch504: 0001-xen-blkfront-fix-leaking-data-in-shared-pages.patch: f4a1391185e3 xen/blkfront: fix leaking data in shared pages
+# Patch505: 0002-xen-netfront-fix-leaking-data-in-shared-pages.patch: 3650ac3218c1 xen/netfront: fix leaking data in shared pages
+# Patch506: 0003-xen-netfront-force-data-bouncing-when-backend-is-unt.patch: 4b67d8e42dbb xen/netfront: force data bouncing when backend is untrusted
+# Patch507: 0004-xen-blkfront-force-data-bouncing-when-backend-is-unt.patch: 981de55fb6b5 xen/blkfront: force data bouncing when backend is untrusted
+# Patch508: xsa423-linux.patch: 44dfdecc288b xen/netback: Ensure protocol headers don't fall in the non-linear area
+# Patch509: xsa424-linux.patch: d3e1b6151d5d xen/netback: don't call kfree_skb() with interrupts disabled
 Patch510: 0002-xen-netback-remove-unused-variables-pending_idx-and-.patch
-Patch511: 0003-xen-netback-don-t-do-grant-copy-across-page-boundary.patch
+# Patch511: 0003-xen-netback-don-t-do-grant-copy-across-page-boundary.patch: e14369897067 xen/netback: don't do grant copy across page boundary
 Patch512: 0004-xen-netback-remove-not-needed-test-in-xenvif_tx_buil.patch
-Patch513: 0005-xen-netback-use-same-error-messages-for-same-errors.patch
-Patch514: xsa432-linux.patch
-Patch515: xsa441-linux.patch
-Patch516: xsa448-linux.patch
+# Patch513: 0005-xen-netback-use-same-error-messages-for-same-errors.patch: a5353cdecd9b xen/netback: use same error messages for same errors
+# Patch514: xsa432-linux.patch: 11e6919ae028 xen/netback: Fix buffer overrun triggered by unusual packet
+# Patch515: xsa441-linux.patch: 3fdf2be9089b xen/events: replace evtchn_rwlock with RCU
+# Patch516: xsa448-linux.patch: 5bb8270789c8 xen-netback: don't produce zero-size SKB frags
 Patch517: kbuild-AFTER_LINK.patch
 Patch518: expose-xsversion.patch
 Patch519: blktap2.patch
@@ -612,12 +661,12 @@ Patch521: tg3-alloc-repeat.patch
 Patch522: disable-EFI-Properties-table-for-Xen.patch
 Patch523: net-Do-not-scrub-ignore_df-within-the-same-name-spac.patch
 Patch524: enable-fragmention-gre-packets.patch
-Patch525: CA-285778-emulex-nic-ip-hdr-len.patch
+Patch525: 0001-CA-285778-emulex-nic-ip-hdr-len.patch-rebase-325.patch
 Patch526: cifs-Change-the-default-value-SecFlags-to-0x83.patch
 Patch527: call-kexec-before-offlining-noncrashing-cpus.patch
 Patch528: hide-hung-task-for-idle-class.patch
 Patch529: xfs-async-wait.patch
-Patch530: 0002-scsi-libfc-drop-extra-rport-reference-in-fc_rport_cr.patch
+# Patch530: 0002-scsi-libfc-drop-extra-rport-reference-in-fc_rport_cr.patch: 694ec54b7826 scsi: libfc: Handling of extra kref
 Patch531: dont-select-pinctrl.patch
 Patch532: netscaler_everest_xs8_200g.patch
 Patch533: 0001-dma-add-dma_get_required_mask_from_max_pfn.patch
@@ -634,10 +683,10 @@ Patch543: pciback-mask-root-port-comp-timeout.patch
 Patch544: no-flr-quirk.patch
 Patch545: revert-PCI-Probe-for-device-reset-support-during-enumeration.patch
 Patch546: CA-135938-nfs-disconnect-on-rpc-retry.patch
-Patch547: sunrpc-force-disconnect-on-connection-timeout.patch
+Patch547: 0001-sunrpc-force-disconnect-on-connection-timeout-rebase-325.patch
 Patch548: nfs-avoid-double-timeout.patch
-Patch549: bonding-balance-slb.patch
-Patch550: bridge-lock-fdb-after-garp.patch
+Patch549: 0001-bonding-balance-slb-rebase-325.patch
+Patch550: 0001-bridge-lock-fdb-after-garp-rebase-325.patch
 Patch551: CP-13181-net-openvswitch-add-dropping-of-fip-and-lldp.patch
 Patch552: xen-ioemu-inject-msi.patch
 Patch553: pv-iommu-support.patch
@@ -655,11 +704,11 @@ Patch564: 0009-drm-i915-gvt-Don-t-output-error-message-when-DomU-ma.patch
 Patch565: 0010-drm-i915-gvt-xengt-Correctly-get-low-mem-max-gfn.patch
 Patch566: 0011-drm-i915-gvt-Fix-dom0-call-trace-at-shutdown-or-rebo.patch
 Patch567: 0012-hvm-dm_op.h-Sync-dm_op-interface-to-xen-4.9-release.patch
-Patch568: 0013-drm-i915-gvt-Apply-g2h-adjust-for-GTT-mmio-access.patch
+Patch568: 0001-drm-i915-gvt-Apply-g2h-adjust-for-GTT-mmio-access-rebase-325.patch
 Patch569: 0014-drm-i915-gvt-Apply-g2h-adjustment-during-fence-mmio-.patch
 Patch570: 0015-drm-i915-gvt-Patch-the-gma-in-gpu-commands-during-co.patch
 Patch571: 0016-drm-i915-gvt-Retrieve-the-guest-gm-base-address-from.patch
-Patch572: 0017-drm-i915-gvt-Align-the-guest-gm-aperture-start-offse.patch
+Patch572: 0001-drm-i915-gvt-Align-the-guest-gm-aperture-start-offse-rebase-325.patch
 Patch573: 0018-drm-i915-gvt-Add-support-to-new-VFIO-subregion-VFIO_.patch
 Patch574: 0019-drm-i915-gvt-Implement-vGPU-status-save-and-restore-.patch
 Patch575: 0020-vfio-Implement-new-Ioctl-VFIO_IOMMU_GET_DIRTY_BITMAP.patch
@@ -697,7 +746,7 @@ Patch606: get_domctl_interface_version.patch
 Patch607: xengt-fix-shutdown-failures.patch
 Patch608: xengt-i915-gem-vgtbuffer.patch
 Patch609: xengt-gtt-2m-alignment.patch
-Patch610: net-core__order-3_frag_allocator_causes_swiotlb_bouncing_under_xen.patch
+Patch610: net-core__order-3_frag_allocator_causes_swiotlb_bouncing_under_xen-rebase-325.patch
 Patch611: idle_cpu-return-0-during-softirq.patch
 Patch612: default-xen-swiotlb-size-128MiB.patch
 Patch613: dlm__increase_socket_backlog_to_avoid_hangs_with_16_nodes.patch
@@ -705,7 +754,7 @@ Patch614: gfs2-add-skippiness.patch
 Patch615: GFS2__Avoid_recently_demoted_rgrps
 Patch616: gfs2-debug-rgrp-sweep
 Patch617: gfs2-restore-kabi.patch
-Patch618: 0001-Add-auxiliary-bus-support.patch
+Patch618: 0001-Add-auxiliary-bus-support-rebase-325.patch
 Patch619: 0002-driver-core-auxiliary-bus-move-slab.h-from-include-f.patch
 Patch620: 0003-driver-core-auxiliary-bus-make-remove-function-retur.patch
 Patch621: 0004-driver-core-auxiliary-bus-minor-coding-style-tweaks.patch
@@ -720,7 +769,7 @@ Patch629: 0012-Documentation-auxiliary_bus-Move-the-text-into-the-c.patch
 Patch630: 0013-CP-41018-Make-CONFIG_AUXILIARY_BUS-y-work.patch
 Patch631: scsi-avoid-lun-change-loop.patch
 Patch632: Avoid-deadlocks-on-NFS-spinlocks.patch
-Patch633: abi-version.patch
+Patch633: 0001-abi-version-rebase-325.patch
 %if %{do_kabichk}
 Source3: check-kabi
 Source4: Module.kabi
@@ -728,44 +777,51 @@ Source4: Module.kabi
 Source5: prepare-build
 
 # XCP-ng patches
-Patch1000: ceph.patch
-Patch1001: tg3-v4.19.315.patch
-Patch1002: 0001-perf-probe-Fix-getting-the-kernel-map.patch
-Patch1003: 0001-ACPI-processor-idle-Check-acpi_bus_get_device-return.patch
-Patch1004: 0001-scsi-target-Fix-XCOPY-NAA-identifier-lookup.patch
-Patch1005: 0001-ext4-fix-off-by-one-error-in-do_split.patch
+# Patch1000: ceph.patch: already included in v4.19.325
+# Patch1001: tg3-v4.19.315.patch: already included in v4.19.325
+# Patch1002: 0001-perf-probe-Fix-getting-the-kernel-map.patch: 37c6f8089806 perf probe: Fix getting the kernel map
+# Patch1003: 0001-ACPI-processor-idle-Check-acpi_bus_get_device-return.patch f001c5c35a00 ACPI: processor: idle: Check acpi_fetch_acpi_dev() return value
+# Patch1004: 0001-scsi-target-Fix-XCOPY-NAA-identifier-lookup.patch: fff1180d24e6 scsi: target: Fix XCOPY NAA identifier lookup
+# Patch1005: 0001-ext4-fix-off-by-one-error-in-do_split.patch: 6f3510ec1348 ext4: fix off-by-one error in do_split
 Patch1006: 0001-SUNRPC-Restore-missing-call-to-cancel_work_sync.patch
 # CVE-2026-31431 (used by CopyFail v1)
 Patch1007: 0001-crypto-disable-authencesn-module-for-CVE-2026-31431.patch
 # CVE-2026-43284 (used by DirtyFrag, DirtyFail, CopyFail v2 Electric Boogaloo)
-Patch1008: 0001-xfrm-esp-avoid-in-place-decrypt-on-shared-skb-frags.patch
+# Patch1008: 0001-xfrm-esp-avoid-in-place-decrypt-on-shared-skb-frags.patch: d985920ced65 xfrm: esp: avoid in-place decrypt on shared skb frags
 # CVE-2026-46333 (used by ssh-keysign-pwn, ptrace_may_dream)
-Patch1009: 0001-ptrace-restore-smp_rmb-in-__ptrace_may_access.patch
-Patch1010: 0002-ptrace-slightly-saner-get_dumpable-logic.patch
-Patch1011: 0003-kabi-ptrace-slightly-saner-get_dumpable-logic.patch
+# Patch1009: 0001-ptrace-restore-smp_rmb-in-__ptrace_may_access.patch: TODO upstream equivalent
+# Patch1010: 0002-ptrace-slightly-saner-get_dumpable-logic.patch: 326b1c50eedc ptrace: slightly saner 'get_dumpable()' logic
+# Patch1011: 0003-kabi-ptrace-slightly-saner-get_dumpable-logic.patch: Not needed given above patch is already in v4.19.325-cip134
 # CVE-2026-46300 (used by fragnesia), iterative fixes to CVE-2026-43284
-Patch1012: 0004-net-skbuff-preserve-shared-frag-marker-during-coales.patch
-Patch1013: 0005-net-skbuff-propagate-shared-frag-marker-through-frag.patch
+# Patch1012: 0004-net-skbuff-preserve-shared-frag-marker-during-coales.patch: e993af8976a5 net: skbuff: preserve shared-frag marker during coalescing
+# Patch1013: 0005-net-skbuff-propagate-shared-frag-marker-through-frag.patch: cb225ad20da0 net: skbuff: propagate shared-frag marker through frag-transfer helpers
 # CVE-2026-43494 (used by pintheft)
-Patch1014: 0006-net-rds-reset-op_nents-when-zerocopy-page-pin-fails.patch
+# Patch1014: 0006-net-rds-reset-op_nents-when-zerocopy-page-pin-fails.patch: ffc1541ce426 net/rds: reset op_nents when zerocopy page pin fails
 # CVE-2026-46243 (cifswitch)
-Patch1015: 0007-smb-client-reject-userspace-cifs-spnego-descriptions.patch
+# Patch1015: 0007-smb-client-reject-userspace-cifs-spnego-descriptions.patch: 1fca42a8b297 smb: client: reject userspace cifs.spnego descriptions
 
 # Backport fixes in pcieport driver for hotplug hardware detection
 Patch1020: 0001-PCI-pciehp-Differentiate-between-surprise-and-safe-r.patch
-Patch1021: 0002-PCI-pciehp-Tolerate-Presence-Detect-hardwired-to-zer.patch
+Patch1021: 0002-PCI-pciehp-Tolerate-Presence-Detect-hardwired-to-zer-rebased-325.patch
 # The following patches fix a regression introduced by the previous patches
 Patch1022: 0001-PCI-pciehp-Disable-in-band-presence-detect-when-poss.patch
 Patch1023: 0002-PCI-pciehp-Wait-for-PDS-if-in-band-presence-is-disab.patch
 Patch1024: 0003-PCI-pciehp-Add-DMI-table-for-in-band-presence-detect.patch
 
 # CVE-2026-45840 (openvswitch: cap upcall PID array size and pre-size vport replies)
-Patch1025: 0656-openvswitch-cap-upcall-PID-array-size-and-pre-size-v.patch
+# Patch1025: 0656-openvswitch-cap-upcall-PID-array-size-and-pre-size-v.patch: 801e108a6bc6 openvswitch: cap upcall PID array size and pre-size vport replies
 # CVE-2026-53227 (net: openvswitch: fix possible kfree_skb of ERR_PTR)
 Patch1026: 0657-net-openvswitch-fix-possible-kfree_skb-of-ERR_PTR.patch
 
 # CVE-2026-64600 (RefluXFS)
 Patch1027: 0001-xfs-resample-the-data-fork-mapping-after-cycling-ILO.patch
+
+# Perf build error
+Patch1028: 0001-tools-headers-Grab-copy-of-linux-const.h-needed-by-l.patch
+Patch1029: 0001-tools-headers-UAPI-Sync-linux-const.h-with-the-kerne.patch
+
+# Remove localversion-st to avoid koji errors.
+Patch1030: 0001-localversion-st-rm-to-avoid-conflicts-with-yum-s-rpm.patch
 
 %description
 The kernel package contains the Linux kernel (vmlinuz), the core of any
@@ -831,7 +887,7 @@ Provides: python2-perf
 %{pythonperfdesc}
 
 %prep
-%autosetup -p1
+%autosetup -p1 -n linux-cip-%{version}-cip%{cipver}
 %{?_cov_prepare}
 
 %build
@@ -1003,7 +1059,10 @@ cp -a --parents arch/x86/tools/relocs.h %{buildroot}%{srcpath}
 cp -a --parents tools/include/tools/le_byteshift.h %{buildroot}%{srcpath}
 cp -a --parents arch/x86/purgatory/purgatory.c %{buildroot}%{srcpath}
 cp -a --parents arch/x86/purgatory/stack.S %{buildroot}%{srcpath}
-cp -a --parents arch/x86/purgatory/string.c %{buildroot}%{srcpath}
+
+## Removed in e0d262a57fc7 x86/purgatory: Do not use __builtin_memcpy and __builtin_memset
+# cp -a --parents arch/x86/purgatory/string.c %{buildroot}%{srcpath}
+
 cp -a --parents arch/x86/purgatory/setup-x86_64.S %{buildroot}%{srcpath}
 cp -a --parents arch/x86/purgatory/entry64.S %{buildroot}%{srcpath}
 cp -a --parents arch/x86/boot/string.h %{buildroot}%{srcpath}
@@ -1120,6 +1179,9 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Mon Aug 17 2026 Quentin Casasnovas <quentin.casasnovas@vates.tech> - 4.19.325-cip134-8.0.46.10
+- Rebase to v4.19.325-cip134
+
 * Thu Aug 06 2026 Quentin Casasnovas <quentin.casasnovas@vates.tech> - 4.19.19-8.0.46.10
 - Backport for CVE-2026-64600 (RefluXFS)
 

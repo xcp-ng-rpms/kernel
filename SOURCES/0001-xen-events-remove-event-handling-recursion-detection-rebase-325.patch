@@ -1,0 +1,86 @@
+From e0fd164242de3db5a149481fa0348e9ca5b6a136 Mon Sep 17 00:00:00 2001
+From: Juergen Gross <jgross@suse.com>
+Date: Fri, 29 Nov 2019 13:39:41 +0100
+Subject: [PATCH] xen/events: remove event handling recursion detection
+
+__xen_evtchn_do_upcall() contains guards against being called
+recursively. This mechanism was introduced in the early pvops times
+(kernel 2.6.26) when there were all the Xen backend drivers missing
+from the upstream kernel, and some of those out-of-tree drivers were
+enabling interrupts in their event handlers (which was explicitly
+allowed in the initial XenoLinux).
+
+Nowadays we don't need to support those old drivers any more and the
+capability to allow recursive calls of __xen_evtchn_do_upcall() can
+be removed.
+
+Signed-off-by: Juergen Gross <jgross@suse.com>
+Reviewed-by: Boris Ostrovsky <boris.ostrovsky@oracle.com>
+Signed-off-by: Juergen Gross <jgross@suse.com>
+(cherry picked from commit 542ba30b1162535b84801a341b926114d9b5d346)
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+
+[Quentin: rebase from v4.19.19 to v4.19.325 conflicts:
+ - drivers/xen/events/events_base.c: 3fdf2be9089b ("xen/events: replace
+   evtchn_rwlock with RCU"), 99502f76271 ("xen/events: defer eoi in case of
+   excessive number of events") and 073d0552ead5 ("xen/events: avoid
+   removing an event channel while handling it") all modified
+   __xen_evtchn_do_upcall]
+
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+---
+ drivers/xen/events/events_base.c | 16 +++-------------
+ 1 file changed, 3 insertions(+), 13 deletions(-)
+
+diff --git a/drivers/xen/events/events_base.c b/drivers/xen/events/events_base.c
+index 3b27b98175c6..87a71cb19c41 100644
+--- a/drivers/xen/events/events_base.c
++++ b/drivers/xen/events/events_base.c
+@@ -1592,13 +1592,10 @@ void handle_irq_for_port(evtchn_port_t port, struct evtchn_loop_ctrl *ctrl)
+ 	generic_handle_irq(irq);
+ }
+ 
+-static DEFINE_PER_CPU(unsigned, xed_nesting_count);
+-
+ static void __xen_evtchn_do_upcall(void)
+ {
+ 	struct vcpu_info *vcpu_info = __this_cpu_read(xen_vcpu);
+-	int cpu = get_cpu();
+-	unsigned count;
++	int cpu = smp_processor_id();
+ 	struct evtchn_loop_ctrl ctrl = { 0 };
+ 
+ 	/*
+@@ -1613,18 +1610,13 @@ static void __xen_evtchn_do_upcall(void)
+ 	do {
+ 		vcpu_info->evtchn_upcall_pending = 0;
+ 
+-		if (__this_cpu_inc_return(xed_nesting_count) - 1)
+-			goto out;
+-
+ 		xen_evtchn_handle_events(cpu, &ctrl);
+ 
+ 		BUG_ON(!irqs_disabled());
+ 
+-		count = __this_cpu_read(xed_nesting_count);
+-		__this_cpu_write(xed_nesting_count, 0);
+-	} while (count != 1 || vcpu_info->evtchn_upcall_pending);
++		virt_rmb(); /* Hypervisor can set upcall pending. */
++	} while (vcpu_info->evtchn_upcall_pending);
+ 
+-out:
+ 	rcu_read_unlock();
+ 
+ 	/*
+@@ -1633,8 +1625,6 @@ static void __xen_evtchn_do_upcall(void)
+ 	 * above.
+ 	 */
+ 	__this_cpu_inc(irq_epoch);
+-
+-	put_cpu();
+ }
+ 
+ void xen_evtchn_do_upcall(struct pt_regs *regs)
+-- 
+2.43.0
+

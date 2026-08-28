@@ -1,0 +1,95 @@
+From 25a33ad40a7bb1494de17e4dc79bca74845f5e83 Mon Sep 17 00:00:00 2001
+From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+Date: Mon, 5 Jan 2026 18:38:59 +0100
+Subject: [PATCH] sctp: add sctp_sock_set_nodelay
+
+Add a helper to directly set the SCTP_NODELAY sockopt from kernel space
+without going through a fake uaccess.
+
+Signed-off-by: Christoph Hellwig <hch@lst.de>
+Acked-by: Marcelo Ricardo Leitner <marcelo.leitner@gmail.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+
+[Quentin: rebase from v4.19.19 to v4.19.325 conflicts:
+ - include/net/sctp/sctp.h: b15a38ce9552 ("sctp: add chunks to sk_backlog
+   when the newsk sk_socket is not set") and ("f033651fba25 sctp:
+   frag_point sanity check") added a couple of helpers that change the
+   context of the patch, not a real conflict]
+
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+---
+ fs/dlm/lowcomms.c       | 10 ++--------
+ include/net/sctp/sctp.h |  9 ++++++++-
+ 2 files changed, 10 insertions(+), 9 deletions(-)
+
+diff --git a/fs/dlm/lowcomms.c b/fs/dlm/lowcomms.c
+index 3e52634ee25b..3706ee04fa1a 100644
+--- a/fs/dlm/lowcomms.c
++++ b/fs/dlm/lowcomms.c
+@@ -916,7 +916,6 @@ static int sctp_bind_addrs(struct connection *con, uint16_t port)
+ static void sctp_connect_to_sock(struct connection *con)
+ {
+ 	struct sockaddr_storage daddr;
+-	int one = 1;
+ 	int result;
+ 	int addr_len;
+ 	struct socket *sock;
+@@ -963,8 +962,7 @@ static void sctp_connect_to_sock(struct connection *con)
+ 	log_print("connecting to %d", con->nodeid);
+ 
+ 	/* Turn off Nagle's algorithm */
+-	kernel_setsockopt(sock, SOL_SCTP, SCTP_NODELAY, (char *)&one,
+-			  sizeof(one));
++	sctp_sock_set_nodelay(sock->sk);
+ 
+ 	/*
+ 	 * Make sock->ops->connect() function return in specified time,
+@@ -1178,7 +1176,6 @@ static int sctp_listen_for_all(void)
+ 	struct socket *sock = NULL;
+ 	int result = -EINVAL;
+ 	struct connection *con = nodeid2con(0, GFP_NOFS);
+-	int one = 1;
+ 
+ 	if (!con)
+ 		return -ENOMEM;
+@@ -1193,10 +1190,7 @@ static int sctp_listen_for_all(void)
+ 	}
+ 
+ 	sock_set_rcvbuf(sock->sk, NEEDED_RMEM);
+-	result = kernel_setsockopt(sock, SOL_SCTP, SCTP_NODELAY, (char *)&one,
+-				   sizeof(one));
+-	if (result < 0)
+-		log_print("Could not set SCTP NODELAY error %d\n", result);
++	sctp_sock_set_nodelay(sock->sk);
+ 
+ 	write_lock_bh(&sock->sk->sk_callback_lock);
+ 	/* Init con struct */
+diff --git a/include/net/sctp/sctp.h b/include/net/sctp/sctp.h
+index 903b2ddde1b4..6e92a2cfc53c 100644
+--- a/include/net/sctp/sctp.h
++++ b/include/net/sctp/sctp.h
+@@ -36,7 +36,7 @@
+  *    Sridhar Samudrala     <sri@us.ibm.com>
+  *    Ardelle Fan           <ardelle.fan@intel.com>
+  *    Ryan Layer            <rmlayer@us.ibm.com>
+- *    Kevin Gao             <kevin.gao@intel.com> 
++ *    Kevin Gao             <kevin.gao@intel.com>
+  */
+ 
+ #ifndef __net_sctp_h__
+@@ -630,4 +630,11 @@ static inline bool sctp_newsk_ready(const struct sock *sk)
+ 	return sock_flag(sk, SOCK_DEAD) || sk->sk_socket;
+ }
+ 
++static inline void sctp_sock_set_nodelay(struct sock *sk)
++{
++	lock_sock(sk);
++	sctp_sk(sk)->nodelay = true;
++	release_sock(sk);
++}
++
+ #endif /* __net_sctp_h__ */
+-- 
+2.43.0
+
