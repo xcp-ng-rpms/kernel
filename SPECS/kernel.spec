@@ -9,9 +9,9 @@
 
 # Control whether we perform a compat. check against published ABI.
 # Default enabled: (to override: --without kabichk)
-%define do_kabichk  %{?_without_kabichk: 0} %{?!_without_kabichk: 1}
+#%%define do_kabichk  %%{?_without_kabichk: 0} %%{?!_without_kabichk: 1}
 # Default disabled: (to override: --with kabichk)
-#%%define do_kabichk  %%{?_with_kabichk: 1} %%{?!_with_kabichk: 0}
+%define do_kabichk  %{?_with_kabichk: 1} %{?!_with_kabichk: 0}
 
 #
 # Adjust debuginfo generation to suit building a kernel:
@@ -42,7 +42,7 @@
 Name: kernel
 License: GPLv2
 Version: 4.19.19
-Release: %{?xsrel}.11%{?dist}
+Release: %{?xsrel}.10%{?dist}
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
@@ -771,6 +771,11 @@ Patch1027: 0001-xfs-resample-the-data-fork-mapping-after-cycling-ILO.patch
 Patch1028: 0001-SUNRPC-avoid-race-between-mod_timer-and-del_timer_sy.patch
 Patch1029: 0002-SUNRPC-use-_bh-spinlocking-on-transport_lock.patch
 Patch1030: 0003-Revert-XSI-2150-Avoid-deadlocks-on-NFS-spinlocks.patch
+
+# lockdep
+Patch1031: 0001-PCI-pciehp-Use-down_read-write_nested-reset_lock-to-.patch
+Patch1032: 0001-blktap2-Do-not-lock-mmap_sem-in-blktap_ring_ioctl.patch
+Patch1033: 0001-xen-grant-table-Use-INIT_DELAYED_WORK_ONSTACK-in-gnt.patch
 
 %description
 The kernel package contains the Linux kernel (vmlinuz), the core of any

@@ -1,0 +1,36 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Tu Dinh <ngoc-tu.dinh@vates.tech>
+Date: Wed, 2 Sep 2026 23:35:07 +0200
+Subject: [PATCH] xen/grant-table: Use INIT_DELAYED_WORK_ONSTACK in
+ gnttab_unmap_refs_sync
+
+gnttab_unmap_refs_sync may take an in-stack gntab_unmap_queue_data
+object. Using INIT_DELAYED_WORK on it is safe since
+gnttab_unmap_refs_sync waits for the completion of the entire unmap, but
+it may still lead to an "ODEBUG: object is on stack, but NOT annotated"
+warning if CONFIG_DEBUG_OBJECTS_WORK is enabled.
+
+Open code the initialization of item->gnttab_work in
+gnttab_unmap_refs_sync instead in order to avoid this warning. Add a
+matching destroy_delayed_work_on_stack for the work item.
+
+Signed-off-by: Tu Dinh <ngoc-tu.dinh@vates.tech>
+
+diff --git a/drivers/xen/grant-table.c b/drivers/xen/grant-table.c
+index e434a583ee7e..9a1a9bcffb6c 100644
+--- a/drivers/xen/grant-table.c
++++ b/drivers/xen/grant-table.c
+@@ -1158,8 +1158,12 @@ int gnttab_unmap_refs_sync(struct gntab_unmap_queue_data *item)
+ 	init_completion(&data.completion);
+ 	item->data = &data;
+ 	item->done = &unmap_refs_callback;
+-	gnttab_unmap_refs_async(item);
++	INIT_DELAYED_WORK_ONSTACK(&item->gnttab_work, gnttab_unmap_work);
++	item->age = 0;
++
++	__gnttab_unmap_refs_async(item);
+ 	wait_for_completion(&data.completion);
++	destroy_delayed_work_on_stack(&item->gnttab_work);
+ 
+ 	return data.result;
+ }
