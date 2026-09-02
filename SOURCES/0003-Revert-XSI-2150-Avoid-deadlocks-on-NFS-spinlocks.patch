@@ -1,0 +1,72 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Tu Dinh <ngoc-tu.dinh@vates.tech>
+Date: Fri, 28 Aug 2026 11:05:44 +0200
+Subject: [PATCH] Revert "XSI-2150: Avoid deadlocks on NFS spinlocks"
+
+This patch is a very confusing patch as it does 2 separate things:
+
+1. It converts the synchronization of `transport_lock` in
+   `xprt_init_autodisconnect` to `spin_lock_bh`. I don't think this is
+actually necessary, since `xprt_init_autodisconnect` is called as a
+timer function which runs in softirq/bh context, and so a normal
+`spin_lock` is sufficient with or without the "SUNRPC: Remove the
+bh-safe lock requirement on xprt->transport_lock" patch.
+
+2. It removes the synchronization around `TCP_ESTABLISHED` in
+   `xs_tcp_state_change`. For me, this is suspect in the context of
+8.0.46, because the entire "SUNRPC: Remove the bh-safe lock requirement
+on xprt->transport_lock" was not backported. Nor was the subsequent
+"SUNRPC: Remove the bh-safe lock requirement on the
+rpc_wait_queue->lock", but I don't know for sure if these 2 patches are
+meant to go together.
+
+Given the above, we should revert this patch.
+
+Signed-off-by: Tu Dinh <ngoc-tu.dinh@vates.tech>
+
+diff --git a/net/sunrpc/xprt.c b/net/sunrpc/xprt.c
+index 5333583b71b2..986bd8f50db7 100644
+--- a/net/sunrpc/xprt.c
++++ b/net/sunrpc/xprt.c
+@@ -765,18 +765,18 @@ xprt_init_autodisconnect(struct timer_list *t)
+ {
+ 	struct rpc_xprt *xprt = from_timer(xprt, t, timer);
+ 
+-	spin_lock_bh(&xprt->transport_lock);
++	spin_lock(&xprt->transport_lock);
+ 	if (!list_empty(&xprt->recv))
+ 		goto out_abort;
+ 	/* Reset xprt->last_used to avoid connect/autodisconnect cycling */
+ 	xprt->last_used = jiffies;
+ 	if (test_and_set_bit(XPRT_LOCKED, &xprt->state))
+ 		goto out_abort;
+-	spin_unlock_bh(&xprt->transport_lock);
++	spin_unlock(&xprt->transport_lock);
+ 	queue_work(xprtiod_workqueue, &xprt->task_cleanup);
+ 	return;
+ out_abort:
+-	spin_unlock_bh(&xprt->transport_lock);
++	spin_unlock(&xprt->transport_lock);
+ }
+ 
+ bool xprt_lock_connect(struct rpc_xprt *xprt,
+diff --git a/net/sunrpc/xprtsock.c b/net/sunrpc/xprtsock.c
+index 68dc23792f87..753b1038228e 100644
+--- a/net/sunrpc/xprtsock.c
++++ b/net/sunrpc/xprtsock.c
+@@ -1612,6 +1612,7 @@ static void xs_tcp_state_change(struct sock *sk)
+ 	trace_rpc_socket_state_change(xprt, sk->sk_socket);
+ 	switch (sk->sk_state) {
+ 	case TCP_ESTABLISHED:
++		spin_lock(&xprt->transport_lock);
+ 		if (!xprt_test_and_set_connected(xprt)) {
+ 			xprt->connect_cookie++;
+ 			clear_bit(XPRT_SOCK_CONNECTING, &transport->sock_state);
+@@ -1619,6 +1620,7 @@ static void xs_tcp_state_change(struct sock *sk)
+ 
+ 			xs_run_error_worker(transport, XPRT_SOCK_WAKE_PENDING);
+ 		}
++		spin_unlock(&xprt->transport_lock);
+ 		break;
+ 	case TCP_FIN_WAIT1:
+ 		/* The client initiated a shutdown of the socket */

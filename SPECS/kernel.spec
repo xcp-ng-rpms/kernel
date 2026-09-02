@@ -42,7 +42,7 @@
 Name: kernel
 License: GPLv2
 Version: 4.19.19
-Release: %{?xsrel}.10%{?dist}
+Release: %{?xsrel}.11%{?dist}
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
@@ -767,6 +767,11 @@ Patch1026: 0657-net-openvswitch-fix-possible-kfree_skb-of-ERR_PTR.patch
 # CVE-2026-64600 (RefluXFS)
 Patch1027: 0001-xfs-resample-the-data-fork-mapping-after-cycling-ILO.patch
 
+# https://github.com/xcp-ng/linux/pull/5
+Patch1028: 0001-SUNRPC-avoid-race-between-mod_timer-and-del_timer_sy.patch
+Patch1029: 0002-SUNRPC-use-_bh-spinlocking-on-transport_lock.patch
+Patch1030: 0003-Revert-XSI-2150-Avoid-deadlocks-on-NFS-spinlocks.patch
+
 %description
 The kernel package contains the Linux kernel (vmlinuz), the core of any
 Linux operating system. The kernel handles the basic functions of the operating
@@ -1120,6 +1125,10 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Wed Sep 02 2026 Tu Dinh <ngoc-tu.dinh@vates.tech> - 4.19.19-8.0.46.11
+- SUNRPC: Restore missing synchronization on transport_lock
+- Revert "XSI-2150: Avoid deadlocks on NFS spinlocks"
+
 * Thu Aug 06 2026 Quentin Casasnovas <quentin.casasnovas@vates.tech> - 4.19.19-8.0.46.10
 - Backport for CVE-2026-64600 (RefluXFS)
 
