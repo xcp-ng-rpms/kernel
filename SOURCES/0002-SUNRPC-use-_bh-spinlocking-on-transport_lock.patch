@@ -1,0 +1,40 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: NeilBrown <neilb@suse.de>
+Date: Mon, 12 Sep 2022 09:00:52 +1000
+Subject: [PATCH] SUNRPC: use _bh spinlocking on ->transport_lock
+
+Prior to Linux 5.3, ->transport_lock in sunrpc required the _bh style
+spinlocks (when not called from a bottom-half handler).
+
+When upstream 3848e96edf4788f772d83990022fa7023a233d83 was backported to
+stable kernels, the spin_lock/unlock calls should have been changed to
+the _bh version, but this wasn't noted in the patch and didn't happen.
+
+So convert these lock/unlock calls to the _bh versions.
+
+This patch is required for any stable kernel prior to 5.3 to which the
+above mentioned patch was backported.  Namely 4.9.y, 4.14.y, 4.19.y.
+
+Signed-off-by: NeilBrown <neilb@suse.de>
+Reported-by: Eugeniu Rosca <erosca@de.adit-jv.com>
+Reviewed-by: Eugeniu Rosca <erosca@de.adit-jv.com>
+Tested-by: Eugeniu Rosca <erosca@de.adit-jv.com>
+(cherry picked from commit bcab4d551a3d15bdf8efaac7b61420219bd154b6)
+Signed-off-by: Tu Dinh <ngoc-tu.dinh@vates.tech>
+
+diff --git a/net/sunrpc/xprt.c b/net/sunrpc/xprt.c
+index d5097ff30f9b..5333583b71b2 100644
+--- a/net/sunrpc/xprt.c
++++ b/net/sunrpc/xprt.c
+@@ -1588,9 +1588,9 @@ static void xprt_destroy(struct rpc_xprt *xprt)
+ 	 * is cleared.  We use ->transport_lock to ensure the mod_timer()
+ 	 * can only run *before* del_time_sync(), never after.
+ 	 */
+-	spin_lock(&xprt->transport_lock);
++	spin_lock_bh(&xprt->transport_lock);
+ 	del_timer_sync(&xprt->timer);
+-	spin_unlock(&xprt->transport_lock);
++	spin_unlock_bh(&xprt->transport_lock);
+ 
+ 	/*
+ 	 * Destroy sockets etc from the system workqueue so they can
