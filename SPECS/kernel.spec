@@ -92,41 +92,56 @@ Source3: check-kabi
 Source4: Module.kabi
 %endif
 
-Patch1: 0001-expose-xsversion.patch.patch
-Patch2: 0002-Write-each-kthread-s-pid-into-xenstore-so-that-it-ca.patch
-Patch3: 0003-Several-order-4-5-allocations-are-required-when-sett.patch
-Patch4: 0004-net-Do-not-scrub-ignore_df-within-the-same-name-spac.patch
-Patch5: 0005-enable-fragmention-gre-packets.patch.patch
-Patch6: 0006-At-some-point-since-kernel-4.19-the-preemption-of-hy.patch
-Patch7: 0007-skip-cpuidle-driver-init-if-cpuidle-function-disable.patch
-Patch8: 0008-CA-392853-fix-kdump-kernel-cannot-find-ACPI-RSDP.patch
-Patch9: 0009-CA-415346-export-module-symbol-offsets.patch
-Patch10: 0010-x86-xen-correct-dma_get_required_mask-for-Xen-PV-gue.patch
-Patch11: 0011-pci-export-pci_probe_reset_function.patch
-Patch12: 0012-Guests-can-potentially-disable-cause-the-PCI-device-.patch
-Patch13: 0013-pciback-mask-root-port-comp-timeout.patch.patch
-Patch14: 0014-Some-devices-advertise-FLReset-but-do-not-support-it.patch
-Patch15: 0015-CA-135938-nfs-disconnect-on-rpc-retry.patch.patch
-Patch16: 0016-sunrpc-force-disconnect-on-connection-timeout.patch.patch
-Patch17: 0017-xen-ioemu-inject-msi.patch.patch
-Patch18: 0018-0001-xen-swiotlb-size-128MiB.patch.patch
-Patch19: 0019-The-objective-is-to-ensure-we-have-a-large-enough-co.patch
-Patch20: 0020-Revert-to-use-num_online_cpus-for-default-rss-queues.patch
-Patch21: 0021-Add-SBAT-metadata-to-dom0-6.6-kernel.patch
-Patch22: 0022-Enable-lockdown-integrity-by-default.patch
-#Patch23: 0023-For-XenServer-the-desired-behaviour-is-that-signatur.patch
-Patch24: 0024-Use-MoK-variable-fallback.patch
-Patch25: 0025-Allows-Xen-Netback-debug-ring-files-to-be-read-if-lo.patch
-Patch26: 0026-Import-the-Xen-public-headers-in-preparation-for-fil.patch
-Patch27: 0027-module-hash-revocation.patch.patch
-Patch28: 0028-CP-46343-common-data-structure-padding.patch
-Patch29: 0029-CP-46343-reserve-cpuid-leaves-for-future-use.patch
-Patch30: 0030-xen-pciback-provide-a-reset-sysfs-file-to-try-harder.patch
-Patch31: 0031-disable-mitigations-by-default.patch.patch
-Patch32: 0032-call-kexec-before-offlining-noncrashing-cpus.patch.patch
-Patch33: 0033-SDEV_EVT_LUN_CHANGE_REPORTED-events-should-only-be-r.patch
-Patch34: 0034-Filter-and-check-hypercalls-from-userspace.patch
-Patch35: 0035-From-338ca398fe64413e8619f0bf79e36f71ceb7e4be-Mon-Se.patch
+#Patch0: 0001-net-gro-move-L3-flush-checks.patch: 4b0ebbca3e16 net: gro: move L3 flush checks to tcp_gro_receive and udp_gro_receive_segment
+#Patch1: 0001-x86-xen-time-Reduce-Xen-timer-tick.patch: ad162488bbd3 x86/xen/time: Reduce Xen timer tick
+#Patch2: 0001-sched-fair-Bump-sd-max_newidle_lb_cost.patch: 33adff0b7e39 sched/fair: Bump sd->max_newidle_lb_cost when newidle balance fails
+Patch3: 0001-disable-mitigations-by-default.patch.patch
+Patch4: 0002-expose-xsversion.patch.patch
+Patch5: 0003-Write-each-kthread-s-pid-into-xenstore-so-that-it-ca.patch
+Patch6: 0004-Several-order-4-5-allocations-are-required-when-sett.patch
+Patch7: 0005-net-Do-not-scrub-ignore_df-within-the-same-name-spac.patch
+Patch8: 0006-enable-fragmention-gre-packets.patch.patch
+Patch9: 0007-call-kexec-before-offlining-noncrashing-cpus.patch.patch
+#Patch10: 0001-lpfc-fallback-to-sli-2.patch: Driver no longer support sli-2
+Patch11: 0008-At-some-point-since-kernel-4.19-the-preemption-of-hy.patch
+Patch12: 0009-skip-cpuidle-driver-init-if-cpuidle-function-disable.patch
+Patch13: 0010-CA-392853-fix-kdump-kernel-cannot-find-ACPI-RSDP.patch
+Patch14: 0011-CA-415346-export-module-symbol-offsets.patch
+Patch15: 0012-x86-xen-correct-dma_get_required_mask-for-Xen-PV-gue.patch
+Patch16: 0013-pci-export-pci_probe_reset_function.patch
+Patch17: 0014-xen-pciback-provide-a-reset-sysfs-file-to-try-harder.patch
+Patch18: 0015-Guests-can-potentially-disable-cause-the-PCI-device-.patch
+Patch19: 0016-pciback-mask-root-port-comp-timeout.patch.patch
+Patch20: 0017-Some-devices-advertise-FLReset-but-do-not-support-it.patch
+Patch21: 0018-CA-135938-nfs-disconnect-on-rpc-retry.patch.patch
+Patch22: 0019-sunrpc-force-disconnect-on-connection-timeout.patch.patch
+Patch23: 0020-xen-ioemu-inject-msi.patch.patch
+#Patch24: 0001-pv-iommu-support.patch: Citrix specific patch
+#Patch25: 0001-kexec-reserve-crashkernel-region.patch: Citrix specific patch
+Patch26: 0021-0001-xen-swiotlb-size-128MiB.patch.patch
+Patch27: 0022-The-objective-is-to-ensure-we-have-a-large-enough-co.patch
+Patch28: 0023-Revert-to-use-num_online_cpus-for-default-rss-queues.patch
+#Patch29: 0001-gfs2-delay-resource-group-glock-demotion.patch: GFS2 not supported
+#Patch30: 0001-gfs2-debug-rgrp-sweep.patch: GFS2 not supported
+#Patch31: 0001-fix-gfs2-umount-timeout-bug.patch: GFS2 not supported
+#Patch32: 0001-gfs2-No-more-self-recovery.patch: GFS2 not supported
+#Patch33: 0001-CA-411820-add-STATX_DIOALIGN-support-to-GFS2.patch: GFS2 not supported
+Patch34: 0024-SDEV_EVT_LUN_CHANGE_REPORTED-events-should-only-be-r.patch
+Patch35: 0025-Add-SBAT-metadata-to-dom0-6.6-kernel.patch
+Patch36: 0026-Enable-lockdown-integrity-by-default.patch
+Patch37: 0027-For-XenServer-the-desired-behaviour-is-that-signatur.patch
+Patch38: 0028-Use-MoK-variable-fallback.patch
+Patch39: 0029-Allows-Xen-Netback-debug-ring-files-to-be-read-if-lo.patch
+Patch40: 0030-Import-the-Xen-public-headers-in-preparation-for-fil.patch
+Patch41: 0031-Filter-and-check-hypercalls-from-userspace.patch
+Patch42: 0032-module-hash-revocation.patch.patch
+#Patch43: 0001-gfs2-fix-debugfs-access.patch: GFS2 not supported
+Patch44: 0033-CP-46343-common-data-structure-padding.patch
+Patch45: 0034-CP-46343-reserve-cpuid-leaves-for-future-use.patch
+#Patch46: abi-version.patch: Citrix specific patch
+
+#XCP-ng patches
+Patch101: 0035-Force-py2-compatible-scripts-to-use-py3-interpreter.patch
 
 %description
 The kernel package contains the Linux kernel (vmlinuz), the core of any
