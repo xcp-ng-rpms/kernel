@@ -1,4 +1,4 @@
-From 5fa70d2b662e70ea1d224540502d0c0e35d32bc7 Mon Sep 17 00:00:00 2001
+From 56631aa54f30cf8f191cd967cb5907f29304b130 Mon Sep 17 00:00:00 2001
 From: Corentin Oparowski <corentin.oparowski@vates.tech>
 Date: Fri, 18 Jul 2025 18:02:35 +0800
 Subject: [PATCH 33/35] CP-46343: common data structure padding
@@ -22,7 +22,7 @@ Replaced every instance of xs_kabi_padding by  UEK_KABI_RESERVE(1-4)]
  include/linux/device/bus.h          |  6 ++++++
  include/linux/device/class.h        |  6 ++++++
  include/linux/fs.h                  |  6 ++++++
- include/linux/fwnode.h              |  5 +++++
+ include/linux/fwnode.h              |  4 ++++
  include/linux/ipmi.h                | 11 +++++++++++
  include/linux/ipmi_smi.h            | 10 ++++++++++
  include/linux/irq.h                 |  5 +++++
@@ -66,7 +66,7 @@ Replaced every instance of xs_kabi_padding by  UEK_KABI_RESERVE(1-4)]
  include/scsi/scsi_transport_sas.h   |  6 ++++++
  kernel/sched/sched.h                | 15 +++++++++++++++
  net/devlink/devl_internal.h         |  7 +++++++
- 58 files changed, 452 insertions(+), 4 deletions(-)
+ 58 files changed, 451 insertions(+), 4 deletions(-)
 
 diff --git a/block/elevator.h b/block/elevator.h
 index 2a78544bf201..e3cdcae2a404 100644
@@ -188,7 +188,7 @@ index 6fdcde0a7169..e376278226d4 100644
  
  struct kcs_bmc_client {
 diff --git a/drivers/pci/pci.h b/drivers/pci/pci.h
-index 8ccfaacb59f2..8e58a2170e8c 100644
+index 652e5223e0ce..5dc561c9ce9f 100644
 --- a/drivers/pci/pci.h
 +++ b/drivers/pci/pci.h
 @@ -3,6 +3,7 @@
@@ -199,7 +199,7 @@ index 8ccfaacb59f2..8e58a2170e8c 100644
  
  /* Number of possible devfns: 0.0 to 1f.7 inclusive */
  #define MAX_NR_DEVFNS 256
-@@ -405,6 +406,11 @@ struct pci_sriov {
+@@ -417,6 +418,11 @@ struct pci_sriov {
  	u16		subsystem_device; /* VF subsystem device */
  	resource_size_t	barsz[PCI_SRIOV_NUM_BARS];	/* VF BAR size */
  	bool		drivers_autoprobe; /* Auto probing of VFs by driver */
@@ -345,7 +345,7 @@ index 0874218454d7..be1d20199168 100644
  	 * We can inline a number of vecs at the end of the bio, to avoid
  	 * double allocations for a small number of bio_vecs. This member
 diff --git a/include/linux/blkdev.h b/include/linux/blkdev.h
-index b8471a49fd1a..7f692c4878a0 100644
+index 1232ba158631..51d2961babca 100644
 --- a/include/linux/blkdev.h
 +++ b/include/linux/blkdev.h
 @@ -26,6 +26,7 @@
@@ -404,7 +404,7 @@ index b8471a49fd1a..7f692c4878a0 100644
  };
  
  /* Keep blk_queue_flag_name[] in sync with the definitions below */
-@@ -1572,6 +1593,11 @@ struct block_device_operations {
+@@ -1568,6 +1589,11 @@ struct block_device_operations {
  	 * driver.
  	 */
  	int (*alternative_gpt_sector)(struct gendisk *disk, sector_t *sector);
@@ -441,7 +441,7 @@ index 14fa93268630..3d4d2ccc6258 100644
  
  void bsg_job_done(struct bsg_job *job, int result,
 diff --git a/include/linux/device/bus.h b/include/linux/device/bus.h
-index cdc4757217f9..88b4b409116a 100644
+index 8e024a78fac7..62b327d61b35 100644
 --- a/include/linux/device/bus.h
 +++ b/include/linux/device/bus.h
 @@ -17,6 +17,7 @@
@@ -452,10 +452,10 @@ index cdc4757217f9..88b4b409116a 100644
  
  struct device_driver;
  struct fwnode_handle;
-@@ -102,6 +103,11 @@ struct bus_type {
- 	const struct dev_pm_ops *pm;
+@@ -106,6 +107,11 @@ struct bus_type {
  
  	bool need_parent_lock;
+ 	UEK_KABI_FILL_HOLE(bool driver_override)
 +
 +	UEK_KABI_RESERVE(1)
 +	UEK_KABI_RESERVE(2)
@@ -489,7 +489,7 @@ index 518c9c83d64b..0b0c0a5e05c5 100644
  
  struct class_dev_iter {
 diff --git a/include/linux/fs.h b/include/linux/fs.h
-index 7989a7bfe346..8cf03da44a06 100644
+index 936e1dd59b6b..f096c9f9c409 100644
 --- a/include/linux/fs.h
 +++ b/include/linux/fs.h
 @@ -45,6 +45,7 @@
@@ -513,21 +513,13 @@ index 7989a7bfe346..8cf03da44a06 100644
  	/*
  	 * On most architectures that alignment is already the case; but
 diff --git a/include/linux/fwnode.h b/include/linux/fwnode.h
-index c7502d338023..3137731456da 100644
+index f8a818745f32..ee59efa5fb9c 100644
 --- a/include/linux/fwnode.h
 +++ b/include/linux/fwnode.h
-@@ -13,6 +13,7 @@
- #include <linux/err.h>
- #include <linux/list.h>
- #include <linux/types.h>
-+#include <linux/uek_kabi.h>
- 
- enum dev_dma_attr {
- 	DEV_DMA_NOT_SUPPORTED,
-@@ -53,6 +54,10 @@ struct fwnode_handle {
+@@ -55,6 +55,10 @@ struct fwnode_handle {
  	struct list_head suppliers;
  	struct list_head consumers;
- 	u8 flags;
+ 	UEK_KABI_REPLACE_UNSAFE_SIZE(u8 flags, unsigned long flags, 1)
 +	UEK_KABI_RESERVE(1)
 +	UEK_KABI_RESERVE(2)
 +	UEK_KABI_RESERVE(3)
@@ -607,7 +599,7 @@ index 5d69820d8b02..e0f7eabb10cb 100644
  
  struct ipmi_device_id {
 diff --git a/include/linux/irq.h b/include/linux/irq.h
-index fa711f80957b..e91a02a63a25 100644
+index 25f51bf3c351..1f80b83742e2 100644
 --- a/include/linux/irq.h
 +++ b/include/linux/irq.h
 @@ -23,6 +23,7 @@
@@ -769,7 +761,7 @@ index 4d17053f6320..16eca89d1be3 100644
  
  #define PGMAP_ALTMAP_VALID	(1 << 0)
 diff --git a/include/linux/mm.h b/include/linux/mm.h
-index 337004a4db10..4b369fcc1d43 100644
+index 00d59ccd9d61..792ce9132399 100644
 --- a/include/linux/mm.h
 +++ b/include/linux/mm.h
 @@ -602,6 +602,10 @@ struct vm_fault {
@@ -784,10 +776,10 @@ index 337004a4db10..4b369fcc1d43 100644
  
  /*
 diff --git a/include/linux/mm_types.h b/include/linux/mm_types.h
-index cdc651b6992f..7627a9892e87 100644
+index 45c0524de4e0..854518642eaa 100644
 --- a/include/linux/mm_types.h
 +++ b/include/linux/mm_types.h
-@@ -1085,16 +1085,21 @@ struct mm_struct {
+@@ -1093,16 +1093,21 @@ struct mm_struct {
  #endif
  		} lru_gen;
  #endif /* CONFIG_LRU_GEN_WALKS_MMU */
@@ -883,7 +875,7 @@ index a72e04d87191..e083dd1400b1 100644
  	pgoff_t _index;
  	unsigned int _nr_pages;
 diff --git a/include/linux/pci.h b/include/linux/pci.h
-index ccb22ce80f56..e65c048cd816 100644
+index 010d3c72524d..a5f43b35ec20 100644
 --- a/include/linux/pci.h
 +++ b/include/linux/pci.h
 @@ -40,6 +40,7 @@
@@ -894,7 +886,7 @@ index ccb22ce80f56..e65c048cd816 100644
  
  #include <linux/pci_ids.h>
  
-@@ -989,6 +990,10 @@ struct pci_driver {
+@@ -1011,6 +1012,10 @@ struct pci_driver {
  	struct device_driver	driver;
  	struct pci_dynids	dynids;
  	bool driver_managed_dma;
@@ -906,10 +898,10 @@ index ccb22ce80f56..e65c048cd816 100644
  
  #define to_pci_driver(__drv)	\
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 2ca95504ef41..68bff207f318 100644
+index 5270f85b3541..c63867dddcfc 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
-@@ -488,6 +488,10 @@ struct sched_avg {
+@@ -486,6 +486,10 @@ struct sched_avg {
  	unsigned long			runnable_avg;
  	unsigned long			util_avg;
  	unsigned int			util_est;
@@ -920,7 +912,7 @@ index 2ca95504ef41..68bff207f318 100644
  } ____cacheline_aligned;
  
  /*
-@@ -613,6 +617,11 @@ struct sched_rt_entity {
+@@ -609,6 +613,11 @@ struct sched_rt_entity {
  	/* rq "owned" by this entity/group: */
  	struct rt_rq			*my_q;
  #endif
@@ -932,7 +924,7 @@ index 2ca95504ef41..68bff207f318 100644
  } __randomize_layout;
  
  typedef bool (*dl_server_has_tasks_f)(struct sched_dl_entity *);
-@@ -761,6 +770,10 @@ struct uclamp_se {
+@@ -757,6 +766,10 @@ struct uclamp_se {
  	unsigned int bucket_id		: bits_per(UCLAMP_BUCKETS);
  	unsigned int active		: 1;
  	unsigned int user_defined	: 1;
@@ -943,7 +935,7 @@ index 2ca95504ef41..68bff207f318 100644
  };
  #endif /* CONFIG_UCLAMP_TASK */
  
-@@ -1635,6 +1648,10 @@ struct task_struct {
+@@ -1643,6 +1656,10 @@ struct task_struct {
  	struct user_event_mm		*user_event_mm;
  #endif
  
@@ -1002,10 +994,10 @@ index 1a00be90d93a..19a5d9e08223 100644
  #define DEFAULT_SEEKS 2 /* A good number if you don't know better. */
  
 diff --git a/include/linux/skbuff.h b/include/linux/skbuff.h
-index 8dad9bb5de4f..248d22edb80c 100644
+index 21fd1b0d475b..c397063757f9 100644
 --- a/include/linux/skbuff.h
 +++ b/include/linux/skbuff.h
-@@ -1072,6 +1072,11 @@ struct sk_buff {
+@@ -1074,6 +1074,11 @@ struct sk_buff {
  	u64			kcov_handle;
  #endif
  
@@ -1017,7 +1009,7 @@ index 8dad9bb5de4f..248d22edb80c 100644
  	); /* end headers group */
  
  	/* These elements must be at the end, see alloc_skb() for details.  */
-@@ -1086,7 +1091,7 @@ struct sk_buff {
+@@ -1088,7 +1093,7 @@ struct sk_buff {
  	/* only usable after checking ->active_extensions != 0 */
  	struct skb_ext		*extensions;
  #endif
@@ -1067,7 +1059,7 @@ index fae5a388f914..7d2d71012ad3 100644
  
  #endif /* _LINUX_TIMER_TYPES_H */
 diff --git a/include/linux/trace_events.h b/include/linux/trace_events.h
-index 3eceb5c08a80..4c6383c983b5 100644
+index 9168e4490e5b..14d3c5b755ae 100644
 --- a/include/linux/trace_events.h
 +++ b/include/linux/trace_events.h
 @@ -9,6 +9,7 @@
@@ -1099,7 +1091,7 @@ index 3eceb5c08a80..4c6383c983b5 100644
  
  	/* All new field here will be zeroed out in pipe_read */
  };
-@@ -688,6 +694,10 @@ struct trace_event_file {
+@@ -685,6 +691,10 @@ struct trace_event_file {
  	refcount_t		ref;	/* ref count for opened files */
  	atomic_t		sm_ref;	/* soft-mode reference counter */
  	atomic_t		tm_ref;	/* trigger-mode reference counter */
@@ -1152,10 +1144,10 @@ index 836e705d7b79..9e4170f0e47a 100644
  
  static inline int dst_entries_get_fast(struct dst_ops *dst)
 diff --git a/include/net/genetlink.h b/include/net/genetlink.h
-index fe7d309f3d22..7f130ec75c84 100644
+index 1fe2d06e4c5b..138da9e2a7c3 100644
 --- a/include/net/genetlink.h
 +++ b/include/net/genetlink.h
-@@ -201,6 +201,11 @@ struct genl_small_ops {
+@@ -205,6 +205,11 @@ struct genl_small_ops {
  	u8	internal_flags;
  	u8	flags;
  	u8	validate;
@@ -1167,7 +1159,7 @@ index fe7d309f3d22..7f130ec75c84 100644
  };
  
  /**
-@@ -289,6 +294,11 @@ struct genl_split_ops {
+@@ -293,6 +298,11 @@ struct genl_split_ops {
  	u8			internal_flags;
  	u8			flags;
  	u8			validate;
@@ -1180,7 +1172,7 @@ index fe7d309f3d22..7f130ec75c84 100644
  
  /**
 diff --git a/include/net/ip6_fib.h b/include/net/ip6_fib.h
-index 8d4ef809cacc..87e6682f67d2 100644
+index 36eb59c7bd3f..7d9ac8364ef6 100644
 --- a/include/net/ip6_fib.h
 +++ b/include/net/ip6_fib.h
 @@ -201,6 +201,12 @@ struct fib6_info {
@@ -1197,7 +1189,7 @@ index 8d4ef809cacc..87e6682f67d2 100644
  };
  
 diff --git a/include/net/ip_fib.h b/include/net/ip_fib.h
-index 967e4dc555fa..c00e48768a95 100644
+index 50060441fa93..642bc1799025 100644
 --- a/include/net/ip_fib.h
 +++ b/include/net/ip_fib.h
 @@ -24,6 +24,7 @@
@@ -1259,7 +1251,7 @@ index de216cbc6b05..4832e93f715c 100644
  
  void macsec_pn_wrapped(struct macsec_secy *secy, struct macsec_tx_sa *tx_sa);
 diff --git a/include/net/netlink.h b/include/net/netlink.h
-index db6af207287c..64af6250af31 100644
+index bcc1ad092b51..34a35c5a8c8b 100644
 --- a/include/net/netlink.h
 +++ b/include/net/netlink.h
 @@ -6,6 +6,7 @@
@@ -1270,7 +1262,7 @@ index db6af207287c..64af6250af31 100644
  
  /* ========================================================================
   *         Netlink Messages and Attributes Interface (As Seen On TV)
-@@ -373,6 +374,11 @@ struct nla_policy {
+@@ -375,6 +376,11 @@ struct nla_policy {
  		int (*validate)(const struct nlattr *attr,
  				struct netlink_ext_ack *extack);
  	};
@@ -1307,10 +1299,10 @@ index d9fb44e8b321..547e0b529f90 100644
  	struct nh_grp_entry	nh_entries[] __counted_by(num_nh);
  };
 diff --git a/include/net/sch_generic.h b/include/net/sch_generic.h
-index 2c002c0836cf..0663fd6fc02b 100644
+index acbc62e175af..c152d55848dd 100644
 --- a/include/net/sch_generic.h
 +++ b/include/net/sch_generic.h
-@@ -130,6 +130,12 @@ struct Qdisc {
+@@ -131,6 +131,12 @@ struct Qdisc {
  	struct rcu_head		rcu;
  	netdevice_tracker	dev_tracker;
  	struct lock_class_key	root_lock_key;
@@ -1324,10 +1316,10 @@ index 2c002c0836cf..0663fd6fc02b 100644
  	long privdata[] ____cacheline_aligned;
  };
 diff --git a/include/net/tls.h b/include/net/tls.h
-index e618ea561cb5..9349f87fcefe 100644
+index a3b0b8c061c0..7e0c4acc6657 100644
 --- a/include/net/tls.h
 +++ b/include/net/tls.h
-@@ -205,6 +205,11 @@ union tls_crypto_context {
+@@ -208,6 +208,11 @@ union tls_crypto_context {
  		struct tls12_crypto_info_sm4_gcm sm4_gcm;
  		struct tls12_crypto_info_sm4_ccm sm4_ccm;
  	};
@@ -1339,7 +1331,7 @@ index e618ea561cb5..9349f87fcefe 100644
  };
  
  struct tls_prot_info {
-@@ -282,6 +287,11 @@ struct tlsdev_ops {
+@@ -285,6 +290,11 @@ struct tlsdev_ops {
  	int (*tls_dev_resync)(struct net_device *netdev,
  			      struct sock *sk, u32 seq, u8 *rcd_sn,
  			      enum tls_offload_ctx_dir direction);
@@ -1352,7 +1344,7 @@ index e618ea561cb5..9349f87fcefe 100644
  
  enum tls_offload_sync_type {
 diff --git a/include/net/udp_tunnel.h b/include/net/udp_tunnel.h
-index 2787b4eec8eb..2c2f19d781bb 100644
+index c719acf3ef91..9e0da2e4cf24 100644
 --- a/include/net/udp_tunnel.h
 +++ b/include/net/udp_tunnel.h
 @@ -4,6 +4,7 @@
@@ -1363,7 +1355,7 @@ index 2787b4eec8eb..2c2f19d781bb 100644
  
  #if IS_ENABLED(CONFIG_IPV6)
  #include <net/ipv6.h>
-@@ -231,6 +232,11 @@ struct udp_tunnel_nic_shared {
+@@ -213,6 +214,11 @@ struct udp_tunnel_nic_shared {
  	struct udp_tunnel_nic *udp_tunnel_nic_info;
  
  	struct list_head devices;
@@ -1375,7 +1367,7 @@ index 2787b4eec8eb..2c2f19d781bb 100644
  };
  
  struct udp_tunnel_nic_shared_node {
-@@ -286,7 +292,17 @@ struct udp_tunnel_nic_info {
+@@ -268,7 +274,17 @@ struct udp_tunnel_nic_info {
  	struct udp_tunnel_nic_table_info {
  		unsigned int n_entries;
  		unsigned int tunnel_types;
@@ -1394,7 +1386,7 @@ index 2787b4eec8eb..2c2f19d781bb 100644
  
  /* UDP tunnel module dependencies
 diff --git a/include/net/xsk_buff_pool.h b/include/net/xsk_buff_pool.h
-index 823fd5c7a3b1..3b9c7e58fd03 100644
+index 53e9a2d48fb2..25c2ae245ae4 100644
 --- a/include/net/xsk_buff_pool.h
 +++ b/include/net/xsk_buff_pool.h
 @@ -9,6 +9,7 @@
@@ -1405,7 +1397,7 @@ index 823fd5c7a3b1..3b9c7e58fd03 100644
  
  struct xsk_buff_pool;
  struct xdp_rxq_info;
-@@ -91,6 +92,10 @@ struct xsk_buff_pool {
+@@ -90,6 +91,10 @@ struct xsk_buff_pool {
  	 * sockets share a single cq when the same netdev and queue id is shared.
  	 */
  	spinlock_t cq_lock;
@@ -1610,7 +1602,7 @@ index e3b6ce3cbf88..0015ec8c445e 100644
  
  
 diff --git a/kernel/sched/sched.h b/kernel/sched/sched.h
-index f1ff9a17c5fc..8da5cf5d7f6c 100644
+index 79db1bc4643d..0601fc7202fc 100644
 --- a/kernel/sched/sched.h
 +++ b/kernel/sched/sched.h
 @@ -71,6 +71,7 @@
@@ -1657,7 +1649,7 @@ index f1ff9a17c5fc..8da5cf5d7f6c 100644
  
  #ifdef CONFIG_FAIR_GROUP_SCHED
 diff --git a/net/devlink/devl_internal.h b/net/devlink/devl_internal.h
-index 4eee580614b6..31578928f0b8 100644
+index 14eaad9cfe35..6f0c94814b70 100644
 --- a/net/devlink/devl_internal.h
 +++ b/net/devlink/devl_internal.h
 @@ -3,6 +3,7 @@
