@@ -34,7 +34,7 @@
 Name: kernel
 License: GPLv2
 Version: %{usver}
-Release: 2%{dist}
+Release: 2.1%{dist}
 ExclusiveOS: Linux
 Summary: The Linux kernel
 BuildRequires: kmod
@@ -133,10 +133,10 @@ Patch37: 0027-For-XenServer-the-desired-behaviour-is-that-signatur.patch
 Patch38: 0028-Use-MoK-variable-fallback.patch
 Patch39: 0029-Allows-Xen-Netback-debug-ring-files-to-be-read-if-lo.patch
 Patch40: 0030-Import-the-Xen-public-headers-in-preparation-for-fil.patch
-Patch41: 0031-Filter-and-check-hypercalls-from-userspace.patch
-Patch42: 0032-module-hash-revocation.patch.patch
+Patch41: 0031-Filter-and-check-hypercalls-from-userspace-rebase-to-6.12.0-206.100.3.1.patch
+Patch42: 0032-module-hash-revocation.patch--rebase-to-6.12.0-206.100.3.1.patch
 #Patch43: 0001-gfs2-fix-debugfs-access.patch: GFS2 not supported
-Patch44: 0033-CP-46343-common-data-structure-padding.patch
+Patch44: 0033-CP-46343-common-data-structure-padding-rebase-to-6.12.0-206.100.3.1.patch
 Patch45: 0034-CP-46343-reserve-cpuid-leaves-for-future-use.patch
 #Patch46: abi-version.patch: Citrix specific patch
 
@@ -489,6 +489,7 @@ fi
 %changelog
 * Wed Sep 7 2026 Corentin Oparowski <corentin.oparowski@vates.tech> - 6.12.0-3
 - Update patchqueue to match Xenserver original XS9
+- Rebase on top of 6.12.0-206-100.3.1
 
 * Fri Aug 07 2026 Yann Dirson <yann.dirson@vates.tech> - 6.12.0-2
 - Add "Provides: kernel-xcpng" so the installer can be sure to pull this kernel not Alma's
