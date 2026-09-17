@@ -1,0 +1,48 @@
+From 4b613670f3e2b0b7c488660ca863b8bbbf917da2 Mon Sep 17 00:00:00 2001
+From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+Date: Fri, 9 Oct 2026 12:14:15 +0200
+Subject: [PATCH] shadow_var: export the API to modules
+
+The shadow variable API was only used by built-in code so far, but the
+nf_queue kabi rework uses it from nfnetlink_queue, which is built as a
+module (CONFIG_NETFILTER_NETLINK_QUEUE=m).  Export the three functions so
+that the module links.
+
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+---
+ kernel/shadow_var.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/kernel/shadow_var.c b/kernel/shadow_var.c
+index 54ac27026025..167940c845d9 100644
+--- a/kernel/shadow_var.c
++++ b/kernel/shadow_var.c
+@@ -42,6 +42,7 @@
+  * shadow_var_free(tsk, "newpid");
+  */
+ 
++#include <linux/export.h>
+ #include <linux/shadow_var.h>
+ 
+ static DEFINE_HASHTABLE(kpatch_shadow_hash, 12);
+@@ -114,6 +115,7 @@ void *shadow_var_alloc(void *obj, char *var, size_t size, gfp_t gfp)
+ 
+ 	return shadow->data;
+ }
++EXPORT_SYMBOL_GPL(shadow_var_alloc);
+ 
+ static void kpatch_shadow_rcu_free(struct rcu_head *head)
+ {
+@@ -146,6 +148,7 @@ void shadow_var_free(void *obj, char *var)
+ 
+ 	spin_unlock_irqrestore(&kpatch_shadow_lock, flags);
+ }
++EXPORT_SYMBOL_GPL(shadow_var_free);
+ 
+ void *shadow_var_get(void *obj, char *var)
+ {
+@@ -168,3 +171,4 @@ void *shadow_var_get(void *obj, char *var)
+ 
+ 	return NULL;
+ }
++EXPORT_SYMBOL_GPL(shadow_var_get);

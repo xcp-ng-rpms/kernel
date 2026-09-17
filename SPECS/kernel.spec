@@ -44,7 +44,7 @@
 Name: kernel
 License: GPLv2
 Version: 4.19.19
-Release: %{?xsrel}.12%{?dist}
+Release: %{?xsrel}.13%{?dist}
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
@@ -774,6 +774,103 @@ Patch1028: 0001-SUNRPC-avoid-race-between-mod_timer-and-del_timer_sy.patch
 Patch1029: 0002-SUNRPC-use-_bh-spinlocking-on-transport_lock.patch
 Patch1030: 0003-Revert-XSI-2150-Avoid-deadlocks-on-NFS-spinlocks.patch
 
+# Export the shadow variable API to modules, used by kABI fixes later
+Patch1031: 0001-shadow_var-export-the-API-to-modules.patch
+
+# CVE-2026-31659
+Patch1032: 0001-batman-adv-initialize-struct-batadv_tvlv_tt_vlan_dat.patch
+Patch1033: 0002-batman-adv-Don-t-accept-TT-entries-for-out-of-spec-V.patch
+Patch1034: 0003-batman-adv-Do-not-send-uninitialized-TT-changes.patch
+Patch1035: 0004-batman-adv-Remove-uninitialized-data-in-full-table-T.patch
+Patch1036: 0005-batman-adv-Do-not-let-TT-changes-list-grows-indefini.patch
+Patch1037: 0006-batman-adv-tt-reject-oversized-local-TVLV-buffers.patch
+# Actual CVE fix, earlier commits are pre-requisites
+Patch1038: 0007-batman-adv-reject-oversized-global-TT-response-buffe.patch
+
+# CVE-2026-31678
+# Actual CVE fix
+Patch1039: 0001-openvswitch-defer-tunnel-netdev_put-to-RCU-release.patch
+# Iterative upstream fix
+Patch1040: 0002-openvswitch-vport-fix-self-deadlock-on-release-of-tu.patch
+
+# CVE-2026-43502
+Patch1041: 0001-net-rds-handle-zerocopy-send-cleanup-before-the-mess.patch
+
+# CVE-2026-52912
+Patch1042: 0001-net-make-skb_dst_force-return-true-when-dst-is-refco.patch
+Patch1043: 0002-netfilter-nf_queue-enqueue-skbs-with-NULL-dst.patch
+Patch1044: 0003-netfilter-nf_queue-fix-possible-use-after-free.patch
+Patch1045: 0004-netfilter-nf_queue-fix-socket-leak.patch
+Patch1046: 0005-netfilter-nf_queue-hold-bridge-skb-dev-while-queued.patch
+Patch1047: 0006-kabi-netfilter-nf_queue-fix-possible-use-after-free.patch
+# Actual CVE fix, earlier commits are pre-requisites
+Patch1048: 0007-kabi-netfilter-nf_queue-hold-bridge-skb-dev-while-qu.patch
+
+# CVE-2026-52923, plus related ipc fixes
+Patch1049: 0001-ipc-IPCMNI-limit-check-for-msgmni-and-shmmni.patch
+Patch1050: 0002-ipc-IPCMNI-limit-check-for-semmni.patch
+Patch1051: 0003-ipc-allow-boot-time-extension-of-IPCMNI-from-32k-to-.patch
+Patch1052: 0004-ipc-conserve-sequence-numbers-in-ipcmni_extend-mode.patch
+Patch1053: 0005-ipc-do-cyclic-id-allocation-for-the-ipc-object.patch
+Patch1054: 0006-kabi-ipc-conserve-sequence-numbers-in-ipcmni_extend-.patch
+Patch1055: 0007-ipc-util.c-sysvipc_find_ipc-should-increase-position.patch
+Patch1056: 0008-ipc-util.c-sysvipc_find_ipc-incorrectly-updates-posi.patch
+Patch1057: 0009-ipc-replace-costly-bailout-check-in-sysvipc_find_ipc.patch
+# Actual CVE fix, earlier are pre-requisites, and later are iterative fixes
+Patch1058: 0010-ipc-limit-next_id-allocation-to-the-valid-ID-range.patch
+Patch1059: 0011-ipc-WARN-if-trying-to-remove-ipc-object-which-is-abs.patch
+Patch1060: 0012-shm-extend-forced-shm-destroy-to-support-objects-fro.patch
+Patch1061: 0013-ipc-util.c-use-binary-search-for-max_idx.patch
+
+# CVE-2026-52924
+Patch1062: 0001-sctp-purge-outqueue-on-stale-COOKIE-ECHO-handling.patch
+
+# CVE-2026-68376
+Patch1063: 0001-sctp-fix-auth_hmacs-array-size-in-struct-sctp_cookie.patch
+Patch1064: 0002-kabi-sctp-fix-auth_hmacs-array-size-in-struct-sctp_c.patch
+
+# CVE-2026-74480
+Patch1065: 0001-net-bridge-stop-fast-leave-after-deleting-a-port-gro.patch
+
+# CVE-2026-74957
+Patch1066: 0001-ip6_tunnel-clear-skb2-cb-in-ip6ip6_err.patch
+
+# CVE-2026-80714
+Patch1067: 0001-ipvs-do-not-propagate-one-packet-flag-to-synced-conn.patch
+
+# CVE-2026-52929
+Patch1068: 0001-sctp-set-stream-ext-to-NULL-after-freeing-it-in-sctp.patch
+Patch1069: 0002-sctp-shrink-stream-outq-only-when-new-outcnt-old-out.patch
+Patch1070: 0003-sctp-shrink-stream-outq-when-fails-to-do-addstream-r.patch
+# Actual CVE fix, earlier commits are pre-requisites
+Patch1071: 0004-sctp-stream-fully-roll-back-denied-add-stream-state.patch
+
+# CVE-2026-63834
+Patch1072: 0001-batman-adv-tp_meter-keep-unacked-list-in-ascending-o.patch
+# Actual CVE fix, earlier commit is a pre-requisite
+Patch1073: 0002-batman-adv-tp_meter-restrict-number-of-unacked-list-.patch
+
+# CVE-2026-43042
+Patch1074: 0001-mpls-add-seqcount-to-protect-the-platform_label-s-pa.patch
+
+# CVE-2026-72255
+Patch1075: 0001-netfilter-avoid-using-skb-nf_bridge-directly.patch
+Patch1076: 0002-netfilter-nf_queue-place-bridge-physports-into-queue.patch
+Patch1077: 0003-netfilter-nf_queue-remove-excess-nf_bridge-variable.patch
+Patch1078: 0004-netfilter-add-dst_dev_rcu-helper-function.patch
+Patch1079: 0005-netfilter-nf_queue-pin-bridge-device-while-NFQUEUE-h.patch
+Patch1080: 0006-kabi-netfilter-nf_queue-place-bridge-physports-into-.patch
+# Actual CVE fix, earlier commits are pre-requisites
+Patch1081: 0007-kabi-netfilter-nf_queue-pin-bridge-device-while-NFQU.patch
+
+# Iterative fixes to CVE-2026-52912/CVE-2026-72255
+Patch1082: 0001-netfilter-nf_queue-add-nf_queue_entry_free-helper.patch
+Patch1083: 0002-netfilter-nf_queue-do-not-release-refcouts-until-nf_.patch
+Patch1084: 0003-netfilter-nf_queue-prefer-nf_queue_entry_free.patch
+Patch1085: 0001-netfilter-br_netfilter-disable-sabotage_in-hook-afte.patch
+Patch1086: 0002-netfilter-br_netfilter-fix-recent-physdev-match-brea.patch
+Patch1087: 0003-kabi-netfilter-br_netfilter-fix-recent-physdev-match.patch
+
 %description
 The kernel package contains the Linux kernel (vmlinuz), the core of any
 Linux operating system. The kernel handles the basic functions of the operating
@@ -1133,6 +1230,23 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Fri Oct 09 2026 Quentin Casasnovas <quentin.casasnovas@vates.tech> - 4.19.19-8.0.46.13
+- Backport security fixes for:
+  - CVE-2026-31659
+  - CVE-2026-31678
+  - CVE-2026-43502
+  - CVE-2026-52912
+  - CVE-2026-52923
+  - CVE-2026-52924
+  - CVE-2026-68376
+  - CVE-2026-74480
+  - CVE-2026-74957
+  - CVE-2026-80714
+  - CVE-2026-52929
+  - CVE-2026-63834
+  - CVE-2026-43042
+  - CVE-2026-72255
+
 * Thu Sep 24 2026 Yann Dirson <yann.dirson@vates.tech> - 4.19.19-8.0.46.12
 - Drop lp-devel package
 

@@ -1,0 +1,102 @@
+From 38261f62145a8f2bd6c1b67a2061de99645a7a64 Mon Sep 17 00:00:00 2001
+From: Sabrina Dubroca <sd@queasysnail.net>
+Date: Tue, 24 Mar 2026 00:25:57 +0100
+Subject: [PATCH] mpls: add seqcount to protect the platform_label{,s} pair
+
+The RCU-protected codepaths (mpls_forward, mpls_dump_routes) can have
+an inconsistent view of platform_labels vs platform_label in case of a
+concurrent resize (resize_platform_label_table, under
+platform_mutex). This can lead to OOB accesses.
+
+This patch adds a seqcount, so that we get a consistent snapshot.
+
+Note that mpls_label_ok is also susceptible to this, so the check
+against RTA_DST in rtm_to_route_config, done outside platform_mutex,
+is not sufficient. This value gets passed to mpls_label_ok once more
+in both mpls_route_add and mpls_route_del, so there is no issue, but
+that additional check must not be removed.
+
+Reported-by: Yuan Tan <tanyuan98@outlook.com>
+Reported-by: Yifan Wu <yifanwucs@gmail.com>
+Reported-by: Juefei Pu <tomapufckgml@gmail.com>
+Reported-by: Xin Liu <bird@lzu.edu.cn>
+Fixes: 7720c01f3f590 ("mpls: Add a sysctl to control the size of the mpls label table")
+Fixes: dde1b38e873c ("mpls: Convert mpls_dump_routes() to RCU.")
+Signed-off-by: Sabrina Dubroca <sd@queasysnail.net>
+Link: https://patch.msgid.link/cd8fca15e3eb7e212b094064cd83652e20fd9d31.1774284088.git.sd@queasysnail.net
+Signed-off-by: Jakub Kicinski <kuba@kernel.org>
+(cherry picked from commit 629ec78ef8608d955ce217880cdc3e1873af3a15)
+
+[Quentin: reworked the patch to use a static seqcount_t for all
+platform_labels as we can't touch the kabi of mpls_ns like the original
+patch.  It might add slight contention on the lock but fixes a serious
+security vulnerability.]
+
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+---
+ net/mpls/af_mpls.c | 40 +++++++++++++++++++++++++++++++++-------
+ 1 file changed, 33 insertions(+), 7 deletions(-)
+
+diff --git a/net/mpls/af_mpls.c b/net/mpls/af_mpls.c
+index 8fbe6cdbe255..70e77587697c 100644
+--- a/net/mpls/af_mpls.c
++++ b/net/mpls/af_mpls.c
+@@ -75,16 +75,38 @@ static void rtmsg_lfib(int event, u32 label, struct mpls_route *rt,
+ 		       struct nlmsghdr *nlh, struct net *net, u32 portid,
+ 		       unsigned int nlm_flags);
+ 
++/*
++ * Protects the platform_label{,s} pair of every netns: we can't add a
++ * per-netns seqcount to struct netns_mpls without breaking the kABI.
++ * Writers are serialized by the RTNL.
++ */
++static seqcount_t mpls_platform_label_seq = SEQCNT_ZERO(mpls_platform_label_seq);
++
++static struct mpls_route __rcu **mpls_platform_label_rcu(struct net *net, size_t *platform_labels)
++{
++	struct mpls_route __rcu **platform_label;
++	unsigned int sequence;
++
++	do {
++		sequence = read_seqcount_begin(&mpls_platform_label_seq);
++		platform_label = rcu_dereference(net->mpls.platform_label);
++		*platform_labels = net->mpls.platform_labels;
++	} while (read_seqcount_retry(&mpls_platform_label_seq, sequence));
++
++	return platform_label;
++}
++
+ static struct mpls_route *mpls_route_input_rcu(struct net *net, unsigned index)
+ {
+-	struct mpls_route *rt = NULL;
++	struct mpls_route __rcu **platform_label;
++	size_t platform_labels;
+ 
+-	if (index < net->mpls.platform_labels) {
+-		struct mpls_route __rcu **platform_label =
+-			rcu_dereference(net->mpls.platform_label);
+-		rt = rcu_dereference(platform_label[index]);
+-	}
+-	return rt;
++	platform_label = mpls_platform_label_rcu(net, &platform_labels);
++
++	if (index >= platform_labels)
++		return NULL;
++
++	return rcu_dereference(platform_label[index]);
+ }
+ 
+ bool mpls_output_possible(const struct net_device *dev)
+@@ -2349,8 +2371,12 @@ static int resize_platform_label_table(struct net *net, size_t limit)
+ 	}
+ 
+ 	/* Update the global pointers */
++	local_bh_disable();
++	write_seqcount_begin(&mpls_platform_label_seq);
+ 	net->mpls.platform_labels = limit;
+ 	rcu_assign_pointer(net->mpls.platform_label, labels);
++	write_seqcount_end(&mpls_platform_label_seq);
++	local_bh_enable();
+ 
+ 	rtnl_unlock();
+ 

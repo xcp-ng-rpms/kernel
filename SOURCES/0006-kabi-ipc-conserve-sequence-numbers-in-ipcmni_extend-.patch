@@ -1,0 +1,88 @@
+From 6f65975eaf0836b8284ef409fd4d128320f32cff Mon Sep 17 00:00:00 2001
+From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+Date: Mon, 28 Sep 2026 10:42:03 +0200
+Subject: [PATCH] !kabi ipc: conserve sequence numbers in ipcmni_extend mode
+
+Adding last_idx to struct ipc_ids breaks the kabi: with
+CONFIG_CHECKPOINT_RESTORE=y, next_id already fills the hole after max_idx
+so the structure grows by 8 bytes, shifting every field of struct
+ipc_namespace that follows its ids[] array.
+
+The field is only used to detect when the cyclic id allocator wraps
+around, which the idr already tracks: idr_alloc_cyclic() always leaves
+idr_next at one past the index it handed out, and idr_init() sets it to 0.
+So "idx <= last_idx" is the same as "idx < cursor" with the cursor read
+just before the allocation, including the initial state (last_idx = -1
+vs cursor = 0).  The checkpoint/restore path uses idr_alloc(), which never
+touches the cursor, just like it never touched last_idx.
+
+Drop the field and use idr_get_cursor() instead.
+
+This relies on the cyclic allocator, so this commit must come after
+8cc219dbd7a3 ("ipc: do cyclic id allocation for the ipc object."): before
+it, ipc_idr_alloc() uses idr_alloc() and the cursor never moves.
+
+Fixes: bca8a89591ef ("ipc: conserve sequence numbers in ipcmni_extend mode")
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+---
+ include/linux/ipc_namespace.h |  1 -
+ ipc/util.c                    | 11 ++++++++---
+ 2 files changed, 8 insertions(+), 4 deletions(-)
+
+diff --git a/include/linux/ipc_namespace.h b/include/linux/ipc_namespace.h
+index c309f43bde45..6ab8c1bada3f 100644
+--- a/include/linux/ipc_namespace.h
++++ b/include/linux/ipc_namespace.h
+@@ -19,7 +19,6 @@ struct ipc_ids {
+ 	struct rw_semaphore rwsem;
+ 	struct idr ipcs_idr;
+ 	int max_idx;
+-	int last_idx;	/* For wrap around detection */
+ #ifdef CONFIG_CHECKPOINT_RESTORE
+ 	int next_id;
+ #endif
+diff --git a/ipc/util.c b/ipc/util.c
+index 1a492afb1d8b..21189b4df851 100644
+--- a/ipc/util.c
++++ b/ipc/util.c
+@@ -120,7 +120,6 @@ void ipc_init_ids(struct ipc_ids *ids)
+ 	rhashtable_init(&ids->key_ht, &ipc_kht_params);
+ 	idr_init(&ids->ipcs_idr);
+ 	ids->max_idx = -1;
+-	ids->last_idx = -1;
+ #ifdef CONFIG_CHECKPOINT_RESTORE
+ 	ids->next_id = -1;
+ #endif
+@@ -221,11 +220,18 @@ static inline int ipc_idr_alloc(struct ipc_ids *ids, struct kern_ipc_perm *new)
+ 	 */
+ 
+ 	if (next_id < 0) { /* !CHECKPOINT_RESTORE or next_id is unset */
++		unsigned int cursor;
+ 		int max_idx;
+ 
+ 		max_idx = max(ids->in_use*3/2, ipc_min_cycle);
+ 		max_idx = min(max_idx, ipc_mni);
+ 
++		/*
++		 * The cyclic allocator cursor is one past the last idx it
++		 * handed out: allocating below it means we wrapped around.
++		 */
++		cursor = idr_get_cursor(&ids->ipcs_idr);
++
+ 		/* allocate the idx, with a NULL struct kern_ipc_perm */
+ 		idx = idr_alloc_cyclic(&ids->ipcs_idr, NULL, 0, max_idx,
+ 					GFP_NOWAIT);
+@@ -236,12 +242,11 @@ static inline int ipc_idr_alloc(struct ipc_ids *ids, struct kern_ipc_perm *new)
+ 			 * Now calculate the sequence number and set the
+ 			 * pointer for real.
+ 			 */
+-			if (idx <= ids->last_idx) {
++			if (idx < cursor) {
+ 				ids->seq++;
+ 				if (ids->seq >= ipcid_seq_max())
+ 					ids->seq = 0;
+ 			}
+-			ids->last_idx = idx;
+ 
+ 			new->seq = ids->seq;
+ 			/* no need for smp_wmb(), this is done
