@@ -31,7 +31,7 @@
 %global __provides_exclude_from ^%{lp_devel_dir}/.*$
 %global __requires_exclude_from ^%{lp_devel_dir}/.*$
 
-Name: kernel
+Name: kernel-xcpng
 License: GPLv2
 Version: %{usver}
 Release: 2%{dist}
@@ -172,10 +172,11 @@ Group: Development/System
 Contains the prepared source files, config, and vmlinux for building live
 patches against base version %{version}-%{release}.
 
-%package -n perf
+%package -n perf-xcpng
 Summary: Performance monitoring for the Linux kernel
+Provides: perf
 License: GPLv2
-%description -n perf
+%description -n perf-xcpng
 This package contains the perf tool, which enables performance monitoring
 of the Linux kernel.
 
@@ -184,10 +185,10 @@ of the Linux kernel.
 written in the Python programming language to use the interface \
 to manipulate perf events.
 
-%package -n python3-perf
+%package -n python3-perf-xcpng
 Summary: %{pythonperfsum}
 Provides: python3-perf
-%description -n python3-perf
+%description -n python3-perf-xcpng
 %{pythonperfdesc}
 
 %prep
@@ -453,7 +454,7 @@ fi
 %verify(not mtime) /usr/src/kernels/%{uname}-%{_arch}
 %{_rpmconfigdir}/macros.d/macros.kernel
 
-%files -n perf
+%files -n perf-xcpng
 %{_bindir}/perf
 %{_libexecdir}/perf-core
 %{_datadir}/perf-core/
@@ -462,7 +463,7 @@ fi
 %doc tools/perf/Documentation/examples.txt
 %license COPYING
 
-%files -n python3-perf
+%files -n python3-perf-xcpng
 %license COPYING
 %{python3_sitearch}/*
 
@@ -472,6 +473,9 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Mon Sep 21 2026 Yann Dirson <yann.dirson@vates.tech> - 6.12.0-3
+- Change package name to kernel-xcpng
+
 * Fri Aug 07 2026 Yann Dirson <yann.dirson@vates.tech> - 6.12.0-2
 - Add "Provides: kernel-xcpng" so the installer can be sure to pull this kernel not Alma's
 - Disable XS modification of CONFIG_MODULE_SIG_FORCE behaviour
