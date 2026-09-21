@@ -74,15 +74,15 @@ BuildRequires: xz-devel
 BuildRequires: libunwind-devel
 BuildRequires: python3-devel
 BuildRequires: python3-setuptools
-BuildRequires: asciidoc xmlto
+BuildRequires: asciidoc, xmlto
 %{?_cov_buildrequires}
 AutoReqProv: no
 Provides: kernel-uname-r = %{uname}
 Provides: kernel = %{version}-%{release}
 Provides: kernel-%{_arch} = %{version}-%{release}
 Obsoletes: kernel < %{version}-%{release}
-Requires(post): coreutils kmod
-Requires(posttrans): coreutils dracut kmod
+Requires(post): coreutils, kmod
+Requires(posttrans): coreutils, dracut, kmod
 
 Source0: UEK8-6.12.0-206.100.3.1.tar.xz
 Source1: kernel-x86_64.config
@@ -490,6 +490,7 @@ fi
 %changelog
 * Wed Nov 04 2026 Yann Dirson <yann.dirson@vates.tech> - 6.12.0-4
 - Change package name to kernel-xcpng, obsoletes older "kernel"
+- Stop using obsolete space separator in *Requires lists
 
 * Mon Sep 07 2026 Corentin Oparowski <corentin.oparowski@vates.tech> - 6.12.0-3
 - Update patchqueue to match Xenserver 6.6.98-19 revision
