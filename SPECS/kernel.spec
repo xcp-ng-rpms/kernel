@@ -476,6 +476,7 @@ fi
 * Mon Sep 21 2026 Yann Dirson <yann.dirson@vates.tech> - 6.12.0-3
 - Change package name to kernel-xcpng
 - Stop using obsolete space separator in *Requires lists
+- Updated .config for use by the Alma 10.1 toolchain
 
 * Fri Aug 07 2026 Yann Dirson <yann.dirson@vates.tech> - 6.12.0-2
 - Add "Provides: kernel-xcpng" so the installer can be sure to pull this kernel not Alma's
