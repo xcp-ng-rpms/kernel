@@ -74,15 +74,15 @@ BuildRequires: xz-devel
 BuildRequires: libunwind-devel
 BuildRequires: python3-devel
 BuildRequires: python3-setuptools
-BuildRequires: asciidoc xmlto
+BuildRequires: asciidoc, xmlto
 %{?_cov_buildrequires}
 AutoReqProv: no
 Provides: kernel-uname-r = %{uname}
 Provides: kernel = %{version}-%{release}
 Provides: kernel-%{_arch} = %{version}-%{release}
 Provides: kernel-xcpng
-Requires(post): coreutils kmod
-Requires(posttrans): coreutils dracut kmod
+Requires(post): coreutils, kmod
+Requires(posttrans): coreutils, dracut, kmod
 
 Source0: linux-%{usver}.tar.xz
 Source1: kernel-x86_64.config
@@ -475,6 +475,7 @@ fi
 %changelog
 * Mon Sep 21 2026 Yann Dirson <yann.dirson@vates.tech> - 6.12.0-3
 - Change package name to kernel-xcpng
+- Stop using obsolete space separator in *Requires lists
 
 * Fri Aug 07 2026 Yann Dirson <yann.dirson@vates.tech> - 6.12.0-2
 - Add "Provides: kernel-xcpng" so the installer can be sure to pull this kernel not Alma's
