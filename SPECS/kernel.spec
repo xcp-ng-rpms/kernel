@@ -25,11 +25,11 @@
 # since some of them are for Python 3 only. Just ignore the errors.
 %global _python_bytecompile_errors_terminate_build 0
 
-%define lp_devel_dir %{_usrsrc}/kernel-%{version}-%{release}
-
-# Prevent RPM adding Provides/Requires to lp-devel package
-%global __provides_exclude_from ^%{lp_devel_dir}/.*$
-%global __requires_exclude_from ^%{lp_devel_dir}/.*$
+# %%define lp_devel_dir %%{_usrsrc}/kernel-%%{version}-%%{release}
+#
+# # Prevent RPM adding Provides/Requires to lp-devel package
+# %%global __provides_exclude_from ^%%{lp_devel_dir}/.*$
+# %%global __requires_exclude_from ^%%{lp_devel_dir}/.*$
 
 Name: kernel-xcpng
 License: GPLv2
@@ -177,15 +177,15 @@ Provides: kernel-devel-uname-r = %{uname}
 This package provides kernel headers and makefiles sufficient to build modules
 against the %{uname} kernel.
 
-%package lp-devel_%{version}_%{release}
-License: GPLv2
-Summary: Development package for building livepatches
-Group: Development/System
-%{core_builddeps Requires}
-
-%description lp-devel_%{version}_%{release}
-Contains the prepared source files, config, and vmlinux for building live
-patches against base version %{version}-%{release}.
+# %%package lp-devel_%%{version}_%%{release}
+# License: GPLv2
+# Summary: Development package for building livepatches
+# Group: Development/System
+# %%{core_builddeps Requires}
+#
+# %%description lp-devel_%%{version}_%%{release}
+# Contains the prepared source files, config, and vmlinux for building live
+# patches against base version %%{version}-%%{release}.
 
 %package -n perf-xcpng
 Summary: Performance monitoring for the Linux kernel
@@ -388,8 +388,8 @@ touch -r %{buildroot}%{srcpath}/Makefile %{buildroot}%{srcpath}/include/generate
 
 find %{buildroot} -name '.*.cmd' -type f -delete
 
-# Install files for building live patches
-install -m 644 vmlinux %{buildroot}%{lp_devel_dir}
+# # Install files for building live patches
+# install -m 644 vmlinux %%{buildroot}%%{lp_devel_dir}
 
 # eBPF support: Install the BTF file to /usr/src/kernels for kernel-devel
 # /usr/src/kernels is also used by `perf` to look for vmlinux files with
@@ -482,8 +482,8 @@ fi
 %license COPYING
 %{python3_sitearch}/*
 
-%files lp-devel_%{version}_%{release}
-%{lp_devel_dir}
+# %%files lp-devel_%%{version}_%%{release}
+# %%{lp_devel_dir}
 
 %{?_cov_results_package}
 
@@ -491,6 +491,7 @@ fi
 * Wed Nov 04 2026 Yann Dirson <yann.dirson@vates.tech> - 6.12.0-4
 - Change package name to kernel-xcpng, obsoletes older "kernel"
 - Stop using obsolete space separator in *Requires lists
+- Comment out support for livepatching
 
 * Mon Sep 07 2026 Corentin Oparowski <corentin.oparowski@vates.tech> - 6.12.0-3
 - Update patchqueue to match Xenserver 6.6.98-19 revision
