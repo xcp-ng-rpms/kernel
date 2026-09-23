@@ -767,6 +767,11 @@ Patch1026: 0657-net-openvswitch-fix-possible-kfree_skb-of-ERR_PTR.patch
 # CVE-2026-64600 (RefluXFS)
 Patch1027: 0001-xfs-resample-the-data-fork-mapping-after-cycling-ILO.patch
 
+# MxGPU
+Patch1028: 0001-export-memory_block_size_bytes-symbol-for-OOT-driver.patch
+Patch1029: 0002-backport-xarray-lib-from-5.0.patch
+Patch1030: 0003-allow-to-use-pxm_to_node-without-CONFIG_NUMA.patch
+
 %description
 The kernel package contains the Linux kernel (vmlinuz), the core of any
 Linux operating system. The kernel handles the basic functions of the operating

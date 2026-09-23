@@ -1,0 +1,28 @@
+From 33e8edc439cba9ecdcc68580150609cfe44e2b4f Mon Sep 17 00:00:00 2001
+From: Yann Sionneau <yann.sionneau@vates.tech>
+Date: Thu, 24 Sep 2026 11:50:05 +0200
+Subject: [PATCH 3/3] allow to use pxm_to_node without CONFIG_NUMA
+
+Signed-off-by: Yann Sionneau <yann.sionneau@vates.tech>
+---
+ include/acpi/acpi_numa.h | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/include/acpi/acpi_numa.h b/include/acpi/acpi_numa.h
+index fdebcfc6c8df..a046d65a32d3 100644
+--- a/include/acpi/acpi_numa.h
++++ b/include/acpi/acpi_numa.h
+@@ -22,5 +22,10 @@ extern int acpi_numa __initdata;
+ extern void bad_srat(void);
+ extern int srat_disabled(void);
+ 
++#else
++static inline int pxm_to_node(int x)
++{
++	return 0;
++}
+ #endif				/* CONFIG_ACPI_NUMA */
+ #endif				/* __ACP_NUMA_H */
+-- 
+2.53.0
+
