@@ -774,6 +774,11 @@ Patch1028: 0001-SUNRPC-avoid-race-between-mod_timer-and-del_timer_sy.patch
 Patch1029: 0002-SUNRPC-use-_bh-spinlocking-on-transport_lock.patch
 Patch1030: 0003-Revert-XSI-2150-Avoid-deadlocks-on-NFS-spinlocks.patch
 
+# MxGPU
+Patch1031: 0001-export-memory_block_size_bytes-symbol-for-OOT-driver.patch
+Patch1032: 0002-backport-xarray-lib-from-5.0.patch
+Patch1033: 0003-allow-to-use-pxm_to_node-without-CONFIG_NUMA.patch
+
 %description
 The kernel package contains the Linux kernel (vmlinuz), the core of any
 Linux operating system. The kernel handles the basic functions of the operating
