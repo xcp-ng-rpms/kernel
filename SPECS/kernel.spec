@@ -28,11 +28,13 @@
 # since some of them are for Python 3 only. Just ignore the errors.
 %global _python_bytecompile_errors_terminate_build 0
 
-%define lp_devel_dir %{_usrsrc}/kernel-%{version}-%{release}
-
-# Prevent RPM adding Provides/Requires to lp-devel package
-%global __provides_exclude_from ^%{lp_devel_dir}/.*$
-%global __requires_exclude_from ^%{lp_devel_dir}/.*$
+# XCP-ng BEGIN: remove support for livepatching support
+# %%define lp_devel_dir %%{_usrsrc}/kernel-%%{version}-%%{release}
+#
+# # Prevent RPM adding Provides/Requires to lp-devel package
+# %%global __provides_exclude_from ^%%{lp_devel_dir}/.*$
+# %%global __requires_exclude_from ^%%{lp_devel_dir}/.*$
+# XCP-ng END
 
 # Be strict when applying patches
 %if 0%{?xenserver} < 9
@@ -42,7 +44,7 @@
 Name: kernel
 License: GPLv2
 Version: 4.19.19
-Release: %{?xsrel}.11%{?dist}
+Release: %{?xsrel}.12%{?dist}
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
@@ -807,15 +809,17 @@ Requires: devtoolset-11-elfutils-libelf-devel
 This package provides kernel headers and makefiles sufficient to build modules
 against the %{uname} kernel.
 
-%package lp-devel_%{version}_%{release}
-License: GPLv2
-Summary: Development package for building livepatches
-Group: Development/System
-%{core_builddeps Requires}
-
-%description lp-devel_%{version}_%{release}
-Contains the prepared source files, config, and vmlinux for building live
-patches against base version %{version}-%{release}.
+# XCP-ng BEGIN: remove support for livepatching support
+# %%package lp-devel_%%{version}_%%{release}
+# License: GPLv2
+# Summary: Development package for building livepatches
+# Group: Development/System
+# %%{core_builddeps Requires}
+#
+# %%description lp-devel_%%{version}_%%{release}
+# Contains the prepared source files, config, and vmlinux for building live
+# patches against base version %%{version}-%%{release}.
+# XCP-ng END
 
 %package -n perf
 Summary: Performance monitoring for the Linux kernel
@@ -1024,9 +1028,11 @@ touch -r %{buildroot}%{srcpath}/Makefile %{buildroot}%{srcpath}/include/generate
 
 find %{buildroot} -name '.*.cmd' -type f -delete
 
-# Install files for building live patches
-mv ../prepared-source %{buildroot}%{lp_devel_dir}
-install -m 644 vmlinux %{buildroot}%{lp_devel_dir}
+# XCP-ng BEGIN: remove support for livepatching support
+# # Install files for building live patches
+# mv ../prepared-source %%{buildroot}%%{lp_devel_dir}
+# install -m 644 vmlinux %%{buildroot}%%{lp_devel_dir}
+# XCP-ng END
 
 # eBPF support: Install the BTF file to /usr/src/kernels for kernel-devel
 # /usr/src/kernels is also used by `perf` to look for vmlinux files with
@@ -1119,12 +1125,17 @@ fi
 %license COPYING
 %{python2_sitearch}/*
 
-%files lp-devel_%{version}_%{release}
-%{lp_devel_dir}
+# XCP-ng BEGIN: remove support for livepatching support
+# %%files lp-devel_%%{version}_%%{release}
+# %%{lp_devel_dir}
+# XCP-ng END
 
 %{?_cov_results_package}
 
 %changelog
+* Thu Sep 24 2026 Yann Dirson <yann.dirson@vates.tech> - 4.19.19-8.0.46.12
+- Drop lp-devel package
+
 * Wed Sep 02 2026 Tu Dinh <ngoc-tu.dinh@vates.tech> - 4.19.19-8.0.46.11
 - SUNRPC: Restore missing synchronization on transport_lock
 - Revert "XSI-2150: Avoid deadlocks on NFS spinlocks"
