@@ -25,13 +25,13 @@
 # since some of them are for Python 3 only. Just ignore the errors.
 %global _python_bytecompile_errors_terminate_build 0
 
-%define lp_devel_dir %{_usrsrc}/kernel-%{version}-%{release}
+# %define lp_devel_dir %{_usrsrc}/kernel-%{version}-%{release}
+#
+# # Prevent RPM adding Provides/Requires to lp-devel package
+# %global __provides_exclude_from ^%{lp_devel_dir}/.*$
+# %global __requires_exclude_from ^%{lp_devel_dir}/.*$
 
-# Prevent RPM adding Provides/Requires to lp-devel package
-%global __provides_exclude_from ^%{lp_devel_dir}/.*$
-%global __requires_exclude_from ^%{lp_devel_dir}/.*$
-
-Name: kernel
+Name: kernel-xcpng
 License: GPLv2
 Version: %{usver}
 Release: 2%{dist}
@@ -74,15 +74,15 @@ BuildRequires: xz-devel
 BuildRequires: libunwind-devel
 BuildRequires: python3-devel
 BuildRequires: python3-setuptools
-BuildRequires: asciidoc xmlto
+BuildRequires: asciidoc, xmlto
 %{?_cov_buildrequires}
 AutoReqProv: no
 Provides: kernel-uname-r = %{uname}
 Provides: kernel = %{version}-%{release}
 Provides: kernel-%{_arch} = %{version}-%{release}
 Provides: kernel-xcpng
-Requires(post): coreutils kmod
-Requires(posttrans): coreutils dracut kmod
+Requires(post): coreutils, kmod
+Requires(posttrans): coreutils, dracut, kmod
 
 Source0: linux-%{usver}.tar.xz
 Source1: kernel-x86_64.config
@@ -162,20 +162,21 @@ Provides: kernel-devel-uname-r = %{uname}
 This package provides kernel headers and makefiles sufficient to build modules
 against the %{uname} kernel.
 
-%package lp-devel_%{version}_%{release}
-License: GPLv2
-Summary: Development package for building livepatches
-Group: Development/System
-%{core_builddeps Requires}
+# %package lp-devel_%{version}_%{release}
+# License: GPLv2
+# Summary: Development package for building livepatches
+# Group: Development/System
+# %{core_builddeps Requires}
+#
+# %description lp-devel_%{version}_%{release}
+# Contains the prepared source files, config, and vmlinux for building live
+# patches against base version %{version}-%{release}.
 
-%description lp-devel_%{version}_%{release}
-Contains the prepared source files, config, and vmlinux for building live
-patches against base version %{version}-%{release}.
-
-%package -n perf
+%package -n perf-xcpng
 Summary: Performance monitoring for the Linux kernel
+Provides: perf
 License: GPLv2
-%description -n perf
+%description -n perf-xcpng
 This package contains the perf tool, which enables performance monitoring
 of the Linux kernel.
 
@@ -184,10 +185,10 @@ of the Linux kernel.
 written in the Python programming language to use the interface \
 to manipulate perf events.
 
-%package -n python3-perf
+%package -n python3-perf-xcpng
 Summary: %{pythonperfsum}
 Provides: python3-perf
-%description -n python3-perf
+%description -n python3-perf-xcpng
 %{pythonperfdesc}
 
 %prep
@@ -372,8 +373,8 @@ touch -r %{buildroot}%{srcpath}/Makefile %{buildroot}%{srcpath}/include/generate
 
 find %{buildroot} -name '.*.cmd' -type f -delete
 
-# Install files for building live patches
-install -m 644 vmlinux %{buildroot}%{lp_devel_dir}
+# # Install files for building live patches
+# install -m 644 vmlinux %{buildroot}%{lp_devel_dir}
 
 # eBPF support: Install the BTF file to /usr/src/kernels for kernel-devel
 # /usr/src/kernels is also used by `perf` to look for vmlinux files with
@@ -453,7 +454,7 @@ fi
 %verify(not mtime) /usr/src/kernels/%{uname}-%{_arch}
 %{_rpmconfigdir}/macros.d/macros.kernel
 
-%files -n perf
+%files -n perf-xcpng
 %{_bindir}/perf
 %{_libexecdir}/perf-core
 %{_datadir}/perf-core/
@@ -462,16 +463,22 @@ fi
 %doc tools/perf/Documentation/examples.txt
 %license COPYING
 
-%files -n python3-perf
+%files -n python3-perf-xcpng
 %license COPYING
 %{python3_sitearch}/*
 
-%files lp-devel_%{version}_%{release}
-%{lp_devel_dir}
+# %files lp-devel_%{version}_%{release}
+# %{lp_devel_dir}
 
 %{?_cov_results_package}
 
 %changelog
+* Mon Sep 21 2026 Yann Dirson <yann.dirson@vates.tech> - 6.12.0-3
+- Change package name to kernel-xcpng
+- Stop using obsolete space separator in *Requires lists
+- Updated .config for use by the Alma 10.1 toolchain
+- Comment out support for livepatching
+
 * Fri Aug 07 2026 Yann Dirson <yann.dirson@vates.tech> - 6.12.0-2
 - Add "Provides: kernel-xcpng" so the installer can be sure to pull this kernel not Alma's
 - Disable XS modification of CONFIG_MODULE_SIG_FORCE behaviour
