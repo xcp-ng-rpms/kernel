@@ -1,18 +1,9 @@
-From e865afef0583e26ed019b59770d47292101f2037 Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Corentin Oparowski <corentin.oparowski@vates.tech>
 Date: Fri, 18 Jul 2025 18:10:33 +0800
-Subject: [PATCH 34/35] CP-46343: reserve cpuid leaves for future use
+Subject: [PATCH] CP-46343: reserve cpuid leaves for future use
 
 Signed-off-by: Chunjie Zhu <chunjie.zhu@cloud.com>
----
- arch/x86/include/asm/cpufeature.h              | 4 ++--
- arch/x86/include/asm/cpufeatures.h             | 4 ++--
- arch/x86/include/asm/disabled-features.h       | 2 +-
- arch/x86/include/asm/required-features.h       | 2 +-
- tools/arch/x86/include/asm/cpufeatures.h       | 4 ++--
- tools/arch/x86/include/asm/disabled-features.h | 2 +-
- tools/arch/x86/include/asm/required-features.h | 2 +-
- 7 files changed, 10 insertions(+), 10 deletions(-)
 
 diff --git a/arch/x86/include/asm/cpufeature.h b/arch/x86/include/asm/cpufeature.h
 index b0eda0b50cac..01adf20857e8 100644
@@ -37,7 +28,7 @@ index b0eda0b50cac..01adf20857e8 100644
  #define cpu_has(c, bit)							\
  	(__builtin_constant_p(bit) && REQUIRED_MASK_BIT_SET(bit) ? 1 :	\
 diff --git a/arch/x86/include/asm/cpufeatures.h b/arch/x86/include/asm/cpufeatures.h
-index 646b11f6c76e..778ff9102f90 100644
+index 3e7ba285c2a6..9e130ac588fd 100644
 --- a/arch/x86/include/asm/cpufeatures.h
 +++ b/arch/x86/include/asm/cpufeatures.h
 @@ -13,8 +13,8 @@
@@ -114,6 +105,3 @@ index 6a3de575bec6..fdb08b1505f7 100644
 +#define REQUIRED_MASK_CHECK BUILD_BUG_ON_ZERO(NCAPINTS != 30)
  
  #endif /* _ASM_X86_REQUIRED_FEATURES_H */
--- 
-2.47.3
-

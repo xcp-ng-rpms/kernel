@@ -1,172 +1,14 @@
-From a031c93e56c494094e30f928c1206bd4172902c1 Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Corentin Oparowski <corentin.oparowski@vates.tech>
 Date: Sat, 19 Sep 2015 08:09:42 +0200
-Subject: [PATCH 30/35] Import the Xen public headers in preparation for
- filtering hypercalls
+Subject: [PATCH] Import the Xen public headers in preparation for filtering
+ hypercalls
 
 These hypercall filter should build against these headers. If the version of
 Xen changes, the headers here should be updated along with the hypercall
 filter.
 
 Signed-off-by: Ross Lagerwall <ross.lagerwall@citrix.com>
----
- drivers/xen/public-xen/COPYING                |   38 +
- drivers/xen/public-xen/arch-arm.h             |  555 ++++++
- drivers/xen/public-xen/arch-arm/hvm/save.h    |   22 +
- drivers/xen/public-xen/arch-arm/smccc.h       |   49 +
- drivers/xen/public-xen/arch-ppc.h             |  107 ++
- drivers/xen/public-xen/arch-riscv.h           |   93 +
- .../xen/public-xen/arch-x86/cpufeatureset.h   |  409 +++++
- drivers/xen/public-xen/arch-x86/cpuid.h       |  122 ++
- drivers/xen/public-xen/arch-x86/guest-acpi.h  |   33 +
- drivers/xen/public-xen/arch-x86/hvm/save.h    |  645 +++++++
- .../xen/public-xen/arch-x86/hvm/start_info.h  |  142 ++
- drivers/xen/public-xen/arch-x86/pmu.h         |  142 ++
- drivers/xen/public-xen/arch-x86/xen-mca.h     |  438 +++++
- drivers/xen/public-xen/arch-x86/xen-x86_32.h  |  177 ++
- drivers/xen/public-xen/arch-x86/xen-x86_64.h  |  224 +++
- drivers/xen/public-xen/arch-x86/xen.h         |  376 ++++
- drivers/xen/public-xen/arch-x86_32.h          |   10 +
- drivers/xen/public-xen/arch-x86_64.h          |   26 +
- drivers/xen/public-xen/argo.h                 |  238 +++
- drivers/xen/public-xen/callback.h             |  104 ++
- drivers/xen/public-xen/device_tree_defs.h     |   49 +
- drivers/xen/public-xen/dom0_ops.h             |  103 ++
- drivers/xen/public-xen/domctl.h               | 1517 +++++++++++++++++
- drivers/xen/public-xen/elfnote.h              |  298 ++++
- drivers/xen/public-xen/errno.h                |  130 ++
- drivers/xen/public-xen/event_channel.h        |  371 ++++
- drivers/xen/public-xen/features.h             |  143 ++
- drivers/xen/public-xen/grant_table.h          |  669 ++++++++
- drivers/xen/public-xen/hvm/dm_op.h            |  506 ++++++
- drivers/xen/public-xen/hvm/e820.h             |   21 +
- drivers/xen/public-xen/hvm/hvm_info_table.h   |   65 +
- drivers/xen/public-xen/hvm/hvm_op.h           |  378 ++++
- drivers/xen/public-xen/hvm/hvm_vcpu.h         |  129 ++
- drivers/xen/public-xen/hvm/hvm_xs_strings.h   |   74 +
- drivers/xen/public-xen/hvm/ioreq.h            |  126 ++
- drivers/xen/public-xen/hvm/params.h           |  296 ++++
- drivers/xen/public-xen/hvm/pvdrivers.h        |   32 +
- drivers/xen/public-xen/hvm/save.h             |   98 ++
- drivers/xen/public-xen/hypfs.h                |  113 ++
- drivers/xen/public-xen/io/9pfs.h              |  242 +++
- drivers/xen/public-xen/io/blkif.h             |  739 ++++++++
- drivers/xen/public-xen/io/cameraif.h          | 1357 +++++++++++++++
- drivers/xen/public-xen/io/console.h           |   39 +
- drivers/xen/public-xen/io/displif.h           |  940 ++++++++++
- drivers/xen/public-xen/io/fbif.h              |  159 ++
- drivers/xen/public-xen/io/fsif.h              |  175 ++
- drivers/xen/public-xen/io/kbdif.h             |  559 ++++++
- drivers/xen/public-xen/io/libxenvchan.h       |   84 +
- drivers/xen/public-xen/io/netif.h             | 1091 ++++++++++++
- drivers/xen/public-xen/io/pciif.h             |  108 ++
- drivers/xen/public-xen/io/protocols.h         |   25 +
- drivers/xen/public-xen/io/pvcalls.h           |  143 ++
- drivers/xen/public-xen/io/ring.h              |  504 ++++++
- drivers/xen/public-xen/io/sndif.h             | 1074 ++++++++++++
- drivers/xen/public-xen/io/tpmif.h             |  126 ++
- drivers/xen/public-xen/io/usbif.h             |  408 +++++
- drivers/xen/public-xen/io/vscsiif.h           |  364 ++++
- drivers/xen/public-xen/io/xenbus.h            |   63 +
- drivers/xen/public-xen/io/xs_wire.h           |  147 ++
- drivers/xen/public-xen/kexec.h                |  279 +++
- drivers/xen/public-xen/memory.h               |  755 ++++++++
- drivers/xen/public-xen/nmi.h                  |   68 +
- drivers/xen/public-xen/physdev.h              |  386 +++++
- drivers/xen/public-xen/platform.h             |  689 ++++++++
- drivers/xen/public-xen/pmu.h                  |  130 ++
- drivers/xen/public-xen/pv-iommu.h             |   88 +
- drivers/xen/public-xen/sched.h                |  185 ++
- drivers/xen/public-xen/sysctl.h               | 1348 +++++++++++++++
- drivers/xen/public-xen/tmem.h                 |  105 ++
- drivers/xen/public-xen/trace.h                |  326 ++++
- drivers/xen/public-xen/vcpu.h                 |  256 +++
- drivers/xen/public-xen/version.h              |  185 ++
- drivers/xen/public-xen/vm_event.h             |  453 +++++
- drivers/xen/public-xen/xen-compat.h           |   29 +
- drivers/xen/public-xen/xen.h                  | 1037 +++++++++++
- drivers/xen/public-xen/xencomm.h              |   24 +
- drivers/xen/public-xen/xenoprof.h             |  135 ++
- drivers/xen/public-xen/xsm/flask_op.h         |  212 +++
- 78 files changed, 24105 insertions(+)
- create mode 100644 drivers/xen/public-xen/COPYING
- create mode 100644 drivers/xen/public-xen/arch-arm.h
- create mode 100644 drivers/xen/public-xen/arch-arm/hvm/save.h
- create mode 100644 drivers/xen/public-xen/arch-arm/smccc.h
- create mode 100644 drivers/xen/public-xen/arch-ppc.h
- create mode 100644 drivers/xen/public-xen/arch-riscv.h
- create mode 100644 drivers/xen/public-xen/arch-x86/cpufeatureset.h
- create mode 100644 drivers/xen/public-xen/arch-x86/cpuid.h
- create mode 100644 drivers/xen/public-xen/arch-x86/guest-acpi.h
- create mode 100644 drivers/xen/public-xen/arch-x86/hvm/save.h
- create mode 100644 drivers/xen/public-xen/arch-x86/hvm/start_info.h
- create mode 100644 drivers/xen/public-xen/arch-x86/pmu.h
- create mode 100644 drivers/xen/public-xen/arch-x86/xen-mca.h
- create mode 100644 drivers/xen/public-xen/arch-x86/xen-x86_32.h
- create mode 100644 drivers/xen/public-xen/arch-x86/xen-x86_64.h
- create mode 100644 drivers/xen/public-xen/arch-x86/xen.h
- create mode 100644 drivers/xen/public-xen/arch-x86_32.h
- create mode 100644 drivers/xen/public-xen/arch-x86_64.h
- create mode 100644 drivers/xen/public-xen/argo.h
- create mode 100644 drivers/xen/public-xen/callback.h
- create mode 100644 drivers/xen/public-xen/device_tree_defs.h
- create mode 100644 drivers/xen/public-xen/dom0_ops.h
- create mode 100644 drivers/xen/public-xen/domctl.h
- create mode 100644 drivers/xen/public-xen/elfnote.h
- create mode 100644 drivers/xen/public-xen/errno.h
- create mode 100644 drivers/xen/public-xen/event_channel.h
- create mode 100644 drivers/xen/public-xen/features.h
- create mode 100644 drivers/xen/public-xen/grant_table.h
- create mode 100644 drivers/xen/public-xen/hvm/dm_op.h
- create mode 100644 drivers/xen/public-xen/hvm/e820.h
- create mode 100644 drivers/xen/public-xen/hvm/hvm_info_table.h
- create mode 100644 drivers/xen/public-xen/hvm/hvm_op.h
- create mode 100644 drivers/xen/public-xen/hvm/hvm_vcpu.h
- create mode 100644 drivers/xen/public-xen/hvm/hvm_xs_strings.h
- create mode 100644 drivers/xen/public-xen/hvm/ioreq.h
- create mode 100644 drivers/xen/public-xen/hvm/params.h
- create mode 100644 drivers/xen/public-xen/hvm/pvdrivers.h
- create mode 100644 drivers/xen/public-xen/hvm/save.h
- create mode 100644 drivers/xen/public-xen/hypfs.h
- create mode 100644 drivers/xen/public-xen/io/9pfs.h
- create mode 100644 drivers/xen/public-xen/io/blkif.h
- create mode 100644 drivers/xen/public-xen/io/cameraif.h
- create mode 100644 drivers/xen/public-xen/io/console.h
- create mode 100644 drivers/xen/public-xen/io/displif.h
- create mode 100644 drivers/xen/public-xen/io/fbif.h
- create mode 100644 drivers/xen/public-xen/io/fsif.h
- create mode 100644 drivers/xen/public-xen/io/kbdif.h
- create mode 100644 drivers/xen/public-xen/io/libxenvchan.h
- create mode 100644 drivers/xen/public-xen/io/netif.h
- create mode 100644 drivers/xen/public-xen/io/pciif.h
- create mode 100644 drivers/xen/public-xen/io/protocols.h
- create mode 100644 drivers/xen/public-xen/io/pvcalls.h
- create mode 100644 drivers/xen/public-xen/io/ring.h
- create mode 100644 drivers/xen/public-xen/io/sndif.h
- create mode 100644 drivers/xen/public-xen/io/tpmif.h
- create mode 100644 drivers/xen/public-xen/io/usbif.h
- create mode 100644 drivers/xen/public-xen/io/vscsiif.h
- create mode 100644 drivers/xen/public-xen/io/xenbus.h
- create mode 100644 drivers/xen/public-xen/io/xs_wire.h
- create mode 100644 drivers/xen/public-xen/kexec.h
- create mode 100644 drivers/xen/public-xen/memory.h
- create mode 100644 drivers/xen/public-xen/nmi.h
- create mode 100644 drivers/xen/public-xen/physdev.h
- create mode 100644 drivers/xen/public-xen/platform.h
- create mode 100644 drivers/xen/public-xen/pmu.h
- create mode 100644 drivers/xen/public-xen/pv-iommu.h
- create mode 100644 drivers/xen/public-xen/sched.h
- create mode 100644 drivers/xen/public-xen/sysctl.h
- create mode 100644 drivers/xen/public-xen/tmem.h
- create mode 100644 drivers/xen/public-xen/trace.h
- create mode 100644 drivers/xen/public-xen/vcpu.h
- create mode 100644 drivers/xen/public-xen/version.h
- create mode 100644 drivers/xen/public-xen/vm_event.h
- create mode 100644 drivers/xen/public-xen/xen-compat.h
- create mode 100644 drivers/xen/public-xen/xen.h
- create mode 100644 drivers/xen/public-xen/xencomm.h
- create mode 100644 drivers/xen/public-xen/xenoprof.h
- create mode 100644 drivers/xen/public-xen/xsm/flask_op.h
 
 diff --git a/drivers/xen/public-xen/COPYING b/drivers/xen/public-xen/COPYING
 new file mode 100644
@@ -24741,6 +24583,3 @@ index 000000000000..7185e806212b
 +DEFINE_XEN_GUEST_HANDLE(xen_flask_op_t);
 +
 +#endif
--- 
-2.47.3
-

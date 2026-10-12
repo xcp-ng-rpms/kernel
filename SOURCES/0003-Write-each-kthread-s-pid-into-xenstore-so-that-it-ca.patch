@@ -1,15 +1,11 @@
-From b6d2e47c88d036a5da8dd1b4749d3f4fec0fc569 Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Corentin Oparowski <corentin.oparowski@vates.tech>
 Date: Sat, 19 Sep 2015 08:09:42 +0200
-Subject: [PATCH 03/35] Write each kthread's pid into xenstore so that it can
- be ioniced by the toolstack.  Relative to the VBD, the xenstore key is:
+Subject: [PATCH] Write each kthread's pid into xenstore so that it can be
+ ioniced by the toolstack.  Relative to the VBD, the xenstore key is:
  queue-NNN/kthread-pid where NNN is the queue number starting from 0.
 
 Signed-off-by: Ross Lagerwall <ross.lagerwall@citrix.com>
----
- drivers/block/xen-blkback/common.h | 17 +++++++--
- drivers/block/xen-blkback/xenbus.c | 61 +++++++++++++++++++++++++-----
- 2 files changed, 66 insertions(+), 12 deletions(-)
 
 diff --git a/drivers/block/xen-blkback/common.h b/drivers/block/xen-blkback/common.h
 index b427d54bc120..87a37c149813 100644
@@ -181,6 +177,3 @@ index 0621878940ae..db75a3f57e44 100644
  	xen_vbd_free(&blkif->vbd);
  	kfree(blkif->be->mode);
  	kfree(blkif->be);
--- 
-2.47.3
-

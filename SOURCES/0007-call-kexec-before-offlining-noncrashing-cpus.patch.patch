@@ -1,14 +1,8 @@
-From b4c1c7fb0c00ae325ba6d1bac57d17c61374340f Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Corentin Oparowski <corentin.oparowski@vates.tech>
 Date: Sat, 19 Sep 2015 08:09:42 +0200
-Subject: [PATCH 07/35] call-kexec-before-offlining-noncrashing-cpus.patch
+Subject: [PATCH] call-kexec-before-offlining-noncrashing-cpus.patch
 
----
- arch/x86/include/asm/xen/hypercall.h |  7 +++++++
- include/xen/interface/kexec.h        | 10 ++++++++++
- kernel/panic.c                       | 12 ++++++++++++
- 3 files changed, 29 insertions(+)
- create mode 100644 include/xen/interface/kexec.h
 
 diff --git a/arch/x86/include/asm/xen/hypercall.h b/arch/x86/include/asm/xen/hypercall.h
 index 2759524b8ffc..b0dad0b4b099 100644
@@ -74,6 +68,3 @@ index a0a17ffe005b..6d9e4c931ed2 100644
  	/*
  	 * If we have crashed and we have a crash kernel loaded let it handle
  	 * everything else.
--- 
-2.47.3
-

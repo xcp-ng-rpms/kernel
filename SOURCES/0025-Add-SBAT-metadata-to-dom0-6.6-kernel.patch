@@ -1,7 +1,7 @@
-From c246ba54b0811c35b9668057a500a422963f74a4 Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Corentin Oparowski <corentin.oparowski@vates.tech>
 Date: Sat, 19 Sep 2015 08:09:42 +0200
-Subject: [PATCH 25/35] Add SBAT metadata to dom0 6.6 kernel
+Subject: [PATCH] Add SBAT metadata to dom0 6.6 kernel
 
 After some recent upstream changes a lot of what used to be done in build.c is
 now done in header.S and setup.ld.
@@ -120,14 +120,6 @@ I have tested that kernels built with CONFIG_EFI_MIXED=y and CONFIG_EFI_MIXED=n
 both boot fine.
 
 Signed-off-by: Kevin Lampis <klampis@cloud.com>
----
- arch/x86/boot/Makefile      |  4 ++--
- arch/x86/boot/header.S      | 16 ++++++++++++++-
- arch/x86/boot/sbat.csv      |  2 ++
- arch/x86/boot/setup.ld      |  9 +++++++--
- arch/x86/boot/tools/build.c | 40 ++++++++++++++++++++++++++++++++++++-
- 5 files changed, 65 insertions(+), 6 deletions(-)
- create mode 100644 arch/x86/boot/sbat.csv
 
 diff --git a/arch/x86/boot/Makefile b/arch/x86/boot/Makefile
 index 9cc0ff6e9067..a1c35c2f31ff 100644
@@ -295,6 +287,3 @@ index 10311d77c67f..aed3ebaf4e3a 100644
  	/* Open and stat the kernel file */
  	fd = open(argv[2], O_RDONLY);
  	if (fd < 0)
--- 
-2.47.3
-

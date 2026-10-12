@@ -1,7 +1,7 @@
-From c2af020580830bf92735b9d81ec9c3af88e6949d Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Corentin Oparowski <corentin.oparowski@vates.tech>
 Date: Sat, 19 Sep 2015 08:09:42 +0200
-Subject: [PATCH 27/35] For XenServer, the desired behaviour is that signature
+Subject: [PATCH] For XenServer, the desired behaviour is that signature
  checking is always enabled unless Secure Boot is disabled and
  sig_enforce=false is passed.
 
@@ -12,9 +12,6 @@ will always be true.
 
 Signed-off-by: Kevin Lampis <klampis@cloud.com>
 Signed-off-by: Ross Lagerwall <ross.lagerwall@citrix.com>
----
- kernel/module/signing.c | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/kernel/module/signing.c b/kernel/module/signing.c
 index a2ff4242e623..c81ee6b6380e 100644
@@ -29,6 +26,3 @@ index a2ff4242e623..c81ee6b6380e 100644
  
  /*
   * Export sig_enforce kernel cmdline parameter to allow other subsystems rely
--- 
-2.47.3
-

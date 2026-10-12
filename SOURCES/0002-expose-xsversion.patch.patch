@@ -1,14 +1,8 @@
-From 7a11d00feec555f673ae7de236059a0c1f723e0c Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Corentin Oparowski <corentin.oparowski@vates.tech>
 Date: Sat, 19 Sep 2015 08:09:42 +0200
-Subject: [PATCH 02/35] expose-xsversion.patch
+Subject: [PATCH] expose-xsversion.patch
 
----
- fs/proc/version.c      |  8 ++++++++
- include/linux/printk.h |  1 +
- init/version.c         |  5 +++++
- scripts/mkcompile_h    | 13 +++++++++++++
- 4 files changed, 27 insertions(+)
 
 diff --git a/fs/proc/version.c b/fs/proc/version.c
 index 02e3c3cd4a9a..d88a2f7f6749 100644
@@ -36,7 +30,7 @@ index 02e3c3cd4a9a..d88a2f7f6749 100644
  }
  fs_initcall(proc_version_init);
 diff --git a/include/linux/printk.h b/include/linux/printk.h
-index 0cb647ecd77f..4af4e009a8ef 100644
+index a6c6fd107805..caaaf7ed1d85 100644
 --- a/include/linux/printk.h
 +++ b/include/linux/printk.h
 @@ -13,6 +13,7 @@ struct console;
@@ -92,6 +86,3 @@ index 2596f78e52ef..6d1c57991fa9 100755
 +#define XS_PQ_COMMIT		"${XS_PQ_COMMIT}"
 +
  EOF
--- 
-2.47.3
-

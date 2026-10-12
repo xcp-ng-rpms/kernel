@@ -1,7 +1,7 @@
-From ce47fd7810b6abd335971ac54938a89decbc0bd3 Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Corentin Oparowski <corentin.oparowski@vates.tech>
 Date: Sat, 19 Sep 2015 08:09:42 +0200
-Subject: [PATCH 31/35] Filter and check hypercalls from userspace
+Subject: [PATCH] Filter and check hypercalls from userspace
 
 Xen cannot determine whether a hypercall originates from userspace or kernel
 space. A malicious userspace may use Xen to attack the dom0 kernel.
@@ -30,24 +30,6 @@ Signed-off-by: Frediano Ziglio <frediano.ziglio@citrix.com>
 [ Corentin: rebase from XS-9 kernel (v6.6.98 based) to UEK8 kernel (v6.12 based):
 - 260017f31a8c `("lsm: use default hook return value in call_int_hook()") simplified the `call_int_hook`
 macro, so align our usage in `security_locked_down_nowarn()`]
----
- arch/x86/xen/xen-head.S            |    2 +
- drivers/pci/pci.c                  |    2 +
- drivers/xen/Makefile               |    2 +-
- drivers/xen/filter-hypercall.c     | 1404 ++++++++++++++++++++++++++++
- drivers/xen/privcmd.c              |   41 +-
- drivers/xen/public-xen/elfnote.h   |    9 +-
- drivers/xen/xen-pciback/pci_stub.c |    2 +
- include/linux/lsm_hook_defs.h      |    1 +
- include/linux/pci.h                |    3 +
- include/linux/security.h           |    7 +
- include/xen/filter-hypercall.h     |   26 +
- include/xen/interface/elfnote.h    |    9 +
- security/lockdown/lockdown.c       |   13 +
- security/security.c                |    7 +
- 14 files changed, 1522 insertions(+), 6 deletions(-)
- create mode 100644 drivers/xen/filter-hypercall.c
- create mode 100644 include/xen/filter-hypercall.h
 
 diff --git a/arch/x86/xen/xen-head.S b/arch/x86/xen/xen-head.S
 index 55978e0dc175..05bcd5d86ef5 100644
@@ -1765,6 +1747,3 @@ index 99bea60ba59c..063129fdb302 100644
  /**
   * security_bdev_alloc() - Allocate a block device LSM blob
   * @bdev: block device
--- 
-2.47.3
-

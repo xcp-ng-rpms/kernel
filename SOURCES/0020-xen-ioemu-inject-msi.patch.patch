@@ -1,16 +1,8 @@
-From 906c26c12bb70d58b4adadeb66f68172b821ba2a Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Corentin Oparowski <corentin.oparowski@vates.tech>
 Date: Sat, 19 Sep 2015 08:09:42 +0200
-Subject: [PATCH 20/35] xen-ioemu-inject-msi.patch
+Subject: [PATCH] xen-ioemu-inject-msi.patch
 
----
- drivers/xen/Makefile               |  1 +
- drivers/xen/ioemu.c                | 86 ++++++++++++++++++++++++++++++
- include/xen/interface/hvm/hvm_op.h | 12 +++++
- include/xen/ioemu.h                | 37 +++++++++++++
- 4 files changed, 136 insertions(+)
- create mode 100644 drivers/xen/ioemu.c
- create mode 100644 include/xen/ioemu.h
 
 diff --git a/drivers/xen/Makefile b/drivers/xen/Makefile
 index 07442441392b..aa7546375854 100644
@@ -182,6 +174,3 @@ index 000000000000..bf01c51dc973
 +int xen_ioemu_inject_msi(domid_t domid, uint64_t addr, uint32_t data);
 +
 +#endif /* #ifndef _XEN_IOEMU_H */
--- 
-2.47.3
-

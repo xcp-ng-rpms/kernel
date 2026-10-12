@@ -488,7 +488,7 @@ fi
 
 %changelog
 * Wed Sep 7 2026 Corentin Oparowski <corentin.oparowski@vates.tech> - 6.12.0-3
-- Update patchqueue to match Xenserver original XS9
+- Update patchqueue to match Xenserver 6.6.98-19 revision
 - Rebase on top of 6.12.0-206-100.3.1
 
 * Fri Aug 07 2026 Yann Dirson <yann.dirson@vates.tech> - 6.12.0-2

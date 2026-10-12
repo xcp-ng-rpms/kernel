@@ -1,14 +1,11 @@
-From fe08a490dae8a311b77415904d5b8b60cde33886 Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Corentin Oparowski <corentin.oparowski@vates.tech>
 Date: Sat, 19 Sep 2015 08:09:42 +0200
-Subject: [PATCH 16/35] pciback-mask-root-port-comp-timeout.patch
+Subject: [PATCH] pciback-mask-root-port-comp-timeout.patch
 
----
- drivers/xen/xen-pciback/pci_stub.c | 34 ++++++++++++++++++++++++++++++
- 1 file changed, 34 insertions(+)
 
 diff --git a/drivers/xen/xen-pciback/pci_stub.c b/drivers/xen/xen-pciback/pci_stub.c
-index 68763af029d3..5ba353a08194 100644
+index b13b27fe0f5a..fc80d0fa66b2 100644
 --- a/drivers/xen/xen-pciback/pci_stub.c
 +++ b/drivers/xen/xen-pciback/pci_stub.c
 @@ -504,6 +504,9 @@ static int pcistub_match(struct pci_dev *dev)
@@ -59,6 +56,3 @@ index 68763af029d3..5ba353a08194 100644
  	}
  
  	/* We need the device active to save the state. */
--- 
-2.47.3
-

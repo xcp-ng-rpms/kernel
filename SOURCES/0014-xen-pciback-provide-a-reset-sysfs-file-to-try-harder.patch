@@ -1,8 +1,8 @@
-From 099e29bc25bf157ebf7e6962bf3d1ea248fbe6dd Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Corentin Oparowski <corentin.oparowski@vates.tech>
 Date: Thu, 10 Jul 2014 13:09:25 +0100
-Subject: [PATCH 14/35] xen-pciback: provide a "reset" sysfs file to try harder
- at an SBR
+Subject: [PATCH] xen-pciback: provide a "reset" sysfs file to try harder at an
+ SBR
 
 The standard implementation of pci_reset_function() does not try an
 SBR if there are other sibling devices.  This is a common
@@ -25,13 +25,9 @@ Signed-off-by: David Vrabel <david.vrabel@citrix.com>
 
 [ Corentin: rebase from XS-9 kernel (v6.6.98 based) to UEK8 kernel (v6.12 based):
 commit 88801d0 ("xen/pci: Add a function to reset device for xen") slightly reworked how to do a pci_reset, integrate these changes into __pcistub_reset_function(), then call __pcistub_reset_function() instead of pcistub_reset_device_state() ]
----
- drivers/xen/xen-pciback/pci_stub.c | 144 ++++++++++++++++++++++++++---
- drivers/xen/xen-pciback/pciback.h  |   1 +
- 2 files changed, 132 insertions(+), 13 deletions(-)
 
 diff --git a/drivers/xen/xen-pciback/pci_stub.c b/drivers/xen/xen-pciback/pci_stub.c
-index b616b7768c3b..f4189af4a8c4 100644
+index 8b3006078d00..47b24b04ea17 100644
 --- a/drivers/xen/xen-pciback/pci_stub.c
 +++ b/drivers/xen/xen-pciback/pci_stub.c
 @@ -18,6 +18,7 @@
@@ -225,7 +221,7 @@ index b616b7768c3b..f4189af4a8c4 100644
  	pci_set_dev_assigned(dev);
  	return 0;
  
-@@ -669,6 +785,8 @@ static void pcistub_remove(struct pci_dev *dev)
+@@ -671,6 +787,8 @@ static void pcistub_remove(struct pci_dev *dev)
  
  	dev_dbg(&dev->dev, "removing\n");
  
@@ -246,6 +242,3 @@ index f9599ed2f2e2..950c7a28db5e 100644
  	unsigned int permissive:1;
  	unsigned int allow_interrupt_control:1;
  	unsigned int warned_on_write:1;
--- 
-2.47.3
-
