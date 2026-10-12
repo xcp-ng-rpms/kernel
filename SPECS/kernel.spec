@@ -34,7 +34,7 @@
 Name: kernel
 License: GPLv2
 Version: %{usver}
-Release: 2.1%{dist}
+Release: 3%{dist}
 ExclusiveOS: Linux
 Summary: The Linux kernel
 BuildRequires: kmod
@@ -84,7 +84,7 @@ Provides: kernel-xcpng
 Requires(post): coreutils kmod
 Requires(posttrans): coreutils dracut kmod
 
-Source0: linux-%{usver}.tar.xz
+Source0: UEK8-6.12.0-206.100.3.1.tar.xz
 Source1: kernel-x86_64.config
 Source2: macros.kernel
 %if %{do_kabichk}
