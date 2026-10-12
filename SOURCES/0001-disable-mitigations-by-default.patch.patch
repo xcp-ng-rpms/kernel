@@ -1,14 +1,11 @@
-From d071948303884224b3bcfa4f7ae88713437b6e7f Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Corentin Oparowski <corentin.oparowski@vates.tech>
 Date: Sat, 19 Sep 2015 08:09:42 +0200
-Subject: [PATCH 01/35] disable-mitigations-by-default.patch
+Subject: [PATCH] disable-mitigations-by-default.patch
 
----
- arch/x86/kernel/cpu/bugs.c | 9 +++------
- 1 file changed, 3 insertions(+), 6 deletions(-)
 
 diff --git a/arch/x86/kernel/cpu/bugs.c b/arch/x86/kernel/cpu/bugs.c
-index 6956051754be..2ab97ca1ba83 100644
+index 17d0c324fb57..ca97bc621f6d 100644
 --- a/arch/x86/kernel/cpu/bugs.c
 +++ b/arch/x86/kernel/cpu/bugs.c
 @@ -253,8 +253,7 @@ static void x86_amd_ssb_disable(void)
@@ -41,6 +38,3 @@ index 6956051754be..2ab97ca1ba83 100644
  static bool mmio_nosmt __ro_after_init = false;
  
  static const char * const mmio_strings[] = {
--- 
-2.47.3
-

@@ -1,7 +1,7 @@
-From be56e3d89f7cca1a876a84d770f7f8a2aa6b04c9 Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Corentin Oparowski <corentin.oparowski@vates.tech>
 Date: Tue, 26 Aug 2025 13:34:44 +0800
-Subject: [PATCH 11/35] CA-415346: export module symbol offsets
+Subject: [PATCH] CA-415346: export module symbol offsets
 
   crashdump needs it to navigate around vmcore to dump driver
   information
@@ -12,12 +12,6 @@ Signed-off-by: Chunjie Zhu <chunjie.zhu@cloud.com>
 re-introduce __counted_by(notes) annotation which
 was present on the original struct (removed in a subsequent hunk), as it
 allows runtime bounds checking on flexible arrays]
----
- arch/x86/kernel/asm-offsets.c | 18 ++++++++++++++++++
- include/linux/module.h        | 13 +++++++++++++
- kernel/module/sysfs.c         | 10 ----------
- scripts/link-vmlinux.sh       |  4 ++++
- 4 files changed, 35 insertions(+), 10 deletions(-)
 
 diff --git a/arch/x86/kernel/asm-offsets.c b/arch/x86/kernel/asm-offsets.c
 index 925adce6e2c7..bff59957cf1c 100644
@@ -55,7 +49,7 @@ index 925adce6e2c7..bff59957cf1c 100644
  #endif
  }
 diff --git a/include/linux/module.h b/include/linux/module.h
-index 4b75a2391285..ca7add3423f9 100644
+index 2e9ff5688a30..e822260e57aa 100644
 --- a/include/linux/module.h
 +++ b/include/linux/module.h
 @@ -409,6 +409,19 @@ struct klp_modinfo {
@@ -100,10 +94,10 @@ index 456358e1fdc4..3b2955929878 100644
  			     unsigned int i)
  {
 diff --git a/scripts/link-vmlinux.sh b/scripts/link-vmlinux.sh
-index a9b3f34a78d2..eb8ed1b4eaf6 100755
+index 94f794ca11ca..1fdf265d12cf 100755
 --- a/scripts/link-vmlinux.sh
 +++ b/scripts/link-vmlinux.sh
-@@ -296,5 +296,9 @@ if is_enabled CONFIG_KALLSYMS; then
+@@ -298,5 +298,9 @@ if is_enabled CONFIG_KALLSYMS; then
  	fi
  fi
  
@@ -113,6 +107,3 @@ index a9b3f34a78d2..eb8ed1b4eaf6 100755
 +
  # For fixdep
  echo "vmlinux: $0" > .vmlinux.d
--- 
-2.47.3
-

@@ -1,8 +1,7 @@
-From 348bc05318bbaa86028714419b7d5ab259db041b Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Corentin Oparowski <corentin.oparowski@vates.tech>
 Date: Fri, 9 May 2014 11:40:46 +0100
-Subject: [PATCH 12/35] x86,xen: correct dma_get_required_mask() for Xen PV
- guests
+Subject: [PATCH] x86,xen: correct dma_get_required_mask() for Xen PV guests
 
 On systems where DMA addresses and physical addresses are not 1:1
 (such as Xen PV guests), the generic dma_get_required_mask() will not
@@ -18,9 +17,6 @@ significantly.
 Under Xen, the required DMA mask can then always be set to 64-bits.
 
 Signed-off-by: David Vrabel <david.vrabel@citrix.com>
----
- drivers/xen/swiotlb-xen.c | 7 +++++++
- 1 file changed, 7 insertions(+)
 
 diff --git a/drivers/xen/swiotlb-xen.c b/drivers/xen/swiotlb-xen.c
 index ef56a2500ed6..534faa440f71 100644
@@ -46,6 +42,3 @@ index ef56a2500ed6..534faa440f71 100644
 +	.get_required_mask = xen_swiotlb_get_required_mask,
  	.max_mapping_size = swiotlb_max_mapping_size,
  };
--- 
-2.47.3
-

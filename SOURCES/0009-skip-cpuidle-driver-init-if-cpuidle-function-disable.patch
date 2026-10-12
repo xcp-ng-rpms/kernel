@@ -1,7 +1,7 @@
-From 396fab9a3c04c8873da757d8d756e3c464986550 Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Corentin Oparowski <corentin.oparowski@vates.tech>
 Date: Thu, 11 Apr 2024 10:18:42 +0000
-Subject: [PATCH 09/35] skip cpuidle driver init if cpuidle function disabled
+Subject: [PATCH] skip cpuidle driver init if cpuidle function disabled
 
 When kernel runs as Xen PV dom0, it does not have access to the required MSRs
 and so cpuidle is explicitly disabled in xen_arch_setup(). Skip intel_idle
@@ -28,11 +28,6 @@ MSRs.
 [   11.709844]  </TASK>
 
 Signed-off-by: Chunjie Zhu <chunjie.zhu@cloud.com>
----
- drivers/cpuidle/cpuidle.h | 3 ++-
- drivers/idle/intel_idle.c | 2 +-
- include/linux/cpuidle.h   | 3 +++
- 3 files changed, 6 insertions(+), 2 deletions(-)
 
 diff --git a/drivers/cpuidle/cpuidle.h b/drivers/cpuidle/cpuidle.h
 index 52701d9588f1..7b65f168c82e 100644
@@ -89,6 +84,3 @@ index 3183aeb7f5b4..f31a10a89cfe 100644
  static inline void disable_cpuidle(void) { }
  static inline bool cpuidle_not_available(struct cpuidle_driver *drv,
  					 struct cpuidle_device *dev)
--- 
-2.47.3
-

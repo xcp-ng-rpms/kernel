@@ -1,72 +1,12 @@
-From 56631aa54f30cf8f191cd967cb5907f29304b130 Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Corentin Oparowski <corentin.oparowski@vates.tech>
 Date: Fri, 18 Jul 2025 18:02:35 +0800
-Subject: [PATCH 33/35] CP-46343: common data structure padding
+Subject: [PATCH] CP-46343: common data structure padding
 
 Signed-off-by: Chunjie Zhu <chunjie.zhu@cloud.com>
 
 [ Corentin: rebase from XS-9 kernel (v6.6.98 based) to UEK8 kernel (v6.12 based):
 Replaced every instance of xs_kabi_padding by  UEK_KABI_RESERVE(1-4)]
----
- block/elevator.h                    | 11 +++++++++++
- drivers/char/ipmi/ipmi_si.h         |  6 ++++++
- drivers/char/ipmi/ipmi_si_sm.h      |  6 ++++++
- drivers/char/ipmi/kcs_bmc_client.h  | 11 +++++++++++
- drivers/pci/pci.h                   |  6 ++++++
- drivers/scsi/sd.h                   |  7 +++++++
- include/linux/backing-dev-defs.h    |  6 ++++++
- include/linux/blk-mq.h              | 21 +++++++++++++++++++++
- include/linux/blk_types.h           |  6 ++++++
- include/linux/blkdev.h              | 26 ++++++++++++++++++++++++++
- include/linux/bsg-lib.h             |  6 ++++++
- include/linux/device/bus.h          |  6 ++++++
- include/linux/device/class.h        |  6 ++++++
- include/linux/fs.h                  |  6 ++++++
- include/linux/fwnode.h              |  4 ++++
- include/linux/ipmi.h                | 11 +++++++++++
- include/linux/ipmi_smi.h            | 10 ++++++++++
- include/linux/irq.h                 |  5 +++++
- include/linux/irq_work.h            |  5 +++++
- include/linux/irqdesc.h             |  5 +++++
- include/linux/irqdomain.h           |  1 +
- include/linux/mempolicy.h           |  5 +++++
- include/linux/mempool.h             |  6 ++++++
- include/linux/memremap.h            |  9 +++++++++
- include/linux/mm.h                  |  4 ++++
- include/linux/mm_types.h            |  9 +++++++--
- include/linux/net.h                 |  6 ++++++
- include/linux/nvme-fc-driver.h      |  6 ++++++
- include/linux/pagemap.h             |  5 +++++
- include/linux/pci.h                 |  5 +++++
- include/linux/sched.h               | 17 +++++++++++++++++
- include/linux/sched/topology.h      |  6 ++++++
- include/linux/shrinker.h            |  5 +++++
- include/linux/skbuff.h              |  7 ++++++-
- include/linux/swap.h                |  6 ++++++
- include/linux/timer_types.h         |  5 +++++
- include/linux/trace_events.h        | 12 +++++++++++-
- include/linux/usb/hcd.h             |  6 ++++++
- include/net/dst_ops.h               |  6 ++++++
- include/net/genetlink.h             | 10 ++++++++++
- include/net/ip6_fib.h               |  6 ++++++
- include/net/ip_fib.h                | 13 +++++++++++++
- include/net/macsec.h                |  6 ++++++
- include/net/netlink.h               |  6 ++++++
- include/net/nexthop.h               |  6 ++++++
- include/net/sch_generic.h           |  6 ++++++
- include/net/tls.h                   | 10 ++++++++++
- include/net/udp_tunnel.h            | 16 ++++++++++++++++
- include/net/xsk_buff_pool.h         |  5 +++++
- include/scsi/scsi_cmnd.h            |  6 ++++++
- include/scsi/scsi_device.h          | 13 +++++++++++++
- include/scsi/scsi_host.h            | 10 ++++++++++
- include/scsi/scsi_transport.h       |  6 ++++++
- include/scsi/scsi_transport_fc.h    |  6 ++++++
- include/scsi/scsi_transport_iscsi.h |  6 ++++++
- include/scsi/scsi_transport_sas.h   |  6 ++++++
- kernel/sched/sched.h                | 15 +++++++++++++++
- net/devlink/devl_internal.h         |  7 +++++++
- 58 files changed, 451 insertions(+), 4 deletions(-)
 
 diff --git a/block/elevator.h b/block/elevator.h
 index 2a78544bf201..e3cdcae2a404 100644
@@ -1673,6 +1613,3 @@ index 14eaad9cfe35..6f0c94814b70 100644
  	char priv[] __aligned(NETDEV_ALIGN);
  };
  
--- 
-2.47.3
-

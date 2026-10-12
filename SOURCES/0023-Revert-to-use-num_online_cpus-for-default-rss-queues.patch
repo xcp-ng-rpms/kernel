@@ -1,7 +1,7 @@
-From 9da6814740d26fb1a968e78e1f8deeb151c40d87 Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Corentin Oparowski <corentin.oparowski@vates.tech>
 Date: Fri, 7 Nov 2025 08:41:00 +0000
-Subject: [PATCH 23/35] Revert to use num_online_cpus for default rss queues
+Subject: [PATCH] Revert to use num_online_cpus for default rss queues
 
 In kernel version v4.19.19, the default number of RSS queues is
 determined using num_online_cpus(). However, in kernel v6.6.x, the logic
@@ -18,15 +18,12 @@ is unavailable, it reverts to using num_online_cpus(). To avoid excessive
 queue allocation, the number of RSS queues is capped at 8.
 
 Signed-off-by: Ming Lu <ming.lu@cloud.com>
----
- net/core/dev.c | 3 +++
- 1 file changed, 3 insertions(+)
 
 diff --git a/net/core/dev.c b/net/core/dev.c
-index fca092ffe090..fef45b6b05da 100644
+index 3527ebc86503..c3199f1bd0d2 100644
 --- a/net/core/dev.c
 +++ b/net/core/dev.c
-@@ -3199,6 +3199,9 @@ int netif_get_num_default_rss_queues(void)
+@@ -3348,6 +3348,9 @@ int netif_get_num_default_rss_queues(void)
  	}
  	free_cpumask_var(cpus);
  
@@ -36,6 +33,3 @@ index fca092ffe090..fef45b6b05da 100644
  	return count > 2 ? DIV_ROUND_UP(count, 2) : count;
  }
  EXPORT_SYMBOL(netif_get_num_default_rss_queues);
--- 
-2.47.3
-

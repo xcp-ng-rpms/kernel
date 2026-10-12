@@ -1,8 +1,8 @@
-From 170e4839e83f7bf7171511ff0a3d7a4d836b5f07 Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Corentin Oparowski <corentin.oparowski@vates.tech>
 Date: Sat, 19 Sep 2015 08:09:42 +0200
-Subject: [PATCH 15/35] Guests can potentially disable/cause the PCI device to
- stop responding at any time.
+Subject: [PATCH] Guests can potentially disable/cause the PCI device to stop
+ responding at any time.
 
 Any access by Dom0, DomU or Xen to the PCI device may cause a Fatal PCI Express
 error. Root ports can be configured to signal BIOS code that such an error has
@@ -18,12 +18,9 @@ crash.
 Disabling Fatal Error reporting in the PCI Express root port prevents the
 error from propogating to system firmware and removes that attack vector for
 triggering host crashes.
----
- drivers/xen/xen-pciback/pci_stub.c | 35 ++++++++++++++++++++++++++++++
- 1 file changed, 35 insertions(+)
 
 diff --git a/drivers/xen/xen-pciback/pci_stub.c b/drivers/xen/xen-pciback/pci_stub.c
-index f4189af4a8c4..68763af029d3 100644
+index 47b24b04ea17..b13b27fe0f5a 100644
 --- a/drivers/xen/xen-pciback/pci_stub.c
 +++ b/drivers/xen/xen-pciback/pci_stub.c
 @@ -41,6 +41,9 @@ wait_queue_head_t xen_pcibk_aer_wait_queue;
@@ -82,6 +79,3 @@ index f4189af4a8c4..68763af029d3 100644
  	/* We need the device active to save the state. */
  	dev_dbg(&dev->dev, "save state of device\n");
  	pci_save_state(dev);
--- 
-2.47.3
-
