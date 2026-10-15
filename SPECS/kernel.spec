@@ -1,6 +1,6 @@
-%global package_speccommit 7f7081a62ef67154f89952572924206f4a00c685
+%global package_speccommit eae2d6a435de7ef3a6be6e141b0501ab2c94f20d
 %global usver 6.6.98
-%global xsver 24
+%global xsver 26
 %global xsrel %{xsver}%{?xscount}%{?xshash}
 %global package_srccommit refs/tags/v6.6.98
 %define uname 6.6.98+1
@@ -612,6 +612,13 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Tue Apr 28 2026 Andrew Cooper <andrew.cooper3@citrix.com> - 6.6.98-26
+- Update hypercall filter driver for Xen 4.21
+
+* Thu Apr 23 2026 Stephen Cheng <stephen.cheng@citrix.com> - 6.6.98-25
+- CP-311737: Update kabi list for driver mpt3sas 57.00.01.00
+- CP-312236: Update minimal kABI list with latest Nvidia driver
+
 * Mon Apr 13 2026 Stephen Cheng <stephen.cheng@citrix.com> - 6.6.98-24
 - CP-311972: Build the yama security module
 - CA-421352: Add dwarves to core_builddeps for livepatch builds

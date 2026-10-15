@@ -71,10 +71,10 @@ index 3095613f8134..b0038aaf115d 100644
  obj-$(CONFIG_XEN_GRANT_DMA_OPS)		+= grant-dma-ops.o
 diff --git a/drivers/xen/filter-hypercall.c b/drivers/xen/filter-hypercall.c
 new file mode 100644
-index 000000000000..de1fe5ca1a8a
+index 000000000000..c72e8cb9be5e
 --- /dev/null
 +++ b/drivers/xen/filter-hypercall.c
-@@ -0,0 +1,1404 @@
+@@ -0,0 +1,1405 @@
 +// SPDX-License-Identifier: GPL-2.0-only
 +
 +#include <linux/kernel.h>
@@ -781,6 +781,7 @@ index 000000000000..de1fe5ca1a8a
 +	case XEN_DOMCTL_soft_reset:
 +	case XEN_DOMCTL_pci_access:
 +	case XEN_DOMCTL_get_address_size:
++	case XEN_DOMCTL_get_domain_state:
 +		break;
 +	case XEN_DOMCTL_shadow_op:
 +		if (bitmap_ptr_bad(op->u.shadow_op.dirty_bitmap.p,
@@ -893,9 +894,9 @@ index 000000000000..de1fe5ca1a8a
 +			goto err;
 +		break;
 +	case XEN_DOMCTL_createdomain:
-+		if (unlikely(op->u.createdomain.altp2m_opts != 0)) {
++		if (unlikely(op->u.createdomain.altp2m.opts != 0)) {
 +			pr_warn("filter-hypercall: Unexpected altp2m options: %u\n",
-+				op->u.createdomain.altp2m_opts);
++				op->u.createdomain.altp2m.opts);
 +			ret = -EPERM;
 +			goto err;
 +		}
@@ -1556,26 +1557,6 @@ index 61aaded483e1..3030274a5c8e 100644
  	return ret;
  }
  
-diff --git a/drivers/xen/public-xen/elfnote.h b/drivers/xen/public-xen/elfnote.h
-index e2743f74c195..3d1b7bcea843 100644
---- a/drivers/xen/public-xen/elfnote.h
-+++ b/drivers/xen/public-xen/elfnote.h
-@@ -283,7 +283,14 @@
-  */
- #define XS_ELFNOTE_PV_IOMMU               0
- 
--#define XS_ELFNOTE_MAX XS_ELFNOTE_PV_IOMMU
-+/*
-+ * If this is present, Dom0 support hypercall filtering,
-+ * needed for Secure Boot.
-+ * The number contains a version of the filter.
-+ */
-+#define XS_ELFNOTE_PRIVCMD_FILTERING      1
-+
-+#define XS_ELFNOTE_MAX XS_ELFNOTE_PRIVCMD_FILTERING
- 
- #endif /* __XEN_PUBLIC_ELFNOTE_H__ */
- 
 diff --git a/drivers/xen/xen-pciback/pci_stub.c b/drivers/xen/xen-pciback/pci_stub.c
 index 0aa2ef687e13..504fbf743482 100644
 --- a/drivers/xen/xen-pciback/pci_stub.c
@@ -1648,7 +1629,7 @@ index 3214365929b5..3a247b2d88d7 100644
  	return 0;
 diff --git a/include/xen/filter-hypercall.h b/include/xen/filter-hypercall.h
 new file mode 100644
-index 000000000000..13031e121d7c
+index 000000000000..3c7ed69f820f
 --- /dev/null
 +++ b/include/xen/filter-hypercall.h
 @@ -0,0 +1,25 @@
@@ -1674,7 +1655,7 @@ index 000000000000..13031e121d7c
 +#endif /* !__ASSEMBLY__ */
 +
 +/* Current filter code uses 9.0 XS ABI compatibility */
-+#define PRIVCMD_FILTERING_ABI_VERSION _AC(0x90001,UL)
++#define PRIVCMD_FILTERING_ABI_VERSION _AC(0x90002, UL)
 +
 +#endif
 diff --git a/include/xen/interface/elfnote.h b/include/xen/interface/elfnote.h
