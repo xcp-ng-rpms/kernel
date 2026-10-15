@@ -1,6 +1,6 @@
-%global package_speccommit 4e8483896f686b3215dc3bfd9ee6911106b47d30
+%global package_speccommit 35e23824f238a840c5b1a31ad4fb4449b64955ca
 %global usver 6.6.98
-%global xsver 19
+%global xsver 23
 %global xsrel %{xsver}%{?xscount}%{?xshash}
 %global package_srccommit refs/tags/v6.6.98
 %define uname 6.6.98+1
@@ -611,6 +611,20 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Fri Mar 13 2026 Stephen Cheng <stephen.cheng@citrix.com> - 6.6.98-23
+- Update import-patch-from-git.py script to Python 3
+- CP-311736: Update kabi list for driver mpi3mr
+
+* Wed Mar 11 2026 Frediano Ziglio <frediano.ziglio@citrix.com> - 6.6.98-22
+- CP-311608: Publish this kernel supports privcmd filtering
+- CA-422582: Disable VSOCK support
+
+* Thu Feb 26 2026 Stephen Cheng <stephen.cheng@citrix.com> - 6.6.98-21
+- CP-311161: Update kabi list for driver qla2xxx
+
+* Fri Feb 06 2026 Frediano Ziglio <frediano.ziglio@citrix.com> - 6.6.98-20
+- Hypercall filter driver: Fix calculation robustness
+
 * Fri Feb 06 2026 Roger Pau Monné <roger.pau@citrix.com> - 6.6.98-19
 - Fix filter driver to not return -EPERM for unknown hypercalls.
 

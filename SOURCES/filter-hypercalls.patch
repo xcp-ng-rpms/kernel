@@ -24,6 +24,25 @@ userspace.
 Signed-off-by: Ross Lagerwall <ross.lagerwall@citrix.com>
 Signed-off-by: Frediano Ziglio <frediano.ziglio@citrix.com>
 
+diff --git a/arch/x86/xen/xen-head.S b/arch/x86/xen/xen-head.S
+index 065483e98d01..00a404fb03f6 100644
+--- a/arch/x86/xen/xen-head.S
++++ b/arch/x86/xen/xen-head.S
+@@ -21,6 +21,7 @@
+ #include <xen/interface/xen.h>
+ #include <xen/interface/xen-mca.h>
+ #include <asm/xen/interface.h>
++#include <xen/filter-hypercall.h>
+ 
+ #ifdef CONFIG_XEN_PV
+ 	__INIT
+@@ -182,5 +183,6 @@ SYM_FUNC_END(xen_hypercall_intel)
+ 	ELFNOTE(Xen, XEN_ELFNOTE_LOADER,         .asciz "generic")
+ 	ELFNOTE(Xen, XEN_ELFNOTE_SUSPEND_CANCEL, .long 1)
+ 	ELFNOTE(XS, XS_ELFNOTE_PV_IOMMU, .long 1)
++	ELFNOTE(XS, XS_ELFNOTE_PRIVCMD_FILTERING, .long PRIVCMD_FILTERING_ABI_VERSION)
+ 
+ #endif /*CONFIG_XEN */
 diff --git a/drivers/pci/pci.c b/drivers/pci/pci.c
 index 19baf8e777d1..3875aa66b837 100644
 --- a/drivers/pci/pci.c
@@ -52,10 +71,10 @@ index 3095613f8134..b0038aaf115d 100644
  obj-$(CONFIG_XEN_GRANT_DMA_OPS)		+= grant-dma-ops.o
 diff --git a/drivers/xen/filter-hypercall.c b/drivers/xen/filter-hypercall.c
 new file mode 100644
-index 000000000000..2d7e448a0c72
+index 000000000000..de1fe5ca1a8a
 --- /dev/null
 +++ b/drivers/xen/filter-hypercall.c
-@@ -0,0 +1,1396 @@
+@@ -0,0 +1,1404 @@
 +// SPDX-License-Identifier: GPL-2.0-only
 +
 +#include <linux/kernel.h>
@@ -86,7 +105,7 @@ index 000000000000..2d7e448a0c72
 +#include "public-xen/xsm/flask_op.h"
 +#include "public-xen/hvm/hvm_op.h"
 +
-+#include "filter-hypercall.h"
++#include <xen/filter-hypercall.h>
 +
 +/*
 + * This is used for filtering hypercalls originating from userspace.
@@ -106,7 +125,8 @@ index 000000000000..2d7e448a0c72
 +
 +#define MAX_BOUNCE_LEN (32 * 1024)
 +#define MAX_BOUNCE_LEN_IOMMU (256 * 1024)
-+#define MAX_PTR_CHECK_LEN (128 * 1024 * 1024)
++#define MAX_PTR_CHECK_LEN ((size_t)(512 * 1024 * 1024))
++#define UINT16_MAX 0xffff
 +
 +static int __pre_hypercall(struct filtercall *fc, struct multicall_entry *mc,
 +			   unsigned int level);
@@ -165,6 +185,14 @@ index 000000000000..2d7e448a0c72
 +		return true;
 +
 +	return !access_ok(p, n * size);
++}
++
++static bool bitmap_ptr_bad(const void *p, size_t bits)
++{
++	if (bits > MAX_PTR_CHECK_LEN * BITS_PER_BYTE)
++		return true;
++
++	return !access_ok(p, DIV_ROUND_UP(bits, BITS_PER_BYTE));
 +}
 +
 +static int pre_xen_version(int cmd, void *uptr, void **kptr)
@@ -755,18 +783,16 @@ index 000000000000..2d7e448a0c72
 +	case XEN_DOMCTL_get_address_size:
 +		break;
 +	case XEN_DOMCTL_shadow_op:
-+		if (ptr_bad(op->u.shadow_op.dirty_bitmap.p,
-+			    (op->u.shadow_op.pages + 7) / 8, 1))
++		if (bitmap_ptr_bad(op->u.shadow_op.dirty_bitmap.p,
++				   op->u.shadow_op.pages))
 +			goto err;
 +		break;
 +	case XEN_DOMCTL_setvcpuaffinity:
 +	case XEN_DOMCTL_getvcpuaffinity:
-+		if (ptr_bad(op->u.vcpuaffinity.cpumap_hard.bitmap.p, 1,
-+			    DIV_ROUND_UP(op->u.vcpuaffinity.cpumap_hard.nr_bits,
-+				         BITS_PER_BYTE)) ||
-+		    ptr_bad(op->u.vcpuaffinity.cpumap_soft.bitmap.p, 1,
-+			    DIV_ROUND_UP(op->u.vcpuaffinity.cpumap_soft.nr_bits,
-+				         BITS_PER_BYTE)))
++		if (bitmap_ptr_bad(op->u.vcpuaffinity.cpumap_hard.bitmap.p,
++				   op->u.vcpuaffinity.cpumap_hard.nr_bits) ||
++		    bitmap_ptr_bad(op->u.vcpuaffinity.cpumap_soft.bitmap.p,
++				   op->u.vcpuaffinity.cpumap_soft.nr_bits))
 +			goto err;
 +		break;
 +	case XEN_DOMCTL_scheduler_op:
@@ -862,9 +888,8 @@ index 000000000000..2d7e448a0c72
 +	}
 +	case XEN_DOMCTL_setnodeaffinity:
 +	case XEN_DOMCTL_getnodeaffinity:
-+		if (ptr_bad(op->u.nodeaffinity.nodemap.bitmap.p, 1,
-+			    DIV_ROUND_UP(op->u.nodeaffinity.nodemap.nr_bits,
-+				         BITS_PER_BYTE)))
++		if (bitmap_ptr_bad(op->u.nodeaffinity.nodemap.bitmap.p,
++				   op->u.nodeaffinity.nodemap.nr_bits))
 +			goto err;
 +		break;
 +	case XEN_DOMCTL_createdomain:
@@ -1019,12 +1044,14 @@ index 000000000000..2d7e448a0c72
 +	case XEN_SYSCTL_cpupool_op:
 +		if ((op->u.cpupool_op.op == XEN_SYSCTL_CPUPOOL_OP_INFO ||
 +		     op->u.cpupool_op.op == XEN_SYSCTL_CPUPOOL_OP_FREEINFO) &&
-+		    ptr_bad(op->u.cpupool_op.cpumap.bitmap.p, 1,
-+			    DIV_ROUND_UP(op->u.cpupool_op.cpumap.nr_bits, BITS_PER_BYTE)))
++		    bitmap_ptr_bad(op->u.cpupool_op.cpumap.bitmap.p,
++				   op->u.cpupool_op.cpumap.nr_bits))
 +			goto err;
 +		break;
 +	case XEN_SYSCTL_numainfo:
-+		if (ptr_bad(op->u.numainfo.meminfo.p, op->u.numainfo.num_nodes,
++		/* The check on num_nodes is to prevent power of 2 below overflowing uint32_t */
++		if (op->u.numainfo.num_nodes > UINT16_MAX ||
++		    ptr_bad(op->u.numainfo.meminfo.p, op->u.numainfo.num_nodes,
 +			    sizeof(xen_sysctl_meminfo_t)) ||
 +		    ptr_bad(op->u.numainfo.distance.p,
 +			    op->u.numainfo.num_nodes * op->u.numainfo.num_nodes,
@@ -1452,32 +1479,8 @@ index 000000000000..2d7e448a0c72
 +{
 +	return __post_hypercall(fc, &fc->mc, &fc->mc_orig);
 +}
-diff --git a/drivers/xen/filter-hypercall.h b/drivers/xen/filter-hypercall.h
-new file mode 100644
-index 000000000000..ea0020ae2279
---- /dev/null
-+++ b/drivers/xen/filter-hypercall.h
-@@ -0,0 +1,18 @@
-+// SPDX-License-Identifier: GPL-2.0-only
-+
-+#ifndef FILTER_HYPERCALL_H
-+#define FILTER_HYPERCALL_H
-+
-+struct filtercall {
-+	struct multicall_entry mc;
-+	struct multicall_entry mc_orig;
-+
-+	/* Used for multicalls */
-+	struct multicall_entry *kmc_list;
-+	struct multicall_entry *umc_list;
-+};
-+
-+int pre_hypercall(struct filtercall *fc);
-+int post_hypercall(struct filtercall *fc);
-+
-+#endif
 diff --git a/drivers/xen/privcmd.c b/drivers/xen/privcmd.c
-index 61aaded483e1..13871e3aac87 100644
+index 61aaded483e1..3030274a5c8e 100644
 --- a/drivers/xen/privcmd.c
 +++ b/drivers/xen/privcmd.c
 @@ -30,6 +30,7 @@
@@ -1488,14 +1491,14 @@ index 61aaded483e1..13871e3aac87 100644
  
  #include <asm/xen/hypervisor.h>
  #include <asm/xen/hypercall.h>
-@@ -44,6 +45,7 @@
+@@ -43,6 +44,7 @@
+ #include <xen/page.h>
  #include <xen/xen-ops.h>
  #include <xen/balloon.h>
++#include <xen/filter-hypercall.h>
  
-+#include "filter-hypercall.h"
  #include "privcmd.h"
  
- MODULE_LICENSE("GPL");
 @@ -75,6 +77,9 @@ static long privcmd_ioctl_hypercall(struct file *file, void __user *udata)
  	struct privcmd_data *data = file->private_data;
  	struct privcmd_hypercall hypercall;
@@ -1552,6 +1555,26 @@ index 61aaded483e1..13871e3aac87 100644
 +
  	return ret;
  }
+ 
+diff --git a/drivers/xen/public-xen/elfnote.h b/drivers/xen/public-xen/elfnote.h
+index e2743f74c195..3d1b7bcea843 100644
+--- a/drivers/xen/public-xen/elfnote.h
++++ b/drivers/xen/public-xen/elfnote.h
+@@ -283,7 +283,14 @@
+  */
+ #define XS_ELFNOTE_PV_IOMMU               0
+ 
+-#define XS_ELFNOTE_MAX XS_ELFNOTE_PV_IOMMU
++/*
++ * If this is present, Dom0 support hypercall filtering,
++ * needed for Secure Boot.
++ * The number contains a version of the filter.
++ */
++#define XS_ELFNOTE_PRIVCMD_FILTERING      1
++
++#define XS_ELFNOTE_MAX XS_ELFNOTE_PRIVCMD_FILTERING
+ 
+ #endif /* __XEN_PUBLIC_ELFNOTE_H__ */
  
 diff --git a/drivers/xen/xen-pciback/pci_stub.c b/drivers/xen/xen-pciback/pci_stub.c
 index 0aa2ef687e13..504fbf743482 100644
@@ -1623,6 +1646,56 @@ index 3214365929b5..3a247b2d88d7 100644
  static inline int security_lock_kernel_down(const char *where, enum lockdown_reason level)
  {
  	return 0;
+diff --git a/include/xen/filter-hypercall.h b/include/xen/filter-hypercall.h
+new file mode 100644
+index 000000000000..13031e121d7c
+--- /dev/null
++++ b/include/xen/filter-hypercall.h
+@@ -0,0 +1,25 @@
++// SPDX-License-Identifier: GPL-2.0-only
++
++#ifndef XEN_FILTER_HYPERCALL_H
++#define XEN_FILTER_HYPERCALL_H
++
++#ifndef __ASSEMBLY__
++
++struct filtercall {
++	struct multicall_entry mc;
++	struct multicall_entry mc_orig;
++
++	/* Used for multicalls */
++	struct multicall_entry *kmc_list;
++	struct multicall_entry *umc_list;
++};
++
++int pre_hypercall(struct filtercall *fc);
++int post_hypercall(struct filtercall *fc);
++
++#endif /* !__ASSEMBLY__ */
++
++/* Current filter code uses 9.0 XS ABI compatibility */
++#define PRIVCMD_FILTERING_ABI_VERSION _AC(0x90001,UL)
++
++#endif
+diff --git a/include/xen/interface/elfnote.h b/include/xen/interface/elfnote.h
+index 4ee494dc2cd3..7db66e1a9a11 100644
+--- a/include/xen/interface/elfnote.h
++++ b/include/xen/interface/elfnote.h
+@@ -200,6 +200,13 @@
+  */
+ #define XS_ELFNOTE_PV_IOMMU               0
+ 
+-#define XS_ELFNOTE_MAX XS_ELFNOTE_PV_IOMMU
++/*
++ * If this is present, Dom0 support hypercall filtering,
++ * needed for Secure Boot.
++ * The number contains a version of the filter.
++ */
++#define XS_ELFNOTE_PRIVCMD_FILTERING      1
++
++#define XS_ELFNOTE_MAX XS_ELFNOTE_PRIVCMD_FILTERING
+ 
+ #endif /* __XEN_PUBLIC_ELFNOTE_H__ */
 diff --git a/security/lockdown/lockdown.c b/security/lockdown/lockdown.c
 index ef348935b6ff..1c76590d0583 100644
 --- a/security/lockdown/lockdown.c
