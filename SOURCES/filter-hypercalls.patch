@@ -44,10 +44,10 @@ index 065483e98d01..00a404fb03f6 100644
  
  #endif /*CONFIG_XEN */
 diff --git a/drivers/pci/pci.c b/drivers/pci/pci.c
-index 19baf8e777d1..dd4791f299bf 100644
+index 82144bc7016f..411f941e9115 100644
 --- a/drivers/pci/pci.c
 +++ b/drivers/pci/pci.c
-@@ -5638,6 +5638,8 @@ int pci_reset_function(struct pci_dev *dev)
+@@ -5704,6 +5704,8 @@ int pci_reset_function(struct pci_dev *dev)
  	pci_dev_save_and_disable(dev);
  
  	rc = __pci_reset_function_locked(dev);
@@ -1508,26 +1508,28 @@ index 000000000000..19e1e2b9ac2e
 +	return __post_hypercall(fc, &fc->mc, &fc->mc_orig);
 +}
 diff --git a/drivers/xen/privcmd.c b/drivers/xen/privcmd.c
-index 61aaded483e1..3030274a5c8e 100644
+index 049b29089b7e..51930d30cb5c 100644
 --- a/drivers/xen/privcmd.c
 +++ b/drivers/xen/privcmd.c
-@@ -30,6 +30,7 @@
+@@ -31,8 +31,8 @@
  #include <linux/seq_file.h>
  #include <linux/miscdevice.h>
  #include <linux/moduleparam.h>
-+#include <linux/security.h>
+-#include <linux/notifier.h>
+ #include <linux/security.h>
++#include <linux/notifier.h>
+ #include <linux/wait.h>
  
  #include <asm/xen/hypervisor.h>
- #include <asm/xen/hypercall.h>
-@@ -43,6 +44,7 @@
- #include <xen/page.h>
+@@ -48,6 +48,7 @@
  #include <xen/xen-ops.h>
  #include <xen/balloon.h>
+ #include <xen/xenbus.h>
 +#include <xen/filter-hypercall.h>
  
  #include "privcmd.h"
  
-@@ -75,6 +77,9 @@ static long privcmd_ioctl_hypercall(struct file *file, void __user *udata)
+@@ -90,6 +91,9 @@ static long privcmd_ioctl_hypercall(struct file *file, void __user *udata)
  	struct privcmd_data *data = file->private_data;
  	struct privcmd_hypercall hypercall;
  	long ret;
@@ -1537,7 +1539,7 @@ index 61aaded483e1..3030274a5c8e 100644
  
  	/* Disallow arbitrary hypercalls if restricted */
  	if (data->domid != DOMID_INVALID)
-@@ -83,13 +88,42 @@ static long privcmd_ioctl_hypercall(struct file *file, void __user *udata)
+@@ -98,13 +102,42 @@ static long privcmd_ioctl_hypercall(struct file *file, void __user *udata)
  	if (copy_from_user(&hypercall, udata, sizeof(hypercall)))
  		return -EFAULT;
  
@@ -1610,10 +1612,10 @@ index 732f9702a439..dd8b33a1aee8 100644
  
  #ifdef CONFIG_PERF_EVENTS
 diff --git a/include/linux/pci.h b/include/linux/pci.h
-index a1e4de68edee..f53215b4102b 100644
+index 0e48b0f06cd3..d4e178ac9782 100644
 --- a/include/linux/pci.h
 +++ b/include/linux/pci.h
-@@ -399,6 +399,13 @@ struct pci_dev {
+@@ -408,6 +408,13 @@ struct pci_dev {
  	unsigned int	pasid_no_tlp:1;		/* PASID works without TLP Prefix */
  	unsigned int	eetlp_prefix_path:1;	/* End-to-End TLP Prefix */
  
@@ -1628,7 +1630,7 @@ index a1e4de68edee..f53215b4102b 100644
  	struct device	dev;			/* Generic device interface */
  
 diff --git a/include/linux/security.h b/include/linux/security.h
-index 3214365929b5..3a247b2d88d7 100644
+index c7fb04431b06..8e73235ad88c 100644
 --- a/include/linux/security.h
 +++ b/include/linux/security.h
 @@ -125,6 +125,7 @@ enum lockdown_reason {
@@ -1636,10 +1638,10 @@ index 3214365929b5..3a247b2d88d7 100644
  	LOCKDOWN_DBG_WRITE_KERNEL,
  	LOCKDOWN_RTAS_ERROR_INJECTION,
 +	LOCKDOWN_XEN_HYPERCALL,
+ 	LOCKDOWN_XEN_USER_ACTIONS,
  	LOCKDOWN_INTEGRITY_MAX,
  	LOCKDOWN_KCORE,
- 	LOCKDOWN_KPROBES,
-@@ -486,6 +487,7 @@ int security_inode_notifysecctx(struct inode *inode, void *ctx, u32 ctxlen);
+@@ -487,6 +488,7 @@ int security_inode_notifysecctx(struct inode *inode, void *ctx, u32 ctxlen);
  int security_inode_setsecctx(struct dentry *dentry, void *ctx, u32 ctxlen);
  int security_inode_getsecctx(struct inode *inode, void **ctx, u32 *ctxlen);
  int security_locked_down(enum lockdown_reason what);
@@ -1647,7 +1649,7 @@ index 3214365929b5..3a247b2d88d7 100644
  int security_lock_kernel_down(const char *where, enum lockdown_reason level);
  #else /* CONFIG_SECURITY */
  
-@@ -1405,6 +1407,10 @@ static inline int security_locked_down(enum lockdown_reason what)
+@@ -1406,6 +1408,10 @@ static inline int security_locked_down(enum lockdown_reason what)
  {
  	return 0;
  }
@@ -1735,7 +1737,7 @@ index ef348935b6ff..1c76590d0583 100644
  };
  
 diff --git a/security/security.c b/security/security.c
-index eb598d55a265..75fe46e9fef0 100644
+index 9310a1d16a0b..12cd1e2777ad 100644
 --- a/security/security.c
 +++ b/security/security.c
 @@ -61,6 +61,7 @@ const char *const lockdown_reasons[LOCKDOWN_CONFIDENTIALITY_MAX + 1] = {
@@ -1743,10 +1745,10 @@ index eb598d55a265..75fe46e9fef0 100644
  	[LOCKDOWN_DBG_WRITE_KERNEL] = "use of kgdb/kdb to write kernel RAM",
  	[LOCKDOWN_RTAS_ERROR_INJECTION] = "RTAS error injection",
 +	[LOCKDOWN_XEN_HYPERCALL] = "raw Xen hypercall access",
+ 	[LOCKDOWN_XEN_USER_ACTIONS] = "Xen guest user action",
  	[LOCKDOWN_INTEGRITY_MAX] = "integrity",
  	[LOCKDOWN_KCORE] = "/proc/kcore access",
- 	[LOCKDOWN_KPROBES] = "use of kprobes",
-@@ -5285,6 +5286,12 @@ int security_locked_down(enum lockdown_reason what)
+@@ -5286,6 +5287,12 @@ int security_locked_down(enum lockdown_reason what)
  }
  EXPORT_SYMBOL(security_locked_down);
  

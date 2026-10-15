@@ -1,0 +1,1011 @@
+diff --git a/include/asm-generic/tlb.h b/include/asm-generic/tlb.h
+index f9eae152bd53..29b172b3536f 100644
+--- a/include/asm-generic/tlb.h
++++ b/include/asm-generic/tlb.h
+@@ -338,6 +338,13 @@ struct mmu_gather {
+ 	unsigned int		vma_huge : 1;
+ 	unsigned int		vma_pfn  : 1;
+ 
++#ifndef __GENKSYMS__
++	/*
++	 * Added in 8ce720d5b (mm/hugetlb: fix excessive IPI broadcasts
++	 * when unsharing PMD tables using mmu_gather)
++	 * The added new fields happens in hole, ignore it
++	 */
++
+ 	/*
+ 	 * Did we unshare (unmap) any shared page tables? For now only
+ 	 * used for hugetlb PMD table sharing.
+@@ -351,6 +358,7 @@ struct mmu_gather {
+ 	 * for hugetlb PMD table sharing.
+ 	 */
+ 	unsigned int		fully_unshared_tables : 1;
++#endif
+ 
+ 	unsigned int		batch_count;
+ 
+@@ -365,6 +373,12 @@ struct mmu_gather {
+ #endif
+ };
+ 
++#ifndef __GENKSYMS__
++#define MMU_GATHER_KABI_V1_SIZE 128
++static_assert(sizeof(struct mmu_gather) == MMU_GATHER_KABI_V1_SIZE,
++	"mmu_gather kABI size changed");
++#endif
++
+ void tlb_flush_mmu(struct mmu_gather *tlb);
+ 
+ static inline void __tlb_adjust_range(struct mmu_gather *tlb,
+diff --git a/include/linux/bpf.h b/include/linux/bpf.h
+index 102115688627..4f6daee7f018 100644
+--- a/include/linux/bpf.h
++++ b/include/linux/bpf.h
+@@ -310,15 +310,40 @@ struct bpf_map {
+ 	};
+ 	struct mutex freeze_mutex;
+ 	atomic64_t writecnt;
++#ifndef __GENKSYMS__
++	/*
++	 * Added in dbd8ec2 (bpf: Move bpf map owner out of common struct)
++	 * Just ignore as no OOT driver access it
++	 */
+ 	spinlock_t owner_lock;
+ 	struct bpf_map_owner *owner;
++#else
++	/* 'Ownership' of program-containing map is claimed by the first program
++	 * that is going to use this map or by the first program which FD is
++	 * stored in the map to make sure that all callers and callees have the
++	 * same prog type, JITed flag and xdp_has_frags flag.
++	 */
++	struct {
++		const struct btf_type *attach_func_proto;
++		spinlock_t lock;
++		enum bpf_prog_type type;
++		bool jited;
++		bool xdp_has_frags;
++	} owner;
++#endif
+ 	bool bypass_spec_v1;
+ 	bool frozen; /* write-once; write-protected by freeze_mutex */
+ 	bool free_after_mult_rcu_gp;
+ 	bool free_after_rcu_gp;
+ 	atomic64_t sleepable_refcnt;
+ 	s64 __percpu *elem_count;
++#ifndef __GENKSYMS__
++	/*
++	 * Added in 3eeefeb (bpf: Add cookie object to bpf maps)
++	 * Just ignore it as no OOT driver access it
++	 */
+ 	u64 cookie; /* write-once */
++#endif
+ };
+ 
+ static inline const char *btf_field_type_name(enum btf_field_type type)
+diff --git a/include/linux/inetdevice.h b/include/linux/inetdevice.h
+index b157ff4f727f..6893c8a76137 100644
+--- a/include/linux/inetdevice.h
++++ b/include/linux/inetdevice.h
+@@ -38,11 +38,16 @@ struct in_device {
+ 	struct ip_mc_list	*mc_tomb;
+ 	unsigned long		mr_v1_seen;
+ 	unsigned long		mr_v2_seen;
++	unsigned long		mr_maxdelay;
+ 	unsigned long		mr_qi;		/* Query Interval */
+ 	unsigned long		mr_qri;		/* Query Response Interval */
+ 	unsigned char		mr_qrv;		/* Query Robustness Variable */
+ 	unsigned char		mr_gq_running;
+-	u32			mr_maxdelay;
++	/*
++	 * u32			mr_maxdelay;
++	 * Added in d5cd3bb (ipv4: igmp: annotate data-races around idev->mr_maxdelay)
++	 * Just revert it to keep kABI
++	 */
+ 	u32			mr_ifc_count;
+ 	struct timer_list	mr_gq_timer;	/* general query timer */
+ 	struct timer_list	mr_ifc_timer;	/* interface change timer */
+diff --git a/include/linux/netpoll.h b/include/linux/netpoll.h
+index f0dddb885280..152e97850d52 100644
+--- a/include/linux/netpoll.h
++++ b/include/linux/netpoll.h
+@@ -32,7 +32,13 @@ struct netpoll {
+ 	bool ipv6;
+ 	u16 local_port, remote_port;
+ 	u8 remote_mac[ETH_ALEN];
++#ifndef __GENKSYMS__
++	/*
++	 * Added in dc67d67 (net: netpoll: Individualize the skb pool)
++	 * No OOT driver access it, just ignore it
++	 */
+ 	struct sk_buff_head skb_pool;
++#endif
+ };
+ 
+ struct netpoll_info {
+diff --git a/include/linux/pci.h b/include/linux/pci.h
+index 34eb9a20a681..22f2f9b52cec 100644
+--- a/include/linux/pci.h
++++ b/include/linux/pci.h
+@@ -451,7 +451,6 @@ struct pci_dev {
+ 	unsigned int	is_physfn:1;
+ 	unsigned int	is_virtfn:1;
+ 	unsigned int	is_hotplug_bridge:1;
+-	unsigned int	is_pciehp:1;
+ 	unsigned int	shpc_managed:1;		/* SHPC owned by shpchp */
+ 	unsigned int	is_thunderbolt:1;	/* Thunderbolt controller */
+ 	/*
+@@ -478,6 +477,13 @@ struct pci_dev {
+ 	unsigned int	no_command_memory:1;	/* No PCI_COMMAND_MEMORY */
+ 	unsigned int	rom_bar_overlap:1;	/* ROM BAR disable broken */
+ 	unsigned int	rom_attr_enabled:1;	/* Display of ROM attribute enabled? */
++#ifndef __GENKSYMS__
++	/*
++	 *  Added in 6cff20ce3b92 (PCI/ACPI: Fix runtime PM ref imbalance on Hot-Plug Capable ports)
++	 *  Moved into hole
++	 */
++	unsigned int	is_pciehp:1;
++#endif
+ 	pci_dev_flags_t dev_flags;
+ 	atomic_t	enable_cnt;	/* pci_enable_device has been called */
+ 
+@@ -546,6 +552,11 @@ struct pci_dev {
+ 	void	*xs_kabi_padding;
+ };
+ 
++#ifndef __GENKSYMS__
++#define PCI_DEV_KABI_SIZE 2656
++static_assert(sizeof(struct pci_dev) == PCI_DEV_KABI_SIZE, "pci_dev kABI size changed");
++#endif
++
+ static inline struct pci_dev *pci_physfn(struct pci_dev *dev)
+ {
+ #ifdef CONFIG_PCI_IOV
+diff --git a/include/linux/posix-clock.h b/include/linux/posix-clock.h
+index a500d3160fe8..3d0ae116223a 100644
+--- a/include/linux/posix-clock.h
++++ b/include/linux/posix-clock.h
+@@ -47,7 +47,24 @@ struct posix_clock_operations {
+ 
+ 	int  (*clock_settime)(struct posix_clock *pc,
+ 			      const struct timespec64 *ts);
++#ifdef __GENKSYMS__
++	/*
++	 * Added in 221e4d1 (posix-clock: introduce posix_clock_context concept)
++	 * No OOT driver access it, just ignore it
++	 */
++	long (*ioctl)(struct posix_clock *pc, unsigned int cmd,
++		      unsigned long arg);
+ 
++	int (*open)(struct posix_clock *pc, fmode_t f_mode);
++
++	__poll_t (*poll)(struct posix_clock *pc, struct file *file,
++			 poll_table *wait);
++
++	int (*release)(struct posix_clock *pc);
++
++	ssize_t (*read)(struct posix_clock *pc, uint flags,
++			char __user *buf, size_t cnt);
++#else
+ 	/*
+ 	 * Optional character device methods:
+ 	 */
+@@ -63,6 +80,7 @@ struct posix_clock_operations {
+ 
+ 	ssize_t (*read)(struct posix_clock_context *pccontext, uint flags,
+ 			char __user *buf, size_t cnt);
++#endif
+ };
+ 
+ /**
+diff --git a/include/linux/pps_kernel.h b/include/linux/pps_kernel.h
+index aab0aebb529e..72f966567ac1 100644
+--- a/include/linux/pps_kernel.h
++++ b/include/linux/pps_kernel.h
+@@ -52,16 +52,27 @@ struct pps_device {
+ 	int current_mode;			/* PPS mode at event time */
+ 
+ 	unsigned int last_ev;			/* last PPS event id */
+-	unsigned int last_fetched_ev;		/* last fetched PPS event id */
+ 	wait_queue_head_t queue;		/* PPS event queue */
+ 
+ 	unsigned int id;			/* PPS source unique ID */
++#ifndef __GENKSYMS__
++	/*
++	 * Added in 7ed42b7 (pps: fix poll support)
++	 * Moved into hole
++	 */
++	unsigned int last_fetched_ev;		/* last fetched PPS event id */
++#endif
+ 	void const *lookup_cookie;		/* For pps_lookup_dev() only */
+ 	struct device dev;
+ 	struct fasync_struct *async_queue;	/* fasync method */
+ 	spinlock_t lock;
+ };
+ 
++#ifndef __GENKSYMS__
++#define PPS_DEVICE_KABI_V1_SIZE 1000
++static_assert(sizeof(struct pps_device) == PPS_DEVICE_KABI_V1_SIZE, "pps_device kABI size changed");
++#endif
++
+ /*
+  * Global variables
+  */
+diff --git a/include/linux/psi_types.h b/include/linux/psi_types.h
+index dd10c22299ab..ec41d0a25ddc 100644
+--- a/include/linux/psi_types.h
++++ b/include/linux/psi_types.h
+@@ -84,9 +84,16 @@ enum psi_aggregators {
+ struct psi_group_cpu {
+ 	/* 1st cacheline updated by the scheduler */
+ 
++	/*
++	 * Removed in b1c6b13 (sched/psi: Optimize psi_group_change() cpu_clock() usage)
++	 * Revert it to keep kABI
++	 */
++
++	/* Aggregator needs to know of concurrent changes */
++	seqcount_t seq ____cacheline_aligned_in_smp;
++
+ 	/* States of the tasks belonging to this group */
+-	unsigned int tasks[NR_PSI_TASK_COUNTS]
+-			____cacheline_aligned_in_smp;
++	unsigned int tasks[NR_PSI_TASK_COUNTS];
+ 
+ 	/* Aggregate pressure state derived from the tasks */
+ 	u32 state_mask;
+diff --git a/include/linux/sched.h b/include/linux/sched.h
+index 48c3a0604d98..4ffc780d94a8 100644
+--- a/include/linux/sched.h
++++ b/include/linux/sched.h
+@@ -760,9 +760,15 @@ struct task_struct {
+ 	struct thread_info		thread_info;
+ #endif
+ 	unsigned int			__state;
++#ifndef __GENKSYMS__
++	/*
++	 * Added in 8afa818 (sched/core: Remove ifdeffery for saved_state)
++	 * Happens in hole, just ignore it
++	 */
+ 
+ 	/* saved state for "spinlock sleepers" */
+ 	unsigned int			saved_state;
++#endif
+ 
+ 	/*
+ 	 * This begins the randomizable portion of task_struct. Only
+@@ -1567,6 +1573,11 @@ struct task_struct {
+ 	 */
+ };
+ 
++#ifndef __GENKSYMS__
++#define TASK_STRUCT_KABI_V1_SIZE 11648
++static_assert(sizeof(struct task_struct) == TASK_STRUCT_KABI_V1_SIZE, "task_struct kABI size changed");
++#endif
++
+ static inline struct pid *task_pid(struct task_struct *task)
+ {
+ 	return task->thread_pid;
+diff --git a/include/linux/sched/topology.h b/include/linux/sched/topology.h
+index 46c3f5fa6d3e..dc76d1c0515e 100644
+--- a/include/linux/sched/topology.h
++++ b/include/linux/sched/topology.h
+@@ -105,10 +105,12 @@ struct sched_domain {
+ 	unsigned int balance_interval;	/* initialise to 1. units in ms. */
+ 	unsigned int nr_balance_failed; /* initialise to 0 */
+ 
+-	/* idle_balance() stats */
+-	unsigned int newidle_call;
+-	unsigned int newidle_success;
+-	unsigned int newidle_ratio;
++	/*
++	 * newidle_call/_success/_ratio used to live inline here.
++	 * They were moved out into struct sched_domain_kabi_ext,
++	 * accessed via xs_kabi_padding, to preserve struct sched_domain's
++	 * kABI. See sd_kabi() and __sdt_alloc().
++	 */
+ 	u64 max_newidle_lb_cost;
+ 	unsigned long last_decay_max_lb_cost;
+ 
+@@ -167,6 +169,23 @@ struct sched_domain {
+ 	unsigned long span[];
+ };
+ 
++/*
++ * Out-of-line extension for kABI-stable additions to struct sched_domain.
++ * Reached via the pre-existing void *xs_kabi_padding on every sched_domain.
++ * Allocated in __sdt_alloc() and released in __sdt_free().
++ */
++struct sched_domain_kabi_ext {
++	unsigned int newidle_call;
++	unsigned int newidle_success;
++	unsigned int newidle_ratio;
++};
++
++static inline struct sched_domain_kabi_ext *
++sd_kabi(struct sched_domain *sd)
++{
++	return sd->xs_kabi_padding;
++}
++
+ static inline struct cpumask *sched_domain_span(struct sched_domain *sd)
+ {
+ 	return to_cpumask(sd->span);
+diff --git a/include/linux/skmsg.h b/include/linux/skmsg.h
+index e923f1c24ce4..b1e347ff2822 100644
+--- a/include/linux/skmsg.h
++++ b/include/linux/skmsg.h
+@@ -93,8 +93,15 @@ struct sk_psock {
+ 	struct sk_buff_head		ingress_skb;
+ 	struct list_head		ingress_msg;
+ 	spinlock_t			ingress_lock;
++#ifndef __GENKSYMS__
++	/*
++	 * Added in 9681044 (bpf, sockmap: Fix FIONREAD for sockmap)
++	 * Happens in a hole, ignore it
++	 */
++
+ 	/** @msg_tot_len: Total bytes queued in ingress_msg list. */
+ 	u32				msg_tot_len;
++#endif
+ 	unsigned long			state;
+ 	struct list_head		link;
+ 	spinlock_t			link_lock;
+@@ -114,6 +121,13 @@ struct sk_psock {
+ 	struct rcu_work			rwork;
+ };
+ 
++
++#ifndef __GENKSYMS__
++#define SK_PSOCK_KABI_V1_SIZE 680
++static_assert(sizeof(struct sk_psock) == SK_PSOCK_KABI_V1_SIZE,
++	"sk_psock kABI size changed");
++#endif
++
+ int sk_msg_alloc(struct sock *sk, struct sk_msg *msg, int len,
+ 		 int elem_first_coalesce);
+ int sk_msg_clone(struct sock *sk, struct sk_msg *dst, struct sk_msg *src,
+diff --git a/include/net/ip6_fib.h b/include/net/ip6_fib.h
+index 3fe3bcb25df8..5916eebd54cc 100644
+--- a/include/net/ip6_fib.h
++++ b/include/net/ip6_fib.h
+@@ -180,7 +180,14 @@ struct fib6_info {
+ 	refcount_t			fib6_ref;
+ 	unsigned long			expires;
+ 
++#ifndef __GENKSYMS__
++	/*
++	 * Added in bd12abe (net/ipv6: Remove expired routes with a separated list of routes)
++	 * Although we have xs_kabi_padding, does not use it as it is complicated and hard to maintain
++	 * Just ignore it as we already ignore fib6_table and no OOT drivers access it
++	 */
+ 	struct hlist_node		gc_link;
++#endif
+ 
+ 	struct dst_metrics		*fib6_metrics;
+ #define fib6_pmtu		fib6_metrics->metrics[RTAX_MTU-1]
+@@ -404,7 +411,13 @@ struct fib6_table {
+ 	struct inet_peer_base	tb6_peers;
+ 	unsigned int		flags;
+ 	unsigned int		fib_seq;
++#ifndef __GENKSYMS__
++	/*
++	 * Added in bd12abe (net/ipv6: Remove expired routes with a separated list of routes
++	 * No OOT driver access it, just ignore it
++	 */
+ 	struct hlist_head       tb6_gc_hlist;	/* GC candidates */
++#endif
+ #define RT6_TABLE_HAS_DFLT_ROUTER	BIT(0)
+ };
+ 
+diff --git a/include/net/neighbour.h b/include/net/neighbour.h
+index 8489fdfeaa75..2797a9a6208e 100644
+--- a/include/net/neighbour.h
++++ b/include/net/neighbour.h
+@@ -183,10 +183,21 @@ struct pneigh_entry {
+ 	netdevice_tracker	dev_tracker;
+ 	u32			flags;
+ 	u8			protocol;
++#ifndef __GENKSYMS__
++	/*
++	 * Added in 7c299d0 (neighbour: add support for NUD_PERMANENT proxy entries)
++	 * Happens in a hole, ignore it
++	 */
+ 	bool			permanent;
++#endif
+ 	u32			key[];
+ };
+ 
++#ifndef __GENKSYMS__
++#define PNEIGH_ENTRY_KABI_V1_SIZE 32
++static_assert(sizeof(struct pneigh_entry) == PNEIGH_ENTRY_KABI_V1_SIZE, "pneigh_entry kABI size changed");
++#endif
++
+ /*
+  *	neighbour table manipulation
+  */
+diff --git a/include/net/netfilter/nf_conntrack_expect.h b/include/net/netfilter/nf_conntrack_expect.h
+index e9a8350e7ccf..457bf8c575b0 100644
+--- a/include/net/netfilter/nf_conntrack_expect.h
++++ b/include/net/netfilter/nf_conntrack_expect.h
+@@ -22,15 +22,29 @@ struct nf_conntrack_expect {
+ 	/* Hash member */
+ 	struct hlist_node hnode;
+ 
++#ifndef __GENKSYMS__
++	/*
++	 *  Added in a76157a (netfilter: nf_conntrack_expect:
++	 *  store netns and zone in expectation)
++	 *  Just ignore as no OOT driver access it
++	 */
+ 	/* Network namespace */
+ 	possible_net_t net;
++#endif
+ 
+ 	/* We expect this tuple, with the following mask */
+ 	struct nf_conntrack_tuple tuple;
+ 	struct nf_conntrack_tuple_mask mask;
+ 
++#ifndef __GENKSYMS__
++	/*
++	 *  Added in a76157a (netfilter: nf_conntrack_expect:
++	 *  store netns and zone in expectation)
++	 *  Just ignore as no OOT driver access it
++	 */
+ #ifdef CONFIG_NF_CONNTRACK_ZONES
+ 	struct nf_conntrack_zone zone;
++#endif
+ #endif
+ 	/* Usage count. */
+ 	refcount_t use;
+@@ -45,8 +59,18 @@ struct nf_conntrack_expect {
+ 	void (*expectfn)(struct nf_conn *new,
+ 			 struct nf_conntrack_expect *this);
+ 
++#ifndef __GENKSYMS__
++	/*
++	 * Added in d81c320 (netfilter: nf_conntrack_expect:
++	 * honor expectation helper field)
++	 * Just ignore as no OOT driver access it
++	 */
++
+ 	/* Helper to assign to new connection */
+ 	struct nf_conntrack_helper __rcu *helper;
++#else
++	struct nf_conntrack_helper *helper;
++#endif
+ 
+ 	/* The conntrack of the master connection */
+ 	struct nf_conn *master;
+diff --git a/include/net/netns/ipv4.h b/include/net/netns/ipv4.h
+index 521529e61ae1..5d29fdcffa66 100644
+--- a/include/net/netns/ipv4.h
++++ b/include/net/netns/ipv4.h
+@@ -42,44 +42,6 @@ struct inet_timewait_death_row {
+ struct tcp_fastopen_context;
+ 
+ struct netns_ipv4 {
+-	/* Cacheline organization can be found documented in
+-	 * Documentation/networking/net_cachelines/netns_ipv4_sysctl.rst.
+-	 * Please update the document when adding new fields.
+-	 */
+-
+-	/* TX readonly hotpath cache lines */
+-	__cacheline_group_begin(netns_ipv4_read_tx);
+-	u8 sysctl_tcp_early_retrans;
+-	u8 sysctl_tcp_tso_win_divisor;
+-	u8 sysctl_tcp_tso_rtt_log;
+-	u8 sysctl_tcp_autocorking;
+-	int sysctl_tcp_min_snd_mss;
+-	unsigned int sysctl_tcp_notsent_lowat;
+-	int sysctl_tcp_limit_output_bytes;
+-	int sysctl_tcp_min_rtt_wlen;
+-	int sysctl_tcp_wmem[3];
+-	u8 sysctl_ip_fwd_use_pmtu;
+-	__cacheline_group_end(netns_ipv4_read_tx);
+-
+-	/* TXRX readonly hotpath cache lines */
+-	__cacheline_group_begin(netns_ipv4_read_txrx);
+-	u8 sysctl_tcp_moderate_rcvbuf;
+-	__cacheline_group_end(netns_ipv4_read_txrx);
+-
+-	/* RX readonly hotpath cache line */
+-	__cacheline_group_begin(netns_ipv4_read_rx);
+-	u8 sysctl_ip_early_demux;
+-	u8 sysctl_tcp_early_demux;
+-	int sysctl_tcp_reordering;
+-	int sysctl_tcp_rmem[3];
+-	__cacheline_group_end(netns_ipv4_read_rx);
+-
+-	/* ICMP rate limiter hot cache line. */
+-	__cacheline_group_begin_aligned(icmp);
+-	atomic_t	icmp_global_credit;
+-	u32		icmp_global_stamp;
+-	__cacheline_group_end_aligned(icmp);
+-
+ 	struct inet_timewait_death_row tcp_death_row;
+ 	struct udp_table *udp_table;
+ 
+@@ -106,6 +68,14 @@ struct netns_ipv4 {
+ 	u8			sysctl_tcp_shrink_window;
+ #ifdef CONFIG_IP_ROUTE_CLASSID
+ 	atomic_t		fib_num_tclassid_users;
++#endif
++#ifndef __GENKSYMS__
++	/*
++	 * Added in e0987b6c3b3 (icmp: move icmp_global.credit and icmp_global.stamp
++	 * to per netns storage)
++	 * Moved into hole for kABI
++	 */
++	atomic_t icmp_global_credit;
+ #endif
+ 	struct hlist_head	*fib_table_hash;
+ 	struct sock		*fibnl;
+@@ -120,10 +90,19 @@ struct netns_ipv4 {
+ 	u8 sysctl_icmp_echo_ignore_broadcasts;
+ 	u8 sysctl_icmp_ignore_bogus_error_responses;
+ 	u8 sysctl_icmp_errors_use_inbound_ifaddr;
++#ifndef __GENKSYMS__
++	/*
++	 * sysctl_tcp_pingpong_thresh added in 4ec8a98b3 (tcp: Set pingpong
++	 * threshold via sysctl)
++	 * sysctl_tcp_backlog_ack_defer added in b4d5e97679 (tcp: defer regular
++	 * ACK while processing socket backlog)
++	 * Moved to hole for kABI
++	 */
++	u8 sysctl_tcp_backlog_ack_defer;
++	u8 sysctl_tcp_pingpong_thresh;
++#endif
+ 	int sysctl_icmp_ratelimit;
+ 	int sysctl_icmp_ratemask;
+-	int sysctl_icmp_msgs_per_sec;
+-	int sysctl_icmp_msgs_burst;
+ 
+ 	u32 ip_rt_min_pmtu;
+ 	int ip_rt_mtu_expires;
+@@ -136,14 +115,17 @@ struct netns_ipv4 {
+ 
+ 	u8 sysctl_ip_default_ttl;
+ 	u8 sysctl_ip_no_pmtu_disc;
++	u8 sysctl_ip_fwd_use_pmtu;
+ 	u8 sysctl_ip_fwd_update_priority;
+ 	u8 sysctl_ip_nonlocal_bind;
+ 	u8 sysctl_ip_autobind_reuse;
+ 	/* Shall we try to damage output packets if routing dev changes? */
+ 	u8 sysctl_ip_dynaddr;
++	u8 sysctl_ip_early_demux;
+ #ifdef CONFIG_NET_L3_MASTER_DEV
+ 	u8 sysctl_raw_l3mdev_accept;
+ #endif
++	u8 sysctl_tcp_early_demux;
+ 	u8 sysctl_udp_early_demux;
+ 
+ 	u8 sysctl_nexthop_compat_mode;
+@@ -156,6 +138,7 @@ struct netns_ipv4 {
+ 	u8 sysctl_tcp_mtu_probing;
+ 	int sysctl_tcp_mtu_probe_floor;
+ 	int sysctl_tcp_base_mss;
++	int sysctl_tcp_min_snd_mss;
+ 	int sysctl_tcp_probe_threshold;
+ 	u32 sysctl_tcp_probe_interval;
+ 
+@@ -168,17 +151,17 @@ struct netns_ipv4 {
+ 	u8 sysctl_tcp_syncookies;
+ 	u8 sysctl_tcp_migrate_req;
+ 	u8 sysctl_tcp_comp_sack_nr;
+-	u8 sysctl_tcp_backlog_ack_defer;
+-	u8 sysctl_tcp_pingpong_thresh;
+-
++	int sysctl_tcp_reordering;
+ 	u8 sysctl_tcp_retries1;
+ 	u8 sysctl_tcp_retries2;
+ 	u8 sysctl_tcp_orphan_retries;
+ 	u8 sysctl_tcp_tw_reuse;
+ 	int sysctl_tcp_fin_timeout;
++	unsigned int sysctl_tcp_notsent_lowat;
+ 	u8 sysctl_tcp_sack;
+ 	u8 sysctl_tcp_window_scaling;
+ 	u8 sysctl_tcp_timestamps;
++	u8 sysctl_tcp_early_retrans;
+ 	u8 sysctl_tcp_recovery;
+ 	u8 sysctl_tcp_thin_linear_timeouts;
+ 	u8 sysctl_tcp_slow_start_after_idle;
+@@ -194,14 +177,30 @@ struct netns_ipv4 {
+ 	u8 sysctl_tcp_frto;
+ 	u8 sysctl_tcp_nometrics_save;
+ 	u8 sysctl_tcp_no_ssthresh_metrics_save;
++	u8 sysctl_tcp_moderate_rcvbuf;
++	u8 sysctl_tcp_tso_win_divisor;
+ 	u8 sysctl_tcp_workaround_signed_windows;
++	int sysctl_tcp_limit_output_bytes;
+ 	int sysctl_tcp_challenge_ack_limit;
++	int sysctl_tcp_min_rtt_wlen;
+ 	u8 sysctl_tcp_min_tso_segs;
++	u8 sysctl_tcp_tso_rtt_log;
++	u8 sysctl_tcp_autocorking;
+ 	u8 sysctl_tcp_reflect_tos;
+ 	int sysctl_tcp_invalid_ratelimit;
+ 	int sysctl_tcp_pacing_ss_ratio;
+ 	int sysctl_tcp_pacing_ca_ratio;
++	int sysctl_tcp_wmem[3];
++	int sysctl_tcp_rmem[3];
+ 	unsigned int sysctl_tcp_child_ehash_entries;
++#ifndef __GENKSYMS__
++	/*
++	 * Added in e0987b6c3b3 (icmp: move icmp_global.credit and icmp_global.stamp
++	 * to per netns storage)
++	 * Moved into hole for kABI
++	 */
++	u32 icmp_global_stamp;
++#endif
+ 	unsigned long sysctl_tcp_comp_sack_delay_ns;
+ 	unsigned long sysctl_tcp_comp_sack_slack_ns;
+ 	int sysctl_max_syn_backlog;
+@@ -244,6 +243,14 @@ struct netns_ipv4 {
+ 	unsigned long *sysctl_local_reserved_ports;
+ 	int sysctl_ip_prot_sock;
+ #endif
++#ifndef __GENKSYMS__
++	/*
++	 * Added in b0da610 (icmp: icmp_msgs_per_sec and icmp_msgs_burst
++	 * sysctls become per netns)
++	 * Moved to hole to keep kABI
++	 */
++	int sysctl_icmp_msgs_per_sec;
++#endif
+ 
+ #ifdef CONFIG_IP_MROUTE
+ #ifndef CONFIG_IP_MROUTE_MULTIPLE_TABLES
+@@ -261,6 +268,14 @@ struct netns_ipv4 {
+ 
+ 	struct fib_notifier_ops	*notifier_ops;
+ 	unsigned int	fib_seq;	/* protected by rtnl_mutex */
++#ifndef __GENKSYMS__
++	/*
++	 * Added in b0da610 (icmp: icmp_msgs_per_sec and icmp_msgs_burst
++	 * sysctls become per netns)
++	 * Moved to hole to keep kABI
++	 */
++	int sysctl_icmp_msgs_burst;
++#endif
+ 
+ 	struct fib_notifier_ops	*ipmr_notifier_ops;
+ 	unsigned int	ipmr_seq;	/* protected by rtnl_mutex */
+@@ -268,4 +283,10 @@ struct netns_ipv4 {
+ 	atomic_t	rt_genid;
+ 	siphash_key_t	ip_id_key;
+ };
++
++#ifndef __GENKSYMS__
++#define NETNS_IPV4_KABI_V1_SIZE 768
++static_assert(sizeof(struct netns_ipv4) == NETNS_IPV4_KABI_V1_SIZE,
++		"netns_ipv4 kABI size changed");
++#endif
+ #endif
+diff --git a/include/net/xsk_buff_pool.h b/include/net/xsk_buff_pool.h
+index daffb614fe2f..76b4928d6a13 100644
+--- a/include/net/xsk_buff_pool.h
++++ b/include/net/xsk_buff_pool.h
+@@ -28,7 +28,20 @@ struct xdp_buff_xsk {
+ 	dma_addr_t frame_dma;
+ 	struct xsk_buff_pool *pool;
+ 	u64 orig_addr;
++	/*
++	 * Renamed in eb66c67b0847 ("xsk: s/free_list_node/list_node/")
++	 * Revert the name as genksyms hash the field name as well
++	 */
++#ifndef __GENKSYMS__
+ 	struct list_head list_node;
++#else
++	struct list_head free_list_node;
++#endif
++	/*
++	 * Removed in 560c974 (xsk: Get rid of xdp_buff_xsk::xskb_list_node)
++	 * Put here for kABI stable
++	 */
++	struct list_head xskb_list_node;
+ };
+ 
+ #define XSK_CHECK_PRIV_TYPE(t) BUILD_BUG_ON(sizeof(t) > offsetofend(struct xdp_buff_xsk, cb))
+@@ -53,12 +66,18 @@ struct xsk_buff_pool {
+ 	refcount_t users;
+ 	struct xdp_umem *umem;
+ 	struct work_struct work;
+-	/* Protects generic receive in shared and non-shared umem mode. */
+-	spinlock_t rx_lock;
+ 	struct list_head free_list;
+ 	struct list_head xskb_list;
+ 	u32 heads_cnt;
+ 	u16 queue_id;
++#ifndef __GENKSYMS__
++	/*
++	 * Added in b6978c5 (xsk: Fix race condition in AF_XDP generic RX path)
++	 * Moved into hole to keep kABI
++	 */
++	/* Protects generic receive in shared and non-shared umem mode. */
++	spinlock_t rx_lock;
++#endif
+ 
+ 	/* Data path members as close to free_heads at the end as possible. */
+ 	struct xsk_queue *fq ____cacheline_aligned_in_smp;
+@@ -92,6 +111,12 @@ struct xsk_buff_pool {
+ 	struct xdp_buff_xsk *free_heads[];
+ };
+ 
++#ifndef __GENKSYMS__
++#define XSK_BUFF_POLL_KABI_V1_SIZE 256
++static_assert(sizeof(struct xsk_buff_pool) == XSK_BUFF_POLL_KABI_V1_SIZE,
++		"xsk_buff_pool kABI size changed");
++#endif
++
+ /* Masks for xdp_umem_page flags.
+  * The low 12-bits of the addr will be 0 since this is the page address, so we
+  * can use them for flags.
+diff --git a/include/uapi/linux/io_uring.h b/include/uapi/linux/io_uring.h
+index 333769bc6abf..e0aa96ae1653 100644
+--- a/include/uapi/linux/io_uring.h
++++ b/include/uapi/linux/io_uring.h
+@@ -46,7 +46,11 @@ struct io_uring_sqe {
+ 	};
+ 	__u32	len;		/* buffer size or number of iovecs */
+ 	union {
+-		__u32		rw_flags;
++		/*
++		 * Changed in 17a66ae (io_uring: don't use int for ABI)
++		 * Revert type back to __kernel_rwf_t to keep kABI
++		 */
++		__kernel_rwf_t	rw_flags;
+ 		__u32		fsync_flags;
+ 		__u16		poll_events;	/* compatibility */
+ 		__u32		poll32_events;	/* word-reversed for BE */
+diff --git a/kernel/sched/fair.c b/kernel/sched/fair.c
+index cdf49a04fd58..d697931cb793 100644
+--- a/kernel/sched/fair.c
++++ b/kernel/sched/fair.c
+@@ -11712,13 +11712,15 @@ void update_max_interval(void)
+ 
+ static inline void update_newidle_stats(struct sched_domain *sd, unsigned int success)
+ {
+-	sd->newidle_call++;
+-	sd->newidle_success += success;
++	struct sched_domain_kabi_ext *ext = sd_kabi(sd);
+ 
+-	if (sd->newidle_call >= 1024) {
+-		sd->newidle_ratio = sd->newidle_success;
+-		sd->newidle_call /= 2;
+-		sd->newidle_success /= 2;
++	ext->newidle_call++;
++	ext->newidle_success += success;
++
++	if (ext->newidle_call >= 1024) {
++		ext->newidle_ratio = ext->newidle_success;
++		ext->newidle_call /= 2;
++		ext->newidle_success /= 2;
+ 	}
+ }
+ 
+@@ -12425,7 +12427,7 @@ static int sched_balance_newidle(struct rq *this_rq, struct rq_flags *rf)
+ 				 * rate.
+ 				 */
+ 				u32 d1k = sched_rng() % 1024;
+-				weight = 1 + sd->newidle_ratio;
++				weight = 1 + sd_kabi(sd)->newidle_ratio;
+ 				if (d1k > weight) {
+ 					update_newidle_stats(sd, 0);
+ 					continue;
+diff --git a/kernel/sched/sched.h b/kernel/sched/sched.h
+index 6a8b499c70e4..0329c972ba10 100644
+--- a/kernel/sched/sched.h
++++ b/kernel/sched/sched.h
+@@ -1018,6 +1018,12 @@ struct rq {
+ 	struct list_head	*tmp_alone_branch;
+ #endif /* CONFIG_FAIR_GROUP_SCHED */
+ 
++#ifndef __GENKSYMS__
++	/*
++	 * Added in 496efa2 (sched: Change nr_uninterruptible type to unsigned long)
++	 * Happens in hole, just ignore it
++	 */
++
+ 	/*
+ 	 * This is part of a global counter where only the total sum
+ 	 * over all CPUs matters. A task can increase this counter on
+@@ -1025,6 +1031,9 @@ struct rq {
+ 	 * it on another CPU. Always updated under the runqueue lock:
+ 	 */
+ 	unsigned long 		nr_uninterruptible;
++#else
++	unsigned int		nr_uninterruptible;
++#endif
+ 
+ 	struct task_struct __rcu	*curr;
+ 	struct task_struct	*idle;
+@@ -1183,6 +1192,11 @@ struct rq {
+ 	void		*xs_kabi_padding;
+ };
+ 
++#ifndef __GENKSYMS__
++#define RQ_KABI_V1_SIZE 3648
++static_assert(sizeof(struct rq) == RQ_KABI_V1_SIZE, "rq kABI size changed");
++#endif
++
+ #ifdef CONFIG_FAIR_GROUP_SCHED
+ 
+ /* CPU runqueue to which this cfs_rq is attached */
+diff --git a/kernel/sched/topology.c b/kernel/sched/topology.c
+index 9fa77e7a6801..8b353e923b99 100644
+--- a/kernel/sched/topology.c
++++ b/kernel/sched/topology.c
+@@ -1559,6 +1559,7 @@ sd_init(struct sched_domain_topology_level *tl,
+ {
+ 	struct sd_data *sdd = &tl->data;
+ 	struct sched_domain *sd = *per_cpu_ptr(sdd->sd, cpu);
++	struct sched_domain_kabi_ext *sd_ext;
+ 	int sd_id, sd_weight, sd_flags = 0;
+ 	struct cpumask *sd_span;
+ 
+@@ -1577,6 +1578,14 @@ sd_init(struct sched_domain_topology_level *tl,
+ 			"wrong sd_flags in topology description\n"))
+ 		sd_flags &= TOPOLOGY_SD_FLAGS;
+ 
++	/*
++	 * sd_init() is invoked once per (re)build of the domain hierarchy and
++	 * re-initialises *sd via designated initialiser, which would clobber
++	 * xs_kabi_padding. Preserve the pre-allocated extension across the
++	 * wipe so its fields can be (re)seeded below.
++	 */
++	sd_ext = sd_kabi(sd);
++
+ 	*sd = (struct sched_domain){
+ 		.min_interval		= sd_weight,
+ 		.max_interval		= 2*sd_weight,
+@@ -1601,10 +1610,7 @@ sd_init(struct sched_domain_topology_level *tl,
+ 		.last_balance		= jiffies,
+ 		.balance_interval	= sd_weight,
+ 
+-		/* 50% success rate */
+-		.newidle_call		= 512,
+-		.newidle_success	= 256,
+-		.newidle_ratio		= 512,
++		.xs_kabi_padding	= sd_ext,
+ 
+ 		.max_newidle_lb_cost	= 0,
+ 		.last_decay_max_lb_cost	= jiffies,
+@@ -1614,6 +1620,11 @@ sd_init(struct sched_domain_topology_level *tl,
+ #endif
+ 	};
+ 
++	/* Seed the kABI extension. 50% success rate. */
++	sd_ext->newidle_call	= 512;
++	sd_ext->newidle_success	= 256;
++	sd_ext->newidle_ratio	= 512;
++
+ 	sd_span = sched_domain_span(sd);
+ 	cpumask_and(sd_span, cpu_map, tl->mask(cpu));
+ 	sd_id = cpumask_first(sd_span);
+@@ -2219,6 +2230,7 @@ static int __sdt_alloc(const struct cpumask *cpu_map)
+ 
+ 		for_each_cpu(j, cpu_map) {
+ 			struct sched_domain *sd;
++			struct sched_domain_kabi_ext *sd_ext;
+ 			struct sched_domain_shared *sds;
+ 			struct sched_group *sg;
+ 			struct sched_group_capacity *sgc;
+@@ -2228,6 +2240,19 @@ static int __sdt_alloc(const struct cpumask *cpu_map)
+ 			if (!sd)
+ 				return -ENOMEM;
+ 
++			/*
++			 * Allocate the kABI extension carrying fields that cannot
++			 * be added inline. Attached via xs_kabi_padding; freed by
++			 * __sdt_free() in lock-step with sd itself.
++			 */
++			sd_ext = kzalloc_node(sizeof(*sd_ext),
++					      GFP_KERNEL, cpu_to_node(j));
++			if (!sd_ext) {
++				kfree(sd);
++				return -ENOMEM;
++			}
++			sd->xs_kabi_padding = sd_ext;
++
+ 			*per_cpu_ptr(sdd->sd, j) = sd;
+ 
+ 			sds = kzalloc_node(sizeof(struct sched_domain_shared),
+@@ -2277,6 +2302,8 @@ static void __sdt_free(const struct cpumask *cpu_map)
+ 				sd = *per_cpu_ptr(sdd->sd, j);
+ 				if (sd && (sd->flags & SD_OVERLAP))
+ 					free_sched_groups(sd->groups, 0);
++				if (sd && sd->xs_kabi_padding)
++					kfree(sd->xs_kabi_padding);
+ 				kfree(*per_cpu_ptr(sdd->sd, j));
+ 			}
+ 
+diff --git a/mm/memory.c b/mm/memory.c
+index fd917a5bc961..33f110a68a63 100644
+--- a/mm/memory.c
++++ b/mm/memory.c
+@@ -67,7 +67,14 @@
+ #include <linux/gfp.h>
+ #include <linux/migrate.h>
+ #include <linux/string.h>
++/*
++ * Included in 7e23967 (mm/memory: do not populate page table entries beyond i_size)
++ * This will lead to kABI change as now gensyms has the detailed type info
++ * Exclude it from gensymbs to keep kABI
++ */
++#ifndef __GENKSYMS__
+ #include <linux/shmem_fs.h>
++#endif
+ #include <linux/memory-tiers.h>
+ #include <linux/debugfs.h>
+ #include <linux/userfaultfd_k.h>
+diff --git a/net/8021q/vlan.h b/net/8021q/vlan.h
+index c7ffe591d593..8de85b20ddde 100644
+--- a/net/8021q/vlan.h
++++ b/net/8021q/vlan.h
+@@ -33,10 +33,22 @@ struct vlan_info {
+ 	struct vlan_group	grp;
+ 	struct list_head	vid_list;
+ 	unsigned int		nr_vids;
++#ifndef __GENKSYMS__
++	/*
++	 * Added in bb515c4 (net: vlan: fix VLAN 0 refcount imbalance
++	 * of toggling filtering during runtime)
++	 * Happens in a hole, ignore it
++	 */
+ 	bool			auto_vid0;
++#endif
+ 	struct rcu_head		rcu;
+ };
+ 
++#ifndef __GENKSYMS__
++#define VLAN_INFO_KABI_V1_SIZE 200
++static_assert(sizeof(struct vlan_info) == 200, "vlan_info kABI size changed");
++#endif
++
+ static inline int vlan_proto_idx(__be16 proto)
+ {
+ 	switch (proto) {
+diff --git a/net/core/net_namespace.c b/net/core/net_namespace.c
+index b99fdca441f3..2c4e1133e704 100644
+--- a/net/core/net_namespace.c
++++ b/net/core/net_namespace.c
+@@ -1147,6 +1147,12 @@ static void rtnl_net_notifyid(struct net *net, int cmd, int id, u32 portid,
+ #ifdef CONFIG_NET_NS
+ static void __init netns_ipv4_struct_check(void)
+ {
++	/*
++	 * 8dacf34 (netns-ipv4: reorganize netns_ipv4 fast path variables)
++	 * reorganize fields and add cache line. Reverted in our patchqueue
++	 * to keep kABI, so skip the check
++	 */
++#if 0
+ 	/* TX readonly hotpath cache lines */
+ 	CACHELINE_ASSERT_GROUP_MEMBER(struct netns_ipv4, netns_ipv4_read_tx,
+ 				      sysctl_tcp_early_retrans);
+@@ -1185,6 +1191,7 @@ static void __init netns_ipv4_struct_check(void)
+ 	CACHELINE_ASSERT_GROUP_MEMBER(struct netns_ipv4, netns_ipv4_read_rx,
+ 				      sysctl_tcp_rmem);
+ 	CACHELINE_ASSERT_GROUP_SIZE(struct netns_ipv4, netns_ipv4_read_rx, 18);
++#endif
+ }
+ #endif
+ 
+diff --git a/net/core/skbuff.c b/net/core/skbuff.c
+index b35bd7b0a324..098fa69cb7a0 100644
+--- a/net/core/skbuff.c
++++ b/net/core/skbuff.c
+@@ -67,7 +67,14 @@
+ #include <net/dst.h>
+ #include <net/sock.h>
+ #include <net/checksum.h>
++/*
++ * Included in ed8a77f (net: allow small head cache usage with large MAX_SKB_FRAGS values)
++ * This will lead to kABI change as now gensyms has the detailed type info
++ * Exclude it from gensymbs to keep kABI
++ */
++#ifndef __GENKSYMS__
+ #include <net/gro.h>
++#endif
+ #include <net/gso.h>
+ #include <net/ip6_checksum.h>
+ #include <net/xfrm.h>

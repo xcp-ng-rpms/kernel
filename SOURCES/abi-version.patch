@@ -1,13 +1,14 @@
 diff --git a/Makefile b/Makefile
-index 0bb5c23c6406..23d2eb123178 100644
+index 56ff90e4d603..9f98c2ac28d6 100644
 --- a/Makefile
 +++ b/Makefile
 @@ -2,7 +2,7 @@
  VERSION = 6
  PATCHLEVEL = 6
- SUBLEVEL = 98
+-SUBLEVEL = 138
++SUBLEVEL = 98
 -EXTRAVERSION =
 +EXTRAVERSION = +1
  NAME = Pinguïn Aangedreven
-
+ 
  # *DOCUMENTATION*

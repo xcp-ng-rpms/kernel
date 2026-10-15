@@ -4,89 +4,6 @@ Date: Fri, 18 Jul 2025 18:02:35 +0800
 Subject: [PATCH 1/2] CP-46343: common data structure padding
 
 Signed-off-by: Chunjie Zhu <chunjie.zhu@cloud.com>
----
- arch/x86/include/asm/processor.h    |  1 +
- block/elevator.h                    |  4 ++++
- drivers/char/ipmi/ipmi_si.h         |  2 ++
- drivers/char/ipmi/ipmi_si_sm.h      |  2 ++
- drivers/char/ipmi/kcs_bmc_client.h  |  2 ++
- drivers/pci/pci.h                   |  1 +
- drivers/scsi/sd.h                   |  2 ++
- include/linux/backing-dev-defs.h    |  2 ++
- include/linux/blk-integrity.h       |  2 ++
- include/linux/blk-mq.h              |  8 ++++++++
- include/linux/blk_types.h           |  2 ++
- include/linux/blkdev.h              | 10 ++++++++++
- include/linux/bsg-lib.h             |  2 ++
- include/linux/device.h              |  1 +
- include/linux/device/bus.h          |  2 ++
- include/linux/device/class.h        |  2 ++
- include/linux/ethtool.h             |  2 ++
- include/linux/fs.h                  |  1 +
- include/linux/fwnode.h              |  1 +
- include/linux/ipmi.h                |  4 ++++
- include/linux/ipmi_smi.h            |  3 +++
- include/linux/ipv6.h                |  2 ++
- include/linux/irq.h                 |  1 +
- include/linux/irq_work.h            |  1 +
- include/linux/irqdesc.h             |  1 +
- include/linux/irqdomain.h           |  2 ++
- include/linux/mempolicy.h           |  1 +
- include/linux/mempool.h             |  2 ++
- include/linux/memremap.h            |  3 +++
- include/linux/mm.h                  |  2 ++
- include/linux/mm_types.h            |  2 ++
- include/linux/module.h              |  1 +
- include/linux/net.h                 |  4 ++++
- include/linux/netdevice.h           | 13 +++++++++++++
- include/linux/netlink.h             |  2 ++
- include/linux/nvme-fc-driver.h      |  2 ++
- include/linux/pagemap.h             |  1 +
- include/linux/pci.h                 |  5 +++++
- include/linux/sched.h               | 10 ++++++++++
- include/linux/sched/signal.h        |  1 +
- include/linux/sched/topology.h      |  2 ++
- include/linux/sched/user.h          |  2 ++
- include/linux/shrinker.h            |  1 +
- include/linux/skbuff.h              |  2 ++
- include/linux/swap.h                |  1 +
- include/linux/timer.h               |  1 +
- include/linux/trace_events.h        |  3 +++
- include/linux/usb/hcd.h             |  2 ++
- include/net/dcbnl.h                 |  2 ++
- include/net/devlink.h               |  2 ++
- include/net/dst.h                   |  2 ++
- include/net/dst_ops.h               |  2 ++
- include/net/fib_rules.h             |  2 ++
- include/net/flow.h                  |  6 ++++++
- include/net/genetlink.h             |  8 ++++++++
- include/net/ip6_fib.h               |  3 +++
- include/net/ip_fib.h                |  6 ++++++
- include/net/l3mdev.h                |  2 ++
- include/net/lwtunnel.h              |  3 +++
- include/net/macsec.h                |  2 ++
- include/net/neighbour.h             |  3 +++
- include/net/netdev_rx_queue.h       |  2 ++
- include/net/netlink.h               |  2 ++
- include/net/nexthop.h               |  2 ++
- include/net/rtnetlink.h             |  2 ++
- include/net/sch_generic.h           |  3 +++
- include/net/sock.h                  |  4 ++++
- include/net/tls.h                   |  6 ++++++
- include/net/udp_tunnel.h            |  8 ++++++++
- include/net/xfrm.h                  |  4 ++++
- include/net/xsk_buff_pool.h         |  1 +
- include/scsi/scsi_cmnd.h            |  2 ++
- include/scsi/scsi_device.h          |  6 ++++++
- include/scsi/scsi_host.h            |  4 ++++
- include/scsi/scsi_transport.h       |  2 ++
- include/scsi/scsi_transport_fc.h    |  2 ++
- include/scsi/scsi_transport_iscsi.h |  2 ++
- include/scsi/scsi_transport_sas.h   |  2 ++
- kernel/sched/sched.h                | 14 ++++++++++++++
- net/devlink/devl_internal.h         |  1 +
- 80 files changed, 238 insertions(+)
-
 diff --git a/arch/x86/include/asm/processor.h b/arch/x86/include/asm/processor.h
 index 428348e7f06c..31c8bfa6bb13 100644
 --- a/arch/x86/include/asm/processor.h
@@ -168,10 +85,10 @@ index 6fdcde0a7169..b5901be63fbf 100644
  
  struct kcs_bmc_client {
 diff --git a/drivers/pci/pci.h b/drivers/pci/pci.h
-index a2099277e104..99f73ccdedbf 100644
+index 9323031d0190..1569fc9dac81 100644
 --- a/drivers/pci/pci.h
 +++ b/drivers/pci/pci.h
-@@ -313,6 +313,7 @@ struct pci_sriov {
+@@ -340,6 +340,7 @@ struct pci_sriov {
  	u16		subsystem_device; /* VF subsystem device */
  	resource_size_t	barsz[PCI_SRIOV_NUM_BARS];	/* VF BAR size */
  	bool		drivers_autoprobe; /* Auto probing of VFs by driver */
@@ -259,7 +176,7 @@ index 1d482c2aabbd..aa38e692b32a 100644
  
  enum {
 diff --git a/include/linux/blk_types.h b/include/linux/blk_types.h
-index 92c8997b1938..dd847cb9cf9d 100644
+index b8ef39ca3d74..0e3d8ef840f0 100644
 --- a/include/linux/blk_types.h
 +++ b/include/linux/blk_types.h
 @@ -316,6 +316,8 @@ struct bio {
@@ -334,7 +251,7 @@ index 9e97ced2896d..96ca74240804 100644
  
  void bsg_job_done(struct bsg_job *job, int result,
 diff --git a/include/linux/device.h b/include/linux/device.h
-index 3627b26b243e..d2ebaa0a173c 100644
+index e5f1a773dc54..3f32ed169824 100644
 --- a/include/linux/device.h
 +++ b/include/linux/device.h
 @@ -805,6 +805,7 @@ struct device {
@@ -385,7 +302,7 @@ index 1b523fd48586..6fc039315973 100644
  
  int ethtool_check_ops(const struct ethtool_ops *ops);
 diff --git a/include/linux/fs.h b/include/linux/fs.h
-index b641a01512fb..dce2627aa8a8 100644
+index 4cdeeaedaa40..4bcf549b2e8b 100644
 --- a/include/linux/fs.h
 +++ b/include/linux/fs.h
 @@ -489,6 +489,7 @@ struct address_space {
@@ -567,7 +484,7 @@ index 1314d9c5f05b..4ccc69ce857c 100644
  		struct range range;
  		DECLARE_FLEX_ARRAY(struct range, ranges);
 diff --git a/include/linux/mm.h b/include/linux/mm.h
-index 209370f64436..0e397de0e552 100644
+index dd763d3da86d..f1adde439368 100644
 --- a/include/linux/mm.h
 +++ b/include/linux/mm.h
 @@ -553,6 +553,7 @@ struct vm_fault {
@@ -587,10 +504,10 @@ index 209370f64436..0e397de0e552 100644
  
  #ifdef CONFIG_NUMA_BALANCING
 diff --git a/include/linux/mm_types.h b/include/linux/mm_types.h
-index e77d4a5c0bac..6d641c803d8e 100644
+index ce3370823f9c..7065cea527f5 100644
 --- a/include/linux/mm_types.h
 +++ b/include/linux/mm_types.h
-@@ -720,6 +720,7 @@ struct vm_area_struct {
+@@ -725,6 +725,7 @@ struct vm_area_struct {
  	struct vma_numab_state *numab_state;	/* NUMA Balancing state */
  #endif
  	struct vm_userfaultfd_ctx vm_userfaultfd_ctx;
@@ -598,7 +515,7 @@ index e77d4a5c0bac..6d641c803d8e 100644
  } __randomize_layout;
  
  #ifdef CONFIG_SCHED_MM_CID
-@@ -977,6 +978,7 @@ struct mm_struct {
+@@ -982,6 +983,7 @@ struct mm_struct {
  #endif
  		} lru_gen;
  #endif /* CONFIG_LRU_GEN */
@@ -607,10 +524,10 @@ index e77d4a5c0bac..6d641c803d8e 100644
  
  	/*
 diff --git a/include/linux/module.h b/include/linux/module.h
-index f58d1eb260fa..c13540d45e78 100644
+index 4b264fad7677..5ab5180d066c 100644
 --- a/include/linux/module.h
 +++ b/include/linux/module.h
-@@ -590,6 +590,7 @@ struct module {
+@@ -602,6 +602,7 @@ struct module {
  #ifdef CONFIG_DYNAMIC_DEBUG_CORE
  	struct _ddebug_info dyndbg_info;
  #endif
@@ -641,7 +558,7 @@ index c9b4a63791a4..0dddcf02c98c 100644
  
  #define DECLARE_SOCKADDR(type, dst, src)	\
 diff --git a/include/linux/netdevice.h b/include/linux/netdevice.h
-index 030d9de2ba2d..a4f8f79c5aae 100644
+index 202e557496fb..7ec072b12c95 100644
 --- a/include/linux/netdevice.h
 +++ b/include/linux/netdevice.h
 @@ -319,6 +319,8 @@ struct header_ops {
@@ -745,10 +662,10 @@ index 15793a4af9d4..333766cb86e2 100644
  	pgoff_t _index;
  	unsigned int _nr_pages;
 diff --git a/include/linux/pci.h b/include/linux/pci.h
-index a1e4de68edee..7cac4743a0cb 100644
+index d4e178ac9782..34eb9a20a681 100644
 --- a/include/linux/pci.h
 +++ b/include/linux/pci.h
-@@ -529,6 +529,8 @@ struct pci_dev {
+@@ -542,6 +542,8 @@ struct pci_dev {
  
  	/* These methods index pci_reset_fn_methods[] */
  	u8 reset_methods[PCI_NUM_RESET_METHODS]; /* In priority order */
@@ -757,7 +674,7 @@ index a1e4de68edee..7cac4743a0cb 100644
  };
  
  static inline struct pci_dev *pci_physfn(struct pci_dev *dev)
-@@ -678,6 +680,8 @@ struct pci_bus {
+@@ -691,6 +693,8 @@ struct pci_bus {
  	struct bin_attribute	*legacy_mem;	/* Legacy mem */
  	unsigned int		is_added:1;
  	unsigned int		unsafe_warn:1;	/* warned about RW1C config write */
@@ -766,7 +683,7 @@ index a1e4de68edee..7cac4743a0cb 100644
  };
  
  #define to_pci_bus(n)	container_of(n, struct pci_bus, dev)
-@@ -933,6 +937,7 @@ struct pci_driver {
+@@ -946,6 +950,7 @@ struct pci_driver {
  	struct device_driver	driver;
  	struct pci_dynids	dynids;
  	bool driver_managed_dma;
@@ -775,7 +692,7 @@ index a1e4de68edee..7cac4743a0cb 100644
  
  static inline struct pci_driver *to_pci_driver(struct device_driver *drv)
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 393c300347de..584e748b4fd0 100644
+index 9c7c67efce34..48c3a0604d98 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
 @@ -504,6 +504,7 @@ struct sched_avg {
@@ -821,7 +738,7 @@ index 393c300347de..584e748b4fd0 100644
  };
  #endif /* CONFIG_UCLAMP_TASK */
  
-@@ -1542,6 +1550,8 @@ struct task_struct {
+@@ -1540,6 +1548,8 @@ struct task_struct {
  	struct user_event_mm		*user_event_mm;
  #endif
  
@@ -843,10 +760,10 @@ index 0014d3adaf84..f9f1b45431fb 100644
  
  /*
 diff --git a/include/linux/sched/topology.h b/include/linux/sched/topology.h
-index 67b573d5bf28..8d80e2e5592d 100644
+index 197039bab8e6..46c3f5fa6d3e 100644
 --- a/include/linux/sched/topology.h
 +++ b/include/linux/sched/topology.h
-@@ -151,6 +151,8 @@ struct sched_domain {
+@@ -154,6 +154,8 @@ struct sched_domain {
  	};
  	struct sched_domain_shared *shared;
  
@@ -881,7 +798,7 @@ index 224293b2dd06..141246e1c2c8 100644
  #define DEFAULT_SEEKS 2 /* A good number if you don't know better. */
  
 diff --git a/include/linux/skbuff.h b/include/linux/skbuff.h
-index f7d392d849be..0f8313b6f3e8 100644
+index 1a91645fa249..9d47bbba3b89 100644
 --- a/include/linux/skbuff.h
 +++ b/include/linux/skbuff.h
 @@ -1044,6 +1044,8 @@ struct sk_buff {
@@ -894,7 +811,7 @@ index f7d392d849be..0f8313b6f3e8 100644
  
  	/* These elements must be at the end, see alloc_skb() for details.  */
 diff --git a/include/linux/swap.h b/include/linux/swap.h
-index cb25db2a93dd..275705e392af 100644
+index ff91337695b4..25e711c6b472 100644
 --- a/include/linux/swap.h
 +++ b/include/linux/swap.h
 @@ -321,6 +321,7 @@ struct swap_info_struct {
@@ -918,7 +835,7 @@ index 9162f275819a..7ab38185568d 100644
  
  #ifdef CONFIG_LOCKDEP
 diff --git a/include/linux/trace_events.h b/include/linux/trace_events.h
-index fe95d13c5e4d..968e57e877a3 100644
+index 4035cb450356..dbf4cd4c315d 100644
 --- a/include/linux/trace_events.h
 +++ b/include/linux/trace_events.h
 @@ -113,6 +113,8 @@ struct trace_iterator {
@@ -978,7 +895,7 @@ index 29fd1b4ee654..8935110d6583 100644
  
  struct devlink_port_new_attrs {
 diff --git a/include/net/dst.h b/include/net/dst.h
-index 16b7b99b5f30..877676841e11 100644
+index 55d1be268d24..31938794847f 100644
 --- a/include/net/dst.h
 +++ b/include/net/dst.h
 @@ -92,6 +92,8 @@ struct dst_entry {
@@ -1088,10 +1005,10 @@ index e8c34aa4a640..6fd07493d25d 100644
  
  /**
 diff --git a/include/net/ip6_fib.h b/include/net/ip6_fib.h
-index 1121d614942c..125c0d45ca4c 100644
+index 05489554019b..3fe3bcb25df8 100644
 --- a/include/net/ip6_fib.h
 +++ b/include/net/ip6_fib.h
-@@ -203,6 +203,9 @@ struct fib6_info {
+@@ -206,6 +206,9 @@ struct fib6_info {
  
  	struct rcu_head			rcu;
  	struct nexthop			*nh;
@@ -1139,7 +1056,7 @@ index bdfa9d414360..cd8e33ea011e 100644
  
  #ifdef CONFIG_NET_L3_MASTER_DEV
 diff --git a/include/net/lwtunnel.h b/include/net/lwtunnel.h
-index 53bd2d02a4f0..e97619e89c8a 100644
+index 09791f5d9b6e..f5595d8183c0 100644
 --- a/include/net/lwtunnel.h
 +++ b/include/net/lwtunnel.h
 @@ -33,6 +33,9 @@ struct lwtunnel_state {
@@ -1166,7 +1083,7 @@ index 75340c3e0c8b..d99bdacbbd29 100644
  
  void macsec_pn_wrapped(struct macsec_secy *secy, struct macsec_tx_sa *tx_sa);
 diff --git a/include/net/neighbour.h b/include/net/neighbour.h
-index 0d28172193fa..e86f6a4ca67c 100644
+index d775906a65c7..8489fdfeaa75 100644
 --- a/include/net/neighbour.h
 +++ b/include/net/neighbour.h
 @@ -162,6 +162,9 @@ struct neighbour {
@@ -1193,10 +1110,10 @@ index cdcafb30d437..9e8f8d105c1f 100644
  
  /*
 diff --git a/include/net/netlink.h b/include/net/netlink.h
-index 8a7cd1170e1f..49adedbb575f 100644
+index aba2b162a226..5ad09ace8c02 100644
 --- a/include/net/netlink.h
 +++ b/include/net/netlink.h
-@@ -359,6 +359,8 @@ struct nla_policy {
+@@ -368,6 +368,8 @@ struct nla_policy {
  		int (*validate)(const struct nlattr *attr,
  				struct netlink_ext_ack *extack);
  	};
@@ -1232,7 +1149,7 @@ index c1fa6fee0acf..13406dea881d 100644
  
  int __rtnl_link_register(struct rtnl_link_ops *ops);
 diff --git a/include/net/sch_generic.h b/include/net/sch_generic.h
-index 3287988a6a98..74aed4977aae 100644
+index 385af747b0b4..993e3027377a 100644
 --- a/include/net/sch_generic.h
 +++ b/include/net/sch_generic.h
 @@ -127,6 +127,9 @@ struct Qdisc {
@@ -1246,19 +1163,19 @@ index 3287988a6a98..74aed4977aae 100644
  	long privdata[] ____cacheline_aligned;
  };
 diff --git a/include/net/sock.h b/include/net/sock.h
-index e15bea43b2ec..c203f18535af 100644
+index d516ed805008..5ea18e958f7b 100644
 --- a/include/net/sock.h
 +++ b/include/net/sock.h
-@@ -545,6 +545,8 @@ struct sock {
- 	struct rcu_head		sk_rcu;
- 	netns_tracker		ns_tracker;
- 	struct hlist_node	sk_bind2_node;
+@@ -551,6 +551,8 @@ struct sock {
+ #if IS_ENABLED(CONFIG_PROVE_LOCKING) && IS_ENABLED(CONFIG_MODULES)
+ 	struct module		*sk_owner;
+ #endif
 +
 +	void			*xs_kabi_padding;
  };
  
  enum sk_pacing {
-@@ -1369,6 +1371,8 @@ struct proto {
+@@ -1388,6 +1390,8 @@ struct proto {
  
  	struct list_head	node;
  	int			(*diag_destroy)(struct sock *sk, int err);
@@ -1268,7 +1185,7 @@ index e15bea43b2ec..c203f18535af 100644
  
  int proto_register(struct proto *prot, int alloc_slab);
 diff --git a/include/net/tls.h b/include/net/tls.h
-index 6c642ea18050..396c68ee1453 100644
+index 66527376ca97..fb4920d980c4 100644
 --- a/include/net/tls.h
 +++ b/include/net/tls.h
 @@ -191,6 +191,8 @@ enum tls_context_flags {
@@ -1299,7 +1216,7 @@ index 6c642ea18050..396c68ee1453 100644
  
  enum tls_offload_sync_type {
 diff --git a/include/net/udp_tunnel.h b/include/net/udp_tunnel.h
-index 29251c3519cf..b21d744dc181 100644
+index 0e6eb40cd777..6b0f9483a028 100644
 --- a/include/net/udp_tunnel.h
 +++ b/include/net/udp_tunnel.h
 @@ -120,6 +120,8 @@ struct udp_tunnel_info {
@@ -1333,7 +1250,7 @@ index 29251c3519cf..b21d744dc181 100644
  
  /* UDP tunnel module dependencies
 diff --git a/include/net/xfrm.h b/include/net/xfrm.h
-index fd550c0b5634..6997e41378ee 100644
+index 892fb8c31c32..36f365f55bdf 100644
 --- a/include/net/xfrm.h
 +++ b/include/net/xfrm.h
 @@ -124,6 +124,8 @@ struct xfrm_state_walk {
@@ -1355,10 +1272,10 @@ index fd550c0b5634..6997e41378ee 100644
  
  struct xfrm_mode {
 diff --git a/include/net/xsk_buff_pool.h b/include/net/xsk_buff_pool.h
-index b0bdff26fc88..f7c80b9220c8 100644
+index 97392fd7712c..daffb614fe2f 100644
 --- a/include/net/xsk_buff_pool.h
 +++ b/include/net/xsk_buff_pool.h
-@@ -87,6 +87,7 @@ struct xsk_buff_pool {
+@@ -88,6 +88,7 @@ struct xsk_buff_pool {
  	 * sockets share a single cq when the same netdev and queue id is shared.
  	 */
  	spinlock_t cq_lock;
@@ -1478,10 +1395,10 @@ index e3b6ce3cbf88..7000a8184531 100644
  
  
 diff --git a/kernel/sched/sched.h b/kernel/sched/sched.h
-index 60dc51f43dd9..980fa851efb6 100644
+index e1913e253221..6a8b499c70e4 100644
 --- a/kernel/sched/sched.h
 +++ b/kernel/sched/sched.h
-@@ -284,6 +284,7 @@ struct rt_bandwidth {
+@@ -285,6 +285,7 @@ struct rt_bandwidth {
  	u64			rt_runtime;
  	struct hrtimer		rt_period_timer;
  	unsigned int		rt_period_active;
@@ -1489,7 +1406,7 @@ index 60dc51f43dd9..980fa851efb6 100644
  };
  
  static inline int dl_bandwidth_enabled(void)
-@@ -313,6 +314,7 @@ struct dl_bw {
+@@ -314,6 +315,7 @@ struct dl_bw {
  	raw_spinlock_t		lock;
  	u64			bw;
  	u64			total_bw;
@@ -1497,7 +1414,7 @@ index 60dc51f43dd9..980fa851efb6 100644
  };
  
  extern void init_dl_bw(struct dl_bw *dl_b);
-@@ -357,6 +359,7 @@ struct cfs_bandwidth {
+@@ -358,6 +360,7 @@ struct cfs_bandwidth {
  	u64			throttled_time;
  	u64			burst_time;
  #endif
@@ -1505,7 +1422,7 @@ index 60dc51f43dd9..980fa851efb6 100644
  };
  
  /* Task group related information */
-@@ -412,6 +415,7 @@ struct task_group {
+@@ -413,6 +416,7 @@ struct task_group {
  	struct uclamp_se	uclamp[UCLAMP_CNT];
  #endif
  
@@ -1513,7 +1430,7 @@ index 60dc51f43dd9..980fa851efb6 100644
  };
  
  #ifdef CONFIG_FAIR_GROUP_SCHED
-@@ -649,6 +653,8 @@ struct cfs_rq {
+@@ -650,6 +654,8 @@ struct cfs_rq {
  #endif
  #endif /* CONFIG_CFS_BANDWIDTH */
  #endif /* CONFIG_FAIR_GROUP_SCHED */
@@ -1522,7 +1439,7 @@ index 60dc51f43dd9..980fa851efb6 100644
  };
  
  static inline int rt_bandwidth_enabled(void)
-@@ -695,6 +701,8 @@ struct rt_rq {
+@@ -696,6 +702,8 @@ struct rt_rq {
  	struct rq		*rq;
  	struct task_group	*tg;
  #endif
@@ -1531,7 +1448,7 @@ index 60dc51f43dd9..980fa851efb6 100644
  };
  
  static inline bool rt_rq_is_runnable(struct rt_rq *rt_rq)
-@@ -763,6 +771,8 @@ struct dl_rq {
+@@ -764,6 +772,8 @@ struct dl_rq {
  	 * by the GRUB algorithm.
  	 */
  	u64			bw_ratio;
@@ -1540,7 +1457,7 @@ index 60dc51f43dd9..980fa851efb6 100644
  };
  
  #ifdef CONFIG_FAIR_GROUP_SCHED
-@@ -889,6 +899,8 @@ struct root_domain {
+@@ -890,6 +900,8 @@ struct root_domain {
  	 * CPUs of the rd. Protected by RCU.
  	 */
  	struct perf_domain __rcu *pd;
@@ -1549,7 +1466,7 @@ index 60dc51f43dd9..980fa851efb6 100644
  };
  
  extern void init_defrootdomain(void);
-@@ -1166,6 +1178,8 @@ struct rq {
+@@ -1167,6 +1179,8 @@ struct rq {
  	call_single_data_t	cfsb_csd;
  	struct list_head	cfsb_csd_list;
  #endif
@@ -1570,6 +1487,3 @@ index f6b5fea2e13c..8ab8ec3ea95b 100644
  	char priv[] __aligned(NETDEV_ALIGN);
  };
  
--- 
-2.34.1
-

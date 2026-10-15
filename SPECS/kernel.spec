@@ -1,15 +1,15 @@
-%global package_speccommit fb95db62999ba6bde956a5118421e52a1995f354
-%global usver 6.6.98
-%global xsver 29
+%global package_speccommit e0f86aa1d5037f0a3bb73d8144e795b8898e0417
+%global usver 6.6.138
+%global xsver 1
 %global xsrel %{xsver}%{?xscount}%{?xshash}
-%global package_srccommit refs/tags/v6.6.98
+%global package_srccommit refs/tags/v6.6.138
 %define uname 6.6.98+1
 %define short_uname 6.6
 %define srcpath /usr/src/kernels/%{uname}-%{_arch}
 
 # Control whether we perform a compat. check against published ABI.
 # Default enabled: (to override: --without kabichk)
-%define do_kabichk  %{?_without_kabichk: 0} %{?!_without_kabichk: 1}
+ %define do_kabichk  %{?_without_kabichk: 0} %{?!_without_kabichk: 1}
 # Default disabled: (to override: --with kabichk)
 # %%define do_kabichk  %%{?_with_kabichk: 1} %%{?!_with_kabichk: 0}
 
@@ -51,86 +51,70 @@
 %define lp_devel_dir %{_usrsrc}/kernel-%{version}-%{release}
 
 # Prevent RPM adding Provides/Requires to lp-devel package
-%global __provides_exclude_from ^%{lp_devel_dir}/.*$
-%global __requires_exclude_from ^%{lp_devel_dir}/.*$
+%global __provides_exclude_from ^%{_usrsrc}/kernel-[^/]+/
+%global __requires_exclude_from ^%{_usrsrc}/kernel-[^/]+/
 
 # BPF type info with bpftool for full bpftrace support and light-weight BPF programs (without LLVM install)
 %bcond_without bpftool
 
 Name: kernel
 License: GPLv2
-Version: 6.6.98
+Version: 6.6.138
 Release: %{?xsrel}%{?dist}
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
 
-Source0: kernel-6.6.98.tar.gz
+Source0: kernel-6.6.138.tar.gz
 Source1: kernel-x86_64.config
 Source2: macros.kernel
 Patch0: 0001-net-gro-move-L3-flush-checks-to-tcp_gro_receive-and-.patch
 Patch1: 0001-x86-xen-time-Reduce-Xen-timer-tick.patch
-Patch2: 0001-sched-fair-Bump-sd-max_newidle_lb_cost-when-newidle-.patch
-Patch3: 0001-crypto-af_alg-Disallow-concurrent-writes-in-af_alg_s.patch
-Patch4: 0001-crypto-af_alg-Set-merge-to-zero-early-in-af_alg_send.patch
-Patch5: 0001-crypto-af_alg-Fix-incorrect-boolean-values-in-af_alg.patch
-Patch6: 0001-crypto-af_alg-zero-initialize-memory-allocated-via-s.patch
-Patch7: 0001-crypto-authencesn-reject-too-short-AAD-assoclen-8-to.patch
-Patch8: 0001-crypto-af-alg-fix-NULL-pointer-dereference-in-scatte.patch
-Patch9: 0001-crypto-algif_aead-Fix-minimum-RX-size-check-for-decr.patch
-Patch10: 0001-crypto-algif_aead-use-memcpy_sglist-instead-of-null-.patch
-Patch11: 0001-crypto-algif_aead-Revert-to-operating-out-of-place.patch
-Patch12: 0001-crypto-scatterwalk-Backport-memcpy_sglist.patch
-Patch13: 0001-crypto-algif_aead-snapshot-IV-for-async-AEAD-request.patch
-Patch14: 0001-crypto-authenc-use-memcpy_sglist-instead-of-null-skc.patch
-Patch15: 0001-crypto-authencesn-Do-not-place-hiseq-at-end-of-dst-f.patch
-Patch16: 0001-crypto-authencesn-Fix-src-offset-when-decrypting-in-.patch
-Patch17: 0001-crypto-af_alg-Fix-page-reassignment-overflow-in-af_a.patch
-Patch18: disable-mitigations-by-default.patch
-Patch19: expose-xsversion.patch
-Patch20: blkback-kthread-pid.patch
-Patch21: tg3-alloc-repeat.patch
-Patch22: net-Do-not-scrub-ignore_df-within-the-same-name-spac.patch
-Patch23: enable-fragmention-gre-packets.patch
-Patch24: call-kexec-before-offlining-noncrashing-cpus.patch
-Patch25: lpfc-fallback-to-sli-2.patch
-Patch26: fix-hypercall-preemption.patch
-Patch27: skip-cpuidle-driver-init-if-cpuidle-function-disable.patch
-Patch28: CA-392853-fix-kdump-kernel-cannot-find-ACPI-RSDP.patch
-Patch29: CA-415346-export-module-symbol-offsets.patch
-Patch30: CP-312080-net-openvswitch-add-dropping-of-lldp.patch
-Patch31: 0002-x86-xen-correct-dma_get_required_mask-for-Xen-PV-gue.patch
-Patch32: 0001-pci-export-pci_reset_supported.patch
-Patch33: 0002-xen-pciback-provide-a-reset-sysfs-file-to-try-harder.patch
-Patch34: pciback-disable-root-port-aer.patch
-Patch35: pciback-mask-root-port-comp-timeout.patch
-Patch36: no-flr-quirk.patch
-Patch37: CA-135938-nfs-disconnect-on-rpc-retry.patch
-Patch38: sunrpc-force-disconnect-on-connection-timeout.patch
-Patch39: xen-ioemu-inject-msi.patch
-Patch40: pv-iommu-support.patch
-Patch41: kexec-reserve-crashkernel-region.patch
-Patch42: 0001-xen-swiotlb-size-128MiB.patch
-Patch43: 0002-xen-swiotlb-rework-early-repeat-code.patch
-Patch44: 0001-Revert-to-use-num_online_cpus-for-default-rss-queues.patch
-Patch45: GFS2__Avoid_recently_demoted_rgrps
-Patch46: gfs2-debug-rgrp-sweep
-Patch47: 0001-fix-gfs2-umount-timeout-bug.patch
-Patch48: gfs2-No-more-self-recovery
-Patch49: CA-411820-add-STATX_DIOALIGN-support-to-GFS2
-Patch50: scsi-avoid-lun-change-loop.patch
-Patch51: add-sbat.patch
-Patch52: enable-lockdown.patch
-Patch53: module-allow-disabling-sig_enforce.patch
-Patch54: use-mok-variable-fallback.patch
-Patch55: allow_reading_xen_netback_ring.patch
-Patch56: import-xen-public-headers.patch
-Patch57: filter-hypercalls.patch
-Patch58: module-hash-revocation.patch
-Patch59: gfs2-fix-debugfs-access.patch
-Patch60: 0001-CP-46343-common-data-structure-padding.patch
-Patch61: 0002-CP-46343-reserve-cpuid-leaves-for-future-use.patch
-Patch62: abi-version.patch
+Patch2: disable-mitigations-by-default.patch
+Patch3: expose-xsversion.patch
+Patch4: blkback-kthread-pid.patch
+Patch5: tg3-alloc-repeat.patch
+Patch6: net-Do-not-scrub-ignore_df-within-the-same-name-spac.patch
+Patch7: enable-fragmention-gre-packets.patch
+Patch8: call-kexec-before-offlining-noncrashing-cpus.patch
+Patch9: lpfc-fallback-to-sli-2.patch
+Patch10: fix-hypercall-preemption.patch
+Patch11: skip-cpuidle-driver-init-if-cpuidle-function-disable.patch
+Patch12: CA-392853-fix-kdump-kernel-cannot-find-ACPI-RSDP.patch
+Patch13: CA-415346-export-module-symbol-offsets.patch
+Patch14: CP-312080-net-openvswitch-add-dropping-of-lldp.patch
+Patch15: 0002-x86-xen-correct-dma_get_required_mask-for-Xen-PV-gue.patch
+Patch16: 0001-pci-export-pci_reset_supported.patch
+Patch17: 0002-xen-pciback-provide-a-reset-sysfs-file-to-try-harder.patch
+Patch18: pciback-disable-root-port-aer.patch
+Patch19: pciback-mask-root-port-comp-timeout.patch
+Patch20: no-flr-quirk.patch
+Patch21: CA-135938-nfs-disconnect-on-rpc-retry.patch
+Patch22: sunrpc-force-disconnect-on-connection-timeout.patch
+Patch23: xen-ioemu-inject-msi.patch
+Patch24: pv-iommu-support.patch
+Patch25: kexec-reserve-crashkernel-region.patch
+Patch26: 0001-xen-swiotlb-size-128MiB.patch
+Patch27: 0002-xen-swiotlb-rework-early-repeat-code.patch
+Patch28: 0001-Revert-to-use-num_online_cpus-for-default-rss-queues.patch
+Patch29: GFS2__Avoid_recently_demoted_rgrps
+Patch30: gfs2-debug-rgrp-sweep
+Patch31: 0001-fix-gfs2-umount-timeout-bug.patch
+Patch32: CA-411820-add-STATX_DIOALIGN-support-to-GFS2
+Patch33: scsi-avoid-lun-change-loop.patch
+Patch34: add-sbat.patch
+Patch35: enable-lockdown.patch
+Patch36: module-allow-disabling-sig_enforce.patch
+Patch37: use-mok-variable-fallback.patch
+Patch38: allow_reading_xen_netback_ring.patch
+Patch39: import-xen-public-headers.patch
+Patch40: filter-hypercalls.patch
+Patch41: module-hash-revocation.patch
+Patch42: gfs2-fix-debugfs-access.patch
+Patch43: 0001-CP-46343-common-data-structure-padding.patch
+Patch44: 0002-CP-46343-reserve-cpuid-leaves-for-future-use.patch
+Patch45: abi-version.patch
+Patch46: fix-kabi-breakages.patch
 %if %{do_kabichk}
 Source3: check-kabi
 %endif
@@ -539,9 +523,6 @@ objdump -h %{buildroot}/usr/src/kernels/%{uname}-%{_arch}/vmlinux|grep " 0 .BTF"
 
 depmod -ae -F /boot/System.map-%{uname} %{uname}
 
-mkdir -p %{_rundir}/reboot-required.d/%{name}
-> %{_rundir}/reboot-required.d/%{name}/%{version}-%{release}
-
 %preun
 if [ -x %{_sbindir}/weak-modules ]; then
     %{_sbindir}/weak-modules --remove-kernel %{uname} || exit $?
@@ -628,6 +609,14 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Wed Jun 10 2026 Lin Liu <lin.liu01@citrix.com> - 6.6.138-1
+- CP-312000: Update to 6.6.138
+- CP-47915: Pre-emptively bump SBAT level
+
+* Tue Jun 09 2026 Stephen Cheng <stephen.cheng@citrix.com> - 6.6.98-30
+- Add dist specifier to coverity stream so that we get separate XS8 and XS9 streams
+- CP-312819: Update kabi list for driver intel-i40e
+
 * Thu May 14 2026 Ross Lagerwall <ross.lagerwall@citrix.com> - 6.6.98-29
 - CP-312080: Import LLDP kernel patch into XS 9
 - CA-426858: Further AF_ALG fixes

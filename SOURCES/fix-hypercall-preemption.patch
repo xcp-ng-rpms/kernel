@@ -30,20 +30,20 @@ above) is set, but the dynamic preemption feature will livepatch that
 function to a no-op unless full preemption is selected.  The code is
 therefore updated to call raw_irqentry_exit_cond_resched().
 
-diff --git a/arch/x86/entry/common.c b/arch/x86/entry/common.c
-index 93c60c0c9d4a..0d4babe79369 100644
---- a/arch/x86/entry/common.c
-+++ b/arch/x86/entry/common.c
-@@ -253,7 +253,7 @@ SYSCALL_DEFINE0(ni_syscall)
- }
+diff --git a/arch/x86/xen/enlighten_pv.c b/arch/x86/xen/enlighten_pv.c
+index bfcd6ffc57df..89afc6c156fb 100644
+--- a/arch/x86/xen/enlighten_pv.c
++++ b/arch/x86/xen/enlighten_pv.c
+@@ -98,7 +98,7 @@ void *xen_initial_gdt;
+ static int xen_cpu_up_prepare_pv(unsigned int cpu);
+ static int xen_cpu_dead_pv(unsigned int cpu);
  
- #ifdef CONFIG_XEN_PV
 -#ifndef CONFIG_PREEMPTION
 +#ifndef CONFIG_PREEMPT
  /*
   * Some hypercalls issued by the toolstack can take many 10s of
   * seconds. Allow tasks running hypercalls via the privcmd driver to
-@@ -309,7 +309,7 @@ __visible noinstr void xen_pv_evtchn_do_upcall(struct pt_regs *regs)
+@@ -738,7 +738,7 @@ __visible noinstr void xen_pv_evtchn_do_upcall(struct pt_regs *regs)
  
  	inhcall = get_and_clear_inhcall();
  	if (inhcall && !WARN_ON_ONCE(state.exit_rcu)) {
