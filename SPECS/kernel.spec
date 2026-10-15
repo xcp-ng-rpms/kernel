@@ -1,6 +1,6 @@
-%global package_speccommit e0f86aa1d5037f0a3bb73d8144e795b8898e0417
+%global package_speccommit 2cd4b97236a57d54738da034872b49ba4650390b
 %global usver 6.6.138
-%global xsver 1
+%global xsver 2
 %global xsrel %{xsver}%{?xscount}%{?xshash}
 %global package_srccommit refs/tags/v6.6.138
 %define uname 6.6.98+1
@@ -380,8 +380,6 @@ install -m 644 .config %{buildroot}/boot/config-%{uname}
 install -m 644 System.map %{buildroot}/boot/System.map-%{uname}
 install -m 644 arch/x86/boot/bzImage.signed %{buildroot}/boot/vmlinuz-%{uname}
 truncate -s 20M %{buildroot}/boot/initrd-%{uname}.img
-ln -sf vmlinuz-%{uname} %{buildroot}/boot/vmlinuz-%{short_uname}-xen
-ln -sf initrd-%{uname}.img %{buildroot}/boot/initrd-%{short_uname}-xen.img
 
 # Install modules
 # Override $(mod-fw) because we don't want it to install any firmware
@@ -519,6 +517,11 @@ objdump -h %{buildroot}/usr/src/kernels/%{uname}-%{_arch}/vmlinux|grep " 0 .BTF"
 %endif
 
 %post
+# Creating the symlinks in postinstall makes it easier to move towards
+# multiple installed kernels, as these are then not "owned" by the kernel
+# package and can be overridden by a posttrans filetrigger when necessary.
+ln -sf vmlinuz-%{uname} /boot/vmlinuz-%{short_uname}-xen
+ln -sf initrd-%{uname}.img /boot/initrd-%{short_uname}-xen.img
 > %{_localstatedir}/lib/rpm-state/regenerate-initrd-%{uname}
 
 depmod -ae -F /boot/System.map-%{uname} %{uname}
@@ -546,8 +549,6 @@ fi
 
 %files
 /boot/vmlinuz-%{uname}
-/boot/vmlinuz-%{short_uname}-xen
-/boot/initrd-%{short_uname}-xen.img
 %ghost /boot/initrd-%{uname}.img
 /boot/System.map-%{uname}
 /boot/config-%{uname}
@@ -609,6 +610,11 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Sat Jun 13 2026 Stephen Cheng <stephen.cheng@citrix.com> - 6.6.138-2
+- CP-313078: Update kabi list for driver bnxt_en
+- CP-312818: Update kabi list for driver intel-e1000e
+- CP-312930: Update kabi list for driver intel-ice
+
 * Wed Jun 10 2026 Lin Liu <lin.liu01@citrix.com> - 6.6.138-1
 - CP-312000: Update to 6.6.138
 - CP-47915: Pre-emptively bump SBAT level

@@ -44,10 +44,10 @@ index 065483e98d01..00a404fb03f6 100644
  
  #endif /*CONFIG_XEN */
 diff --git a/drivers/pci/pci.c b/drivers/pci/pci.c
-index 82144bc7016f..411f941e9115 100644
+index bdde6aab14e7..86fe3077f970 100644
 --- a/drivers/pci/pci.c
 +++ b/drivers/pci/pci.c
-@@ -5704,6 +5704,8 @@ int pci_reset_function(struct pci_dev *dev)
+@@ -5712,6 +5712,8 @@ int pci_reset_function(struct pci_dev *dev)
  	pci_dev_save_and_disable(dev);
  
  	rc = __pci_reset_function_locked(dev);
@@ -71,10 +71,10 @@ index 3095613f8134..b0038aaf115d 100644
  obj-$(CONFIG_XEN_GRANT_DMA_OPS)		+= grant-dma-ops.o
 diff --git a/drivers/xen/filter-hypercall.c b/drivers/xen/filter-hypercall.c
 new file mode 100644
-index 000000000000..19e1e2b9ac2e
+index 000000000000..271296a06921
 --- /dev/null
 +++ b/drivers/xen/filter-hypercall.c
-@@ -0,0 +1,1432 @@
+@@ -0,0 +1,1492 @@
 +// SPDX-License-Identifier: GPL-2.0-only
 +
 +#include <linux/kernel.h>
@@ -685,12 +685,52 @@ index 000000000000..19e1e2b9ac2e
 +	return !ptr_bad(uptr, 1, size) ? 0 : -EFAULT;
 +}
 +
-+static int pre_platform_op(void *uptr, void **kptr)
++static int pre_resource_op(xenpf_resource_op_t *resource_op, void **uptr2)
++{
++	xenpf_resource_entry_t *entries = resource_op->entries.p;
++	size_t size;
++	int ret;
++
++	*uptr2 = entries;
++	set_xen_guest_handle(resource_op->entries, NULL);
++
++	if (resource_op->nr_entries == 0)
++		return 0;
++
++	/* avoid multiplication overflow */
++	if (resource_op->nr_entries >
++	    MAX_BOUNCE_LEN / sizeof(xenpf_resource_entry_t))
++		return -ENOMEM;
++
++	/* copy entries to avoid races */
++	size = resource_op->nr_entries * sizeof(xenpf_resource_entry_t);
++	ret = bounce(entries, (void **)&entries, size);
++	if (ret)
++		return ret;
++
++	/* check commands inside entries */
++	for (uint32_t entry = 0; entry < resource_op->nr_entries; ++entry)
++		switch (entries[entry].u.cmd) {
++		case XEN_RESOURCE_OP_MSR_READ:
++		case XEN_RESOURCE_OP_MSR_WRITE:
++			break;
++		default:
++			kvfree(entries);
++			return -ENOSYS;
++		}
++
++	set_xen_guest_handle(resource_op->entries, entries);
++
++	return 0;
++}
++
++static int pre_platform_op(void *uptr, void **kptr, void **uptr2)
 +{
 +	struct xen_platform_op *op;
 +	int ret;
 +
 +	*kptr = NULL;
++	*uptr2 = NULL;
 +
 +	ret = bounce(uptr, kptr, sizeof(*op));
 +	if (ret)
@@ -712,8 +752,8 @@ index 000000000000..19e1e2b9ac2e
 +			goto err;
 +		break;
 +	case XENPF_resource_op:
-+		if (ptr_bad(op->u.resource_op.entries.p, op->u.resource_op.nr_entries,
-+                            sizeof(xenpf_resource_entry_t)))
++		ret = pre_resource_op(&op->u.resource_op, uptr2);
++		if (ret)
 +			goto err;
 +		break;
 +	default:
@@ -731,11 +771,25 @@ index 000000000000..19e1e2b9ac2e
 +	return ret;
 +}
 +
-+static int post_platform_op(void *uptr, void *kptr)
++static int post_platform_op(void *uptr, void *kptr, void *uptr2)
 +{
 +	int ret = 0;
++	struct xen_platform_op *const op = kptr;
 +
-+	if (copy_to_user(uptr, kptr, sizeof(struct xen_platform_op)))
++	if (op->cmd == XENPF_resource_op) {
++		const size_t size = op->u.resource_op.nr_entries *
++			sizeof(xenpf_resource_entry_t);
++
++		if (copy_to_user(uptr2, op->u.resource_op.entries.p, size))
++			ret = -EFAULT;
++
++		kvfree(op->u.resource_op.entries.p);
++
++		/* Restore to avoid kernel pointer leaking to userspace */
++		op->u.resource_op.entries.p = uptr2;
++	}
++
++	if (!ret && copy_to_user(uptr, kptr, sizeof(struct xen_platform_op)))
 +		ret = -EFAULT;
 +
 +	kvfree(kptr);
@@ -1399,9 +1453,14 @@ index 000000000000..19e1e2b9ac2e
 +					 (void *)mc->args[1]);
 +			break;
 +		case __HYPERVISOR_platform_op:
-+			ret = pre_platform_op((void *)mc->args[0], &kptr);
++		{
++			void *uptr2;
++
++			ret = pre_platform_op((void *)mc->args[0], &kptr, &uptr2);
 +			mc->args[0] = (uint64_t)kptr;
++			mc->args[1] = (uint64_t)uptr2;
 +			break;
++		}
 +		case __HYPERVISOR_physdev_op:
 +			ret = pre_physdev_op((int)mc->args[0],
 +					     (void *)mc->args[1]);
@@ -1480,7 +1539,8 @@ index 000000000000..19e1e2b9ac2e
 +			break;
 +		case __HYPERVISOR_platform_op:
 +			uptr = (void *)mc_orig->args[0];
-+			ret = post_platform_op(uptr, (void *)mc->args[0]);
++			ret = post_platform_op(uptr, (void *)mc->args[0],
++					       (void *)mc->args[1]);
 +			break;
 +		case __HYPERVISOR_iommu_op:
 +			if (mc_orig)
@@ -1508,7 +1568,7 @@ index 000000000000..19e1e2b9ac2e
 +	return __post_hypercall(fc, &fc->mc, &fc->mc_orig);
 +}
 diff --git a/drivers/xen/privcmd.c b/drivers/xen/privcmd.c
-index 049b29089b7e..51930d30cb5c 100644
+index ddbe0a6451ac..aaa94f4fbaf1 100644
 --- a/drivers/xen/privcmd.c
 +++ b/drivers/xen/privcmd.c
 @@ -31,8 +31,8 @@
@@ -1612,7 +1672,7 @@ index 732f9702a439..dd8b33a1aee8 100644
  
  #ifdef CONFIG_PERF_EVENTS
 diff --git a/include/linux/pci.h b/include/linux/pci.h
-index 0e48b0f06cd3..d4e178ac9782 100644
+index 0e48b0f06cd3..4e07d5fc7fc8 100644
 --- a/include/linux/pci.h
 +++ b/include/linux/pci.h
 @@ -408,6 +408,13 @@ struct pci_dev {
