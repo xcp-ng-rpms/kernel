@@ -1,6 +1,6 @@
-%global package_speccommit 2cd4b97236a57d54738da034872b49ba4650390b
+%global package_speccommit 837551f0b58ea4e0bc416df151453f75c548b437
 %global usver 6.6.138
-%global xsver 2
+%global xsver 3
 %global xsrel %{xsver}%{?xscount}%{?xshash}
 %global package_srccommit refs/tags/v6.6.138
 %define uname 6.6.98+1
@@ -82,39 +82,38 @@ Patch10: fix-hypercall-preemption.patch
 Patch11: skip-cpuidle-driver-init-if-cpuidle-function-disable.patch
 Patch12: CA-392853-fix-kdump-kernel-cannot-find-ACPI-RSDP.patch
 Patch13: CA-415346-export-module-symbol-offsets.patch
-Patch14: CP-312080-net-openvswitch-add-dropping-of-lldp.patch
-Patch15: 0002-x86-xen-correct-dma_get_required_mask-for-Xen-PV-gue.patch
-Patch16: 0001-pci-export-pci_reset_supported.patch
-Patch17: 0002-xen-pciback-provide-a-reset-sysfs-file-to-try-harder.patch
-Patch18: pciback-disable-root-port-aer.patch
-Patch19: pciback-mask-root-port-comp-timeout.patch
-Patch20: no-flr-quirk.patch
-Patch21: CA-135938-nfs-disconnect-on-rpc-retry.patch
-Patch22: sunrpc-force-disconnect-on-connection-timeout.patch
-Patch23: xen-ioemu-inject-msi.patch
-Patch24: pv-iommu-support.patch
-Patch25: kexec-reserve-crashkernel-region.patch
-Patch26: 0001-xen-swiotlb-size-128MiB.patch
-Patch27: 0002-xen-swiotlb-rework-early-repeat-code.patch
-Patch28: 0001-Revert-to-use-num_online_cpus-for-default-rss-queues.patch
-Patch29: GFS2__Avoid_recently_demoted_rgrps
-Patch30: gfs2-debug-rgrp-sweep
-Patch31: 0001-fix-gfs2-umount-timeout-bug.patch
-Patch32: CA-411820-add-STATX_DIOALIGN-support-to-GFS2
-Patch33: scsi-avoid-lun-change-loop.patch
-Patch34: add-sbat.patch
-Patch35: enable-lockdown.patch
-Patch36: module-allow-disabling-sig_enforce.patch
-Patch37: use-mok-variable-fallback.patch
-Patch38: allow_reading_xen_netback_ring.patch
-Patch39: import-xen-public-headers.patch
-Patch40: filter-hypercalls.patch
-Patch41: module-hash-revocation.patch
-Patch42: gfs2-fix-debugfs-access.patch
-Patch43: 0001-CP-46343-common-data-structure-padding.patch
-Patch44: 0002-CP-46343-reserve-cpuid-leaves-for-future-use.patch
-Patch45: abi-version.patch
-Patch46: fix-kabi-breakages.patch
+Patch14: 0002-x86-xen-correct-dma_get_required_mask-for-Xen-PV-gue.patch
+Patch15: 0001-pci-export-pci_reset_supported.patch
+Patch16: 0002-xen-pciback-provide-a-reset-sysfs-file-to-try-harder.patch
+Patch17: pciback-disable-root-port-aer.patch
+Patch18: pciback-mask-root-port-comp-timeout.patch
+Patch19: no-flr-quirk.patch
+Patch20: CA-135938-nfs-disconnect-on-rpc-retry.patch
+Patch21: sunrpc-force-disconnect-on-connection-timeout.patch
+Patch22: xen-ioemu-inject-msi.patch
+Patch23: pv-iommu-support.patch
+Patch24: kexec-reserve-crashkernel-region.patch
+Patch25: 0001-xen-swiotlb-size-128MiB.patch
+Patch26: 0002-xen-swiotlb-rework-early-repeat-code.patch
+Patch27: 0001-Revert-to-use-num_online_cpus-for-default-rss-queues.patch
+Patch28: GFS2__Avoid_recently_demoted_rgrps
+Patch29: gfs2-debug-rgrp-sweep
+Patch30: 0001-fix-gfs2-umount-timeout-bug.patch
+Patch31: CA-411820-add-STATX_DIOALIGN-support-to-GFS2
+Patch32: scsi-avoid-lun-change-loop.patch
+Patch33: add-sbat.patch
+Patch34: enable-lockdown.patch
+Patch35: module-allow-disabling-sig_enforce.patch
+Patch36: use-mok-variable-fallback.patch
+Patch37: allow_reading_xen_netback_ring.patch
+Patch38: import-xen-public-headers.patch
+Patch39: filter-hypercalls.patch
+Patch40: module-hash-revocation.patch
+Patch41: gfs2-fix-debugfs-access.patch
+Patch42: 0001-CP-46343-common-data-structure-padding.patch
+Patch43: 0002-CP-46343-reserve-cpuid-leaves-for-future-use.patch
+Patch44: abi-version.patch
+Patch45: fix-kabi-breakages.patch
 %if %{do_kabichk}
 Source3: check-kabi
 %endif
@@ -610,6 +609,9 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Wed Aug 26 2026 Stephen Cheng <stephen.cheng@citrix.com> - 6.6.138-3
+- CP-314275: Update kabi list for driver cisco-enic
+
 * Sat Jun 13 2026 Stephen Cheng <stephen.cheng@citrix.com> - 6.6.138-2
 - CP-313078: Update kabi list for driver bnxt_en
 - CP-312818: Update kabi list for driver intel-e1000e
