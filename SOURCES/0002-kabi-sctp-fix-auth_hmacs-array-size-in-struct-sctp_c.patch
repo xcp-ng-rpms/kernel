@@ -1,0 +1,42 @@
+From 5ac7b07973485ea678d7b0b738962506c3238158 Mon Sep 17 00:00:00 2001
+From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+Date: Tue, 29 Sep 2026 15:12:54 +0200
+Subject: [PATCH] !kabi sctp: fix auth_hmacs array size in struct sctp_cookie
+
+Growing auth_hmacs by 2 bytes changes the genksyms CRCs of every sctp.ko
+symbol reaching struct sctp_association (sctp_get_sctp_info,
+sctp_for_each_endpoint, sctp_for_each_transport, ...).
+
+The layout of the structures is unchanged with CONFIG_CRYPTO_SHA256=y as
+in our config: SCTP_AUTH_NUM_HMACS is then 4 and SCTP_AUTH_MAX_CHUNKS is
+16, so auth_random + auth_hmacs + auth_chunks went from 36 + 10 + 20 = 66
+bytes, padded to 68 before the __u32 raw_addr_list_len, to 36 + 12 + 20 =
+68 bytes.  sizeof(struct sctp_cookie) and the offset of raw_addr_list_len
+are thus preserved, only auth_chunks moves by 2 bytes and it is only used
+within sctp.ko.  Without SHA256 the structure would grow by 4 bytes.
+
+Hide the new declarator from genksyms to preserve the CRCs.
+
+Fixes: 13a8ed2a87ae ("sctp: fix auth_hmacs array size in struct sctp_cookie")
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+---
+ include/net/sctp/structs.h | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/include/net/sctp/structs.h b/include/net/sctp/structs.h
+index 00cde58b003e..df7155557188 100644
+--- a/include/net/sctp/structs.h
++++ b/include/net/sctp/structs.h
+@@ -324,8 +324,12 @@ struct sctp_cookie {
+ 
+ 	__u8 auth_random[sizeof(struct sctp_paramhdr) +
+ 			 SCTP_AUTH_RANDOM_LENGTH];
++#ifndef __GENKSYMS__
+ 	__u8 auth_hmacs[sizeof(struct sctp_paramhdr) +
+ 			SCTP_AUTH_NUM_HMACS * sizeof(__u16)];
++#else
++	__u8 auth_hmacs[SCTP_AUTH_NUM_HMACS * sizeof(__u16) + 2];
++#endif
+ 	__u8 auth_chunks[sizeof(struct sctp_paramhdr) + SCTP_AUTH_MAX_CHUNKS];
+ 
+ 	/* This is a shim for my peer's INIT packet, followed by

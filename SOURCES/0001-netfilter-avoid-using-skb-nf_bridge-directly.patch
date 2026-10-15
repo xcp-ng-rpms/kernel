@@ -1,0 +1,424 @@
+From c52bacd88c83388987506d84b6622464997bc9b7 Mon Sep 17 00:00:00 2001
+From: Florian Westphal <fw@strlen.de>
+Date: Tue, 18 Dec 2018 17:15:15 +0100
+Subject: [PATCH] netfilter: avoid using skb->nf_bridge directly
+
+This pointer is going to be removed soon, so use the existing helpers in
+more places to avoid noise when the removal happens.
+
+Signed-off-by: Florian Westphal <fw@strlen.de>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+(cherry picked from commit c4b0e771f906f5beb7d90c3d28fe55ff9dbd038c)
+
+[Quentin:
+- net/netfilter/nfnetlink_queue.c: conflicts in context due to earlier
+  backport of e196115ec330 ("netfilter: nf_queue: hold bridge skb->dev
+  while queued")]
+
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+---
+ include/linux/netfilter_bridge.h     | 33 +++++++++++++-----
+ include/net/netfilter/br_netfilter.h |  6 ----
+ net/bridge/br_netfilter_hooks.c      | 19 ++++++++---
+ net/ipv4/netfilter/nf_reject_ipv4.c  |  6 ++--
+ net/ipv6/netfilter/nf_reject_ipv6.c  | 10 ++++--
+ net/netfilter/nf_log_common.c        | 20 +++++------
+ net/netfilter/nf_queue.c             | 50 ++++++++++++++++++----------
+ net/netfilter/nfnetlink_queue.c      | 22 ++++++------
+ net/netfilter/xt_physdev.c           |  2 +-
+ 9 files changed, 102 insertions(+), 66 deletions(-)
+
+diff --git a/include/linux/netfilter_bridge.h b/include/linux/netfilter_bridge.h
+index fa0686500970..0a65a422587c 100644
+--- a/include/linux/netfilter_bridge.h
++++ b/include/linux/netfilter_bridge.h
+@@ -17,43 +17,58 @@ static inline void br_drop_fake_rtable(struct sk_buff *skb)
+ 		skb_dst_drop(skb);
+ }
+ 
++static inline struct nf_bridge_info *
++nf_bridge_info_get(const struct sk_buff *skb)
++{
++	return skb->nf_bridge;
++}
++
++static inline bool nf_bridge_info_exists(const struct sk_buff *skb)
++{
++	return skb->nf_bridge != NULL;
++}
++
+ static inline int nf_bridge_get_physinif(const struct sk_buff *skb)
+ {
+-	struct nf_bridge_info *nf_bridge;
++	const struct nf_bridge_info *nf_bridge = nf_bridge_info_get(skb);
+ 
+-	if (skb->nf_bridge == NULL)
++	if (!nf_bridge)
+ 		return 0;
+ 
+-	nf_bridge = skb->nf_bridge;
+ 	return nf_bridge->physindev ? nf_bridge->physindev->ifindex : 0;
+ }
+ 
+ static inline int nf_bridge_get_physoutif(const struct sk_buff *skb)
+ {
+-	struct nf_bridge_info *nf_bridge;
++	const struct nf_bridge_info *nf_bridge = nf_bridge_info_get(skb);
+ 
+-	if (skb->nf_bridge == NULL)
++	if (!nf_bridge)
+ 		return 0;
+ 
+-	nf_bridge = skb->nf_bridge;
+ 	return nf_bridge->physoutdev ? nf_bridge->physoutdev->ifindex : 0;
+ }
+ 
+ static inline struct net_device *
+ nf_bridge_get_physindev(const struct sk_buff *skb)
+ {
+-	return skb->nf_bridge ? skb->nf_bridge->physindev : NULL;
++	const struct nf_bridge_info *nf_bridge = nf_bridge_info_get(skb);
++
++	return nf_bridge ? nf_bridge->physindev : NULL;
+ }
+ 
+ static inline struct net_device *
+ nf_bridge_get_physoutdev(const struct sk_buff *skb)
+ {
+-	return skb->nf_bridge ? skb->nf_bridge->physoutdev : NULL;
++	const struct nf_bridge_info *nf_bridge = nf_bridge_info_get(skb);
++
++	return nf_bridge ? nf_bridge->physoutdev : NULL;
+ }
+ 
+ static inline bool nf_bridge_in_prerouting(const struct sk_buff *skb)
+ {
+-	return skb->nf_bridge && skb->nf_bridge->in_prerouting;
++	const struct nf_bridge_info *nf_bridge = nf_bridge_info_get(skb);
++
++	return nf_bridge && nf_bridge->in_prerouting;
+ }
+ #else
+ #define br_drop_fake_rtable(skb)	        do { } while (0)
+diff --git a/include/net/netfilter/br_netfilter.h b/include/net/netfilter/br_netfilter.h
+index 74af19c3a8f7..6efc0153987b 100644
+--- a/include/net/netfilter/br_netfilter.h
++++ b/include/net/netfilter/br_netfilter.h
+@@ -22,12 +22,6 @@ int br_nf_hook_thresh(unsigned int hook, struct net *net, struct sock *sk,
+ 		      int (*okfn)(struct net *, struct sock *,
+ 				  struct sk_buff *));
+ 
+-static inline struct nf_bridge_info *
+-nf_bridge_info_get(const struct sk_buff *skb)
+-{
+-	return skb->nf_bridge;
+-}
+-
+ unsigned int nf_bridge_encap_header_len(const struct sk_buff *skb);
+ 
+ static inline void nf_bridge_push_encap_header(struct sk_buff *skb)
+diff --git a/net/bridge/br_netfilter_hooks.c b/net/bridge/br_netfilter_hooks.c
+index e07a7e62c705..5b335f039d03 100644
+--- a/net/bridge/br_netfilter_hooks.c
++++ b/net/bridge/br_netfilter_hooks.c
+@@ -247,7 +247,9 @@ static int br_validate_ipv4(struct net *net, struct sk_buff *skb)
+ 
+ void nf_bridge_update_protocol(struct sk_buff *skb)
+ {
+-	switch (skb->nf_bridge->orig_proto) {
++	const struct nf_bridge_info *nf_bridge = nf_bridge_info_get(skb);
++
++	switch (nf_bridge->orig_proto) {
+ 	case BRNF_PROTO_8021Q:
+ 		skb->protocol = htons(ETH_P_8021Q);
+ 		break;
+@@ -568,7 +570,8 @@ static unsigned int br_nf_forward_ip(void *priv,
+ 	struct net_device *parent;
+ 	u_int8_t pf;
+ 
+-	if (!skb->nf_bridge)
++	nf_bridge = nf_bridge_info_get(skb);
++	if (!nf_bridge)
+ 		return NF_ACCEPT;
+ 
+ 	/* Need exclusive nf_bridge_info since we might have multiple
+@@ -702,7 +705,9 @@ br_nf_ip_fragment(struct net *net, struct sock *sk, struct sk_buff *skb,
+ 
+ static unsigned int nf_bridge_mtu_reduction(const struct sk_buff *skb)
+ {
+-	if (skb->nf_bridge->orig_proto == BRNF_PROTO_PPPOE)
++	const struct nf_bridge_info *nf_bridge = nf_bridge_info_get(skb);
++
++	if (nf_bridge->orig_proto == BRNF_PROTO_PPPOE)
+ 		return PPPOE_SES_HLEN;
+ 	return 0;
+ }
+@@ -835,7 +840,9 @@ static unsigned int ip_sabotage_in(void *priv,
+ 				   struct sk_buff *skb,
+ 				   const struct nf_hook_state *state)
+ {
+-	if (skb->nf_bridge && !skb->nf_bridge->in_prerouting &&
++	struct nf_bridge_info *nf_bridge = nf_bridge_info_get(skb);
++
++	if (nf_bridge && !nf_bridge->in_prerouting &&
+ 	    !netif_is_l3_master(skb->dev)) {
+ 		state->okfn(state->net, state->sk, skb);
+ 		return NF_STOLEN;
+@@ -873,7 +880,9 @@ static void br_nf_pre_routing_finish_bridge_slow(struct sk_buff *skb)
+ 
+ static int br_nf_dev_xmit(struct sk_buff *skb)
+ {
+-	if (skb->nf_bridge && skb->nf_bridge->bridged_dnat) {
++	const struct nf_bridge_info *nf_bridge = nf_bridge_info_get(skb);
++
++	if (nf_bridge && nf_bridge->bridged_dnat) {
+ 		br_nf_pre_routing_finish_bridge_slow(skb);
+ 		return 1;
+ 	}
+diff --git a/net/ipv4/netfilter/nf_reject_ipv4.c b/net/ipv4/netfilter/nf_reject_ipv4.c
+index 5cd06ba3535d..aa8304c618b8 100644
+--- a/net/ipv4/netfilter/nf_reject_ipv4.c
++++ b/net/ipv4/netfilter/nf_reject_ipv4.c
+@@ -102,6 +102,7 @@ EXPORT_SYMBOL_GPL(nf_reject_ip_tcphdr_put);
+ /* Send RST reply */
+ void nf_send_reset(struct net *net, struct sk_buff *oldskb, int hook)
+ {
++	struct net_device *br_indev __maybe_unused;
+ 	struct sk_buff *nskb;
+ 	struct iphdr *niph;
+ 	const struct tcphdr *oth;
+@@ -147,10 +148,11 @@ void nf_send_reset(struct net *net, struct sk_buff *oldskb, int hook)
+ 	 * build the eth header using the original destination's MAC as the
+ 	 * source, and send the RST packet directly.
+ 	 */
+-	if (oldskb->nf_bridge) {
++	br_indev = nf_bridge_get_physindev(oldskb);
++	if (br_indev) {
+ 		struct ethhdr *oeth = eth_hdr(oldskb);
+ 
+-		nskb->dev = nf_bridge_get_physindev(oldskb);
++		nskb->dev = br_indev;
+ 		niph->tot_len = htons(nskb->len);
+ 		ip_send_check(niph);
+ 		if (dev_hard_header(nskb, nskb->dev, ntohs(nskb->protocol),
+diff --git a/net/ipv6/netfilter/nf_reject_ipv6.c b/net/ipv6/netfilter/nf_reject_ipv6.c
+index 24858402e374..b9c8a763c863 100644
+--- a/net/ipv6/netfilter/nf_reject_ipv6.c
++++ b/net/ipv6/netfilter/nf_reject_ipv6.c
+@@ -131,6 +131,7 @@ EXPORT_SYMBOL_GPL(nf_reject_ip6_tcphdr_put);
+ 
+ void nf_send_reset6(struct net *net, struct sk_buff *oldskb, int hook)
+ {
++	struct net_device *br_indev __maybe_unused;
+ 	struct sk_buff *nskb;
+ 	struct tcphdr _otcph;
+ 	const struct tcphdr *otcph;
+@@ -197,15 +198,18 @@ void nf_send_reset6(struct net *net, struct sk_buff *oldskb, int hook)
+ 	 * build the eth header using the original destination's MAC as the
+ 	 * source, and send the RST packet directly.
+ 	 */
+-	if (oldskb->nf_bridge) {
++	br_indev = nf_bridge_get_physindev(oldskb);
++	if (br_indev) {
+ 		struct ethhdr *oeth = eth_hdr(oldskb);
+ 
+-		nskb->dev = nf_bridge_get_physindev(oldskb);
++		nskb->dev = br_indev;
+ 		nskb->protocol = htons(ETH_P_IPV6);
+ 		ip6h->payload_len = htons(sizeof(struct tcphdr));
+ 		if (dev_hard_header(nskb, nskb->dev, ntohs(nskb->protocol),
+-				    oeth->h_source, oeth->h_dest, nskb->len) < 0)
++				    oeth->h_source, oeth->h_dest, nskb->len) < 0) {
++			kfree_skb(nskb);
+ 			return;
++		}
+ 		dev_queue_xmit(nskb);
+ 	} else
+ #endif
+diff --git a/net/netfilter/nf_log_common.c b/net/netfilter/nf_log_common.c
+index a8c5c846aec1..3a0d6880b7c9 100644
+--- a/net/netfilter/nf_log_common.c
++++ b/net/netfilter/nf_log_common.c
+@@ -156,22 +156,20 @@ nf_log_dump_packet_common(struct nf_log_buf *m, u_int8_t pf,
+ 			  const struct net_device *out,
+ 			  const struct nf_loginfo *loginfo, const char *prefix)
+ {
++	const struct net_device *physoutdev __maybe_unused;
++	const struct net_device *physindev __maybe_unused;
++
+ 	nf_log_buf_add(m, KERN_SOH "%c%sIN=%s OUT=%s ",
+ 	       '0' + loginfo->u.log.level, prefix,
+ 	       in ? in->name : "",
+ 	       out ? out->name : "");
+ #if IS_ENABLED(CONFIG_BRIDGE_NETFILTER)
+-	if (skb->nf_bridge) {
+-		const struct net_device *physindev;
+-		const struct net_device *physoutdev;
+-
+-		physindev = nf_bridge_get_physindev(skb);
+-		if (physindev && in != physindev)
+-			nf_log_buf_add(m, "PHYSIN=%s ", physindev->name);
+-		physoutdev = nf_bridge_get_physoutdev(skb);
+-		if (physoutdev && out != physoutdev)
+-			nf_log_buf_add(m, "PHYSOUT=%s ", physoutdev->name);
+-	}
++	physindev = nf_bridge_get_physindev(skb);
++	if (physindev && in != physindev)
++		nf_log_buf_add(m, "PHYSIN=%s ", physindev->name);
++	physoutdev = nf_bridge_get_physoutdev(skb);
++	if (physoutdev && out != physoutdev)
++		nf_log_buf_add(m, "PHYSOUT=%s ", physoutdev->name);
+ #endif
+ }
+ EXPORT_SYMBOL_GPL(nf_log_dump_packet_common);
+diff --git a/net/netfilter/nf_queue.c b/net/netfilter/nf_queue.c
+index bced63202f2b..1db5b8d6c8a5 100644
+--- a/net/netfilter/nf_queue.c
++++ b/net/netfilter/nf_queue.c
+@@ -47,6 +47,24 @@ void nf_unregister_queue_handler(struct net *net)
+ }
+ EXPORT_SYMBOL(nf_unregister_queue_handler);
+ 
++static void nf_queue_entry_release_br_nf_refs(struct sk_buff *skb)
++{
++#if IS_ENABLED(CONFIG_BRIDGE_NETFILTER)
++	struct nf_bridge_info *nf_bridge = nf_bridge_info_get(skb);
++
++	if (nf_bridge) {
++		struct net_device *physdev;
++
++		physdev = nf_bridge_get_physindev(skb);
++		if (physdev)
++			dev_put(physdev);
++		physdev = nf_bridge_get_physoutdev(skb);
++		if (physdev)
++			dev_put(physdev);
++	}
++#endif
++}
++
+ void nf_queue_entry_release_refs(struct nf_queue_entry *entry)
+ {
+ 	struct nf_hook_state *state = &entry->state;
+@@ -61,20 +79,28 @@ void nf_queue_entry_release_refs(struct nf_queue_entry *entry)
+ 		dev_put(state->out);
+ 	if (state->sk)
+ 		sock_put(state->sk);
++
++	nf_queue_entry_release_br_nf_refs(entry->skb);
++}
++EXPORT_SYMBOL_GPL(nf_queue_entry_release_refs);
++
++static void nf_queue_entry_get_br_nf_refs(struct sk_buff *skb)
++{
+ #if IS_ENABLED(CONFIG_BRIDGE_NETFILTER)
+-	if (entry->skb->nf_bridge) {
++	struct nf_bridge_info *nf_bridge = nf_bridge_info_get(skb);
++
++	if (nf_bridge) {
+ 		struct net_device *physdev;
+ 
+-		physdev = nf_bridge_get_physindev(entry->skb);
++		physdev = nf_bridge_get_physindev(skb);
+ 		if (physdev)
+-			dev_put(physdev);
+-		physdev = nf_bridge_get_physoutdev(entry->skb);
++			dev_hold(physdev);
++		physdev = nf_bridge_get_physoutdev(skb);
+ 		if (physdev)
+-			dev_put(physdev);
++			dev_hold(physdev);
+ 	}
+ #endif
+ }
+-EXPORT_SYMBOL_GPL(nf_queue_entry_release_refs);
+ 
+ /* Bump dev refs so they don't vanish while packet is out */
+ static void __nf_queue_entry_get_refs(struct nf_queue_entry *entry)
+@@ -88,18 +114,8 @@ static void __nf_queue_entry_get_refs(struct nf_queue_entry *entry)
+ 		dev_hold(state->in);
+ 	if (state->out)
+ 		dev_hold(state->out);
+-#if IS_ENABLED(CONFIG_BRIDGE_NETFILTER)
+-	if (entry->skb->nf_bridge) {
+-		struct net_device *physdev;
+ 
+-		physdev = nf_bridge_get_physindev(entry->skb);
+-		if (physdev)
+-			dev_hold(physdev);
+-		physdev = nf_bridge_get_physoutdev(entry->skb);
+-		if (physdev)
+-			dev_hold(physdev);
+-	}
+-#endif
++	nf_queue_entry_get_br_nf_refs(entry->skb);
+ }
+ 
+ /*
+diff --git a/net/netfilter/nfnetlink_queue.c b/net/netfilter/nfnetlink_queue.c
+index 29c70be4ad2f..61480f0fbe40 100644
+--- a/net/netfilter/nfnetlink_queue.c
++++ b/net/netfilter/nfnetlink_queue.c
+@@ -747,13 +747,13 @@ nf_queue_entry_dup(struct nf_queue_entry *e)
+  */
+ static void nf_bridge_adjust_skb_data(struct sk_buff *skb)
+ {
+-	if (skb->nf_bridge)
++	if (nf_bridge_info_get(skb))
+ 		__skb_push(skb, skb->network_header - skb->mac_header);
+ }
+ 
+ static void nf_bridge_adjust_segmented_data(struct sk_buff *skb)
+ {
+-	if (skb->nf_bridge)
++	if (nf_bridge_info_get(skb))
+ 		__skb_pull(skb, skb->network_header - skb->mac_header);
+ }
+ #else
+@@ -926,7 +926,15 @@ static int
+ dev_cmp(struct nf_queue_entry *entry, unsigned long ifindex)
+ {
+ 	struct nf_queue_entry_extra *extra = nf_queue_entry_extra(entry);
++#if IS_ENABLED(CONFIG_BRIDGE_NETFILTER)
++	int physinif, physoutif;
++
++	physinif = nf_bridge_get_physinif(entry->skb);
++	physoutif = nf_bridge_get_physoutif(entry->skb);
+ 
++	if (physinif == ifindex || physoutif == ifindex)
++		return 1;
++#endif
+ 	if (extra && extra->skb_dev && extra->skb_dev->ifindex == ifindex)
+ 		return 1;
+ 	if (entry->state.in)
+@@ -935,17 +943,7 @@ dev_cmp(struct nf_queue_entry *entry, unsigned long ifindex)
+ 	if (entry->state.out)
+ 		if (entry->state.out->ifindex == ifindex)
+ 			return 1;
+-#if IS_ENABLED(CONFIG_BRIDGE_NETFILTER)
+-	if (entry->skb->nf_bridge) {
+-		int physinif, physoutif;
+ 
+-		physinif = nf_bridge_get_physinif(entry->skb);
+-		physoutif = nf_bridge_get_physoutif(entry->skb);
+-
+-		if (physinif == ifindex || physoutif == ifindex)
+-			return 1;
+-	}
+-#endif
+ 	return 0;
+ }
+ 
+diff --git a/net/netfilter/xt_physdev.c b/net/netfilter/xt_physdev.c
+index 9d6d67b953ac..4034d70bff39 100644
+--- a/net/netfilter/xt_physdev.c
++++ b/net/netfilter/xt_physdev.c
+@@ -33,7 +33,7 @@ physdev_mt(const struct sk_buff *skb, struct xt_action_param *par)
+ 	/* Not a bridged IP packet or no info available yet:
+ 	 * LOCAL_OUT/mangle and LOCAL_OUT/nat don't know if
+ 	 * the destination device will be a bridge. */
+-	if (!skb->nf_bridge) {
++	if (!nf_bridge_info_exists(skb)) {
+ 		/* Return MATCH if the invert flags of the used options are on */
+ 		if ((info->bitmask & XT_PHYSDEV_OP_BRIDGED) &&
+ 		    !(info->invert & XT_PHYSDEV_OP_BRIDGED))

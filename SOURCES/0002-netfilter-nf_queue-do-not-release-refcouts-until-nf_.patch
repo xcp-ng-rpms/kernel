@@ -1,0 +1,68 @@
+From a4c83c28cf69b10d170796290071c4cfd2bf1aaa Mon Sep 17 00:00:00 2001
+From: Florian Westphal <fw@strlen.de>
+Date: Fri, 27 Mar 2020 03:24:48 +0100
+Subject: [PATCH] netfilter: nf_queue: do not release refcouts until
+ nf_reinject is done
+
+nf_queue is problematic when another NF_QUEUE invocation happens
+from nf_reinject().
+
+1. nf_queue is invoked, increments state->sk refcount.
+2. skb is queued, waiting for verdict.
+3. sk is closed/released.
+3. verdict comes back, nf_reinject is called.
+4. nf_reinject drops the reference -- refcount can now drop to 0
+
+Instead of get_ref/release_ref pattern, we need to nest the get_ref calls:
+    get_ref
+       get_ref
+       release_ref
+     release_ref
+
+So that when we invoke the next processing stage (another netfilter
+or the okfn()), we hold at least one reference count on the
+devices/socket.
+
+After previous patch, it is now safe to put the entry even after okfn()
+has potentially free'd the skb.
+
+Signed-off-by: Florian Westphal <fw@strlen.de>
+Signed-off-by: Pablo Neira Ayuso <pablo@netfilter.org>
+(cherry picked from commit af370ab36fcd19f04e3408c402608e7e56e6f188)
+
+[Quentin: minor conflicts as nf_queue_entry_free() now also frees the
+shadow variable.]
+
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+---
+ net/netfilter/nf_queue.c | 8 ++------
+ 1 file changed, 2 insertions(+), 6 deletions(-)
+
+diff --git a/net/netfilter/nf_queue.c b/net/netfilter/nf_queue.c
+index f89e1e7efa89..fdbf5b43c100 100644
+--- a/net/netfilter/nf_queue.c
++++ b/net/netfilter/nf_queue.c
+@@ -375,13 +375,10 @@ void nf_reinject(struct nf_queue_entry *entry, unsigned int verdict)
+ 
+ 	hooks = nf_hook_entries_head(net, pf, entry->state.hook);
+ 
+-	nf_queue_entry_release_refs(entry);
+-
+ 	i = entry->hook_index;
+ 	if (WARN_ON_ONCE(!hooks || i >= hooks->num_hook_entries)) {
+ 		kfree_skb(skb);
+-		shadow_var_free(entry, NF_QUEUE_ENTRY_EXTRA);
+-		kfree(entry);
++		nf_queue_entry_free(entry);
+ 		return;
+ 	}
+ 
+@@ -420,7 +417,6 @@ void nf_reinject(struct nf_queue_entry *entry, unsigned int verdict)
+ 		kfree_skb(skb);
+ 	}
+ 
+-	shadow_var_free(entry, NF_QUEUE_ENTRY_EXTRA);
+-	kfree(entry);
++	nf_queue_entry_free(entry);
+ }
+ EXPORT_SYMBOL(nf_reinject);

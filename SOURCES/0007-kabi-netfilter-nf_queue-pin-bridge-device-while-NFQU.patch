@@ -1,0 +1,87 @@
+From 1dcf38aa5a547a6e8ebcbfa77ea4097aadf8ba43 Mon Sep 17 00:00:00 2001
+From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+Date: Mon, 5 Oct 2026 11:29:36 +0200
+Subject: [PATCH] !kabi netfilter: nf_queue: pin bridge device while NFQUEUE
+ holds fake dst
+
+Move the bridge_dev field out of struct nf_queue_entry and into the
+nf_queue_entry_extra shadow variable to preserve the kabi.
+
+Fixes: 14af2e9e8bf7 ("netfilter: nf_queue: pin bridge device while NFQUEUE holds fake dst")
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+---
+ include/net/netfilter/nf_queue.h |  4 +---
+ net/netfilter/nf_queue.c         | 10 +++++-----
+ net/netfilter/nfnetlink_queue.c  |  2 +-
+ 3 files changed, 7 insertions(+), 9 deletions(-)
+
+diff --git a/include/net/netfilter/nf_queue.h b/include/net/netfilter/nf_queue.h
+index d5d1555a2883..94f9e3a5aefd 100644
+--- a/include/net/netfilter/nf_queue.h
++++ b/include/net/netfilter/nf_queue.h
+@@ -13,9 +13,6 @@ struct nf_queue_entry {
+ 	struct sk_buff		*skb;
+ 	unsigned int		id;
+ 	unsigned int		hook_index;	/* index in hook_entries->hook[] */
+-#if IS_ENABLED(CONFIG_BRIDGE_NETFILTER)
+-	struct net_device	*bridge_dev;
+-#endif
+ 	struct nf_hook_state	state;
+ 	u16			size; /* sizeof(entry) + saved route keys */
+ 
+@@ -33,6 +30,7 @@ struct nf_queue_entry {
+ struct nf_queue_entry_extra {
+ 	struct net_device	*skb_dev;
+ #if IS_ENABLED(CONFIG_BRIDGE_NETFILTER)
++	struct net_device	*bridge_dev;
+ 	struct net_device	*physin;
+ 	struct net_device	*physout;
+ #endif
+diff --git a/net/netfilter/nf_queue.c b/net/netfilter/nf_queue.c
+index 54cfcd5e2bbe..754076e3ecb4 100644
+--- a/net/netfilter/nf_queue.c
++++ b/net/netfilter/nf_queue.c
+@@ -70,8 +70,8 @@ void nf_queue_entry_release_refs(struct nf_queue_entry *entry)
+ 		sock_put(state->sk);
+ 
+ #if IS_ENABLED(CONFIG_BRIDGE_NETFILTER)
+-	if (entry->bridge_dev)
+-		dev_put(entry->bridge_dev);
++	if (extra && extra->bridge_dev)
++		dev_put(extra->bridge_dev);
+ 	if (extra && extra->physin)
+ 		dev_put(extra->physin);
+ 	if (extra && extra->physout)
+@@ -104,7 +104,7 @@ static void __nf_queue_entry_init_physdevs(struct nf_queue_entry *entry,
+ 	 * the dst itself, but the fake rtable is embedded in bridge-private
+ 	 * storage that netdevice teardown can free independently.
+ 	 */
+-	entry->bridge_dev = dev;
++	extra->bridge_dev = dev;
+ #endif
+ }
+ 
+@@ -122,8 +122,8 @@ static void __nf_queue_entry_get_refs(struct nf_queue_entry *entry)
+ 		dev_hold(state->out);
+ 
+ #if IS_ENABLED(CONFIG_BRIDGE_NETFILTER)
+-	if (entry->bridge_dev)
+-		dev_hold(entry->bridge_dev);
++	if (extra && extra->bridge_dev)
++		dev_hold(extra->bridge_dev);
+ 	if (extra && extra->physin)
+ 		dev_hold(extra->physin);
+ 	if (extra && extra->physout)
+diff --git a/net/netfilter/nfnetlink_queue.c b/net/netfilter/nfnetlink_queue.c
+index 1acdbf266378..3b3b77e649bc 100644
+--- a/net/netfilter/nfnetlink_queue.c
++++ b/net/netfilter/nfnetlink_queue.c
+@@ -935,7 +935,7 @@ dev_cmp(struct nf_queue_entry *entry, unsigned long ifindex)
+ 	if (physinif == ifindex || physoutif == ifindex)
+ 		return 1;
+ 
+-	if (entry->bridge_dev && entry->bridge_dev->ifindex == ifindex)
++	if (extra && extra->bridge_dev && extra->bridge_dev->ifindex == ifindex)
+ 		return 1;
+ #endif
+ 	if (extra && extra->skb_dev && extra->skb_dev->ifindex == ifindex)

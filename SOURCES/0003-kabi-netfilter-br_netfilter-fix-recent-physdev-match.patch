@@ -1,0 +1,34 @@
+From 394e56f4dc024b940f6fca0986397206f2cc4618 Mon Sep 17 00:00:00 2001
+From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+Date: Tue, 6 Oct 2026 09:19:52 +0200
+Subject: [PATCH] !kabi netfilter: br_netfilter: fix recent physdev match
+ breakage
+
+The new sabotage_in_done bit fits in the existing u8 bitfield of struct
+nf_bridge_info, next to pkt_otherhost/in_prerouting/bridged_dnat, so the
+layout of the structure is unchanged.  Hide it from genksyms so that the
+CRCs of all the symbols reaching struct sk_buff are preserved.
+
+nf_bridge_info is always allocated with kzalloc() and copied as a whole in
+nf_bridge_unshare(), so the new bit is always initialized.
+
+Fixes: 1118f8116c96 ("netfilter: br_netfilter: fix recent physdev match breakage")
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+---
+ include/linux/skbuff.h | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/include/linux/skbuff.h b/include/linux/skbuff.h
+index 0fe57129ee66..586d08f37441 100644
+--- a/include/linux/skbuff.h
++++ b/include/linux/skbuff.h
+@@ -261,7 +261,9 @@ struct nf_bridge_info {
+ 	u8			pkt_otherhost:1;
+ 	u8			in_prerouting:1;
+ 	u8			bridged_dnat:1;
++#ifndef __GENKSYMS__
+ 	u8			sabotage_in_done:1;
++#endif
+ 	__u16			frag_max_size;
+ 	struct net_device	*physindev;
+ 

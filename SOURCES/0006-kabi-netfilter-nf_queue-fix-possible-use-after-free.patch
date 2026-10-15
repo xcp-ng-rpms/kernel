@@ -1,0 +1,111 @@
+From 162ac5692c299e5e6c0236bd9eb516c274dcbd10 Mon Sep 17 00:00:00 2001
+From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+Date: Tue, 22 Sep 2026 10:51:59 +0200
+Subject: [PATCH] !kabi netfilter: nf_queue: fix possible use-after-free
+
+Preserve the kabi for nf_queue_entry_get_refs in case it is used by our
+out-of-tree kernel modules and introduce a bool version.
+
+Fixes: f7d719976ac2 ("netfilter: nf_queue: fix possible use-after-free")
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+---
+ include/net/netfilter/nf_queue.h |  3 ++-
+ net/netfilter/nf_queue.c         | 37 ++++++++++++++++++++++++++------
+ net/netfilter/nfnetlink_queue.c  |  2 +-
+ 3 files changed, 34 insertions(+), 8 deletions(-)
+
+diff --git a/include/net/netfilter/nf_queue.h b/include/net/netfilter/nf_queue.h
+index ad25dff54ead..ef2f603670f4 100644
+--- a/include/net/netfilter/nf_queue.h
++++ b/include/net/netfilter/nf_queue.h
+@@ -33,7 +33,8 @@ void nf_register_queue_handler(struct net *net, const struct nf_queue_handler *q
+ void nf_unregister_queue_handler(struct net *net);
+ void nf_reinject(struct nf_queue_entry *entry, unsigned int verdict);
+ 
+-bool nf_queue_entry_get_refs(struct nf_queue_entry *entry);
++void nf_queue_entry_get_refs(struct nf_queue_entry *entry);
++bool nf_queue_entry_get_refs_bool(struct nf_queue_entry *entry);
+ void nf_queue_entry_release_refs(struct nf_queue_entry *entry);
+ 
+ static inline void init_hashrandom(u32 *jhash_initval)
+diff --git a/net/netfilter/nf_queue.c b/net/netfilter/nf_queue.c
+index 8837944df393..3cb91270f308 100644
+--- a/net/netfilter/nf_queue.c
++++ b/net/netfilter/nf_queue.c
+@@ -75,13 +75,10 @@ void nf_queue_entry_release_refs(struct nf_queue_entry *entry)
+ EXPORT_SYMBOL_GPL(nf_queue_entry_release_refs);
+ 
+ /* Bump dev refs so they don't vanish while packet is out */
+-bool nf_queue_entry_get_refs(struct nf_queue_entry *entry)
++static void __nf_queue_entry_get_refs(struct nf_queue_entry *entry)
+ {
+ 	struct nf_hook_state *state = &entry->state;
+ 
+-	if (state->sk && !refcount_inc_not_zero(&state->sk->sk_refcnt))
+-		return false;
+-
+ 	if (entry->skb_dev)
+ 		dev_hold(entry->skb_dev);
+ 	if (state->in)
+@@ -100,10 +97,38 @@ bool nf_queue_entry_get_refs(struct nf_queue_entry *entry)
+ 			dev_hold(physdev);
+ 	}
+ #endif
+-	return true;
++}
++
++/*
++ * Kept for out-of-tree users, nf_queue_entry_get_refs_bool() must be used
++ * instead as it won't take a reference on a socket being destroyed.
++ */
++void nf_queue_entry_get_refs(struct nf_queue_entry *entry)
++{
++	struct nf_hook_state *state = &entry->state;
++
++	WARN_ONCE(true, "Use the nf_queue_entry_get_refs_bool variant to avoid possible use-after-frees.")
++
++	if (state->sk)
++		sock_hold(state->sk);
++
++	__nf_queue_entry_get_refs(entry);
+ }
+ EXPORT_SYMBOL_GPL(nf_queue_entry_get_refs);
+ 
++bool nf_queue_entry_get_refs_bool(struct nf_queue_entry *entry)
++{
++	struct nf_hook_state *state = &entry->state;
++
++	if (state->sk && !refcount_inc_not_zero(&state->sk->sk_refcnt))
++		return false;
++
++	__nf_queue_entry_get_refs(entry);
++
++	return true;
++}
++EXPORT_SYMBOL_GPL(nf_queue_entry_get_refs_bool);
++
+ void nf_queue_nf_hook_drop(struct net *net)
+ {
+ 	const struct nf_queue_handler *qh;
+@@ -193,7 +218,7 @@ static int __nf_queue(struct sk_buff *skb, const struct nf_hook_state *state,
+ 		.size	= sizeof(*entry) + route_key_size,
+ 	};
+ 
+-	if (!nf_queue_entry_get_refs(entry)) {
++	if (!nf_queue_entry_get_refs_bool(entry)) {
+ 		kfree(entry);
+ 		return -ENOTCONN;
+ 	}
+diff --git a/net/netfilter/nfnetlink_queue.c b/net/netfilter/nfnetlink_queue.c
+index 7a0827b5de1b..e922bfdd9fcf 100644
+--- a/net/netfilter/nfnetlink_queue.c
++++ b/net/netfilter/nfnetlink_queue.c
+@@ -719,7 +719,7 @@ nf_queue_entry_dup(struct nf_queue_entry *e)
+ 	if (!entry)
+ 		return NULL;
+ 
+-	if (nf_queue_entry_get_refs(entry))
++	if (nf_queue_entry_get_refs_bool(entry))
+ 		return entry;
+ 
+ 	kfree(entry);
