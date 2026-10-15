@@ -44,14 +44,14 @@ index 065483e98d01..00a404fb03f6 100644
  
  #endif /*CONFIG_XEN */
 diff --git a/drivers/pci/pci.c b/drivers/pci/pci.c
-index 19baf8e777d1..3875aa66b837 100644
+index 19baf8e777d1..dd4791f299bf 100644
 --- a/drivers/pci/pci.c
 +++ b/drivers/pci/pci.c
 @@ -5638,6 +5638,8 @@ int pci_reset_function(struct pci_dev *dev)
  	pci_dev_save_and_disable(dev);
  
  	rc = __pci_reset_function_locked(dev);
-+	if (rc >= 0 && dev->quarantined)
++	if (rc >= 0 && !dev->assigned)
 +		dev->unsafe = 0;
  
  	pci_dev_restore(dev);
@@ -71,10 +71,10 @@ index 3095613f8134..b0038aaf115d 100644
  obj-$(CONFIG_XEN_GRANT_DMA_OPS)		+= grant-dma-ops.o
 diff --git a/drivers/xen/filter-hypercall.c b/drivers/xen/filter-hypercall.c
 new file mode 100644
-index 000000000000..c72e8cb9be5e
+index 000000000000..19e1e2b9ac2e
 --- /dev/null
 +++ b/drivers/xen/filter-hypercall.c
-@@ -0,0 +1,1405 @@
+@@ -0,0 +1,1432 @@
 +// SPDX-License-Identifier: GPL-2.0-only
 +
 +#include <linux/kernel.h>
@@ -743,6 +743,77 @@ index 000000000000..c72e8cb9be5e
 +	return ret;
 +}
 +
++static int pre_domctl_assign_device(struct xen_domctl *const op,
++				    unsigned int level)
++{
++	struct pci_dev *pdev;
++	uint32_t sbdf;
++	int ret;
++
++	if (unlikely(op->u.assign_device.dev != XEN_DOMCTL_DEV_PCI)) {
++		pr_warn("filter-hypercall: Unimplemented DOMCTL_(de)assign_device dev: %u\n",
++			op->u.assign_device.dev);
++		/* Unknown device types return -ENODEV in Xen. */
++		return -ENODEV;
++	}
++
++	/* reuse for keeping device */
++	op->u.assign_device.u.dt.path.p = NULL;
++
++	/*
++	 * Avoid caller to cause dead locks using multicall, there's
++	 * no much point in optimizing these calls.
++	 */
++	if (level > 1)
++		return -ELOOP;
++
++	sbdf = op->u.assign_device.u.pci.machine_sbdf;
++	pdev = pci_get_domain_bus_and_slot(sbdf >> 16, PCI_BUS_NUM(sbdf), sbdf & 0xff);
++	if (!pdev)
++		return -ENODEV;
++
++	device_lock(&pdev->dev);
++
++	/*
++	 * Attempt to reset the device to a safe state if userspace
++	 * has not already done so.
++	 * This is not expected under normal operation, but may occur
++	 * in failure scenarios.
++	 * The reset is performed in the context of a userspace ioctl,
++	 * so the time spent is accounted to the caller, analogous to
++	 * a reset via /sys.
++	 */
++	if (pdev->unsafe && !pdev->assigned &&
++	    pci_reset_function_locked(pdev) >= 0)
++		pdev->unsafe = 0;
++
++	ret = 0;
++	if (op->cmd == XEN_DOMCTL_deassign_device) {
++		/* Do not allow a device to be assigned to dom0 if unsafe
++		 * but allow to get assigned to domIO if unsafe (putting
++		 * it in quarantine).
++		 */
++		if (pdev->unsafe && op->domain == DOMID_IO)
++			ret = -EPERM;
++	} else {
++		/* Do not allow to assign a device if unsafe. */
++		if (pdev->unsafe)
++			ret = -EPERM;
++		/* If it's being assigned to domU it will became unsafe. */
++		else if (op->domain != DOMID_IO && op->domain != 0)
++			pdev->unsafe = 1;
++	}
++
++	if (ret) {
++		device_unlock(&pdev->dev);
++		pci_dev_put(pdev);
++		return ret;
++	}
++
++	op->u.assign_device.u.dt.path.p = (void*) pdev;
++	return ret;
++}
++
 +static int pre_domctl(void *uptr, void **kptr, unsigned int level)
 +{
 +	struct xen_domctl *op;
@@ -839,54 +910,10 @@ index 000000000000..c72e8cb9be5e
 +		break;
 +	case XEN_DOMCTL_assign_device:
 +	case XEN_DOMCTL_deassign_device:
-+	{
-+		struct pci_dev *pdev;
-+		uint32_t sbdf;
-+
-+		if (unlikely(op->u.assign_device.dev != XEN_DOMCTL_DEV_PCI)) {
-+			pr_warn("filter-hypercall: Unimplemented DOMCTL_(de)assign_device dev: %u\n",
-+				op->u.assign_device.dev);
-+			/* Unknown device types return -ENODEV in Xen. */
-+			ret = -ENODEV;
++		ret = pre_domctl_assign_device(op, level);
++		if (ret)
 +			goto err;
-+		}
-+
-+		/* reuse for keeping device */
-+		op->u.assign_device.u.dt.path.p = NULL;
-+
-+		/*
-+		 * Avoid caller to cause dead locks using multicall, there's
-+		 * no much point in optimizing these calls.
-+		 */
-+		if (level > 1) {
-+			ret = -ELOOP;
-+			goto err;
-+		}
-+
-+		sbdf = op->u.assign_device.u.pci.machine_sbdf;
-+		pdev = pci_get_domain_bus_and_slot(sbdf >> 16, PCI_BUS_NUM(sbdf), sbdf & 0xff);
-+		if (!pdev) {
-+			ret = -ENODEV;
-+			goto err;
-+		}
-+		if (op->cmd == XEN_DOMCTL_deassign_device) {
-+			ret = 0;
-+		} else if (pdev->unsafe) {
-+			ret = -EPERM;
-+		} else if (op->domain == DOMID_IO || op->domain == 0) {
-+			ret = 0;
-+		} else {
-+			ret = 0;
-+			pdev->unsafe = 1;
-+		}
-+		if (ret) {
-+			pci_dev_put(pdev);
-+			goto err;
-+		}
-+		device_lock(&pdev->dev);
-+		op->u.assign_device.u.dt.path.p = (void*) pdev;
 +		break;
-+	}
 +	case XEN_DOMCTL_setnodeaffinity:
 +	case XEN_DOMCTL_getnodeaffinity:
 +		if (bitmap_ptr_bad(op->u.nodeaffinity.nodemap.bitmap.p,
@@ -949,9 +976,9 @@ index 000000000000..c72e8cb9be5e
 +		op->u.assign_device.u.dt.path.p = NULL;
 +		if (!rc) {
 +			if (op->cmd == XEN_DOMCTL_deassign_device) {
-+				pdev->quarantined = 1;
-+			} else if (op->domain != DOMID_IO) {
-+				pdev->quarantined = 0;
++				pdev->assigned = 0;
++			} else if (op->domain != DOMID_IO && op->domain != 0) {
++				pdev->assigned = 1;
 +			}
 +		}
 +		device_unlock(&pdev->dev);
@@ -1558,14 +1585,14 @@ index 61aaded483e1..3030274a5c8e 100644
  }
  
 diff --git a/drivers/xen/xen-pciback/pci_stub.c b/drivers/xen/xen-pciback/pci_stub.c
-index 0aa2ef687e13..504fbf743482 100644
+index 0aa2ef687e13..71f7e894c468 100644
 --- a/drivers/xen/xen-pciback/pci_stub.c
 +++ b/drivers/xen/xen-pciback/pci_stub.c
 @@ -128,6 +128,8 @@ static int pcistub_reset_function(struct pci_dev *dev)
  
  	device_lock(&dev->dev);
  	ret = __pcistub_reset_function(dev);
-+	if (ret >= 0 && dev->quarantined)
++	if (ret >= 0 && !dev->assigned)
 +		dev->unsafe = 0;
  	device_unlock(&dev->dev);
  
@@ -1583,15 +1610,19 @@ index 732f9702a439..dd8b33a1aee8 100644
  
  #ifdef CONFIG_PERF_EVENTS
 diff --git a/include/linux/pci.h b/include/linux/pci.h
-index a1e4de68edee..445e0d4b5287 100644
+index a1e4de68edee..f53215b4102b 100644
 --- a/include/linux/pci.h
 +++ b/include/linux/pci.h
-@@ -399,6 +399,9 @@ struct pci_dev {
+@@ -399,6 +399,13 @@ struct pci_dev {
  	unsigned int	pasid_no_tlp:1;		/* PASID works without TLP Prefix */
  	unsigned int	eetlp_prefix_path:1;	/* End-to-End TLP Prefix */
  
 +	unsigned int	unsafe:1;		/* Device is unsafe for assignment to other domains */
-+	unsigned int	quarantined:1;		/* Device is in quarantine */
++#ifdef __GENKSYMS__
++	unsigned int	quarantined:1;		/* Old name, to keep ABI */
++#else
++	unsigned int	assigned:1;		/* Device is assigned to domU */
++#endif
 +
  	pci_channel_state_t error_state;	/* Current connectivity state */
  	struct device	dev;			/* Generic device interface */
@@ -1629,7 +1660,7 @@ index 3214365929b5..3a247b2d88d7 100644
  	return 0;
 diff --git a/include/xen/filter-hypercall.h b/include/xen/filter-hypercall.h
 new file mode 100644
-index 000000000000..3c7ed69f820f
+index 000000000000..fde4d6e8403a
 --- /dev/null
 +++ b/include/xen/filter-hypercall.h
 @@ -0,0 +1,25 @@
@@ -1655,7 +1686,7 @@ index 000000000000..3c7ed69f820f
 +#endif /* !__ASSEMBLY__ */
 +
 +/* Current filter code uses 9.0 XS ABI compatibility */
-+#define PRIVCMD_FILTERING_ABI_VERSION _AC(0x90002, UL)
++#define PRIVCMD_FILTERING_ABI_VERSION _AC(0x90003, UL)
 +
 +#endif
 diff --git a/include/xen/interface/elfnote.h b/include/xen/interface/elfnote.h

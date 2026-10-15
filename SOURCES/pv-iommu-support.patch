@@ -471,10 +471,10 @@ index 24648836e0d44..bce3ffc84df0f 100644
  EXPORT_SYMBOL_GPL(__xenmem_reservation_va_mapping_reset);
 diff --git a/drivers/xen/pv-iommu-xen.c b/drivers/xen/pv-iommu-xen.c
 new file mode 100644
-index 0000000000000..fe49e47166969
+index 0000000000000..96827b9752ece
 --- /dev/null
 +++ b/drivers/xen/pv-iommu-xen.c
-@@ -0,0 +1,130 @@
+@@ -0,0 +1,128 @@
 +/*
 + *  Copyright 2014
 + *  by Malcolm Crossley <malcolm.crossley@citrix.com>
@@ -530,7 +530,6 @@ index 0000000000000..fe49e47166969
 +				unsigned long attrs,
 +				dma_addr_t *phys_addr)
 +{
-+	struct io_tlb_mem *p_io_tlb_mem = get_io_tlb_default_mem_addr();
 +	unsigned long p2m_entry = get_phys_to_machine(page_to_pfn(page));
 +
 +	if (p2m_entry & FOREIGN_FRAME_BIT) {
@@ -573,7 +572,6 @@ index 0000000000000..fe49e47166969
 +			 int nelems, enum dma_data_direction dir,
 +			 unsigned long attrs)
 +{
-+	struct io_tlb_mem *p_io_tlb_mem = get_io_tlb_default_mem_addr();
 +	struct scatterlist *sg;
 +	int i;
 +	for_each_sg(sgl, sg, nelems, i) {
@@ -605,19 +603,6 @@ index 0000000000000..fe49e47166969
 +
 +}
 +EXPORT_SYMBOL_GPL(xen_pv_iommu_map_sg_attrs);
-diff --git a/include/linux/swiotlb.h b/include/linux/swiotlb.h
-index ecde0312dd520..3e9849bc05482 100644
---- a/include/linux/swiotlb.h
-+++ b/include/linux/swiotlb.h
-@@ -154,6 +154,8 @@ static inline struct io_tlb_pool *swiotlb_find_pool(struct device *dev,
- 
- #endif
- 
-+struct io_tlb_mem *get_io_tlb_default_mem_addr(void);
-+
- /**
-  * is_swiotlb_buffer() - check if a physical address belongs to a swiotlb
-  * @dev:        Device which has mapped the buffer.
 diff --git a/include/xen/interface/elfnote.h b/include/xen/interface/elfnote.h
 index 38deb12146136..4ee494dc2cd35 100644
 --- a/include/xen/interface/elfnote.h
@@ -866,22 +851,6 @@ index f1d9f01b283d7..26440a725cb25 100644
  	if (ret < 0)
  		return 0;
  	return ret;
-diff --git a/kernel/dma/swiotlb.c b/kernel/dma/swiotlb.c
-index e7c3fbd0737ec..cb5d221da9ce7 100644
---- a/kernel/dma/swiotlb.c
-+++ b/kernel/dma/swiotlb.c
-@@ -118,6 +118,11 @@ struct io_tlb_area {
- 	spinlock_t lock;
- };
- 
-+struct io_tlb_mem *get_io_tlb_default_mem_addr(void)
-+{
-+	return &io_tlb_default_mem;
-+}
-+
- /*
-  * Round up number of slabs to the next power of 2. The last area is going
-  * be smaller than the rest if default_nslabs is not power of two.
 diff --git a/kernel/ksysfs.c b/kernel/ksysfs.c
 index 1d4bc493b2f4b..0e7217c8c0fcb 100644
 --- a/kernel/ksysfs.c

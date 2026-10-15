@@ -1,6 +1,6 @@
-%global package_speccommit eae2d6a435de7ef3a6be6e141b0501ab2c94f20d
+%global package_speccommit fb95db62999ba6bde956a5118421e52a1995f354
 %global usver 6.6.98
-%global xsver 26
+%global xsver 29
 %global xsrel %{xsver}%{?xscount}%{?xshash}
 %global package_srccommit refs/tags/v6.6.98
 %define uname 6.6.98+1
@@ -71,50 +71,66 @@ Source2: macros.kernel
 Patch0: 0001-net-gro-move-L3-flush-checks-to-tcp_gro_receive-and-.patch
 Patch1: 0001-x86-xen-time-Reduce-Xen-timer-tick.patch
 Patch2: 0001-sched-fair-Bump-sd-max_newidle_lb_cost-when-newidle-.patch
-Patch3: disable-mitigations-by-default.patch
-Patch4: expose-xsversion.patch
-Patch5: blkback-kthread-pid.patch
-Patch6: tg3-alloc-repeat.patch
-Patch7: net-Do-not-scrub-ignore_df-within-the-same-name-spac.patch
-Patch8: enable-fragmention-gre-packets.patch
-Patch9: call-kexec-before-offlining-noncrashing-cpus.patch
-Patch10: lpfc-fallback-to-sli-2.patch
-Patch11: fix-hypercall-preemption.patch
-Patch12: skip-cpuidle-driver-init-if-cpuidle-function-disable.patch
-Patch13: CA-392853-fix-kdump-kernel-cannot-find-ACPI-RSDP.patch
-Patch14: CA-415346-export-module-symbol-offsets.patch
-Patch15: 0002-x86-xen-correct-dma_get_required_mask-for-Xen-PV-gue.patch
-Patch16: 0001-pci-export-pci_reset_supported.patch
-Patch17: 0002-xen-pciback-provide-a-reset-sysfs-file-to-try-harder.patch
-Patch18: pciback-disable-root-port-aer.patch
-Patch19: pciback-mask-root-port-comp-timeout.patch
-Patch20: no-flr-quirk.patch
-Patch21: CA-135938-nfs-disconnect-on-rpc-retry.patch
-Patch22: sunrpc-force-disconnect-on-connection-timeout.patch
-Patch23: xen-ioemu-inject-msi.patch
-Patch24: pv-iommu-support.patch
-Patch25: kexec-reserve-crashkernel-region.patch
-Patch26: 0001-xen-swiotlb-size-128MiB.patch
-Patch27: 0002-xen-swiotlb-rework-early-repeat-code.patch
-Patch28: 0001-Revert-to-use-num_online_cpus-for-default-rss-queues.patch
-Patch29: GFS2__Avoid_recently_demoted_rgrps
-Patch30: gfs2-debug-rgrp-sweep
-Patch31: 0001-fix-gfs2-umount-timeout-bug.patch
-Patch32: gfs2-No-more-self-recovery
-Patch33: CA-411820-add-STATX_DIOALIGN-support-to-GFS2
-Patch34: scsi-avoid-lun-change-loop.patch
-Patch35: add-sbat.patch
-Patch36: enable-lockdown.patch
-Patch37: module-allow-disabling-sig_enforce.patch
-Patch38: use-mok-variable-fallback.patch
-Patch39: allow_reading_xen_netback_ring.patch
-Patch40: import-xen-public-headers.patch
-Patch41: filter-hypercalls.patch
-Patch42: module-hash-revocation.patch
-Patch43: gfs2-fix-debugfs-access.patch
-Patch44: 0001-CP-46343-common-data-structure-padding.patch
-Patch45: 0002-CP-46343-reserve-cpuid-leaves-for-future-use.patch
-Patch46: abi-version.patch
+Patch3: 0001-crypto-af_alg-Disallow-concurrent-writes-in-af_alg_s.patch
+Patch4: 0001-crypto-af_alg-Set-merge-to-zero-early-in-af_alg_send.patch
+Patch5: 0001-crypto-af_alg-Fix-incorrect-boolean-values-in-af_alg.patch
+Patch6: 0001-crypto-af_alg-zero-initialize-memory-allocated-via-s.patch
+Patch7: 0001-crypto-authencesn-reject-too-short-AAD-assoclen-8-to.patch
+Patch8: 0001-crypto-af-alg-fix-NULL-pointer-dereference-in-scatte.patch
+Patch9: 0001-crypto-algif_aead-Fix-minimum-RX-size-check-for-decr.patch
+Patch10: 0001-crypto-algif_aead-use-memcpy_sglist-instead-of-null-.patch
+Patch11: 0001-crypto-algif_aead-Revert-to-operating-out-of-place.patch
+Patch12: 0001-crypto-scatterwalk-Backport-memcpy_sglist.patch
+Patch13: 0001-crypto-algif_aead-snapshot-IV-for-async-AEAD-request.patch
+Patch14: 0001-crypto-authenc-use-memcpy_sglist-instead-of-null-skc.patch
+Patch15: 0001-crypto-authencesn-Do-not-place-hiseq-at-end-of-dst-f.patch
+Patch16: 0001-crypto-authencesn-Fix-src-offset-when-decrypting-in-.patch
+Patch17: 0001-crypto-af_alg-Fix-page-reassignment-overflow-in-af_a.patch
+Patch18: disable-mitigations-by-default.patch
+Patch19: expose-xsversion.patch
+Patch20: blkback-kthread-pid.patch
+Patch21: tg3-alloc-repeat.patch
+Patch22: net-Do-not-scrub-ignore_df-within-the-same-name-spac.patch
+Patch23: enable-fragmention-gre-packets.patch
+Patch24: call-kexec-before-offlining-noncrashing-cpus.patch
+Patch25: lpfc-fallback-to-sli-2.patch
+Patch26: fix-hypercall-preemption.patch
+Patch27: skip-cpuidle-driver-init-if-cpuidle-function-disable.patch
+Patch28: CA-392853-fix-kdump-kernel-cannot-find-ACPI-RSDP.patch
+Patch29: CA-415346-export-module-symbol-offsets.patch
+Patch30: CP-312080-net-openvswitch-add-dropping-of-lldp.patch
+Patch31: 0002-x86-xen-correct-dma_get_required_mask-for-Xen-PV-gue.patch
+Patch32: 0001-pci-export-pci_reset_supported.patch
+Patch33: 0002-xen-pciback-provide-a-reset-sysfs-file-to-try-harder.patch
+Patch34: pciback-disable-root-port-aer.patch
+Patch35: pciback-mask-root-port-comp-timeout.patch
+Patch36: no-flr-quirk.patch
+Patch37: CA-135938-nfs-disconnect-on-rpc-retry.patch
+Patch38: sunrpc-force-disconnect-on-connection-timeout.patch
+Patch39: xen-ioemu-inject-msi.patch
+Patch40: pv-iommu-support.patch
+Patch41: kexec-reserve-crashkernel-region.patch
+Patch42: 0001-xen-swiotlb-size-128MiB.patch
+Patch43: 0002-xen-swiotlb-rework-early-repeat-code.patch
+Patch44: 0001-Revert-to-use-num_online_cpus-for-default-rss-queues.patch
+Patch45: GFS2__Avoid_recently_demoted_rgrps
+Patch46: gfs2-debug-rgrp-sweep
+Patch47: 0001-fix-gfs2-umount-timeout-bug.patch
+Patch48: gfs2-No-more-self-recovery
+Patch49: CA-411820-add-STATX_DIOALIGN-support-to-GFS2
+Patch50: scsi-avoid-lun-change-loop.patch
+Patch51: add-sbat.patch
+Patch52: enable-lockdown.patch
+Patch53: module-allow-disabling-sig_enforce.patch
+Patch54: use-mok-variable-fallback.patch
+Patch55: allow_reading_xen_netback_ring.patch
+Patch56: import-xen-public-headers.patch
+Patch57: filter-hypercalls.patch
+Patch58: module-hash-revocation.patch
+Patch59: gfs2-fix-debugfs-access.patch
+Patch60: 0001-CP-46343-common-data-structure-padding.patch
+Patch61: 0002-CP-46343-reserve-cpuid-leaves-for-future-use.patch
+Patch62: abi-version.patch
 %if %{do_kabichk}
 Source3: check-kabi
 %endif
@@ -612,6 +628,16 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Thu May 14 2026 Ross Lagerwall <ross.lagerwall@citrix.com> - 6.6.98-29
+- CP-312080: Import LLDP kernel patch into XS 9
+- CA-426858: Further AF_ALG fixes
+
+* Wed May 06 2026 Frediano Ziglio <frediano.ziglio@citrix.com> - 6.6.98-28
+* CA-426830: Fix switching PCI card from full pass-through to SR-IOV
+
+* Fri May 01 2026 Ross Lagerwall <ross.lagerwall@citrix.com> - 6.6.98-27
+- CA-426858: Backport patches to fix CVE-2026-31431 - Copy Fail
+
 * Tue Apr 28 2026 Andrew Cooper <andrew.cooper3@citrix.com> - 6.6.98-26
 - Update hypercall filter driver for Xen 4.21
 
