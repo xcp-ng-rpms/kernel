@@ -1,6 +1,6 @@
-%global package_speccommit 35e23824f238a840c5b1a31ad4fb4449b64955ca
+%global package_speccommit 7f7081a62ef67154f89952572924206f4a00c685
 %global usver 6.6.98
-%global xsver 23
+%global xsver 24
 %global xsrel %{xsver}%{?xscount}%{?xshash}
 %global package_srccommit refs/tags/v6.6.98
 %define uname 6.6.98+1
@@ -123,9 +123,6 @@ Source5: prepare-build
 Source6: module-hash-list.csv
 
 BuildRequires: kmod
-%if %{with bpftool}
-BuildRequires: dwarves
-%endif
 
 # These build dependencies are needed for building the main kernel and
 # modules as well live patches.
@@ -145,6 +142,10 @@ BuildRequires: dwarves
             'openssl-devel',
             'perl'
     }
+
+    if rpm.expand("%{with bpftool}") == "1" then
+        table.insert(deps, 'dwarves')
+    end
 
     for _, dep in ipairs(deps) do
         print(rpm.expand("%1") .. ': ' .. dep .. '\\n')
@@ -611,6 +612,10 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Mon Apr 13 2026 Stephen Cheng <stephen.cheng@citrix.com> - 6.6.98-24
+- CP-311972: Build the yama security module
+- CA-421352: Add dwarves to core_builddeps for livepatch builds
+
 * Fri Mar 13 2026 Stephen Cheng <stephen.cheng@citrix.com> - 6.6.98-23
 - Update import-patch-from-git.py script to Python 3
 - CP-311736: Update kabi list for driver mpi3mr
