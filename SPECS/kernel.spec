@@ -38,6 +38,11 @@
 # %%global __requires_exclude_from ^%%{lp_devel_dir}/.*$
 # XCP-ng END
 
+# Be strict when applying patches
+%if 0%{?xenserver} < 9
+%global __patch /bin/patch -F0
+%endif
+
 Name: kernel
 License: GPLv2
 Version: %{usver}
