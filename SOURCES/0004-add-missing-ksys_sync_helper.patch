@@ -1,0 +1,37 @@
+From 2d44a72a980f2643f74b32b0a23f6537bd4bf1a4 Mon Sep 17 00:00:00 2001
+From: Yann Sionneau <yann.sionneau@vates.tech>
+Date: Thu, 22 Oct 2026 16:59:31 +0200
+Subject: [PATCH 4/4] add missing ksys_sync_helper
+
+Signed-off-by: Yann Sionneau <yann.sionneau@vates.tech>
+---
+ kernel/power/main.c | 13 +++++++++++++
+ 1 file changed, 13 insertions(+)
+
+diff --git a/kernel/power/main.c b/kernel/power/main.c
+index 35b50823d83b..4c827364d1fa 100644
+--- a/kernel/power/main.c
++++ b/kernel/power/main.c
+@@ -51,6 +51,19 @@ void unlock_system_sleep(void)
+ }
+ EXPORT_SYMBOL_GPL(unlock_system_sleep);
+ 
++void ksys_sync_helper(void)
++{
++	ktime_t start;
++	long elapsed_msecs;
++
++	start = ktime_get();
++	ksys_sync();
++	elapsed_msecs = ktime_to_ms(ktime_sub(ktime_get(), start));
++	pr_info("Filesystems sync: %ld.%03ld seconds\n",
++		elapsed_msecs / MSEC_PER_SEC, elapsed_msecs % MSEC_PER_SEC);
++}
++EXPORT_SYMBOL_GPL(ksys_sync_helper);
++
+ /* Routines for PM-transition notifications */
+ 
+ static BLOCKING_NOTIFIER_HEAD(pm_chain_head);
+-- 
+2.53.0
+

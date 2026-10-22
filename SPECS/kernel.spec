@@ -771,6 +771,7 @@ Patch1027: 0001-xfs-resample-the-data-fork-mapping-after-cycling-ILO.patch
 Patch1028: 0001-export-memory_block_size_bytes-symbol-for-OOT-driver.patch
 Patch1029: 0002-backport-xarray-lib-from-5.0.patch
 Patch1030: 0003-allow-to-use-pxm_to_node-without-CONFIG_NUMA.patch
+Patch1031: 0004-add-missing-ksys_sync_helper.patch
 
 %description
 The kernel package contains the Linux kernel (vmlinuz), the core of any
