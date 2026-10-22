@@ -1,0 +1,66 @@
+From 73176d857a3dd69ebc536e8814614e0179bc1266 Mon Sep 17 00:00:00 2001
+From: Yann Sionneau <yann.sionneau@vates.tech>
+Date: Thu, 22 Oct 2026 16:59:31 +0200
+Subject: [PATCH 4/4] add missing ksys_sync_helper
+
+Signed-off-by: Yann Sionneau <yann.sionneau@vates.tech>
+---
+ include/linux/suspend.h |  2 ++
+ kernel/power/main.c     | 14 ++++++++++++++
+ 2 files changed, 16 insertions(+)
+
+diff --git a/include/linux/suspend.h b/include/linux/suspend.h
+index 3f529ad9a9d2..7c66f2930b43 100644
+--- a/include/linux/suspend.h
++++ b/include/linux/suspend.h
+@@ -449,6 +449,7 @@ extern void pm_print_active_wakeup_sources(void);
+ 
+ extern void lock_system_sleep(void);
+ extern void unlock_system_sleep(void);
++extern void ksys_sync_helper(void);
+ 
+ #else /* !CONFIG_PM_SLEEP */
+ 
+@@ -471,6 +472,7 @@ static inline void pm_system_irq_wakeup(unsigned int irq_number) {}
+ 
+ static inline void lock_system_sleep(void) {}
+ static inline void unlock_system_sleep(void) {}
++static inline void ksys_sync_helper(void) {}
+ 
+ #endif /* !CONFIG_PM_SLEEP */
+ 
+diff --git a/kernel/power/main.c b/kernel/power/main.c
+index 35b50823d83b..f4156789ac9e 100644
+--- a/kernel/power/main.c
++++ b/kernel/power/main.c
+@@ -16,6 +16,7 @@
+ #include <linux/debugfs.h>
+ #include <linux/seq_file.h>
+ #include <linux/suspend.h>
++#include <linux/syscalls.h>
+ 
+ #include "power.h"
+ 
+@@ -51,6 +52,19 @@ void unlock_system_sleep(void)
+ }
+ EXPORT_SYMBOL_GPL(unlock_system_sleep);
+ 
++void ksys_sync_helper(void)
++{
++	ktime_t start;
++	long elapsed_msecs;
++
++	start = ktime_get();
++	ksys_sync();
++	elapsed_msecs = ktime_to_ms(ktime_sub(ktime_get(), start));
++	pr_info("Filesystems sync: %ld.%03ld seconds\n",
++		elapsed_msecs / MSEC_PER_SEC, elapsed_msecs % MSEC_PER_SEC);
++}
++EXPORT_SYMBOL_GPL(ksys_sync_helper);
++
+ /* Routines for PM-transition notifications */
+ 
+ static BLOCKING_NOTIFIER_HEAD(pm_chain_head);
+-- 
+2.53.0
+
