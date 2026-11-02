@@ -44,7 +44,7 @@
 Name: kernel
 License: GPLv2
 Version: 4.19.19
-Release: %{?xsrel}.12%{?dist}
+Release: %{?xsrel}.13%{?dist}
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
@@ -774,6 +774,12 @@ Patch1028: 0001-SUNRPC-avoid-race-between-mod_timer-and-del_timer_sy.patch
 Patch1029: 0002-SUNRPC-use-_bh-spinlocking-on-transport_lock.patch
 Patch1030: 0003-Revert-XSI-2150-Avoid-deadlocks-on-NFS-spinlocks.patch
 
+# CVE-2026-98432
+Patch1031: 0001-net-use-rcu_dereference_protected-to-fetch-sk_dst_ca.patch
+Patch1032: 0002-inet-fully-convert-sk-sk_rx_dst-to-RCU-rules.patch
+Patch1033: 0003-kabi-inet-fully-convert-sk-sk_rx_dst-to-RCU-rules.patch
+Patch1034: 0004-ipv4-free-inet_opt-and-ireq_opt-after-an-RCU-grace-p.patch
+
 %description
 The kernel package contains the Linux kernel (vmlinuz), the core of any
 Linux operating system. The kernel handles the basic functions of the operating
@@ -1133,6 +1139,9 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Mon Nov 02 2026 Quentin Casasnovas <quentin.casasnovas@vates.tech> - 4.19.19-8.0.46.13
+- Backport security fix for CVE-2026-98432
+
 * Thu Sep 24 2026 Yann Dirson <yann.dirson@vates.tech> - 4.19.19-8.0.46.12
 - Drop lp-devel package
 
