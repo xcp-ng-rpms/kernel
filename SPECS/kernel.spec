@@ -44,7 +44,7 @@
 Name: kernel
 License: GPLv2
 Version: 4.19.19
-Release: %{?xsrel}.13%{?dist}
+Release: %{?xsrel}.14%{?dist}
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
@@ -1139,6 +1139,9 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Mon Nov 02 2026 Quentin Casasnovas <quentin.casasnovas@vates.tech> - 4.19.19-8.0.46.14
+- Iterative fix for CVE-2026-98432 that introduced a NULL pointer dereference.
+
 * Mon Nov 02 2026 Quentin Casasnovas <quentin.casasnovas@vates.tech> - 4.19.19-8.0.46.13
 - Backport security fix for CVE-2026-98432
 

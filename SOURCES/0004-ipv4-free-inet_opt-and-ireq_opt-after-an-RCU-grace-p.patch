@@ -1,4 +1,4 @@
-From c7283925bd090d838e1f69c6847126d9d080f6d6 Mon Sep 17 00:00:00 2001
+From 44c184b8f1e56d92c61608842c9e3652722c1cef Mon Sep 17 00:00:00 2001
 From: Eric Dumazet <edumazet@kernel.org>
 Date: Thu, 1 Oct 2026 22:12:53 +0000
 Subject: [PATCH] ipv4: free inet_opt and ireq_opt after an RCU grace period
@@ -62,8 +62,8 @@ v4.19 version does not have it]
 Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
 ---
  net/ipv4/af_inet.c  | 6 +++++-
- net/ipv4/tcp_ipv4.c | 2 +-
- 2 files changed, 6 insertions(+), 2 deletions(-)
+ net/ipv4/tcp_ipv4.c | 5 ++++-
+ 2 files changed, 9 insertions(+), 2 deletions(-)
 
 diff --git a/net/ipv4/af_inet.c b/net/ipv4/af_inet.c
 index 8a6647a96c29..8ba97ebf1e89 100644
@@ -90,15 +90,18 @@ index 8a6647a96c29..8ba97ebf1e89 100644
  	dst_release(rcu_dereference_protected(sk->sk_rx_dst, 1));
  	sk_refcnt_debug_dec(sk);
 diff --git a/net/ipv4/tcp_ipv4.c b/net/ipv4/tcp_ipv4.c
-index 87465fa8e0fa..a070f8936207 100644
+index 87465fa8e0fa..266cb625071c 100644
 --- a/net/ipv4/tcp_ipv4.c
 +++ b/net/ipv4/tcp_ipv4.c
-@@ -959,7 +959,7 @@ static int tcp_v4_send_synack(const struct sock *sk, struct dst_entry *dst,
+@@ -959,7 +959,10 @@ static int tcp_v4_send_synack(const struct sock *sk, struct dst_entry *dst,
   */
  static void tcp_v4_reqsk_destructor(struct request_sock *req)
  {
 -	kfree(rcu_dereference_protected(inet_rsk(req)->ireq_opt, 1));
-+	kfree_rcu(rcu_dereference_protected(inet_rsk(req)->ireq_opt, 1), rcu);
++	struct ip_options_rcu *ireq_opt = rcu_dereference_protected(inet_rsk(req)->ireq_opt, 1);
++
++	if (ireq_opt)
++		kfree_rcu(ireq_opt, rcu);
  }
  
  #ifdef CONFIG_TCP_MD5SIG
