@@ -1,0 +1,42 @@
+From c488aeadcbd002a992593e6090d54e8ac27c4310 Mon Sep 17 00:00:00 2001
+From: Christoph Hellwig <hch@lst.de>
+Date: Thu, 28 May 2020 07:12:22 +0200
+Subject: [PATCH] tcp: add tcp_sock_set_user_timeout
+
+Add a helper to directly set the TCP_USER_TIMEOUT sockopt from kernel
+space without going through a fake uaccess.
+
+Only the helper itself is backported here; the ocfs2 and sunrpc caller
+conversions from the upstream commit are omitted as they are not needed
+and would enlarge the delta against 4.19 for no benefit.
+
+Signed-off-by: Christoph Hellwig <hch@lst.de>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+diff --git a/include/linux/tcp.h b/include/linux/tcp.h
+--- a/include/linux/tcp.h
++++ b/include/linux/tcp.h
+@@ -490,5 +490,6 @@
+ 		  int shiftlen);
+ 
+ void tcp_sock_set_nodelay(struct sock *sk);
++void tcp_sock_set_user_timeout(struct sock *sk, u32 val);
+ 
+ #endif	/* _LINUX_TCP_H */
+diff --git a/net/ipv4/tcp.c b/net/ipv4/tcp.c
+--- a/net/ipv4/tcp.c
++++ b/net/ipv4/tcp.c
+@@ -2721,6 +2721,14 @@
+ }
+ EXPORT_SYMBOL(tcp_sock_set_nodelay);
+ 
++void tcp_sock_set_user_timeout(struct sock *sk, u32 val)
++{
++	lock_sock(sk);
++	inet_csk(sk)->icsk_user_timeout = val;
++	release_sock(sk);
++}
++EXPORT_SYMBOL(tcp_sock_set_user_timeout);
++
+ /*
+  *	Socket option code for TCP.
+  */
