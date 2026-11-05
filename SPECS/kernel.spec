@@ -34,7 +34,7 @@
 Name: kernel-xcpng
 License: GPLv2
 Version: %{usver}
-Release: 4%{dist}
+Release: 5%{dist}
 ExclusiveOS: Linux
 Summary: The Linux kernel
 BuildRequires: kmod
@@ -95,7 +95,7 @@ Source4: Module.kabi
 #Patch0: 0001-net-gro-move-L3-flush-checks.patch: 4b0ebbca3e16 net: gro: move L3 flush checks to tcp_gro_receive and udp_gro_receive_segment
 #Patch1: 0001-x86-xen-time-Reduce-Xen-timer-tick.patch: ad162488bbd3 x86/xen/time: Reduce Xen timer tick
 #Patch2: 0001-sched-fair-Bump-sd-max_newidle_lb_cost.patch: 33adff0b7e39 sched/fair: Bump sd->max_newidle_lb_cost when newidle balance fails
-Patch3: 0001-disable-mitigations-by-default.patch.patch
+#Patch3: 0001-disable-mitigations-by-default.patch.patch
 Patch4: 0002-expose-xsversion.patch.patch
 Patch5: 0003-Write-each-kthread-s-pid-into-xenstore-so-that-it-ca.patch
 Patch6: 0004-Several-order-4-5-allocations-are-required-when-sett.patch
@@ -488,6 +488,9 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Thu Nov 05 2026 Teddy Astie <teddy.astie@vates.tech> - 6.12.0-5
+- Drop disable-mitigations-by-default patch in favor of kernel config tuning.
+
 * Wed Nov 04 2026 Yann Dirson <yann.dirson@vates.tech> - 6.12.0-4
 - Change package name to kernel-xcpng, obsoletes older "kernel"
 - Stop using obsolete space separator in *Requires lists
