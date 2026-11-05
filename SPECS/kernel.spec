@@ -95,7 +95,7 @@ Source4: Module.kabi
 #Patch0: 0001-net-gro-move-L3-flush-checks.patch: 4b0ebbca3e16 net: gro: move L3 flush checks to tcp_gro_receive and udp_gro_receive_segment
 #Patch1: 0001-x86-xen-time-Reduce-Xen-timer-tick.patch: ad162488bbd3 x86/xen/time: Reduce Xen timer tick
 #Patch2: 0001-sched-fair-Bump-sd-max_newidle_lb_cost.patch: 33adff0b7e39 sched/fair: Bump sd->max_newidle_lb_cost when newidle balance fails
-Patch3: 0001-disable-mitigations-by-default.patch.patch
+#Patch3: 0001-disable-mitigations-by-default.patch.patch
 Patch4: 0002-expose-xsversion.patch.patch
 Patch5: 0003-Write-each-kthread-s-pid-into-xenstore-so-that-it-ca.patch
 Patch6: 0004-Several-order-4-5-allocations-are-required-when-sett.patch
@@ -487,6 +487,9 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Thu Nov 5 2026 Teddy Astie <teddy.astie@vates.tech> - 6.12.0-4
+- Drop disable-mitigations-by-default patch in favor of kernel config tuning.
+
 * Wed Sep 7 2026 Corentin Oparowski <corentin.oparowski@vates.tech> - 6.12.0-3
 - Update patchqueue to match Xenserver 6.6.98-19 revision
 - Rebase on top of 6.12.0-206-100.3.1
