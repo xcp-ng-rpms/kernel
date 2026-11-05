@@ -34,7 +34,7 @@
 Name: kernel-xcpng
 License: GPLv2
 Version: %{usver}
-Release: 4%{dist}
+Release: 4~yd.1%{dist}
 ExclusiveOS: Linux
 Summary: The Linux kernel
 BuildRequires: kmod
