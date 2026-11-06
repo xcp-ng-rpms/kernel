@@ -44,7 +44,7 @@
 Name: kernel
 License: GPLv2
 Version: 4.19.19
-Release: %{?xsrel}.2%{?dist}
+Release: %{?xsrel}.3%{?dist}
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
@@ -886,6 +886,19 @@ Patch1085: 0001-netfilter-br_netfilter-disable-sabotage_in-hook-afte.patch
 Patch1086: 0002-netfilter-br_netfilter-fix-recent-physdev-match-brea.patch
 Patch1087: 0003-kabi-netfilter-br_netfilter-fix-recent-physdev-match.patch
 
+# XSA-526 / CVE-2026-100080
+Patch1088: xsa526-linux.patch
+
+# XSA-527 / CVE-2026-100081
+Patch1089: 0002-xen-netback-fix-error-path-of-xenvif_connect_data.patch
+Patch1090: xsa527-linux.patch
+
+# XSA-528 / CVE-2026-100082
+Patch1091: xsa528-linux.patch
+
+# Use-after-free in netback xenvif flush hash, suggested by Alex Brett
+Patch1092: 0005-net-xen-netback-prevent-UAF-in-xenvif_flush_hash.patch
+
 %description
 The kernel package contains the Linux kernel (vmlinuz), the core of any
 Linux operating system. The kernel handles the basic functions of the operating
@@ -1255,6 +1268,13 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Mon Nov 09 2026 Lucas Pottier <lucas.pottier@vates.tech> - 4.19.19-8.0.49.3
+- Backport security fixes for:
+  - XSA-526 / CVE-2026-100080
+  - XSA-527 / CVE-2026-100081
+  - XSA-528 / CVE-2026-100082 (Quentin Casasnovas)
+  - Use-after-free in xen-netback virtual interfaces hashmap flushing (Quentin Casasnovas)
+
 * Thu Nov 05 2026 Quentin Casasnovas <quentin.casasnovas@vates.tech> - 4.19.19-8.0.49.2
 - Backport security fixes for:
   - CVE-2026-31659
