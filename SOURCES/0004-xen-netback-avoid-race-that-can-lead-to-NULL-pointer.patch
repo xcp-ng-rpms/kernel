@@ -1,0 +1,66 @@
+From f8fdcc1cfa492351cb14e9b292d26093f9d447dd Mon Sep 17 00:00:00 2001
+From: Paul Durrant <pdurrant@amazon.com>
+Date: Fri, 13 Dec 2019 13:20:40 +0000
+Subject: [PATCH] xen-netback: avoid race that can lead to NULL pointer
+ dereference
+
+In function xenvif_disconnect_queue(), the value of queue->rx_irq is
+zeroed *before* queue->task is stopped. Unfortunately that task may call
+notify_remote_via_irq(queue->rx_irq) and calling that function with a
+zero value results in a NULL pointer dereference in evtchn_from_irq().
+
+This patch simply re-orders things, stopping all tasks before zero-ing the
+irq values, thereby avoiding the possibility of the race.
+
+Fixes: 2ac061ce97f4 ("xen/netback: cleanup init and deinit code")
+Signed-off-by: Paul Durrant <pdurrant@amazon.com>
+Acked-by: Wei Liu <wei.liu@kernel.org>
+Signed-off-by: Jakub Kicinski <jakub.kicinski@netronome.com>
+(cherry picked from commit fd42bfd1bb31f9a521be6b4f1bd89b85abc08d20)
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+---
+ drivers/net/xen-netback/interface.c | 24 ++++++++++++------------
+ 1 file changed, 12 insertions(+), 12 deletions(-)
+
+diff --git a/drivers/net/xen-netback/interface.c b/drivers/net/xen-netback/interface.c
+index c40163359b6f..0e673a29eab3 100644
+--- a/drivers/net/xen-netback/interface.c
++++ b/drivers/net/xen-netback/interface.c
+@@ -671,18 +671,6 @@ int xenvif_connect_ctrl(struct xenvif *vif, grant_ref_t ring_ref,
+ 
+ static void xenvif_disconnect_queue(struct xenvif_queue *queue)
+ {
+-	if (queue->tx_irq) {
+-		unbind_from_irqhandler(queue->tx_irq, queue);
+-		if (queue->tx_irq == queue->rx_irq)
+-			queue->rx_irq = 0;
+-		queue->tx_irq = 0;
+-	}
+-
+-	if (queue->rx_irq) {
+-		unbind_from_irqhandler(queue->rx_irq, queue);
+-		queue->rx_irq = 0;
+-	}
+-
+ 	if (queue->task) {
+ 		kthread_stop(queue->task);
+ 		queue->task = NULL;
+@@ -698,6 +686,18 @@ static void xenvif_disconnect_queue(struct xenvif_queue *queue)
+ 		queue->napi.poll = NULL;
+ 	}
+ 
++	if (queue->tx_irq) {
++		unbind_from_irqhandler(queue->tx_irq, queue);
++		if (queue->tx_irq == queue->rx_irq)
++			queue->rx_irq = 0;
++		queue->tx_irq = 0;
++	}
++
++	if (queue->rx_irq) {
++		unbind_from_irqhandler(queue->rx_irq, queue);
++		queue->rx_irq = 0;
++	}
++
+ 	xenvif_unmap_frontend_data_rings(queue);
+ }
+ 

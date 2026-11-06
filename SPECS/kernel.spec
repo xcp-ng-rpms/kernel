@@ -44,7 +44,7 @@
 Name: kernel
 License: GPLv2
 Version: 4.19.19
-Release: %{?xsrel}.2%{?dist}
+Release: %{?xsrel}.4%{?dist}
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
@@ -886,6 +886,30 @@ Patch1085: 0001-netfilter-br_netfilter-disable-sabotage_in-hook-afte.patch
 Patch1086: 0002-netfilter-br_netfilter-fix-recent-physdev-match-brea.patch
 Patch1087: 0003-kabi-netfilter-br_netfilter-fix-recent-physdev-match.patch
 
+# XSA-526 / CVE-2026-100080
+Patch1088: 0001-xen-netback-Fix-UAF-when-reading-statistics-data.patch
+
+# XSA-527 / CVE-2026-100081
+Patch1089: 0002-xen-netback-fix-error-path-of-xenvif_connect_data.patch
+Patch1090: 0003-xen-netback-cleanup-init-and-deinit-code.patch
+Patch1091: 0004-xen-netback-avoid-race-that-can-lead-to-NULL-pointer.patch
+# XSA-374 / CVE-2021-28691 introduce by earlier 0003-xen-netback-cleanup-init-and-deinit-code.patch
+Patch1092: 0005-xen-netback-take-a-reference-to-the-RX-task-thread.patch
+# Actual XSA-527 fixes, earlier commits are soft dependencies
+Patch1093: 0006-xen-netback-defer-xenvif_mcast_addr_list_free.patch
+
+# XSA-528 / CVE-2026-100082
+Patch1094: 0007-xen-blkback-add-stack-variable-blkif-in-connect_ring.patch
+Patch1095: 0008-xen-blkback-prevent-premature-module-unload.patch
+Patch1096: 0009-xen-blkback-rework-connect_ring-to-avoid-inconsisten.patch
+Patch1097: 0010-xen-blkback-fix-memory-leaks.patch
+Patch1098: 0011-xen-blkback-fix-compatibility-bug-with-single-page-r.patch
+# Actual XSA-528 fix, earlier are soft dependencies / bug fixes
+Patch1099: 0012-xen-blkback-Avoid-UAF-when-reading-I-O-statistics.patch
+
+# No XSA but fixes another user-after-free in the xen-netback driver
+Patch1100: 0013-net-xen-netback-prevent-UAF-in-xenvif_flush_hash.patch # Suggested by Alex Brett
+
 %description
 The kernel package contains the Linux kernel (vmlinuz), the core of any
 Linux operating system. The kernel handles the basic functions of the operating
@@ -1255,6 +1279,12 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Sat Nov 07 2026 Quentin Casasnovas <quentin.casasnovas@vates.tech> - 4.19.19-8.0.49.4
+- Backport security fixes for:
+  - XSA-526 / CVE-2026-100080
+  - XSA-527 / CVE-2026-100081
+  - XSA-528 / CVE-2026-100082
+
 * Thu Nov 05 2026 Quentin Casasnovas <quentin.casasnovas@vates.tech> - 4.19.19-8.0.49.2
 - Backport security fixes for:
   - CVE-2026-31659

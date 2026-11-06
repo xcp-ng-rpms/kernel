@@ -1,0 +1,56 @@
+From 7f05704230a36794f5bc7f9d9d8c4316c3a8a754 Mon Sep 17 00:00:00 2001
+From: Roger Pau Monne <roger.pau@citrix.com>
+Date: Mon, 7 Jun 2021 15:13:15 +0200
+Subject: [PATCH] xen-netback: take a reference to the RX task thread
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Do this in order to prevent the task from being freed if the thread
+returns (which can be triggered by the frontend) before the call to
+kthread_stop done as part of the backend tear down. Not taking the
+reference will lead to a use-after-free in that scenario. Such
+reference was taken before but dropped as part of the rework done in
+2ac061ce97f4.
+
+Reintroduce the reference taking and add a comment this time
+explaining why it's needed.
+
+This is XSA-374 / CVE-2021-28691.
+
+Fixes: 2ac061ce97f4 ('xen/netback: cleanup init and deinit code')
+Signed-off-by: Roger Pau Monné <roger.pau@citrix.com>
+Cc: stable@vger.kernel.org
+Reviewed-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Juergen Gross <jgross@suse.com>
+Signed-off-by: Juergen Gross <jgross@suse.com>
+(cherry picked from commit 107866a8eb0b664675a260f1ba0655010fac1e08)
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+---
+ drivers/net/xen-netback/interface.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/drivers/net/xen-netback/interface.c b/drivers/net/xen-netback/interface.c
+index 0e673a29eab3..252d57397313 100644
+--- a/drivers/net/xen-netback/interface.c
++++ b/drivers/net/xen-netback/interface.c
+@@ -673,6 +673,7 @@ static void xenvif_disconnect_queue(struct xenvif_queue *queue)
+ {
+ 	if (queue->task) {
+ 		kthread_stop(queue->task);
++		put_task_struct(queue->task);
+ 		queue->task = NULL;
+ 	}
+ 
+@@ -733,6 +734,11 @@ int xenvif_connect_data(struct xenvif_queue *queue,
+ 	if (IS_ERR(task))
+ 		goto kthread_err;
+ 	queue->task = task;
++	/*
++	 * Take a reference to the task in order to prevent it from being freed
++	 * if the thread function returns before kthread_stop is called.
++	 */
++	get_task_struct(task);
+ 
+ 	task = kthread_run(xenvif_dealloc_kthread, queue,
+ 			   "%s-dealloc", queue->name);
