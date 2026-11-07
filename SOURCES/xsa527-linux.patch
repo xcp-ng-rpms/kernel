@@ -1,5 +1,7 @@
+From 83b97a7270d768f9664b85c37f7092a38236bb02 Mon Sep 17 00:00:00 2001
 From: Jan Beulich <jbeulich@suse.com>
-Subject: xen-netback: defer xenvif_mcast_addr_list_free()
+Date: Fri, 6 Nov 2026 17:07:01 +0100
+Subject: [PATCH] xen-netback: defer xenvif_mcast_addr_list_free()
 
 In order for the function to legitimately avoid locking/RCU, it needs to
 run after all TX/RX processing has finished/stopped: Lookups happen from
@@ -16,11 +18,18 @@ Fixes: b17075d5c198 ("xen-netback: fix race condition on XenBus disconnect")
 Reported-by: kerhunt <kerhunt@proton.me>
 Signed-off-by: Jan Beulich <jbeulich@suse.com>
 Reviewed-by: Juergen Gross <jgross@suse.com>
-Backported-by: Lucas Pottier <lucas.pottier@vates.tech>
+(cherry picked from commit bfddc420afe827d9f06458cdf8087cd602f8c9cb)
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+---
+ drivers/net/xen-netback/interface.c | 2 --
+ drivers/net/xen-netback/xenbus.c    | 2 ++
+ 2 files changed, 2 insertions(+), 2 deletions(-)
 
+diff --git a/drivers/net/xen-netback/interface.c b/drivers/net/xen-netback/interface.c
+index aa9e2af31bc0..52b224850786 100644
 --- a/drivers/net/xen-netback/interface.c
 +++ b/drivers/net/xen-netback/interface.c
-@@ -812,8 +812,6 @@ void xenvif_disconnect_data(struct xenvi
+@@ -814,8 +814,6 @@ void xenvif_disconnect_data(struct xenvif *vif)
  
  		xenvif_unmap_frontend_data_rings(queue);
  	}
@@ -29,9 +38,11 @@ Backported-by: Lucas Pottier <lucas.pottier@vates.tech>
  }
  
  void xenvif_disconnect_ctrl(struct xenvif *vif)
+diff --git a/drivers/net/xen-netback/xenbus.c b/drivers/net/xen-netback/xenbus.c
+index 84081668742c..e7bb96dc7ce4 100644
 --- a/drivers/net/xen-netback/xenbus.c
 +++ b/drivers/net/xen-netback/xenbus.c
-@@ -267,6 +267,8 @@ static void backend_disconnect(struct ba
+@@ -511,6 +511,8 @@ static void backend_disconnect(struct backend_info *be)
  		vif->num_queues = 0;
  		synchronize_net();
  

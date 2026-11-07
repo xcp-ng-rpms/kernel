@@ -886,10 +886,19 @@ Patch1085: 0001-netfilter-br_netfilter-disable-sabotage_in-hook-afte.patch
 Patch1086: 0002-netfilter-br_netfilter-fix-recent-physdev-match-brea.patch
 Patch1087: 0003-kabi-netfilter-br_netfilter-fix-recent-physdev-match.patch
 
-# CVE-2026-100080
+# XSA-526 / CVE-2026-100080
 Patch1088: xsa526-linux.patch
-# CVE-2026-100081
-Patch1089: xsa527-linux.patch
+
+# XSA-527 / CVE-2026-100081
+Patch1089: 0002-xen-netback-fix-error-path-of-xenvif_connect_data.patch
+Patch1090: xsa527-linux.patch
+
+# XSA-528 / CVE-2026-100082
+Patch1091: 0004-xen-blkback-fix-memory-leaks.patch
+Patch1092: xsa528-linux.patch
+
+# Use-after-free in netback xenvif flush hash, suggested by Alex Brett
+Patch1093: 0006-net-xen-netback-prevent-UAF-in-xenvif_flush_hash.patch
 
 %description
 The kernel package contains the Linux kernel (vmlinuz), the core of any
@@ -1261,7 +1270,11 @@ fi
 
 %changelog
 * Fri Nov 06 2026 Lucas Pottier <lucas.pottier@vates.tech> - 4.19.19-8.0.49.3
-- Backport security fixes for CVE-2026-100080, CVE-2026-100081
+- Backport security fixes for:
+  - XSA-526 / CVE-2026-100080
+  - XSA-527 / CVE-2026-100081
+  - XSA-528 / CVE-2026-100082
+  - Use-after-free in xen-netback virtual interfaces hashmap flushing
 
 * Thu Nov 05 2026 Quentin Casasnovas <quentin.casasnovas@vates.tech> - 4.19.19-8.0.49.2
 - Backport security fixes for:
