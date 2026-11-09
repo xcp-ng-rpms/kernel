@@ -1,4 +1,4 @@
-From e63fdb26ad81ef35fc026c7656bccaea2e57c031 Mon Sep 17 00:00:00 2001
+From 76eaf45c9d0530d77f68031cfd0045a2773ea7cc Mon Sep 17 00:00:00 2001
 From: Juergen Gross <jgross@suse.com>
 Date: Thu, 5 Nov 2026 08:27:38 +0100
 Subject: [PATCH] xen-blkback: Avoid UAF when reading I/O statistics
@@ -49,7 +49,7 @@ index e41d5e246c7e..86df03f761ed 100644
  	unsigned int		nr_rings;
  };
 diff --git a/drivers/block/xen-blkback/xenbus.c b/drivers/block/xen-blkback/xenbus.c
-index 66103f1ff128..6cdb8e90d3aa 100644
+index 84f713f419fb..585553887861 100644
 --- a/drivers/block/xen-blkback/xenbus.c
 +++ b/drivers/block/xen-blkback/xenbus.c
 @@ -161,15 +161,23 @@ static void xen_update_blkif_status(struct xen_blkif *blkif)

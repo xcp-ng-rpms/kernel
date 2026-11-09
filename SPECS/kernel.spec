@@ -894,11 +894,10 @@ Patch1089: 0002-xen-netback-fix-error-path-of-xenvif_connect_data.patch
 Patch1090: xsa527-linux.patch
 
 # XSA-528 / CVE-2026-100082
-Patch1091: 0004-xen-blkback-fix-memory-leaks.patch
-Patch1092: xsa528-linux.patch
+Patch1091: xsa528-linux.patch
 
 # Use-after-free in netback xenvif flush hash, suggested by Alex Brett
-Patch1093: 0006-net-xen-netback-prevent-UAF-in-xenvif_flush_hash.patch
+Patch1092: 0005-net-xen-netback-prevent-UAF-in-xenvif_flush_hash.patch
 
 %description
 The kernel package contains the Linux kernel (vmlinuz), the core of any
@@ -1269,12 +1268,12 @@ fi
 %{?_cov_results_package}
 
 %changelog
-* Fri Nov 06 2026 Lucas Pottier <lucas.pottier@vates.tech> - 4.19.19-8.0.49.3
+* Mon Nov 09 2026 Lucas Pottier <lucas.pottier@vates.tech> - 4.19.19-8.0.49.3
 - Backport security fixes for:
   - XSA-526 / CVE-2026-100080
   - XSA-527 / CVE-2026-100081
-  - XSA-528 / CVE-2026-100082
-  - Use-after-free in xen-netback virtual interfaces hashmap flushing
+  - XSA-528 / CVE-2026-100082 (Quentin Casasnovas)
+  - Use-after-free in xen-netback virtual interfaces hashmap flushing (Quentin Casasnovas)
 
 * Thu Nov 05 2026 Quentin Casasnovas <quentin.casasnovas@vates.tech> - 4.19.19-8.0.49.2
 - Backport security fixes for:
