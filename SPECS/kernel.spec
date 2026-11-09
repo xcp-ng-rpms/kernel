@@ -845,6 +845,16 @@ Provides: python2-perf
 %description -n python2-perf
 %{pythonperfdesc}
 
+# Apply all patches, expands to a shorter string to prevent overflow
+%global autopatch(qvp:) %{lua:
+local patch = rpm.expand("%{__patch} %{!-v:-s} %{-p:-p%{-p*}}")
+print("p() { "..patch.." -p1 -i \\"$1\\"; }\\n")
+for i, p in ipairs(patches) do
+    print("p "..p.."\\n")
+end
+print("unset p\\n")
+}
+
 %prep
 %autosetup -p1
 %{?_cov_prepare}
