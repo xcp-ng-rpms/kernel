@@ -44,7 +44,7 @@
 Name: kernel
 License: GPLv2
 Version: 4.19.19
-Release: %{?xsrel}.15%{?dist}
+Release: %{?xsrel}.16%{?dist}
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
@@ -793,6 +793,9 @@ Patch1091: xsa528-linux.patch
 # Use-after-free in netback xenvif flush hash, suggested by Alex Brett
 Patch1092: 0005-net-xen-netback-prevent-UAF-in-xenvif_flush_hash.patch
 
+# XSA-526 iterative fix
+Patch1040: 0001-xen-netback-Fix-XenBus-connection-failure-cleanup.patch
+
 %description
 The kernel package contains the Linux kernel (vmlinuz), the core of any
 Linux operating system. The kernel handles the basic functions of the operating
@@ -1162,6 +1165,9 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Tue Nov 10 2026 Quentin Casasnovas <quentin.casasnovas@vates.tech> - 4.19.19-8.0.46.16
+- Iterative fix to incomplete XSA-526 original fix
+
 * Mon Nov 09 2026 Lucas Pottier <lucas.pottier@vates.tech> - 4.19.19-8.0.46.15
 - Backport security fixes for:
   - XSA-526 / CVE-2026-100080
