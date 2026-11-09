@@ -1,0 +1,30 @@
+From 7c80d8da3105de5fdc5c2c61d5059335abe66585 Mon Sep 17 00:00:00 2001
+From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+Date: Mon, 2 Nov 2026 09:48:32 +0100
+Subject: [PATCH] !kabi inet: fully convert sk->sk_rx_dst to RCU rules
+
+Hide the __rcu annotation to genksyms otherwise it will mistakenly assume
+there is a kABI change.
+
+Fixes: 3f449ea2b275 ("inet: fully convert sk->sk_rx_dst to RCU rules")
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+---
+ include/net/sock.h | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/include/net/sock.h b/include/net/sock.h
+index 8eaf4704abd2..a2de725b8f81 100644
+--- a/include/net/sock.h
++++ b/include/net/sock.h
+@@ -401,7 +401,11 @@ struct sock {
+ #ifdef CONFIG_XFRM
+ 	struct xfrm_policy __rcu *sk_policy[2];
+ #endif
++#ifdef __GENKSYMS__
++	struct dst_entry	*sk_rx_dst;
++#else
+ 	struct dst_entry __rcu	*sk_rx_dst;
++#endif
+ 	struct dst_entry __rcu	*sk_dst_cache;
+ 	atomic_t		sk_omem_alloc;
+ 	int			sk_sndbuf;
