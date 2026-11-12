@@ -1,0 +1,68 @@
+From 7bea8809446cf92de0bb51af3cd716b2e38b6b70 Mon Sep 17 00:00:00 2001
+From: Stefanos Gerangelos <stefanos.gerangelos@vates.tech>
+Date: Thu, 12 Nov 2026 13:12:20 +0200
+Subject: [PATCH 3/3] xen-netback: per-VIF TX copy mode
+
+tx_copy_all applies to every VIF of the host.  Allow enabling copy mode
+for selected VIFs only: the toolstack writes tx-copy-all = 1 in the
+VIF's backend xenstore node before the frontend connects, and netback
+reads it when the rings are connected.
+
+  xenstore-write /local/domain/0/backend/vif/<domid>/<devid>/tx-copy-all 1
+
+This is useful for guests that do not benefit from the mapping path
+(e.g. netfront without the TX spurious-interrupt fix) while other guests
+on the same host keep using it.
+
+Measured on XCP-ng 8.3 (net-lab): an affected guest goes from 7-8 to
+19 Gb/s while an unaffected guest on the same host stays in map mode.
+---
+ drivers/net/xen-netback/common.h  | 1 +
+ drivers/net/xen-netback/netback.c | 2 +-
+ drivers/net/xen-netback/xenbus.c  | 8 ++++++++
+ 3 files changed, 10 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/net/xen-netback/common.h b/drivers/net/xen-netback/common.h
+index 58d7ee16d..2e55a2184 100644
+--- a/drivers/net/xen-netback/common.h
++++ b/drivers/net/xen-netback/common.h
+@@ -279,6 +279,7 @@ struct xenvif {
+ 	u8 ip_csum:1;
+ 	u8 ipv6_csum:1;
+ 	u8 multicast_control:1;
++	u8 tx_copy_all:1;	/* per-VIF copy mode, backend xenstore key tx-copy-all */
+ 
+ 	/* Is this interface disabled? True when backend discovers
+ 	 * frontend is rogue.
+diff --git a/drivers/net/xen-netback/netback.c b/drivers/net/xen-netback/netback.c
+index 6c7f91f5c..988a88052 100644
+--- a/drivers/net/xen-netback/netback.c
++++ b/drivers/net/xen-netback/netback.c
+@@ -1045,7 +1045,7 @@ static void xenvif_tx_build_gops(struct xenvif_queue *queue,
+ 			data_len = txreq.size;
+ 
+ 		skb = NULL;
+-		if (tx_copy_all) {
++		if (tx_copy_all || queue->vif->tx_copy_all) {
+ 			unsigned int total = txreq.size;
+ 			int i;
+ 
+diff --git a/drivers/net/xen-netback/xenbus.c b/drivers/net/xen-netback/xenbus.c
+index e7bb96dc7..c988b69ad 100644
+--- a/drivers/net/xen-netback/xenbus.c
++++ b/drivers/net/xen-netback/xenbus.c
+@@ -1181,6 +1181,14 @@ static int read_xenbus_vif_flags(struct backend_info *be)
+ 	unsigned int rx_copy;
+ 	int err;
+ 
++	/* Per-VIF copy mode, set by the toolstack in the backend node
++	 * before the frontend connects (e.g. for guests without the netfront
++	 * TX spurious-interrupt fix).
++	 */
++	vif->tx_copy_all = !!xenbus_read_unsigned(dev->nodename, "tx-copy-all", 0);
++	if (vif->tx_copy_all)
++		pr_info("%s: per-VIF TX copy mode enabled\n", dev->nodename);
++
+ 	err = xenbus_scanf(XBT_NIL, dev->otherend, "request-rx-copy", "%u",
+ 			   &rx_copy);
+ 	if (err == -ENOENT) {

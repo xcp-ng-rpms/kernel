@@ -1,0 +1,80 @@
+From 22ec421cb2e2228da5cc90176b32b178a3e265e9 Mon Sep 17 00:00:00 2001
+From: Stefanos Gerangelos <stefanos.gerangelos@vates.tech>
+Date: Thu, 12 Nov 2026 13:12:20 +0200
+Subject: [PATCH 1/3] xen-netback: optionally grant-copy the whole guest TX
+ packet
+
+Today netback grant-maps the guest TX payload slots, sends them
+zero-copy and only answers the guest once the skb has been freed and
+the dealloc thread has unmapped the pages (TLB flush).  A single guest
+TX flow therefore never has much data in flight, and is limited to
+~10-13 Gb/s per queue with idle CPUs.
+
+Add a runtime module parameter tx_copy_all (default off).  When set,
+the whole packet is grant-copied into a linear skb (the XSA-423 path
+already copies data_len bytes across slots; this sets data_len to the
+packet length).  There are then no map ops, no zerocopy callback and
+no dealloc, and the guest gets every slot's response as soon as the
+copy batch completes.  If the linear allocation fails, the existing
+mapping path is used.
+
+  /sys/module/xen_netback/parameters/tx_copy_all            (rw, 0/1)
+  /sys/module/xen_netback/parameters/tx_copy_all_pkts       (ro counter)
+  /sys/module/xen_netback/parameters/tx_copy_all_fallbacks  (ro counter)
+
+Measured on XCP-ng 8.3 (net-lab, 2 hosts, mlx5): guest -> local dom0
+12.7-14.3 -> 41.2-44.6 Gb/s, guest -> remote guest 16.6-20.2 ->
+24.2-24.4 Gb/s, data verified.
+---
+ drivers/net/xen-netback/netback.c | 31 ++++++++++++++++++++++++++++++-
+ 1 file changed, 30 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/net/xen-netback/netback.c b/drivers/net/xen-netback/netback.c
+index eed10337c..6c7f91f5c 100644
+--- a/drivers/net/xen-netback/netback.c
++++ b/drivers/net/xen-netback/netback.c
+@@ -81,6 +81,19 @@ MODULE_PARM_DESC(max_queues,
+ static unsigned int fatal_skb_slots = FATAL_SKB_SLOTS_DEFAULT;
+ module_param(fatal_skb_slots, uint, 0444);
+ 
++/* Optionally copy the whole guest packet into the skb head instead of
++ * grant-mapping the payload slots. No unmap/dealloc round trip: the TX
++ * responses reach the guest as soon as the copy batch completes.
++ */
++static bool tx_copy_all;
++module_param(tx_copy_all, bool, 0644);
++MODULE_PARM_DESC(tx_copy_all,
++		 "Grant-copy the whole guest TX packet into a linear skb (no grant mapping)");
++static unsigned long tx_copy_all_pkts;
++module_param(tx_copy_all_pkts, ulong, 0444);
++static unsigned long tx_copy_all_fallbacks;
++module_param(tx_copy_all_fallbacks, ulong, 0444);
++
+ /* The amount to copy out of the first guest Tx slot into the skb's
+  * linear area.  If the first slot has more data, it will be mapped
+  * and put into the first frag.
+@@ -1031,7 +1044,23 @@ static void xenvif_tx_build_gops(struct xenvif_queue *queue,
+ 		if (ret >= XEN_NETBK_LEGACY_SLOTS_MAX - 1 && data_len < txreq.size)
+ 			data_len = txreq.size;
+ 
+-		skb = xenvif_alloc_skb(data_len);
++		skb = NULL;
++		if (tx_copy_all) {
++			unsigned int total = txreq.size;
++			int i;
++
++			for (i = 0; i < ret; i++)
++				total += txfrags[i].size;
++			skb = xenvif_alloc_skb(total);
++			if (likely(skb)) {
++				data_len = total;
++				tx_copy_all_pkts++;
++			} else {
++				tx_copy_all_fallbacks++;
++			}
++		}
++		if (!skb)
++			skb = xenvif_alloc_skb(data_len);
+ 		if (unlikely(skb == NULL)) {
+ 			netdev_dbg(queue->vif->dev,
+ 				   "Can't allocate a skb in start_xmit.\n");

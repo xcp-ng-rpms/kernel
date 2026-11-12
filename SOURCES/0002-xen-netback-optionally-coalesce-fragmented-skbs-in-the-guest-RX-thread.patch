@@ -1,0 +1,63 @@
+From b534c3b7d1ce52090753a4075c2951b0b31a68b1 Mon Sep 17 00:00:00 2001
+From: Stefanos Gerangelos <stefanos.gerangelos@vates.tech>
+Date: Thu, 12 Nov 2026 13:12:20 +0200
+Subject: [PATCH 2/3] xen-netback: optionally coalesce fragmented skbs in the
+ guest-RX thread
+
+skbs received from a NIC with GRO typically carry one fragment per wire
+frame.  Netback then issues one grant-copy op per ~1.5 KB fragment
+towards the guest, and the per-op cost caps single-flow receive.
+
+Add a runtime module parameter rx_coalesce_frags (default 0 = off).
+When set to N, skbs with at least N fragments are linearized in the
+guest-RX kthread before the grant copies, so the copies use up to
+4 KB ops.  The work is done in the per-queue kthread rather than in
+the NIC softirq.
+
+  /sys/module/xen_netback/parameters/rx_coalesce_frags  (rw, 16 recommended)
+  /sys/module/xen_netback/parameters/rx_coalesced       (ro counter)
+  /sys/module/xen_netback/parameters/rx_coalesce_fail   (ro counter)
+
+Measured on XCP-ng 8.3 (net-lab): NIC -> guest +20 %, VM -> VM
++12-15 % (single-flow receive ceiling ~25 -> ~30 Gb/s).
+---
+ drivers/net/xen-netback/rx.c | 19 +++++++++++++++++++
+ 1 file changed, 19 insertions(+)
+
+diff --git a/drivers/net/xen-netback/rx.c b/drivers/net/xen-netback/rx.c
+index 57f1b1a72..85e8390eb 100644
+--- a/drivers/net/xen-netback/rx.c
++++ b/drivers/net/xen-netback/rx.c
+@@ -249,6 +249,13 @@ struct xenvif_pkt_state {
+ 	unsigned int slot;
+ };
+ 
++static unsigned int rx_coalesce_frags;
++module_param(rx_coalesce_frags, uint, 0644);
++MODULE_PARM_DESC(rx_coalesce_frags, "Linearize guest-bound skbs with at least this many frags in the RX kthread (0 = off)");
++static unsigned long rx_coalesced, rx_coalesce_fail;
++module_param(rx_coalesced, ulong, 0444);
++module_param(rx_coalesce_fail, ulong, 0444);
++
+ static void xenvif_rx_next_skb(struct xenvif_queue *queue,
+ 			       struct xenvif_pkt_state *pkt)
+ {
+@@ -257,6 +264,18 @@ static void xenvif_rx_next_skb(struct xenvif_queue *queue,
+ 
+ 	skb = xenvif_rx_dequeue(queue);
+ 
++	/* Optionally coalesce many small fragments (NIC GRO skbs: one per wire
++	 * frame) into one linear buffer here, in the guest-RX kthread, so the
++	 * grant copies below use up-to-4 KiB ops instead of one op per frame.
++	 */
++	if (rx_coalesce_frags &&
++	    skb_shinfo(skb)->nr_frags >= READ_ONCE(rx_coalesce_frags)) {
++		if (skb_linearize(skb))
++			rx_coalesce_fail++;
++		else
++			rx_coalesced++;
++	}
++
+ 	queue->stats.tx_bytes += skb->len;
+ 	queue->stats.tx_packets++;
+ 

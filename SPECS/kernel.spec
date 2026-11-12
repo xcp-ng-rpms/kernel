@@ -44,7 +44,7 @@
 Name: kernel
 License: GPLv2
 Version: 4.19.19
-Release: %{?xsrel}.16%{?dist}
+Release: %{?xsrel}.17%{?dist}
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
@@ -796,6 +796,11 @@ Patch1039: 0005-net-xen-netback-prevent-UAF-in-xenvif_flush_hash.patch
 # XSA-526 iterative fix, called XSA-531 / CVE-2026-99286
 Patch1040: 0001-xen-netback-Fix-XenBus-connection-failure-cleanup.patch
 
+# netback performance: optional TX copy mode and RX coalescing (runtime knobs, off by default)
+Patch1041: 0001-xen-netback-optionally-grant-copy-the-whole-guest-TX-packet.patch
+Patch1042: 0002-xen-netback-optionally-coalesce-fragmented-skbs-in-the-guest-RX-thread.patch
+Patch1043: 0003-xen-netback-per-VIF-TX-copy-mode.patch
+
 %description
 The kernel package contains the Linux kernel (vmlinuz), the core of any
 Linux operating system. The kernel handles the basic functions of the operating
@@ -1165,6 +1170,11 @@ fi
 %{?_cov_results_package}
 
 %changelog
+* Thu Nov 12 2026 Stefanos Gerangelos <stefanos.gerangelos@vates.tech> - 4.19.19-8.0.46.17
+- xen-netback: add optional whole-packet TX grant copy (tx_copy_all, off by default)
+- xen-netback: add optional RX coalescing in the guest-RX thread (rx_coalesce_frags, off by default)
+- xen-netback: add per-VIF TX copy mode (backend xenstore key tx-copy-all)
+
 * Tue Nov 10 2026 Quentin Casasnovas <quentin.casasnovas@vates.tech> - 4.19.19-8.0.46.16
 - Iterative fix to incomplete XSA-526 original fix - XSA-531 / CVE-2026-99286
 
