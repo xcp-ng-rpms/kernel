@@ -781,19 +781,19 @@ Patch1033: 0003-kabi-inet-fully-convert-sk-sk_rx_dst-to-RCU-rules.patch
 Patch1034: 0004-ipv4-free-inet_opt-and-ireq_opt-after-an-RCU-grace-p.patch
 
 # XSA-526 / CVE-2026-100080
-Patch1088: xsa526-linux.patch
+Patch1035: xsa526-linux.patch
 
 # XSA-527 / CVE-2026-100081
-Patch1089: 0002-xen-netback-fix-error-path-of-xenvif_connect_data.patch
-Patch1090: xsa527-linux.patch
+Patch1036: 0002-xen-netback-fix-error-path-of-xenvif_connect_data.patch
+Patch1037: xsa527-linux.patch
 
 # XSA-528 / CVE-2026-100082
-Patch1091: xsa528-linux.patch
+Patch1038: xsa528-linux.patch
 
 # Use-after-free in netback xenvif flush hash, suggested by Alex Brett
-Patch1092: 0005-net-xen-netback-prevent-UAF-in-xenvif_flush_hash.patch
+Patch1039: 0005-net-xen-netback-prevent-UAF-in-xenvif_flush_hash.patch
 
-# XSA-526 iterative fix
+# XSA-526 iterative fix, called XSA-531 / CVE-2026-99286
 Patch1040: 0001-xen-netback-Fix-XenBus-connection-failure-cleanup.patch
 
 %description
@@ -1166,7 +1166,7 @@ fi
 
 %changelog
 * Tue Nov 10 2026 Quentin Casasnovas <quentin.casasnovas@vates.tech> - 4.19.19-8.0.46.16
-- Iterative fix to incomplete XSA-526 original fix
+- Iterative fix to incomplete XSA-526 original fix - XSA-531 / CVE-2026-99286
 
 * Mon Nov 09 2026 Lucas Pottier <lucas.pottier@vates.tech> - 4.19.19-8.0.46.15
 - Backport security fixes for:
