@@ -795,9 +795,8 @@ Patch1039: 0005-net-xen-netback-prevent-UAF-in-xenvif_flush_hash.patch
 
 # MxGPU
 Patch1040: 0001-export-memory_block_size_bytes-symbol-for-OOT-driver.patch
-Patch1041: 0002-backport-xarray-lib-from-5.0.patch
-Patch1042: 0003-allow-to-use-pxm_to_node-without-CONFIG_NUMA.patch
-Patch1043: 0004-add-missing-ksys_sync_helper.patch
+Patch1041: 0003-allow-to-use-pxm_to_node-without-CONFIG_NUMA.patch
+Patch1042: 0004-add-missing-ksys_sync_helper.patch
 
 %description
 The kernel package contains the Linux kernel (vmlinuz), the core of any
