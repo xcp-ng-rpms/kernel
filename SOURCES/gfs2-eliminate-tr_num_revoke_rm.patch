@@ -1,0 +1,82 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Bob Peterson <rpeterso@redhat.com>
+Date: Tue, 26 Mar 2019 13:51:48 -0600
+Subject: [PATCH] gfs2: eliminate tr_num_revoke_rm
+
+For its journal processing, gfs2 kept track of the number of buffers
+added and removed on a per-transaction basis. These values are used
+to calculate space needed in the journal. But while these calculations
+make sense for the number of buffers, they make no sense for revokes.
+Revokes are managed in their own list, linked from the superblock.
+So it's entirely unnecessary to keep separate per-transaction counts
+for revokes added and removed. A single count will do the same job.
+Therefore, this patch combines the transaction revokes into a single
+count.
+
+Signed-off-by: Bob Peterson <rpeterso@redhat.com>
+Signed-off-by: Andreas Gruenbacher <agruenba@redhat.com>
+---
+ fs/gfs2/incore.h | 1 -
+ fs/gfs2/log.c    | 3 +--
+ fs/gfs2/trans.c  | 6 +++---
+ 3 files changed, 4 insertions(+), 6 deletions(-)
+
+diff --git a/fs/gfs2/incore.h b/fs/gfs2/incore.h
+index 1d35e0da0ef8..0e7fab396bf8 100644
+--- a/fs/gfs2/incore.h
++++ b/fs/gfs2/incore.h
+@@ -507,7 +507,6 @@ struct gfs2_trans {
+ 	unsigned int tr_num_buf_rm;
+ 	unsigned int tr_num_databuf_rm;
+ 	unsigned int tr_num_revoke;
+-	unsigned int tr_num_revoke_rm;
+ 
+ 	struct list_head tr_list;
+ 	struct list_head tr_databuf;
+diff --git a/fs/gfs2/log.c b/fs/gfs2/log.c
+index cd185b0cfcc1..528148aea699 100644
+--- a/fs/gfs2/log.c
++++ b/fs/gfs2/log.c
+@@ -893,7 +893,6 @@ static void gfs2_merge_trans(struct gfs2_sbd *sdp, struct gfs2_trans *new)
+ 	old->tr_num_buf_rm	+= new->tr_num_buf_rm;
+ 	old->tr_num_databuf_rm	+= new->tr_num_databuf_rm;
+ 	old->tr_num_revoke	+= new->tr_num_revoke;
+-	old->tr_num_revoke_rm	+= new->tr_num_revoke_rm;
+ 
+ 	list_splice_tail_init(&new->tr_databuf, &old->tr_databuf);
+ 	list_splice_tail_init(&new->tr_buf, &old->tr_buf);
+@@ -920,7 +919,7 @@ static void log_refund(struct gfs2_sbd *sdp, struct gfs2_trans *tr)
+ 		set_bit(TR_ATTACHED, &tr->tr_flags);
+ 	}
+ 
+-	sdp->sd_log_commited_revoke += tr->tr_num_revoke - tr->tr_num_revoke_rm;
++	sdp->sd_log_commited_revoke += tr->tr_num_revoke;
+ 	reserved = calc_reserved(sdp);
+ 	maxres = sdp->sd_log_blks_reserved + tr->tr_reserved;
+ 	gfs2_assert_withdraw(sdp, maxres >= reserved);
+diff --git a/fs/gfs2/trans.c b/fs/gfs2/trans.c
+index 4b584d98cfad..3b758bf9a1ff 100644
+--- a/fs/gfs2/trans.c
++++ b/fs/gfs2/trans.c
+@@ -82,10 +82,10 @@ static void gfs2_print_trans(struct gfs2_sbd *sdp, const struct gfs2_trans *tr)
+ 	fs_warn(sdp, "blocks=%u revokes=%u reserved=%u touched=%u\n",
+ 		tr->tr_blocks, tr->tr_revokes, tr->tr_reserved,
+ 		test_bit(TR_TOUCHED, &tr->tr_flags));
+-	fs_warn(sdp, "Buf %u/%u Databuf %u/%u Revoke %u/%u\n",
++	fs_warn(sdp, "Buf %u/%u Databuf %u/%u Revoke %u\n",
+ 		tr->tr_num_buf_new, tr->tr_num_buf_rm,
+ 		tr->tr_num_databuf_new, tr->tr_num_databuf_rm,
+-		tr->tr_num_revoke, tr->tr_num_revoke_rm);
++		tr->tr_num_revoke);
+ }
+ 
+ void gfs2_trans_end(struct gfs2_sbd *sdp)
+@@ -270,7 +270,7 @@ void gfs2_trans_remove_revoke(struct gfs2_sbd *sdp, u64 blkno, unsigned int len)
+ 			if (bd->bd_gl)
+ 				gfs2_glock_remove_revoke(bd->bd_gl);
+ 			kmem_cache_free(gfs2_bufdata_cachep, bd);
+-			tr->tr_num_revoke_rm++;
++			tr->tr_num_revoke--;
+ 			if (--n == 0)
+ 				break;
+ 		}

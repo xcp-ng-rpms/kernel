@@ -1,0 +1,120 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Alexander Aring <aahringo@redhat.com>
+Date: Tue, 2 Nov 2021 15:17:19 -0400
+Subject: [PATCH] fs: dlm: let handle callback data as void
+
+This patch changes the dlm_lowcomms_new_msg() function pointer private data
+from "struct mhandle *" to "void *" to provide different structures than
+just "struct mhandle".
+
+Signed-off-by: Alexander Aring <aahringo@redhat.com>
+Signed-off-by: David Teigland <teigland@redhat.com>
+---
+ fs/dlm/lowcomms.c | 19 +++++++++----------
+ fs/dlm/lowcomms.h |  4 ++--
+ fs/dlm/midcomms.c |  4 +++-
+ 3 files changed, 14 insertions(+), 13 deletions(-)
+
+diff --git a/fs/dlm/lowcomms.c b/fs/dlm/lowcomms.c
+index c098a57fc5e3..88ce412d5651 100644
+--- a/fs/dlm/lowcomms.c
++++ b/fs/dlm/lowcomms.c
+@@ -1207,8 +1207,7 @@ static struct writequeue_entry *new_writequeue_entry(struct connection *con,
+ 
+ static struct writequeue_entry *new_wq_entry(struct connection *con, int len,
+ 					     gfp_t allocation, char **ppc,
+-					     void (*cb)(struct dlm_mhandle *mh),
+-					     struct dlm_mhandle *mh)
++					     void (*cb)(void *data), void *data)
+ {
+ 	struct writequeue_entry *e;
+ 
+@@ -1220,7 +1219,7 @@ static struct writequeue_entry *new_wq_entry(struct connection *con, int len,
+ 
+ 			*ppc = page_address(e->page) + e->end;
+ 			if (cb)
+-				cb(mh);
++				cb(data);
+ 
+ 			e->end += len;
+ 			e->users++;
+@@ -1242,7 +1241,7 @@ static struct writequeue_entry *new_wq_entry(struct connection *con, int len,
+ 
+ 	spin_lock(&con->writequeue_lock);
+ 	if (cb)
+-		cb(mh);
++		cb(data);
+ 
+ 	list_add_tail(&e->list, &con->writequeue);
+ 	spin_unlock(&con->writequeue_lock);
+@@ -1252,8 +1251,8 @@ static struct writequeue_entry *new_wq_entry(struct connection *con, int len,
+ 
+ static struct dlm_msg *dlm_lowcomms_new_msg_con(struct connection *con, int len,
+ 						gfp_t allocation, char **ppc,
+-						void (*cb)(struct dlm_mhandle *mh),
+-						struct dlm_mhandle *mh)
++						void (*cb)(void *data),
++						void *data)
+ {
+ 	struct writequeue_entry *e;
+ 	struct dlm_msg *msg;
+@@ -1276,7 +1275,7 @@ static struct dlm_msg *dlm_lowcomms_new_msg_con(struct connection *con, int len,
+ 
+ 	kref_init(&msg->ref);
+ 
+-	e = new_wq_entry(con, len, allocation, ppc, cb, mh);
++	e = new_wq_entry(con, len, allocation, ppc, cb, data);
+ 	if (!e) {
+ 		if (sleepable)
+ 			mutex_unlock(&con->wq_alloc);
+@@ -1296,8 +1295,8 @@ static struct dlm_msg *dlm_lowcomms_new_msg_con(struct connection *con, int len,
+ }
+ 
+ struct dlm_msg *dlm_lowcomms_new_msg(int nodeid, int len, gfp_t allocation,
+-				     char **ppc, void (*cb)(struct dlm_mhandle *mh),
+-				     struct dlm_mhandle *mh)
++				     char **ppc, void (*cb)(void *data),
++				     void *data)
+ {
+ 	struct connection *con;
+ 	struct dlm_msg *msg;
+@@ -1318,7 +1317,7 @@ struct dlm_msg *dlm_lowcomms_new_msg(int nodeid, int len, gfp_t allocation,
+ 		return NULL;
+ 	}
+ 
+-	msg = dlm_lowcomms_new_msg_con(con, len, allocation, ppc, cb, mh);
++	msg = dlm_lowcomms_new_msg_con(con, len, allocation, ppc, cb, data);
+ 	if (!msg) {
+ 		srcu_read_unlock(&connections_srcu, idx);
+ 		return NULL;
+diff --git a/fs/dlm/lowcomms.h b/fs/dlm/lowcomms.h
+index ca0c938e4a66..91e4172480cd 100644
+--- a/fs/dlm/lowcomms.h
++++ b/fs/dlm/lowcomms.h
+@@ -40,8 +40,8 @@ void dlm_lowcomms_stop(void);
+ void dlm_lowcomms_exit(void);
+ int dlm_lowcomms_close(int nodeid);
+ struct dlm_msg *dlm_lowcomms_new_msg(int nodeid, int len, gfp_t allocation,
+-				     char **ppc, void (*cb)(struct dlm_mhandle *mh),
+-				     struct dlm_mhandle *mh);
++				     char **ppc, void (*cb)(void *data),
++				     void *data);
+ void dlm_lowcomms_commit_msg(struct dlm_msg *msg);
+ void dlm_lowcomms_put_msg(struct dlm_msg *msg);
+ int dlm_lowcomms_resend_msg(struct dlm_msg *msg);
+diff --git a/fs/dlm/midcomms.c b/fs/dlm/midcomms.c
+index ed4f115945c7..28c760c9e3fe 100644
+--- a/fs/dlm/midcomms.c
++++ b/fs/dlm/midcomms.c
+@@ -1022,8 +1022,10 @@ static void dlm_fill_opts_header(struct dlm_opts *opts, uint16_t inner_len,
+ 	header_out(&opts->o_header);
+ }
+ 
+-static void midcomms_new_msg_cb(struct dlm_mhandle *mh)
++static void midcomms_new_msg_cb(void *data)
+ {
++	struct dlm_mhandle *mh = data;
++
+ 	atomic_inc(&mh->node->send_queue_cnt);
+ 
+ 	spin_lock(&mh->node->send_queue_lock);

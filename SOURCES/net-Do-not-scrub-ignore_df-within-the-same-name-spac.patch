@@ -1,0 +1,36 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Anoob Soman <anoob.soman@citrix.com>
+Date: Thu, 27 Jul 2017 16:25:54 +0100
+Subject: [PATCH] net: Do not scrub ignore_df within the same name space
+
+Commit 239c78db9c ("net: clear local_df when passing skb between namespaces")
+cleared local_df/ignore_df for tunnels. This broke, last resort, fragmentation
+of GRE tunneled packets.
+
+Clear ignore_df, only when packet is being injected to another namespace.
+
+Signed-off-by: Anoob Soman <anoob.soman@citrix.com>
+---
+ net/core/skbuff.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/net/core/skbuff.c b/net/core/skbuff.c
+index b153cb06e5e0..674732967876 100644
+--- a/net/core/skbuff.c
++++ b/net/core/skbuff.c
+@@ -5006,7 +5006,6 @@ void skb_scrub_packet(struct sk_buff *skb, bool xnet)
+ {
+ 	skb->pkt_type = PACKET_HOST;
+ 	skb->skb_iif = 0;
+-	skb->ignore_df = 0;
+ 	skb_dst_drop(skb);
+ 	secpath_reset(skb);
+ 	nf_reset(skb);
+@@ -5023,6 +5022,7 @@ void skb_scrub_packet(struct sk_buff *skb, bool xnet)
+ 
+ 	skb->mark = 0;
+ 	skb->tstamp = 0;
++        skb->ignore_df = 0;
+ }
+ EXPORT_SYMBOL_GPL(skb_scrub_packet);
+ 

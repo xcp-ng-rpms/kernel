@@ -1,0 +1,56 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Aliasgar Surti <aliasgar.surti500@gmail.com>
+Date: Fri, 4 Oct 2019 10:55:29 -0500
+Subject: [PATCH] gfs2: removed unnecessary semicolon
+
+There is use of unnecessary semicolon after switch case.
+Removed the semicolon.
+
+Signed-off-by: Aliasgar Surti <aliasgar.surti500@gmail.com>
+Signed-off-by: Bob Peterson <rpeterso@redhat.com>
+Signed-off-by: Andreas Gruenbacher <agruenba@redhat.com>
+---
+ fs/gfs2/glops.c    | 2 +-
+ fs/gfs2/inode.c    | 2 +-
+ fs/gfs2/recovery.c | 2 +-
+ 3 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/fs/gfs2/glops.c b/fs/gfs2/glops.c
+index 1a11305983df..38f0588adc4f 100644
+--- a/fs/gfs2/glops.c
++++ b/fs/gfs2/glops.c
+@@ -357,7 +357,7 @@ static int gfs2_dinode_in(struct gfs2_inode *ip, const void *buf)
+ 		ip->i_inode.i_rdev = MKDEV(be32_to_cpu(str->di_major),
+ 					   be32_to_cpu(str->di_minor));
+ 		break;
+-	};
++	}
+ 
+ 	i_uid_write(&ip->i_inode, be32_to_cpu(str->di_uid));
+ 	i_gid_write(&ip->i_inode, be32_to_cpu(str->di_gid));
+diff --git a/fs/gfs2/inode.c b/fs/gfs2/inode.c
+index c42ebcb880f3..3cfaf814c95a 100644
+--- a/fs/gfs2/inode.c
++++ b/fs/gfs2/inode.c
+@@ -1480,7 +1480,7 @@ static int gfs2_rename(struct inode *odir, struct dentry *odentry,
+ 			error = -EEXIST;
+ 		default:
+ 			goto out_gunlock;
+-		};
++		}
+ 
+ 		if (odip != ndip) {
+ 			if (!ndip->i_inode.i_nlink) {
+diff --git a/fs/gfs2/recovery.c b/fs/gfs2/recovery.c
+index 4ce2bfdbefdc..4d526750f400 100644
+--- a/fs/gfs2/recovery.c
++++ b/fs/gfs2/recovery.c
+@@ -329,7 +329,7 @@ void gfs2_recover_func(struct work_struct *work)
+ 
+ 		default:
+ 			goto fail;
+-		};
++		}
+ 
+ 		error = gfs2_glock_nq_init(ip->i_gl, LM_ST_SHARED,
+ 					   LM_FLAG_NOEXP | GL_NOCACHE, &ji_gh);

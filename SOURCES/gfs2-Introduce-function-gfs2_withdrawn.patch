@@ -1,0 +1,240 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Bob Peterson <rpeterso@redhat.com>
+Date: Thu, 14 Nov 2019 09:52:15 -0500
+Subject: [PATCH] gfs2: Introduce function gfs2_withdrawn
+
+Add function gfs2_withdrawn and replace all checks for the SDF_WITHDRAWN
+bit to call it. This does not change the logic or function of gfs2, and
+it facilitates later improvements to the withdraw sequence.
+
+Signed-off-by: Bob Peterson <rpeterso@redhat.com>
+Signed-off-by: Andreas Gruenbacher <agruenba@redhat.com>
+---
+ fs/gfs2/aops.c       | 4 ++--
+ fs/gfs2/file.c       | 2 +-
+ fs/gfs2/glock.c      | 7 +++----
+ fs/gfs2/glops.c      | 2 +-
+ fs/gfs2/meta_io.c    | 6 +++---
+ fs/gfs2/ops_fstype.c | 3 +--
+ fs/gfs2/quota.c      | 2 +-
+ fs/gfs2/super.c      | 6 +++---
+ fs/gfs2/sys.c        | 2 +-
+ fs/gfs2/util.c       | 2 +-
+ fs/gfs2/util.h       | 9 +++++++++
+ 11 files changed, 26 insertions(+), 19 deletions(-)
+
+diff --git a/fs/gfs2/aops.c b/fs/gfs2/aops.c
+index 6c738cc5baef..161631a63a41 100644
+--- a/fs/gfs2/aops.c
++++ b/fs/gfs2/aops.c
+@@ -497,7 +497,7 @@ static int __gfs2_readpage(void *file, struct page *page)
+ 		error = mpage_readpage(page, gfs2_block_map);
+ 	}
+ 
+-	if (unlikely(test_bit(SDF_WITHDRAWN, &sdp->sd_flags)))
++	if (unlikely(gfs2_withdrawn(sdp)))
+ 		return -EIO;
+ 
+ 	return error;
+@@ -614,7 +614,7 @@ static int gfs2_readpages(struct file *file, struct address_space *mapping,
+ 	gfs2_glock_dq(&gh);
+ out_uninit:
+ 	gfs2_holder_uninit(&gh);
+-	if (unlikely(test_bit(SDF_WITHDRAWN, &sdp->sd_flags)))
++	if (unlikely(gfs2_withdrawn(sdp)))
+ 		ret = -EIO;
+ 	return ret;
+ }
+diff --git a/fs/gfs2/file.c b/fs/gfs2/file.c
+index 5acb3a324769..0fb6841f82c0 100644
+--- a/fs/gfs2/file.c
++++ b/fs/gfs2/file.c
+@@ -1208,7 +1208,7 @@ static int gfs2_lock(struct file *file, int cmd, struct file_lock *fl)
+ 		cmd = F_SETLK;
+ 		fl->fl_type = F_UNLCK;
+ 	}
+-	if (unlikely(test_bit(SDF_WITHDRAWN, &sdp->sd_flags))) {
++	if (unlikely(gfs2_withdrawn(sdp))) {
+ 		if (fl->fl_type == F_UNLCK)
+ 			locks_lock_file_wait(file, fl);
+ 		return -EIO;
+diff --git a/fs/gfs2/glock.c b/fs/gfs2/glock.c
+index 3163f7e256a8..2a6d433314ca 100644
+--- a/fs/gfs2/glock.c
++++ b/fs/gfs2/glock.c
+@@ -552,7 +552,7 @@ __acquires(&gl->gl_lockref.lock)
+ 	unsigned int lck_flags = (unsigned int)(gh ? gh->gh_flags : 0);
+ 	int ret;
+ 
+-	if (unlikely(test_bit(SDF_WITHDRAWN, &sdp->sd_flags)) &&
++	if (unlikely(gfs2_withdrawn(sdp)) &&
+ 	    target != LM_ST_UNLOCKED)
+ 		return;
+ 	lck_flags &= (LM_FLAG_TRY | LM_FLAG_TRY_1CB | LM_FLAG_NOEXP |
+@@ -589,8 +589,7 @@ __acquires(&gl->gl_lockref.lock)
+ 		}
+ 		else if (ret) {
+ 			fs_err(sdp, "lm_lock ret %d\n", ret);
+-			GLOCK_BUG_ON(gl, !test_bit(SDF_WITHDRAWN,
+-						   &sdp->sd_flags));
++			GLOCK_BUG_ON(gl, !gfs2_withdrawn(sdp));
+ 		}
+ 	} else { /* lock_nolock */
+ 		finish_xmote(gl, target);
+@@ -1195,7 +1194,7 @@ int gfs2_glock_nq(struct gfs2_holder *gh)
+ 	struct gfs2_sbd *sdp = gl->gl_name.ln_sbd;
+ 	int error = 0;
+ 
+-	if (unlikely(test_bit(SDF_WITHDRAWN, &sdp->sd_flags)))
++	if (unlikely(gfs2_withdrawn(sdp)))
+ 		return -EIO;
+ 
+ 	if (test_bit(GLF_LRU, &gl->gl_flags))
+diff --git a/fs/gfs2/glops.c b/fs/gfs2/glops.c
+index 38f0588adc4f..31cc6cdc9f7d 100644
+--- a/fs/gfs2/glops.c
++++ b/fs/gfs2/glops.c
+@@ -553,7 +553,7 @@ static int freeze_go_xmote_bh(struct gfs2_glock *gl, struct gfs2_holder *gh)
+ 			gfs2_consist(sdp);
+ 
+ 		/*  Initialize some head of the log stuff  */
+-		if (!test_bit(SDF_WITHDRAWN, &sdp->sd_flags)) {
++		if (!gfs2_withdrawn(sdp)) {
+ 			sdp->sd_log_sequence = head.lh_sequence + 1;
+ 			gfs2_log_pointers_init(sdp, head.lh_blkno);
+ 		}
+diff --git a/fs/gfs2/meta_io.c b/fs/gfs2/meta_io.c
+index 570d6a71d58a..d7745dbc7f36 100644
+--- a/fs/gfs2/meta_io.c
++++ b/fs/gfs2/meta_io.c
+@@ -254,7 +254,7 @@ int gfs2_meta_read(struct gfs2_glock *gl, u64 blkno, int flags,
+ 	struct buffer_head *bh, *bhs[2];
+ 	int num = 0;
+ 
+-	if (unlikely(test_bit(SDF_WITHDRAWN, &sdp->sd_flags))) {
++	if (unlikely(gfs2_withdrawn(sdp))) {
+ 		*bhp = NULL;
+ 		return -EIO;
+ 	}
+@@ -312,7 +312,7 @@ int gfs2_meta_read(struct gfs2_glock *gl, u64 blkno, int flags,
+ 
+ int gfs2_meta_wait(struct gfs2_sbd *sdp, struct buffer_head *bh)
+ {
+-	if (unlikely(test_bit(SDF_WITHDRAWN, &sdp->sd_flags)))
++	if (unlikely(gfs2_withdrawn(sdp)))
+ 		return -EIO;
+ 
+ 	wait_on_buffer(bh);
+@@ -323,7 +323,7 @@ int gfs2_meta_wait(struct gfs2_sbd *sdp, struct buffer_head *bh)
+ 			gfs2_io_error_bh_wd(sdp, bh);
+ 		return -EIO;
+ 	}
+-	if (unlikely(test_bit(SDF_WITHDRAWN, &sdp->sd_flags)))
++	if (unlikely(gfs2_withdrawn(sdp)))
+ 		return -EIO;
+ 
+ 	return 0;
+diff --git a/fs/gfs2/ops_fstype.c b/fs/gfs2/ops_fstype.c
+index 0caa14a460dd..811a2df9c531 100644
+--- a/fs/gfs2/ops_fstype.c
++++ b/fs/gfs2/ops_fstype.c
+@@ -1017,8 +1017,7 @@ static int gfs2_lm_mount(struct gfs2_sbd *sdp, int silent)
+ void gfs2_lm_unmount(struct gfs2_sbd *sdp)
+ {
+ 	const struct lm_lockops *lm = sdp->sd_lockstruct.ls_ops;
+-	if (likely(!test_bit(SDF_WITHDRAWN, &sdp->sd_flags)) &&
+-	    lm->lm_unmount)
++	if (likely(!gfs2_withdrawn(sdp)) && lm->lm_unmount)
+ 		lm->lm_unmount(sdp);
+ }
+ 
+diff --git a/fs/gfs2/quota.c b/fs/gfs2/quota.c
+index a8a7523c4e7c..0a430da45b2a 100644
+--- a/fs/gfs2/quota.c
++++ b/fs/gfs2/quota.c
+@@ -1488,7 +1488,7 @@ static void quotad_error(struct gfs2_sbd *sdp, const char *msg, int error)
+ {
+ 	if (error == 0 || error == -EROFS)
+ 		return;
+-	if (!test_bit(SDF_WITHDRAWN, &sdp->sd_flags)) {
++	if (!gfs2_withdrawn(sdp)) {
+ 		fs_err(sdp, "gfs2_quotad: %s error %d\n", msg, error);
+ 		sdp->sd_log_error = error;
+ 		wake_up(&sdp->sd_logd_waitq);
+diff --git a/fs/gfs2/super.c b/fs/gfs2/super.c
+index 44f2b2f230f9..e2c98ff5ae7b 100644
+--- a/fs/gfs2/super.c
++++ b/fs/gfs2/super.c
+@@ -808,7 +808,7 @@ static void gfs2_dirty_inode(struct inode *inode, int flags)
+ 
+ 	if (!(flags & I_DIRTY_INODE))
+ 		return;
+-	if (unlikely(test_bit(SDF_WITHDRAWN, &sdp->sd_flags)))
++	if (unlikely(gfs2_withdrawn(sdp)))
+ 		return;
+ 	if (!gfs2_glock_is_locked_by_me(ip->i_gl)) {
+ 		ret = gfs2_glock_nq_init(ip->i_gl, LM_ST_EXCLUSIVE, 0, &gh);
+@@ -857,7 +857,7 @@ static int gfs2_make_fs_ro(struct gfs2_sbd *sdp)
+ 
+ 	error = gfs2_glock_nq_init(sdp->sd_freeze_gl, LM_ST_SHARED, GL_NOCACHE,
+ 				   &freeze_gh);
+-	if (error && !test_bit(SDF_WITHDRAWN, &sdp->sd_flags))
++	if (error && !gfs2_withdrawn(sdp))
+ 		return error;
+ 
+ 	flush_workqueue(gfs2_delete_workqueue);
+@@ -1019,7 +1019,7 @@ static int gfs2_freeze(struct super_block *sb)
+ 		goto out;
+ 	}
+ 
+-	if (test_bit(SDF_WITHDRAWN, &sdp->sd_flags)) {
++	if (gfs2_withdrawn(sdp)) {
+ 		error = -EINVAL;
+ 		goto out;
+ 	}
+diff --git a/fs/gfs2/sys.c b/fs/gfs2/sys.c
+index 10793c16ce13..54321d398cc4 100644
+--- a/fs/gfs2/sys.c
++++ b/fs/gfs2/sys.c
+@@ -121,7 +121,7 @@ static ssize_t freeze_store(struct gfs2_sbd *sdp, const char *buf, size_t len)
+ 
+ static ssize_t withdraw_show(struct gfs2_sbd *sdp, char *buf)
+ {
+-	unsigned int b = test_bit(SDF_WITHDRAWN, &sdp->sd_flags);
++	unsigned int b = gfs2_withdrawn(sdp);
+ 	return snprintf(buf, PAGE_SIZE, "%u\n", b);
+ }
+ 
+diff --git a/fs/gfs2/util.c b/fs/gfs2/util.c
+index 04056b136ff0..170e851393b4 100644
+--- a/fs/gfs2/util.c
++++ b/fs/gfs2/util.c
+@@ -261,7 +261,7 @@ void gfs2_io_error_bh_i(struct gfs2_sbd *sdp, struct buffer_head *bh,
+ 			const char *function, char *file, unsigned int line,
+ 			bool withdraw)
+ {
+-	if (!test_bit(SDF_WITHDRAWN, &sdp->sd_flags))
++	if (!gfs2_withdrawn(sdp))
+ 		fs_err(sdp,
+ 		       "fatal: I/O error\n"
+ 		       "  block = %llu\n"
+diff --git a/fs/gfs2/util.h b/fs/gfs2/util.h
+index 9278fecba632..177fc13e3dad 100644
+--- a/fs/gfs2/util.h
++++ b/fs/gfs2/util.h
+@@ -167,6 +167,15 @@ static inline unsigned int gfs2_tune_get_i(struct gfs2_tune *gt,
+ 	return x;
+ }
+ 
++/**
++ * gfs2_withdrawn - test whether the file system is withdrawing or withdrawn
++ * @sdp: the superblock
++ */
++static inline bool gfs2_withdrawn(struct gfs2_sbd *sdp)
++{
++	return test_bit(SDF_WITHDRAWN, &sdp->sd_flags);
++}
++
+ #define gfs2_tune_get(sdp, field) \
+ gfs2_tune_get_i(&(sdp)->sd_tune, &(sdp)->sd_tune.field)
+ 

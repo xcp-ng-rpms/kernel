@@ -1,0 +1,26 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Vates Git Importer <gitimporter@vates.tech>
+Date: Sat, 19 Sep 2015 07:09:42 +0100
+Subject: [PATCH] SDEV_EVT_LUN_CHANGE_REPORTED events should only be reported
+ when we're not expecting the LUN change. Lest it may trigger udev rules which
+ in turn trigger more LUN change events.
+
+Signed-off-by: Gerald Elder-Vass <gerald.elder-vass@cloud.com>
+---
+ drivers/scsi/scsi_error.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/scsi/scsi_error.c b/drivers/scsi/scsi_error.c
+index e731af504f07..0ae411913217 100644
+--- a/drivers/scsi/scsi_error.c
++++ b/drivers/scsi/scsi_error.c
+@@ -418,7 +418,8 @@ static void scsi_report_sense(struct scsi_device *sdev,
+ 			sdev_printk(KERN_WARNING, sdev,
+ 				    "Inquiry data has changed");
+ 		} else if (sshdr->asc == 0x3f && sshdr->ascq == 0x0e) {
+-			evt_type = SDEV_EVT_LUN_CHANGE_REPORTED;
++			if (!sdev->sdev_target->expecting_lun_change)
++				evt_type = SDEV_EVT_LUN_CHANGE_REPORTED;
+ 			scsi_report_lun_change(sdev);
+ 			sdev_printk(KERN_WARNING, sdev,
+ 				    "Warning! Received an indication that the "
