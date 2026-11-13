@@ -1,0 +1,89 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Vates Git Importer <gitimporter@vates.tech>
+Date: Sat, 19 Sep 2015 07:09:42 +0100
+Subject: [PATCH] expose-xsversion
+
+---
+ fs/proc/version.c      |  7 +++++++
+ include/linux/printk.h |  1 +
+ init/version.c         |  5 +++++
+ scripts/mkcompile_h    | 12 ++++++++++++
+ 4 files changed, 25 insertions(+)
+
+diff --git a/fs/proc/version.c b/fs/proc/version.c
+index b449f186577f..c556feac8c44 100644
+--- a/fs/proc/version.c
++++ b/fs/proc/version.c
+@@ -15,9 +15,16 @@ static int version_proc_show(struct seq_file *m, void *v)
+ 	return 0;
+ }
+ 
++static int xsversion_proc_show(struct seq_file *m, void *v)
++{
++	seq_printf(m, xs_proc_banner);
++	return 0;
++}
++
+ static int __init proc_version_init(void)
+ {
+ 	proc_create_single("version", 0, NULL, version_proc_show);
++	proc_create_single("xsversion", 0, NULL, xsversion_proc_show);
+ 	return 0;
+ }
+ fs_initcall(proc_version_init);
+diff --git a/include/linux/printk.h b/include/linux/printk.h
+index f4d7e643f010..7f97485224d3 100644
+--- a/include/linux/printk.h
++++ b/include/linux/printk.h
+@@ -10,6 +10,7 @@
+ 
+ extern const char linux_banner[];
+ extern const char linux_proc_banner[];
++extern const char xs_proc_banner[];
+ 
+ #define PRINTK_MAX_SINGLE_HEADER_LEN 2
+ 
+diff --git a/init/version.c b/init/version.c
+index ef4012ec4375..8ce3e2bc86f1 100644
+--- a/init/version.c
++++ b/init/version.c
+@@ -51,4 +51,9 @@ const char linux_proc_banner[] =
+ 	" (" LINUX_COMPILE_BY "@" LINUX_COMPILE_HOST ")"
+ 	" (" LINUX_COMPILER ") %s\n";
+ 
++const char xs_proc_banner[] =
++	"rpm_version " XS_VERSION "\n"
++	"base_commit " XS_BASE_COMMIT "\n"
++	"pq_commit   " XS_PQ_COMMIT "\n";
++
+ BUILD_SALT;
+diff --git a/scripts/mkcompile_h b/scripts/mkcompile_h
+index 30ac50f3f2ba..10175ae64d31 100755
+--- a/scripts/mkcompile_h
++++ b/scripts/mkcompile_h
+@@ -33,6 +33,14 @@ else
+ 	VERSION=$KBUILD_BUILD_VERSION
+ fi
+ 
++if [ -f .xsversion ]; then
++    . ./.xsversion
++else
++    XS_VERSION=dev
++    XS_BASE_COMMIT=unknown
++    XS_PQ_COMMIT=unknown
++fi
++
+ if [ -z "$KBUILD_BUILD_TIMESTAMP" ]; then
+ 	TIMESTAMP=`date`
+ else
+@@ -73,6 +81,10 @@ UTS_TRUNCATE="cut -b -$UTS_LEN"
+   echo \#define LINUX_COMPILE_HOST \"`echo $LINUX_COMPILE_HOST | $UTS_TRUNCATE`\"
+ 
+   echo \#define LINUX_COMPILER \"`$CC -v 2>&1 | grep ' version ' | sed 's/[[:space:]]*$//'`\"
++
++  echo \#define XS_VERSION \"$XS_VERSION\"
++  echo \#define XS_BASE_COMMIT \"$XS_BASE_COMMIT\"
++  echo \#define XS_PQ_COMMIT \"$XS_PQ_COMMIT\"
+ ) > .tmpcompile
+ 
+ # Only replace the real compile.h if the new one is different,

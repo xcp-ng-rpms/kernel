@@ -1,0 +1,119 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Bob Peterson <rpeterso@redhat.com>
+Date: Wed, 8 Jan 2020 11:37:30 -0600
+Subject: [PATCH] gfs2: flesh out delayed withdraw for gfs2_log_flush
+
+Function gfs2_log_flush() had a few places where it tried to withdraw
+from the file system when errors were encountered. The problem is,
+it should delay those withdraws until the log flush lock is no longer
+held.
+
+This patch creates a new function just for delayed withdraws for
+situations like this. If errors=panic was specified on mount, we
+still want to do it the old fashioned way because the panic it does
+not help to delay in that situation.
+
+Signed-off-by: Bob Peterson <rpeterso@redhat.com>
+Reviewed-by: Andreas Gruenbacher <agruenba@redhat.com>
+---
+ fs/gfs2/log.c  | 12 ++++++++----
+ fs/gfs2/util.c | 27 +++++++++++++++++++++------
+ fs/gfs2/util.h | 14 ++++++++++++--
+ 3 files changed, 41 insertions(+), 12 deletions(-)
+
+diff --git a/fs/gfs2/log.c b/fs/gfs2/log.c
+index c219c4dacafc..caa83512edae 100644
+--- a/fs/gfs2/log.c
++++ b/fs/gfs2/log.c
+@@ -873,13 +873,17 @@ void gfs2_log_flush(struct gfs2_sbd *sdp, struct gfs2_glock *gl, u32 flags)
+ 		sdp->sd_log_tr = NULL;
+ 		tr->tr_first = sdp->sd_log_flush_head;
+ 		if (unlikely (state == SFS_FROZEN))
+-			gfs2_assert_withdraw(sdp, !tr->tr_num_buf_new && !tr->tr_num_databuf_new);
++			if (gfs2_assert_withdraw_delayed(sdp,
++			       !tr->tr_num_buf_new && !tr->tr_num_databuf_new))
++				goto out;
+ 	}
+ 
+ 	if (unlikely(state == SFS_FROZEN))
+-		gfs2_assert_withdraw(sdp, !sdp->sd_log_num_revoke);
+-	gfs2_assert_withdraw(sdp,
+-			sdp->sd_log_num_revoke == sdp->sd_log_committed_revoke);
++		if (gfs2_assert_withdraw_delayed(sdp, !sdp->sd_log_num_revoke))
++			goto out;
++	if (gfs2_assert_withdraw_delayed(sdp,
++			sdp->sd_log_num_revoke == sdp->sd_log_committed_revoke))
++		goto out;
+ 
+ 	gfs2_ordered_write(sdp);
+ 	if (gfs2_withdrawn(sdp))
+diff --git a/fs/gfs2/util.c b/fs/gfs2/util.c
+index bf8bb08d21fd..adafa2131198 100644
+--- a/fs/gfs2/util.c
++++ b/fs/gfs2/util.c
+@@ -321,13 +321,28 @@ int gfs2_withdraw(struct gfs2_sbd *sdp)
+  */
+ 
+ void gfs2_assert_withdraw_i(struct gfs2_sbd *sdp, char *assertion,
+-			    const char *function, char *file, unsigned int line)
++			    const char *function, char *file, unsigned int line,
++			    bool delayed)
+ {
+-	gfs2_lm(sdp,
+-		"fatal: assertion \"%s\" failed\n"
+-		"   function = %s, file = %s, line = %u\n",
+-		assertion, function, file, line);
+-	gfs2_withdraw(sdp);
++	if (gfs2_withdrawn(sdp))
++		return;
++
++	fs_err(sdp,
++	       "fatal: assertion \"%s\" failed\n"
++	       "   function = %s, file = %s, line = %u\n",
++	       assertion, function, file, line);
++
++	/*
++	 * If errors=panic was specified on mount, it won't help to delay the
++	 * withdraw.
++	 */
++	if (sdp->sd_args.ar_errors == GFS2_ERRORS_PANIC)
++		delayed = false;
++
++	if (delayed)
++		gfs2_withdraw_delayed(sdp);
++	else
++		gfs2_withdraw(sdp);
+ 	dump_stack();
+ }
+ 
+diff --git a/fs/gfs2/util.h b/fs/gfs2/util.h
+index a3776051c11b..004837a6a593 100644
+--- a/fs/gfs2/util.h
++++ b/fs/gfs2/util.h
+@@ -40,14 +40,24 @@ do { \
+ 
+ 
+ void gfs2_assert_withdraw_i(struct gfs2_sbd *sdp, char *assertion,
+-			    const char *function, char *file, unsigned int line);
++			    const char *function, char *file, unsigned int line,
++			    bool delayed);
+ 
+ #define gfs2_assert_withdraw(sdp, assertion) \
+ 	({ \
+ 		bool _bool = (assertion); \
+ 		if (unlikely(!_bool)) \
+ 			gfs2_assert_withdraw_i((sdp), #assertion, \
+-					__func__, __FILE__, __LINE__); \
++					__func__, __FILE__, __LINE__, false); \
++		!_bool; \
++	})
++
++#define gfs2_assert_withdraw_delayed(sdp, assertion) \
++	({ \
++		bool _bool = (assertion); \
++		if (unlikely(!_bool)) \
++			gfs2_assert_withdraw_i((sdp), #assertion, \
++					__func__, __FILE__, __LINE__, true); \
+ 		!_bool; \
+ 	})
+ 

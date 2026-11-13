@@ -1,0 +1,48 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Vates Git Importer <gitimporter@vates.tech>
+Date: Sat, 19 Sep 2015 07:09:42 +0100
+Subject: [PATCH] Some devices advertise FLReset+ but do not support it. Add a
+ quirk for some devices to fallback to an alternate reset method.
+
+Signed-off-by: Ross Lagerwall <ross.lagerwall@citrix.com>
+---
+ drivers/pci/quirks.c    | 12 ++++++++++++
+ include/linux/pci_ids.h |  2 ++
+ 2 files changed, 14 insertions(+)
+
+diff --git a/drivers/pci/quirks.c b/drivers/pci/quirks.c
+index f83c0b2ded01..ec346a0244cb 100644
+--- a/drivers/pci/quirks.c
++++ b/drivers/pci/quirks.c
+@@ -3559,6 +3559,18 @@ static void quirk_no_pm_reset(struct pci_dev *dev)
+ DECLARE_PCI_FIXUP_CLASS_HEADER(PCI_VENDOR_ID_ATI, PCI_ANY_ID,
+ 			       PCI_CLASS_DISPLAY_VGA, 8, quirk_no_pm_reset);
+ 
++static void quirk_no_flr_reset(struct pci_dev *dev)
++{
++	dev->dev_flags |= PCI_DEV_FLAGS_NO_FLR_RESET;
++}
++
++DECLARE_PCI_FIXUP_CLASS_HEADER(PCI_VENDOR_ID_LSI_LOGIC,
++			       PCI_DEVICE_ID_LSI_SAS3008,
++			       PCI_CLASS_STORAGE_SAS, 8, quirk_no_flr_reset);
++DECLARE_PCI_FIXUP_CLASS_HEADER(PCI_VENDOR_ID_LSI_LOGIC,
++			       PCI_DEVICE_ID_LSI_MEGARAID_3108,
++			       PCI_CLASS_STORAGE_SAS, 8, quirk_no_flr_reset);
++
+ /*
+  * Spectrum-{1,2,3,4} devices report that a D3hot->D0 transition causes a reset
+  * (i.e., they advertise NoSoftRst-). However, this transition does not have
+diff --git a/include/linux/pci_ids.h b/include/linux/pci_ids.h
+index 44a3de802cc1..bd695e298128 100644
+--- a/include/linux/pci_ids.h
++++ b/include/linux/pci_ids.h
+@@ -227,6 +227,8 @@
+ #define PCI_DEVICE_ID_LSI_SAS1066E	0x005A
+ #define PCI_DEVICE_ID_LSI_SAS1068E	0x0058
+ #define PCI_DEVICE_ID_LSI_SAS1078	0x0060
++#define PCI_DEVICE_ID_LSI_SAS3008       0x0097
++#define PCI_DEVICE_ID_LSI_MEGARAID_3108 0x005d
+ 
+ #define PCI_VENDOR_ID_ATI		0x1002
+ /* Mach64 */

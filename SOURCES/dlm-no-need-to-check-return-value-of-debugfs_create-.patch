@@ -1,0 +1,136 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Date: Wed, 12 Jun 2019 17:25:36 +0200
+Subject: [PATCH] dlm: no need to check return value of debugfs_create
+ functions
+
+When calling debugfs functions, there is no need to ever check the
+return value.  The function can work or not, but the code logic should
+never do something different based on this.
+
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: David Teigland <teigland@redhat.com>
+---
+ fs/dlm/debug_fs.c     | 21 ++-------------------
+ fs/dlm/dlm_internal.h |  8 ++++----
+ fs/dlm/main.c         |  5 +----
+ 3 files changed, 7 insertions(+), 27 deletions(-)
+
+diff --git a/fs/dlm/debug_fs.c b/fs/dlm/debug_fs.c
+index bb87dad03cd4..83b169e9774c 100644
+--- a/fs/dlm/debug_fs.c
++++ b/fs/dlm/debug_fs.c
+@@ -740,7 +740,7 @@ void dlm_delete_debug_file(struct dlm_ls *ls)
+ 	debugfs_remove(ls->ls_debug_toss_dentry);
+ }
+ 
+-int dlm_create_debug_file(struct dlm_ls *ls)
++void dlm_create_debug_file(struct dlm_ls *ls)
+ {
+ 	char name[DLM_LOCKSPACE_LEN + 8];
+ 
+@@ -751,8 +751,6 @@ int dlm_create_debug_file(struct dlm_ls *ls)
+ 						      dlm_root,
+ 						      ls,
+ 						      &format1_fops);
+-	if (!ls->ls_debug_rsb_dentry)
+-		goto fail;
+ 
+ 	/* format 2 */
+ 
+@@ -764,8 +762,6 @@ int dlm_create_debug_file(struct dlm_ls *ls)
+ 							dlm_root,
+ 							ls,
+ 							&format2_fops);
+-	if (!ls->ls_debug_locks_dentry)
+-		goto fail;
+ 
+ 	/* format 3 */
+ 
+@@ -777,8 +773,6 @@ int dlm_create_debug_file(struct dlm_ls *ls)
+ 						      dlm_root,
+ 						      ls,
+ 						      &format3_fops);
+-	if (!ls->ls_debug_all_dentry)
+-		goto fail;
+ 
+ 	/* format 4 */
+ 
+@@ -790,8 +784,6 @@ int dlm_create_debug_file(struct dlm_ls *ls)
+ 						       dlm_root,
+ 						       ls,
+ 						       &format4_fops);
+-	if (!ls->ls_debug_toss_dentry)
+-		goto fail;
+ 
+ 	memset(name, 0, sizeof(name));
+ 	snprintf(name, DLM_LOCKSPACE_LEN + 8, "%s_waiters", ls->ls_name);
+@@ -801,21 +793,12 @@ int dlm_create_debug_file(struct dlm_ls *ls)
+ 							  dlm_root,
+ 							  ls,
+ 							  &waiters_fops);
+-	if (!ls->ls_debug_waiters_dentry)
+-		goto fail;
+-
+-	return 0;
+-
+- fail:
+-	dlm_delete_debug_file(ls);
+-	return -ENOMEM;
+ }
+ 
+-int __init dlm_register_debugfs(void)
++void __init dlm_register_debugfs(void)
+ {
+ 	mutex_init(&debug_buf_lock);
+ 	dlm_root = debugfs_create_dir("dlm", NULL);
+-	return dlm_root ? 0 : -ENOMEM;
+ }
+ 
+ void dlm_unregister_debugfs(void)
+diff --git a/fs/dlm/dlm_internal.h b/fs/dlm/dlm_internal.h
+index cb287df13a7a..f79cfca188bf 100644
+--- a/fs/dlm/dlm_internal.h
++++ b/fs/dlm/dlm_internal.h
+@@ -720,14 +720,14 @@ int dlm_plock_init(void);
+ void dlm_plock_exit(void);
+ 
+ #ifdef CONFIG_DLM_DEBUG
+-int dlm_register_debugfs(void);
++void dlm_register_debugfs(void);
+ void dlm_unregister_debugfs(void);
+-int dlm_create_debug_file(struct dlm_ls *ls);
++void dlm_create_debug_file(struct dlm_ls *ls);
+ void dlm_delete_debug_file(struct dlm_ls *ls);
+ #else
+-static inline int dlm_register_debugfs(void) { return 0; }
++static inline void dlm_register_debugfs(void) { }
+ static inline void dlm_unregister_debugfs(void) { }
+-static inline int dlm_create_debug_file(struct dlm_ls *ls) { return 0; }
++static inline void dlm_create_debug_file(struct dlm_ls *ls) { }
+ static inline void dlm_delete_debug_file(struct dlm_ls *ls) { }
+ #endif
+ 
+diff --git a/fs/dlm/main.c b/fs/dlm/main.c
+index 8e1b618891be..a020ef8558cb 100644
+--- a/fs/dlm/main.c
++++ b/fs/dlm/main.c
+@@ -37,9 +37,7 @@ static int __init init_dlm(void)
+ 	if (error)
+ 		goto out_lockspace;
+ 
+-	error = dlm_register_debugfs();
+-	if (error)
+-		goto out_config;
++	dlm_register_debugfs();
+ 
+ 	error = dlm_user_init();
+ 	if (error)
+@@ -63,7 +61,6 @@ static int __init init_dlm(void)
+ 	dlm_user_exit();
+  out_debug:
+ 	dlm_unregister_debugfs();
+- out_config:
+ 	dlm_config_exit();
+  out_lockspace:
+ 	dlm_lockspace_exit();

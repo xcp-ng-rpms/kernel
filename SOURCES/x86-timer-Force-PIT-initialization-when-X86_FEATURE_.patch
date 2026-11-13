@@ -1,0 +1,39 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Jan Stancek <jstancek@redhat.com>
+Date: Sun, 8 Sep 2019 00:50:40 +0200
+Subject: [PATCH] x86/timer: Force PIT initialization when !X86_FEATURE_ARAT
+
+KVM guests with commit c8c4076723da ("x86/timer: Skip PIT initialization on
+modern chipsets") applied to guest kernel have been observed to have
+unusually higher CPU usage with symptoms of increase in vm exits for HLT
+and MSW_WRITE (MSR_IA32_TSCDEADLINE).
+
+This is caused by older QEMUs lacking support for X86_FEATURE_ARAT.  lapic
+clock retains CLOCK_EVT_FEAT_C3STOP and nohz stays inactive.  There's no
+usable broadcast device either.
+
+Do the PIT initialization if guest CPU lacks X86_FEATURE_ARAT.  On real
+hardware it shouldn't matter as ARAT and DEADLINE come together.
+
+Fixes: c8c4076723da ("x86/timer: Skip PIT initialization on modern chipsets")
+Signed-off-by: Jan Stancek <jstancek@redhat.com>
+Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
+---
+ arch/x86/kernel/apic/apic.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/arch/x86/kernel/apic/apic.c b/arch/x86/kernel/apic/apic.c
+index ee5e47b14740..008185e9dc53 100644
+--- a/arch/x86/kernel/apic/apic.c
++++ b/arch/x86/kernel/apic/apic.c
+@@ -824,6 +824,10 @@ bool __init apic_needs_pit(void)
+ 	if (!boot_cpu_has(X86_FEATURE_APIC))
+ 		return true;
+ 
++	/* Virt guests may lack ARAT, but still have DEADLINE */
++	if (!boot_cpu_has(X86_FEATURE_ARAT))
++		return true;
++
+ 	/* Deadline timer is based on TSC so no further PIT action required */
+ 	if (boot_cpu_has(X86_FEATURE_TSC_DEADLINE_TIMER))
+ 		return false;

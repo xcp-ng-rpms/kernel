@@ -1,0 +1,31 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+Date: Mon, 5 Jan 2026 20:26:52 +0100
+Subject: [PATCH] abi-version
+
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+
+[Quentin: version number conflicts in Makefile due to rebase from v4.19.19
+to v4.19.325]
+
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+---
+ Makefile | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index 0c829cb17a68..5a04894554a1 100644
+--- a/Makefile
++++ b/Makefile
+@@ -1,8 +1,9 @@
+ # SPDX-License-Identifier: GPL-2.0
+ VERSION = 4
+ PATCHLEVEL = 19
+-SUBLEVEL = 325
+-EXTRAVERSION =
++SUBLEVEL = 0
++EXTRAVERSION = +1
++STABLE_SUBLEVEL = 325
+ NAME = "People's Front"
+ 
+ # *DOCUMENTATION*

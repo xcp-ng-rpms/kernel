@@ -1,0 +1,203 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Bob Peterson <rpeterso@redhat.com>
+Date: Fri, 5 Apr 2019 04:41:38 +0100
+Subject: [PATCH] gfs2: Replace gl_revokes with a GLF flag
+
+The gl_revokes value determines how many outstanding revokes a glock has
+on the superblock revokes list; this is used to avoid unnecessary log
+flushes.  However, gl_revokes is only ever tested for being zero, and it's
+only decremented in revoke_lo_after_commit, which removes all revokes
+from the list, so we know that the gl_revoke values of all the glocks on
+the list will reach zero.  Therefore, we can replace gl_revokes with a
+bit flag. This saves an atomic counter in struct gfs2_glock.
+
+Signed-off-by: Bob Peterson <rpeterso@redhat.com>
+Signed-off-by: Andreas Gruenbacher <agruenba@redhat.com>
+[Quentin: rebase from v4.19.19 to v4.19.325-cip136 conflicts:
+ - fs/gfs2/lops.c: 0809e1087c3d ("gfs2: fix glock reference problem in
+   gfs2_trans_remove_revoke") moved the gl_revokes decrement into the new
+   gfs2_glock_remove_revoke() helper.  Took the GLF_REVOKES version of
+   revoke_lo_after_commit().
+ - fs/gfs2/{log.c,log.h,trans.c}: removed gfs2_glock_remove_revoke() and
+   its gfs2_trans_add_unrevoke() caller, as gl_revokes no longer exists,
+   matching the XenServer tree at this point of the patch-queue.  Both are
+   restored by the revert of this commit later in the patch-queue.]
+
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+---
+ fs/gfs2/glock.c  |  4 ++--
+ fs/gfs2/incore.h |  2 +-
+ fs/gfs2/log.c    | 12 +++---------
+ fs/gfs2/log.h    |  1 -
+ fs/gfs2/lops.c   | 32 +++++++++++++++++++++++++-------
+ fs/gfs2/main.c   |  1 -
+ fs/gfs2/super.c  |  2 +-
+ fs/gfs2/trans.c  |  2 --
+ 8 files changed, 32 insertions(+), 24 deletions(-)
+
+diff --git a/fs/gfs2/glock.c b/fs/gfs2/glock.c
+index b0cfd5280ae0..e9f33a65251a 100644
+--- a/fs/gfs2/glock.c
++++ b/fs/gfs2/glock.c
+@@ -140,7 +140,7 @@ void gfs2_glock_free(struct gfs2_glock *gl)
+ {
+ 	struct gfs2_sbd *sdp = gl->gl_name.ln_sbd;
+ 
+-	BUG_ON(atomic_read(&gl->gl_revokes));
++	BUG_ON(test_bit(GLF_REVOKES, &gl->gl_flags));
+ 	rhashtable_remove_fast(&gl_hash_table, &gl->gl_node, ht_parms);
+ 	smp_mb();
+ 	wake_up_glock(gl);
+@@ -1802,7 +1802,7 @@ void gfs2_dump_glock(struct seq_file *seq, struct gfs2_glock *gl)
+ 		  state2str(gl->gl_target),
+ 		  state2str(gl->gl_demote_state), dtime,
+ 		  atomic_read(&gl->gl_ail_count),
+-		  atomic_read(&gl->gl_revokes),
++		  test_bit(GLF_REVOKES, &gl->gl_flags) ? 1 : 0,
+ 		  (int)gl->gl_lockref.count, gl->gl_hold_time);
+ 
+ 	list_for_each_entry(gh, &gl->gl_holders, gh_list)
+diff --git a/fs/gfs2/incore.h b/fs/gfs2/incore.h
+index 86840a70ee1a..6a94b094a904 100644
+--- a/fs/gfs2/incore.h
++++ b/fs/gfs2/incore.h
+@@ -345,6 +345,7 @@ enum {
+ 	GLF_OBJECT			= 14, /* Used only for tracing */
+ 	GLF_BLOCKING			= 15,
+ 	GLF_INODE_CREATING		= 16, /* Inode creation occurring */
++	GLF_REVOKES			= 17, /* Glock has revokes in queue */
+ };
+ 
+ struct gfs2_glock {
+@@ -374,7 +375,6 @@ struct gfs2_glock {
+ 	struct list_head gl_lru;
+ 	struct list_head gl_ail_list;
+ 	atomic_t gl_ail_count;
+-	atomic_t gl_revokes;
+ 	struct delayed_work gl_work;
+ 	union {
+ 		/* For inode and iopen glocks only */
+diff --git a/fs/gfs2/log.c b/fs/gfs2/log.c
+index 973df4023dff..3f0da7b271db 100644
+--- a/fs/gfs2/log.c
++++ b/fs/gfs2/log.c
+@@ -606,20 +606,14 @@ void gfs2_add_revoke(struct gfs2_sbd *sdp, struct gfs2_bufdata *bd)
+ 	gfs2_remove_from_ail(bd); /* drops ref on bh */
+ 	bd->bd_bh = NULL;
+ 	sdp->sd_log_num_revoke++;
+-	if (atomic_inc_return(&gl->gl_revokes) == 1)
++	if (!test_bit(GLF_REVOKES, &gl->gl_flags)) {
++		set_bit(GLF_REVOKES, &gl->gl_flags);
+ 		gfs2_glock_hold(gl);
++	}
+ 	set_bit(GLF_LFLUSH, &gl->gl_flags);
+ 	list_add(&bd->bd_list, &sdp->sd_log_le_revoke);
+ }
+ 
+-void gfs2_glock_remove_revoke(struct gfs2_glock *gl)
+-{
+-	if (atomic_dec_return(&gl->gl_revokes) == 0) {
+-		clear_bit(GLF_LFLUSH, &gl->gl_flags);
+-		gfs2_glock_queue_put(gl);
+-	}
+-}
+-
+ void gfs2_write_revokes(struct gfs2_sbd *sdp)
+ {
+ 	struct gfs2_trans *tr;
+diff --git a/fs/gfs2/log.h b/fs/gfs2/log.h
+index 907bb3f66038..86d07d436cdf 100644
+--- a/fs/gfs2/log.h
++++ b/fs/gfs2/log.h
+@@ -80,7 +80,6 @@ extern void gfs2_ail1_flush(struct gfs2_sbd *sdp, struct writeback_control *wbc)
+ extern void gfs2_log_shutdown(struct gfs2_sbd *sdp);
+ extern int gfs2_logd(void *data);
+ extern void gfs2_add_revoke(struct gfs2_sbd *sdp, struct gfs2_bufdata *bd);
+-extern void gfs2_glock_remove_revoke(struct gfs2_glock *gl);
+ extern void gfs2_write_revokes(struct gfs2_sbd *sdp);
+ 
+ #endif /* __LOG_DOT_H__ */
+diff --git a/fs/gfs2/lops.c b/fs/gfs2/lops.c
+index 42b97ea6f7b1..85793433e5e4 100644
+--- a/fs/gfs2/lops.c
++++ b/fs/gfs2/lops.c
+@@ -660,16 +660,34 @@ static void revoke_lo_before_commit(struct gfs2_sbd *sdp, struct gfs2_trans *tr)
+ static void revoke_lo_after_commit(struct gfs2_sbd *sdp, struct gfs2_trans *tr)
+ {
+ 	struct list_head *head = &sdp->sd_log_le_revoke;
+-	struct gfs2_bufdata *bd;
+-	struct gfs2_glock *gl;
++	struct gfs2_bufdata *bd, *tmp;
+ 
+-	while (!list_empty(head)) {
+-		bd = list_entry(head->next, struct gfs2_bufdata, bd_list);
+-		list_del_init(&bd->bd_list);
+-		gl = bd->bd_gl;
+-		gfs2_glock_remove_revoke(gl);
++	/*
++	 * Glocks can be referenced repeatedly on the revoke list, but the list
++	 * only holds one reference.  All glocks on the list will have the
++	 * GLF_REVOKES flag set initially.
++	 */
++
++	list_for_each_entry_safe(bd, tmp, head, bd_list) {
++		struct gfs2_glock *gl = bd->bd_gl;
++
++		if (test_bit(GLF_REVOKES, &gl->gl_flags)) {
++			/* Keep each glock on the list exactly once. */
++			clear_bit(GLF_REVOKES, &gl->gl_flags);
++			continue;
++		}
++		list_del(&bd->bd_list);
++		kmem_cache_free(gfs2_bufdata_cachep, bd);
++	}
++	list_for_each_entry_safe(bd, tmp, head, bd_list) {
++		struct gfs2_glock *gl = bd->bd_gl;
++
++		list_del(&bd->bd_list);
+ 		kmem_cache_free(gfs2_bufdata_cachep, bd);
++		clear_bit(GLF_LFLUSH, &gl->gl_flags);
++		gfs2_glock_queue_put(gl);
+ 	}
++	/* the list is empty now */
+ }
+ 
+ static void revoke_lo_before_scan(struct gfs2_jdesc *jd,
+diff --git a/fs/gfs2/main.c b/fs/gfs2/main.c
+index 136484ef35d3..c700738de1f7 100644
+--- a/fs/gfs2/main.c
++++ b/fs/gfs2/main.c
+@@ -59,7 +59,6 @@ static void gfs2_init_glock_once(void *foo)
+ 	INIT_LIST_HEAD(&gl->gl_lru);
+ 	INIT_LIST_HEAD(&gl->gl_ail_list);
+ 	atomic_set(&gl->gl_ail_count, 0);
+-	atomic_set(&gl->gl_revokes, 0);
+ }
+ 
+ static void gfs2_init_gl_aspace_once(void *foo)
+diff --git a/fs/gfs2/super.c b/fs/gfs2/super.c
+index fd7b5e783614..b720575adb81 100644
+--- a/fs/gfs2/super.c
++++ b/fs/gfs2/super.c
+@@ -1481,7 +1481,7 @@ static void gfs2_final_release_pages(struct gfs2_inode *ip)
+ 	truncate_inode_pages(gfs2_glock2aspace(ip->i_gl), 0);
+ 	truncate_inode_pages(&inode->i_data, 0);
+ 
+-	if (atomic_read(&gl->gl_revokes) == 0) {
++	if (!test_bit(GLF_REVOKES, &gl->gl_flags)) {
+ 		clear_bit(GLF_LFLUSH, &gl->gl_flags);
+ 		clear_bit(GLF_DIRTY, &gl->gl_flags);
+ 	}
+diff --git a/fs/gfs2/trans.c b/fs/gfs2/trans.c
+index 391afd4362f8..c5ea7b13dcf0 100644
+--- a/fs/gfs2/trans.c
++++ b/fs/gfs2/trans.c
+@@ -267,8 +267,6 @@ void gfs2_trans_add_unrevoke(struct gfs2_sbd *sdp, u64 blkno, unsigned int len)
+ 			list_del_init(&bd->bd_list);
+ 			gfs2_assert_withdraw(sdp, sdp->sd_log_num_revoke);
+ 			sdp->sd_log_num_revoke--;
+-			if (bd->bd_gl)
+-				gfs2_glock_remove_revoke(bd->bd_gl);
+ 			kmem_cache_free(gfs2_bufdata_cachep, bd);
+ 			tr->tr_num_revoke_rm++;
+ 			if (--n == 0)

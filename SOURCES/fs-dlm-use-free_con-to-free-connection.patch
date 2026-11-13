@@ -1,0 +1,34 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Alexander Aring <aahringo@redhat.com>
+Date: Thu, 27 Aug 2020 15:02:54 -0400
+Subject: [PATCH] fs: dlm: use free_con to free connection
+
+This patch use free_con() functionality to free the listen connection if
+listen fails. It also fixes an issue that a freed resource is still part
+of the connection_hash as hlist_del() is not called in this case. The
+only difference is that free_con() handles othercon as well, but this is
+never been set for the listen connection.
+
+Signed-off-by: Alexander Aring <aahringo@redhat.com>
+Signed-off-by: David Teigland <teigland@redhat.com>
+---
+ fs/dlm/lowcomms.c | 6 ++----
+ 1 file changed, 2 insertions(+), 4 deletions(-)
+
+diff --git a/fs/dlm/lowcomms.c b/fs/dlm/lowcomms.c
+index 5ed580ec5301..6cb70bcad725 100644
+--- a/fs/dlm/lowcomms.c
++++ b/fs/dlm/lowcomms.c
+@@ -1709,10 +1709,8 @@ int dlm_lowcomms_start(void)
+ fail_unlisten:
+ 	dlm_allow_conn = 0;
+ 	con = nodeid2con(0,0);
+-	if (con) {
+-		close_connection(con, false, true, true);
+-		kfree_rcu(con, rcu);
+-	}
++	if (con)
++		free_conn(con);
+ fail:
+ 	return error;
+ }

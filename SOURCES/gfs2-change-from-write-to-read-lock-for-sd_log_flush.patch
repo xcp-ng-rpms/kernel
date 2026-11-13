@@ -1,0 +1,38 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Bob Peterson <rpeterso@redhat.com>
+Date: Thu, 26 Mar 2020 12:22:05 -0500
+Subject: [PATCH] gfs2: change from write to read lock for sd_log_flush_lock in
+ journal replay
+
+Function gfs2_recover_func grabs the sd_log_flush_lock rw_semaphore in
+write mode. This is unnecessary because we only need to prevent log flush
+from using sd_log_bio bio while it does. Therefore, a read lock will be
+enough. This is a small step in cleaning up log flush.
+
+Signed-off-by: Bob Peterson <rpeterso@redhat.com>
+---
+ fs/gfs2/recovery.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/fs/gfs2/recovery.c b/fs/gfs2/recovery.c
+index b5bddf4f356a..5956a413ab92 100644
+--- a/fs/gfs2/recovery.c
++++ b/fs/gfs2/recovery.c
+@@ -404,7 +404,7 @@ void gfs2_recover_func(struct work_struct *work)
+ 		/* We take the sd_log_flush_lock here primarily to prevent log
+ 		 * flushes and simultaneous journal replays from stomping on
+ 		 * each other wrt sd_log_bio. */
+-		down_write(&sdp->sd_log_flush_lock);
++		down_read(&sdp->sd_log_flush_lock);
+ 		for (pass = 0; pass < 2; pass++) {
+ 			lops_before_scan(jd, &head, pass);
+ 			error = foreach_descriptor(jd, head.lh_tail,
+@@ -415,7 +415,7 @@ void gfs2_recover_func(struct work_struct *work)
+ 		}
+ 
+ 		clean_journal(jd, &head);
+-		up_write(&sdp->sd_log_flush_lock);
++		up_read(&sdp->sd_log_flush_lock);
+ 
+ 		gfs2_glock_dq_uninit(&thaw_gh);
+ 		t_rep = ktime_get();

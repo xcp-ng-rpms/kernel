@@ -1,0 +1,25 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Vates Git Importer <gitimporter@vates.tech>
+Date: Sat, 19 Sep 2015 07:09:42 +0100
+Subject: [PATCH] dom0 detects the presence of the ACPI PM timer but cannot
+ access it because Xen explicitly denies access. Keep it enabled in case it is
+ needed under kexec or for testing native boot but don't detect it for dom0.
+
+---
+ arch/x86/kernel/acpi/boot.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/arch/x86/kernel/acpi/boot.c b/arch/x86/kernel/acpi/boot.c
+index 2f0fa294d617..f71f536d384e 100644
+--- a/arch/x86/kernel/acpi/boot.c
++++ b/arch/x86/kernel/acpi/boot.c
+@@ -991,6 +991,9 @@ static int __init acpi_parse_fadt(struct acpi_table_header *table)
+ 	}
+ 
+ #ifdef CONFIG_X86_PM_TIMER
++	if (xen_initial_domain())
++		return 0;
++
+ 	/* detect the location of the ACPI PM Timer */
+ 	if (acpi_gbl_FADT.header.revision >= FADT2_REVISION_ID) {
+ 		/* FADT rev. 2 */

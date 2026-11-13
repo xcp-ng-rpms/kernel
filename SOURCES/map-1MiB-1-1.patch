@@ -1,0 +1,29 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Vates Git Importer <gitimporter@vates.tech>
+Date: Sat, 19 Sep 2015 07:09:42 +0100
+Subject: [PATCH] map-1MiB-1-1
+
+---
+ arch/x86/xen/setup.c | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/arch/x86/xen/setup.c b/arch/x86/xen/setup.c
+index 69fd1134b7fc..1518fb3134c8 100644
+--- a/arch/x86/xen/setup.c
++++ b/arch/x86/xen/setup.c
+@@ -774,8 +774,14 @@ char * __init xen_memory_setup(void)
+ 	 * UNUSABLE regions in domUs are not handled and will need
+ 	 * a patch in the future.
+ 	 */
+-	if (xen_initial_domain())
++	if (xen_initial_domain()) {
+ 		xen_ignore_unusable();
++		/* Reserve 0.5 MiB to 1 MiB region so iBFT can be found */
++		xen_e820_table.entries[xen_e820_table.nr_entries].addr = 0x80000;
++		xen_e820_table.entries[xen_e820_table.nr_entries].size = 0x80000;
++		xen_e820_table.entries[xen_e820_table.nr_entries].type = E820_TYPE_RESERVED;
++		xen_e820_table.nr_entries++;
++	}
+ 
+ 	/* Make sure the Xen-supplied memory map is well-ordered. */
+ 	e820__update_table(&xen_e820_table);

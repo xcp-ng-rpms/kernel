@@ -1,0 +1,26 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Alexander Aring <aahringo@redhat.com>
+Date: Wed, 3 Nov 2021 17:04:18 -0400
+Subject: [PATCH] fs: dlm: remove double list_first_entry call
+
+This patch removes a list_first_entry() call which is already done by
+the previous con_next_wq() call.
+
+Signed-off-by: Alexander Aring <aahringo@redhat.com>
+Signed-off-by: David Teigland <teigland@redhat.com>
+---
+ fs/dlm/lowcomms.c | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/fs/dlm/lowcomms.c b/fs/dlm/lowcomms.c
+index 88ce412d5651..04861834202e 100644
+--- a/fs/dlm/lowcomms.c
++++ b/fs/dlm/lowcomms.c
+@@ -1407,7 +1407,6 @@ static void send_to_sock(struct connection *con)
+ 		if (!e)
+ 			break;
+ 
+-		e = list_first_entry(&con->writequeue, struct writequeue_entry, list);
+ 		len = e->len;
+ 		offset = e->offset;
+ 		BUG_ON(len == 0 && e->users == 0);

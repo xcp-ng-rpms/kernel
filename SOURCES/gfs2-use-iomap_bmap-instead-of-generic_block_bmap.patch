@@ -1,0 +1,27 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Christoph Hellwig <hch@lst.de>
+Date: Mon, 1 Jul 2019 23:54:36 +0200
+Subject: [PATCH] gfs2: use iomap_bmap instead of generic_block_bmap
+
+No need to indirect through get_blocks and buffer_heads when we can just use
+the iomap version.
+
+Signed-off-by: Christoph Hellwig <hch@lst.de>
+Signed-off-by: Andreas Gruenbacher <agruenba@redhat.com>
+---
+ fs/gfs2/aops.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/fs/gfs2/aops.c b/fs/gfs2/aops.c
+index 7bc0528b18f1..c8439d96c853 100644
+--- a/fs/gfs2/aops.c
++++ b/fs/gfs2/aops.c
+@@ -697,7 +697,7 @@ static sector_t gfs2_bmap(struct address_space *mapping, sector_t lblock)
+ 		return 0;
+ 
+ 	if (!gfs2_is_stuffed(ip))
+-		dblock = generic_block_bmap(mapping, lblock, gfs2_block_map);
++		dblock = iomap_bmap(mapping, lblock, &gfs2_iomap_ops);
+ 
+ 	gfs2_glock_dq_uninit(&i_gh);
+ 
