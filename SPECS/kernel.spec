@@ -818,6 +818,10 @@ Patch1038: tools-headers-UAPI-Sync-linux-const.h-with-the-kerne.patch
 # Remove extra localversion-st to avoid koji errors
 Patch1039: localversion-st-rm-to-avoid-conflicts-with-yum-s-rpm.patch
 
+# Remove extra localversion-cip to avoid uname changes, so that kernel
+# modules stay in /lib/modules/4.19.0+1
+Patch1040: localversion-cip-remove-so-that-kernel-modules-are-s.patch
+
 %description
 The kernel package contains the Linux kernel (vmlinuz), the core of any
 Linux operating system. The kernel handles the basic functions of the operating

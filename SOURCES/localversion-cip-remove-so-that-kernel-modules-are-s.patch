@@ -1,0 +1,19 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+Date: Sat, 14 Nov 2026 14:40:12 +0100
+Subject: [PATCH] localversion-cip: remove so that kernel modules are still in
+ /lib/modules/4.19.0+1.
+
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+---
+ localversion-cip | 1 -
+ 1 file changed, 1 deletion(-)
+ delete mode 100644 localversion-cip
+
+diff --git a/localversion-cip b/localversion-cip
+deleted file mode 100644
+index c62c8992295e..000000000000
+--- a/localversion-cip
++++ /dev/null
+@@ -1 +0,0 @@
+--cip137
