@@ -45,7 +45,7 @@
 Name: kernel
 License: GPLv2
 Version: %{usver}
-Release: %{?xsrel}.16%{?dist}
+Release: %{?xsrel}.16.kernelpreview.1%{?dist}
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
@@ -1192,10 +1192,9 @@ fi
 
 %changelog
 
-#* Fri Nov 13 2026 Quentin Casasnovas <quentin.casasnovas@vates.tech> - 4.19.325-cip137.8.0.46.16.kernelpreview.1
-#- Rebase on top of v4.19.325-cip137
-#- Iterative fix to incomplete CVE-2026-64600 (RefluXFS)
-#
+* Fri Nov 13 2026 Quentin Casasnovas <quentin.casasnovas@vates.tech> - 4.19.325-cip137.8.0.46.16.kernelpreview.1
+- Rebase on top of v4.19.325-cip137
+- Iterative fix to incomplete CVE-2026-64600 (RefluXFS)
 
 * Tue Nov 10 2026 Quentin Casasnovas <quentin.casasnovas@vates.tech> - 4.19.19-8.0.46.16
 - Iterative fix to incomplete XSA-526 original fix - XSA-531 / CVE-2026-99286
