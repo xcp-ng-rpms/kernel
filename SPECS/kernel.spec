@@ -45,7 +45,7 @@
 Name: kernel
 License: GPLv2
 Version: %{usver}
-Release: %{?xsrel}.16%{?dist}
+Release: %{?xsrel}.16.1%{?dist}
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
@@ -1248,8 +1248,12 @@ fi
 
 %changelog
 
+* Mon Nov 16 2026 Quentin Casasnovas <quentin.casasnovas@vates.tech> - 4.19.325-cip137-8.0.46.16.1
+- Fix typo in changelog entry
+- Regenerate patches based on v4.19.325-cip137 to avoid context conflicts
+
 * Fri Nov 13 2026 Quentin Casasnovas <quentin.casasnovas@vates.tech> - 4.19.325-cip137-8.0.46.16
-- Rebase on top of v4.19.325-cip136
+- Rebase on top of v4.19.325-cip137
 
 * Tue Nov 10 2026 Quentin Casasnovas <quentin.casasnovas@vates.tech> - 4.19.19-8.0.46.16
 - Iterative fix to incomplete XSA-526 original fix - XSA-531 / CVE-2026-99286
