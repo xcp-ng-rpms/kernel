@@ -782,41 +782,42 @@ Patch1020: PCI-pciehp-Add-DMI-table-for-in-band-presence-detect.patch
 # Patch1022: 180def09bed2 ("net: openvswitch: fix possible kfree_skb of ERR_PTR")
 
 # CVE-2026-64600 (RefluXFS)
-Patch1023: xfs-resample-the-data-fork-mapping-after-cycling-ILO.patch
+Patch1023: xfs-update-fork-seq-counter-on-data-fork-changes.patch
+Patch1024: xfs-resample-the-data-fork-mapping-after-cycling-ILO.patch
 
 # https://github.com/xcp-ng/linux/pull/5
-# Patch1024: 242a3e0c75b6 ("SUNRPC: avoid race between mod_timer() and del_timer_sync()")
-# Patch1025: bcab4d551a3d ("SUNRPC: use _bh spinlocking on ->transport_lock")
-Patch1026: Revert-XSI-2150-Avoid-deadlocks-on-NFS-spinlocks.patch
+# Patch1025: 242a3e0c75b6 ("SUNRPC: avoid race between mod_timer() and del_timer_sync()")
+# Patch1026: bcab4d551a3d ("SUNRPC: use _bh spinlocking on ->transport_lock")
+Patch1027: Revert-XSI-2150-Avoid-deadlocks-on-NFS-spinlocks.patch
 
 # CVE-2026-98432
-# Patch1027: ("net: use rcu_dereference_protected to fetch sk_dst_cache in sk_destruct") was only there to minimize conflict
-# Patch1028: 75a578000ae5 ("inet: fully convert sk->sk_rx_dst to RCU rules")
-# Patch1029: ("!kabi inet: fully convert sk->sk_rx_dst to RCU rules") not required for the CIP rebase
-# Patch1030:  69c4a5f195a7 ("ipv4: free inet_opt and ireq_opt after an RCU grace period")
+# Patch1028: ("net: use rcu_dereference_protected to fetch sk_dst_cache in sk_destruct") was only there to minimize conflict
+# Patch1029: 75a578000ae5 ("inet: fully convert sk->sk_rx_dst to RCU rules")
+# Patch1030: ("!kabi inet: fully convert sk->sk_rx_dst to RCU rules") not required for the CIP rebase
+# Patch1031:  69c4a5f195a7 ("ipv4: free inet_opt and ireq_opt after an RCU grace period")
 
 # XSA-526 / CVE-2026-100080
-Patch1031: xen-netback-Fix-UAF-when-reading-statistics-data.patch
+Patch1032: xen-netback-Fix-UAF-when-reading-statistics-data.patch
 
 # XSA-527 / CVE-2026-100081
-# Patch1032: ccb02adf3293 ("xen/netback: fix error path of xenvif_connect_data()")
-Patch1033: xen-netback-defer-xenvif_mcast_addr_list_free.patch
+# Patch1033: ccb02adf3293 ("xen/netback: fix error path of xenvif_connect_data()")
+Patch1034: xen-netback-defer-xenvif_mcast_addr_list_free.patch
 
 # XSA-528 / CVE-2026-100082
-Patch1034: xen-blkback-Avoid-UAF-when-reading-I-O-statistics.patch
+Patch1035: xen-blkback-Avoid-UAF-when-reading-I-O-statistics.patch
 
 # Use-after-free in netback xenvif flush hash, suggested by Alex Brett
-# Patch1035: f1529ec771e4 ("net/xen-netback: prevent UAF in xenvif_flush_hash()")
+# Patch1036: f1529ec771e4 ("net/xen-netback: prevent UAF in xenvif_flush_hash()")
 
 # XSA-526 iterative fix, called XSA-531 / CVE-2026-99286
-Patch1036: xen-netback-Fix-XenBus-connection-failure-cleanup.patch
+Patch1037: xen-netback-Fix-XenBus-connection-failure-cleanup.patch
 
 # Perf build errors on linux-4.19.325-cip
-Patch1037: tools-headers-Grab-copy-of-linux-const.h-needed-by-l.patch
-Patch1038: tools-headers-UAPI-Sync-linux-const.h-with-the-kerne.patch
+Patch1038: tools-headers-Grab-copy-of-linux-const.h-needed-by-l.patch
+Patch1039: tools-headers-UAPI-Sync-linux-const.h-with-the-kerne.patch
 
 # Remove extra localversion-st to avoid koji errors
-Patch1039: localversion-st-rm-to-avoid-conflicts-with-yum-s-rpm.patch
+Patch1040: localversion-st-rm-to-avoid-conflicts-with-yum-s-rpm.patch
 
 %description
 The kernel package contains the Linux kernel (vmlinuz), the core of any
@@ -1190,6 +1191,7 @@ fi
 
 #* Fri Nov 13 2026 Quentin Casasnovas <quentin.casasnovas@vates.tech> - 4.19.325-cip137.8.0.46.16.kernelpreview.1
 #- Rebase on top of v4.19.325-cip137
+#- Iterative fix to incomplete CVE-2026-64600 (RefluXFS)
 #
 
 * Tue Nov 10 2026 Quentin Casasnovas <quentin.casasnovas@vates.tech> - 4.19.19-8.0.46.16
