@@ -1,9 +1,10 @@
 %global package_speccommit ab0ac59fd53959995355c0cc3d845e75e7d60f94
-%global usver 4.19.19
+%global usver 4.19.325
+%global cipver 137
 %global xsver 8.0.46
-%global xsrel %{xsver}%{?xscount}%{?xshash}
-%global package_srccommit refs/tags/v4.19.19
-%define uname 4.19.0+1
+%global xsrel cip%{cipver}.%{xsver}%{?xscount}%{?xshash}
+%global package_srccommit refs/tags/v%{usver}-cip%{cipver}
+%define uname 4.19.325-cip137
 %define short_uname 4.19
 %define srcpath /usr/src/kernels/%{uname}-%{_arch}
 
@@ -43,7 +44,7 @@
 
 Name: kernel
 License: GPLv2
-Version: 4.19.19
+Version: %{usver}
 Release: %{?xsrel}.16%{?dist}
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
@@ -86,7 +87,7 @@ Provides: kernel-%{_arch} = %{version}-%{release}
 Requires(post): coreutils kmod
 Requires(posttrans): coreutils dracut kmod
 
-Source0: kernel-4.19.19.tar.gz
+Source0: linux-cip-4.19.325-cip137.tar.gz
 Source1: kernel-x86_64.config
 Source2: macros.kernel
 %if %{do_kabichk}
@@ -171,7 +172,7 @@ print("unset p\\n")
 }
 
 %prep
-%autosetup -p1
+%autosetup -p1 -n linux-cip-%{version}-cip%{cipver}
 %{?_cov_prepare}
 
 %build
@@ -464,6 +465,11 @@ fi
 %{?_cov_results_package}
 
 %changelog
+
+#* Fri Nov 13 2026 Quentin Casasnovas <quentin.casasnovas@vates.tech> - 4.19.325-cip137.8.0.46.16.kernelpreview.1
+#- Rebase on top of v4.19.325-cip137
+#
+
 * Tue Nov 10 2026 Quentin Casasnovas <quentin.casasnovas@vates.tech> - 4.19.19-8.0.46.16
 - Iterative fix to incomplete XSA-526 original fix - XSA-531 / CVE-2026-99286
 
