@@ -1181,25 +1181,25 @@ fi
 
 %changelog
 
-# * Fri Nov 20 2026 Quentin Casasnovas <quentin.casasnovas@vates.tech> - 4.19.19-8.0.51.1
-# - Fix regression on AES-GCM encryption through AF_ALG
-# - Fix incomplete backport to CVE-2026-64600 (RefluXFS)
-# - Sync with 4.19.19-8.0.51
-# - *** Upstream changelog ***
-# - * Tue Nov 17 2026 Alex Brett <alex.brett@citrix.com> - 4.19.19-8.0.51
-#   - CA-433053: Fix for XSA-531 / CVE-2026-99286
-#   - CA-433124: Fix regressions from the AF_ALG concurrent-write backport
-#   - CA-433120: backport cifs: fail i/o on soft mounts if sessionsetup errors out
-#   - CA-433052: xen/swiotlb: Check the segment boundary in range_straddles_page_boundary()
-#   - CA-433291: Backport fix for NoisyTCP / CVE-2026-99288
-# - * Fri Nov 06 2026 Alex Brett <alex.brett@citrix.com> - 4.19.19-8.0.50
-#   - CA-432979: Fix for XSA-526 / CVE-2026-100080
-#   - CA-432980: Fix for XSA-527 / CVE-2026-100081
-#   - CA-432981: Fix for XSA-528 / CVE-2026-100082
-#   - Backport fix for xen-netback UAF in xenvif_flush_hash()
-# - * Fri Oct 30 2026 Alex Brett <alex.brett@citrix.com> - 4.19.19-8.0.49
-#   - CA-432848: Fix CVE-2021-47103 - sk_rx_dst use-after-free
-#   - CA-432848: Fix CVE-2026-98432 - ipv4 inet_opt use-after-free
+* Fri Nov 20 2026 Quentin Casasnovas <quentin.casasnovas@vates.tech> - 4.19.19-8.0.51.1
+- Fix regression on AES-GCM encryption through AF_ALG
+- Fix incomplete backport to CVE-2026-64600 (RefluXFS)
+- Sync with 4.19.19-8.0.51
+- *** Upstream changelog ***
+- * Tue Nov 17 2026 Alex Brett <alex.brett@citrix.com> - 4.19.19-8.0.51
+  - CA-433053: Fix for XSA-531 / CVE-2026-99286
+  - CA-433124: Fix regressions from the AF_ALG concurrent-write backport
+  - CA-433120: backport cifs: fail i/o on soft mounts if sessionsetup errors out
+  - CA-433052: xen/swiotlb: Check the segment boundary in range_straddles_page_boundary()
+  - CA-433291: Backport fix for NoisyTCP / CVE-2026-99288
+- * Fri Nov 06 2026 Alex Brett <alex.brett@citrix.com> - 4.19.19-8.0.50
+  - CA-432979: Fix for XSA-526 / CVE-2026-100080
+  - CA-432980: Fix for XSA-527 / CVE-2026-100081
+  - CA-432981: Fix for XSA-528 / CVE-2026-100082
+  - Backport fix for xen-netback UAF in xenvif_flush_hash()
+- * Fri Oct 30 2026 Alex Brett <alex.brett@citrix.com> - 4.19.19-8.0.49
+  - CA-432848: Fix CVE-2021-47103 - sk_rx_dst use-after-free
+  - CA-432848: Fix CVE-2026-98432 - ipv4 inet_opt use-after-free
 
 * Tue Nov 10 2026 Quentin Casasnovas <quentin.casasnovas@vates.tech> - 4.19.19-8.0.46.16
 - Iterative fix to incomplete XSA-526 original fix - XSA-531 / CVE-2026-99286
