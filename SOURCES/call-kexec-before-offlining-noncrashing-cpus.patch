@@ -1,8 +1,20 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Vates Git Importer <gitimporter@vates.tech>
+Date: Sat, 19 Sep 2015 07:09:42 +0100
+Subject: [PATCH] call-kexec-before-offlining-noncrashing-cpus
+
+---
+ arch/x86/include/asm/xen/hypercall.h |  7 +++++++
+ include/xen/interface/kexec.h        | 10 ++++++++++
+ kernel/panic.c                       | 12 ++++++++++++
+ 3 files changed, 29 insertions(+)
+ create mode 100644 include/xen/interface/kexec.h
+
 diff --git a/arch/x86/include/asm/xen/hypercall.h b/arch/x86/include/asm/xen/hypercall.h
-index ef05bea7010d..402874488e9f 100644
+index 6b5c710846f5..d66ba01478ac 100644
 --- a/arch/x86/include/asm/xen/hypercall.h
 +++ b/arch/x86/include/asm/xen/hypercall.h
-@@ -412,6 +412,13 @@ HYPERVISOR_hvm_op(int op, void *arg)
+@@ -415,6 +415,13 @@ HYPERVISOR_hvm_op(int op, void *arg)
         return _hypercall2(unsigned long, hvm_op, op, arg);
  }
  
@@ -33,11 +45,11 @@ index 000000000000..443df8adf8df
 +#endif
 +
 diff --git a/kernel/panic.c b/kernel/panic.c
-index 8b2e002d52eb..98cba19c8701 100644
+index 982ecba286c0..62de1048f40e 100644
 --- a/kernel/panic.c
 +++ b/kernel/panic.c
-@@ -30,6 +30,12 @@
- #include <linux/debugfs.h>
+@@ -32,6 +32,12 @@
+ #include <linux/sysfs.h>
  #include <asm/sections.h>
  
 +#ifdef CONFIG_XEN
@@ -49,7 +61,7 @@ index 8b2e002d52eb..98cba19c8701 100644
  #define PANIC_TIMER_STEP 100
  #define PANIC_BLINK_SPD 18
  
-@@ -184,6 +190,12 @@ void panic(const char *fmt, ...)
+@@ -250,6 +256,12 @@ void panic(const char *fmt, ...)
  		dump_stack();
  #endif
  

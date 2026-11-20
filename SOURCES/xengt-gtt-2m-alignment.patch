@@ -1,5 +1,15 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Vates Git Importer <gitimporter@vates.tech>
+Date: Sat, 19 Sep 2015 07:09:42 +0100
+Subject: [PATCH] xengt-gtt-2m-alignment
+
+---
+ drivers/gpu/drm/i915/gvt/aperture_gm.c | 2 +-
+ drivers/gpu/drm/i915/gvt/xengt.c       | 6 +++++-
+ 2 files changed, 6 insertions(+), 2 deletions(-)
+
 diff --git a/drivers/gpu/drm/i915/gvt/aperture_gm.c b/drivers/gpu/drm/i915/gvt/aperture_gm.c
-index 59c2681..61e7397 100644
+index 59c2681e0aa6..61e73979d6fa 100644
 --- a/drivers/gpu/drm/i915/gvt/aperture_gm.c
 +++ b/drivers/gpu/drm/i915/gvt/aperture_gm.c
 @@ -62,7 +62,7 @@ static int alloc_gm(struct intel_vgpu *vgpu, bool high_gm)
@@ -12,7 +22,7 @@ index 59c2681..61e7397 100644
  				  start, end, flags);
  	mutex_unlock(&dev_priv->drm.struct_mutex);
 diff --git a/drivers/gpu/drm/i915/gvt/xengt.c b/drivers/gpu/drm/i915/gvt/xengt.c
-index 8b4da45..c4ab8d7 100644
+index 8b4da45b82c8..c4ab8d7abfbb 100644
 --- a/drivers/gpu/drm/i915/gvt/xengt.c
 +++ b/drivers/gpu/drm/i915/gvt/xengt.c
 @@ -718,7 +718,7 @@ static int xen_hvm_memory_mapping(domid_t vm_id, uint64_t first_gfn,

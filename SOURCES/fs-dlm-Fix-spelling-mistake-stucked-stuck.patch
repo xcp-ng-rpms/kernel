@@ -1,0 +1,35 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Colin Ian King <colin.king@canonical.com>
+Date: Wed, 26 May 2021 09:53:39 +0100
+Subject: [PATCH] fs: dlm: Fix spelling mistake "stucked" -> "stuck"
+
+There are spelling mistake in log messages. Fix these.
+
+Signed-off-by: Colin Ian King <colin.king@canonical.com>
+Signed-off-by: David Teigland <teigland@redhat.com>
+---
+ fs/dlm/midcomms.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/fs/dlm/midcomms.c b/fs/dlm/midcomms.c
+index 6d927501e797..95c756b5f066 100644
+--- a/fs/dlm/midcomms.c
++++ b/fs/dlm/midcomms.c
+@@ -593,7 +593,7 @@ dlm_midcomms_recv_node_lookup(int nodeid, const union dlm_packet *p,
+ 					 * was failed, we try to reset and
+ 					 * hope it will go on.
+ 					 */
+-					log_print("reset node %d because shutdown stucked",
++					log_print("reset node %d because shutdown stuck",
+ 						  node->nodeid);
+ 
+ 					midcomms_node_reset(node);
+@@ -1161,7 +1161,7 @@ void dlm_midcomms_add_member(int nodeid)
+ 			 * was failed, we try to reset and
+ 			 * hope it will go on.
+ 			 */
+-			log_print("reset node %d because shutdown stucked",
++			log_print("reset node %d because shutdown stuck",
+ 				  node->nodeid);
+ 
+ 			midcomms_node_reset(node);

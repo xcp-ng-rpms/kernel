@@ -1,5 +1,14 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Vates Git Importer <gitimporter@vates.tech>
+Date: Sat, 19 Sep 2015 07:09:42 +0100
+Subject: [PATCH] xengt-fix-shutdown-failures
+
+---
+ drivers/gpu/drm/i915/gvt/xengt.c | 19 +++++++++----------
+ 1 file changed, 9 insertions(+), 10 deletions(-)
+
 diff --git a/drivers/gpu/drm/i915/gvt/xengt.c b/drivers/gpu/drm/i915/gvt/xengt.c
-index 0544744..6fbbf2d 100644
+index 0544744c2531..6fbbf2d8ccc3 100644
 --- a/drivers/gpu/drm/i915/gvt/xengt.c
 +++ b/drivers/gpu/drm/i915/gvt/xengt.c
 @@ -1584,23 +1584,22 @@ static void xengt_logd_destroy(struct xengt_hvm_dev *info)

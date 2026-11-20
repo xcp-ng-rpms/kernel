@@ -1,0 +1,52 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Vates Git Importer <gitimporter@vates.tech>
+Date: Sat, 19 Sep 2015 07:09:42 +0100
+Subject: [PATCH] The CFQ IO scheduler has the concept of an idle IO scheduling
+ class where requests are only scheduled when the disk is idle. However, there
+ is no mechanism to ensure that these requests complete eventually which means
+ tasks may be blocked for a long time waiting for a busy, slow disk to become
+ idle. This is not necessarily a problem but results in scary warnings in the
+ kernel log that may generate customer support tickets. Workaround the problem
+ by not printing hung task warnings for tasks with the idle IO scheduling
+ class and for tasks with the idle scheduling task (which get scheduled as
+ idle IO by default).
+
+This patch is not for upstream and will not be needed in the future
+because the CFQ IO scheduler along with the legacy IO path have been
+removed from upstream kernels.
+---
+ kernel/hung_task.c | 14 ++++++++++++++
+ 1 file changed, 14 insertions(+)
+
+diff --git a/kernel/hung_task.c b/kernel/hung_task.c
+index 4a9191617076..3bac98ce1bc9 100644
+--- a/kernel/hung_task.c
++++ b/kernel/hung_task.c
+@@ -85,6 +85,7 @@ static struct notifier_block panic_block = {
+ 
+ static void check_hung_task(struct task_struct *t, unsigned long timeout)
+ {
++	struct io_context *ioc;
+ 	unsigned long switch_count = t->nvcsw + t->nivcsw;
+ 
+ 	/*
+@@ -110,6 +111,19 @@ static void check_hung_task(struct task_struct *t, unsigned long timeout)
+ 	if (time_is_after_jiffies(t->last_switch_time + timeout * HZ))
+ 		return;
+ 
++	if (t->policy == SCHED_IDLE)
++		return;
++
++	ioc = get_task_io_context(t, GFP_ATOMIC, NUMA_NO_NODE);
++	if (ioc) {
++		int ioprio = ioc->ioprio;
++
++		put_io_context(ioc);
++
++		if (IOPRIO_PRIO_CLASS(ioprio) == IOPRIO_CLASS_IDLE)
++			return;
++	}
++
+ 	trace_sched_process_hang(t);
+ 
+ 	if (sysctl_hung_task_panic) {

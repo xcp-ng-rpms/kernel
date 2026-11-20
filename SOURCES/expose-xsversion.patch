@@ -1,3 +1,15 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Vates Git Importer <gitimporter@vates.tech>
+Date: Sat, 19 Sep 2015 07:09:42 +0100
+Subject: [PATCH] expose-xsversion
+
+---
+ fs/proc/version.c      |  7 +++++++
+ include/linux/printk.h |  1 +
+ init/version.c         |  5 +++++
+ scripts/mkcompile_h    | 12 ++++++++++++
+ 4 files changed, 25 insertions(+)
+
 diff --git a/fs/proc/version.c b/fs/proc/version.c
 index b449f186577f..c556feac8c44 100644
 --- a/fs/proc/version.c
@@ -20,7 +32,7 @@ index b449f186577f..c556feac8c44 100644
  }
  fs_initcall(proc_version_init);
 diff --git a/include/linux/printk.h b/include/linux/printk.h
-index cf3eccfe1543..ad73740cec23 100644
+index f4d7e643f010..7f97485224d3 100644
 --- a/include/linux/printk.h
 +++ b/include/linux/printk.h
 @@ -10,6 +10,7 @@
@@ -46,7 +58,7 @@ index ef4012ec4375..8ce3e2bc86f1 100644
 +
  BUILD_SALT;
 diff --git a/scripts/mkcompile_h b/scripts/mkcompile_h
-index 87f1fc9801d7..c9f992ec88d6 100755
+index 30ac50f3f2ba..10175ae64d31 100755
 --- a/scripts/mkcompile_h
 +++ b/scripts/mkcompile_h
 @@ -33,6 +33,14 @@ else

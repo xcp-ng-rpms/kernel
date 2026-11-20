@@ -1,8 +1,36 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Vates Git Importer <gitimporter@vates.tech>
+Date: Sat, 19 Sep 2015 07:09:42 +0100
+Subject: [PATCH] blktap2
+
+---
+ block/elevator.c                |  13 +
+ drivers/block/Kconfig           |   9 +
+ drivers/block/Makefile          |   2 +
+ drivers/block/blktap2/Makefile  |   7 +
+ drivers/block/blktap2/blktap.h  | 184 +++++++++
+ drivers/block/blktap2/control.c | 321 ++++++++++++++++
+ drivers/block/blktap2/device.c  | 644 ++++++++++++++++++++++++++++++++
+ drivers/block/blktap2/request.c | 472 +++++++++++++++++++++++
+ drivers/block/blktap2/ring.c    | 585 +++++++++++++++++++++++++++++
+ drivers/block/blktap2/sysfs.c   | 241 ++++++++++++
+ include/linux/blktap.h          |  95 +++++
+ include/linux/elevator.h        |   1 +
+ 12 files changed, 2574 insertions(+)
+ create mode 100644 drivers/block/blktap2/Makefile
+ create mode 100644 drivers/block/blktap2/blktap.h
+ create mode 100644 drivers/block/blktap2/control.c
+ create mode 100644 drivers/block/blktap2/device.c
+ create mode 100644 drivers/block/blktap2/request.c
+ create mode 100644 drivers/block/blktap2/ring.c
+ create mode 100644 drivers/block/blktap2/sysfs.c
+ create mode 100644 include/linux/blktap.h
+
 diff --git a/block/elevator.c b/block/elevator.c
-index fae58b2f906f..034e46fa5b18 100644
+index 371a7da83efc..5cd46e714a00 100644
 --- a/block/elevator.c
 +++ b/block/elevator.c
-@@ -1109,6 +1109,19 @@ static int __elevator_change(struct request_queue *q, const char *name)
+@@ -1113,6 +1113,19 @@ static int __elevator_change(struct request_queue *q, const char *name)
  	return elevator_switch(q, e);
  }
  
@@ -23,10 +51,10 @@ index fae58b2f906f..034e46fa5b18 100644
  {
  	if (q->mq_ops && q->tag_set && (q->tag_set->flags &
 diff --git a/drivers/block/Kconfig b/drivers/block/Kconfig
-index d4913516823f..d2adbbcdaf13 100644
+index 10637dbc9aac..800833c86e90 100644
 --- a/drivers/block/Kconfig
 +++ b/drivers/block/Kconfig
-@@ -481,4 +481,13 @@ config BLK_DEV_RSXX
+@@ -489,4 +489,13 @@ config BLK_DEV_RSXX
  	  To compile this driver as a module, choose M here: the
  	  module will be called rsxx.
  
@@ -41,10 +69,10 @@ index d4913516823f..d2adbbcdaf13 100644
 +
  endif # BLK_DEV
 diff --git a/drivers/block/Makefile b/drivers/block/Makefile
-index 8566b188368b..6095e302af71 100644
+index 1ac5a2bb3158..e188d1aa7c19 100644
 --- a/drivers/block/Makefile
 +++ b/drivers/block/Makefile
-@@ -44,3 +44,5 @@ null_blk-$(CONFIG_BLK_DEV_ZONED) += null_blk_zoned.o
+@@ -42,3 +42,5 @@ null_blk-$(CONFIG_BLK_DEV_ZONED) += null_blk_zoned.o
  
  skd-y		:= skd_main.o
  swim_mod-y	:= swim.o swim_asm.o
@@ -2648,10 +2676,10 @@ index 000000000000..eeee457be017
 +
 +#endif /* _LINUX_BLKTAP_H */
 diff --git a/include/linux/elevator.h b/include/linux/elevator.h
-index a02deea30185..6f3ca694e44a 100644
+index a2bf4a6b9316..e2b6303c73ce 100644
 --- a/include/linux/elevator.h
 +++ b/include/linux/elevator.h
-@@ -218,6 +218,7 @@ extern void elv_unregister(struct elevator_type *);
+@@ -219,6 +219,7 @@ extern void elv_unregister(struct elevator_type *);
  extern ssize_t elv_iosched_show(struct request_queue *, char *);
  extern ssize_t elv_iosched_store(struct request_queue *, const char *, size_t);
  

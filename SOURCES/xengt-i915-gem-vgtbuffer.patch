@@ -1,5 +1,23 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Vates Git Importer <gitimporter@vates.tech>
+Date: Sat, 19 Sep 2015 07:09:42 +0100
+Subject: [PATCH] xengt-i915-gem-vgtbuffer
+
+---
+ drivers/gpu/drm/i915/Makefile             |   3 +-
+ drivers/gpu/drm/i915/gvt/hypercall.h      |   1 +
+ drivers/gpu/drm/i915/gvt/mpt.h            |  15 +
+ drivers/gpu/drm/i915/gvt/xengt.c          |   1 +
+ drivers/gpu/drm/i915/i915_drv.c           |   1 +
+ drivers/gpu/drm/i915/i915_drv.h           |   9 +
+ drivers/gpu/drm/i915/i915_gem.c           |   2 +-
+ drivers/gpu/drm/i915/i915_gem_vgtbuffer.c | 326 ++++++++++++++++++++++
+ include/uapi/drm/i915_drm.h               |  39 +++
+ 9 files changed, 395 insertions(+), 2 deletions(-)
+ create mode 100644 drivers/gpu/drm/i915/i915_gem_vgtbuffer.c
+
 diff --git a/drivers/gpu/drm/i915/Makefile b/drivers/gpu/drm/i915/Makefile
-index 5794f10..07a619c 100644
+index 5794f102f9b8..07a619ce6f62 100644
 --- a/drivers/gpu/drm/i915/Makefile
 +++ b/drivers/gpu/drm/i915/Makefile
 @@ -183,7 +183,8 @@ i915-y += i915_perf.o \
@@ -13,7 +31,7 @@ index 5794f10..07a619c 100644
  endif
  
 diff --git a/drivers/gpu/drm/i915/gvt/hypercall.h b/drivers/gpu/drm/i915/gvt/hypercall.h
-index ae9b94a..715c85a 100644
+index ae9b94a20778..715c85ad530a 100644
 --- a/drivers/gpu/drm/i915/gvt/hypercall.h
 +++ b/drivers/gpu/drm/i915/gvt/hypercall.h
 @@ -63,6 +63,7 @@ struct intel_gvt_mpt {
@@ -25,7 +43,7 @@ index ae9b94a..715c85a 100644
  
  extern struct intel_gvt_mpt xengt_mpt;
 diff --git a/drivers/gpu/drm/i915/gvt/mpt.h b/drivers/gpu/drm/i915/gvt/mpt.h
-index d16bc40..898b1bc 100644
+index d16bc4005321..898b1bce2b41 100644
 --- a/drivers/gpu/drm/i915/gvt/mpt.h
 +++ b/drivers/gpu/drm/i915/gvt/mpt.h
 @@ -347,4 +347,19 @@ static inline bool intel_gvt_hypervisor_is_valid_gfn(
@@ -49,7 +67,7 @@ index d16bc40..898b1bc 100644
 +
  #endif /* _GVT_MPT_H_ */
 diff --git a/drivers/gpu/drm/i915/gvt/xengt.c b/drivers/gpu/drm/i915/gvt/xengt.c
-index 6fbbf2d..8b4da45 100644
+index 6fbbf2d8ccc3..8b4da45b82c8 100644
 --- a/drivers/gpu/drm/i915/gvt/xengt.c
 +++ b/drivers/gpu/drm/i915/gvt/xengt.c
 @@ -1998,6 +1998,7 @@ struct intel_gvt_mpt xengt_mpt = {
@@ -61,10 +79,10 @@ index 6fbbf2d..8b4da45 100644
  EXPORT_SYMBOL_GPL(xengt_mpt);
  
 diff --git a/drivers/gpu/drm/i915/i915_drv.c b/drivers/gpu/drm/i915/i915_drv.c
-index f8cfd16..fda068c 100644
+index b0d76a7a0946..9f09f14bef3d 100644
 --- a/drivers/gpu/drm/i915/i915_drv.c
 +++ b/drivers/gpu/drm/i915/i915_drv.c
-@@ -2860,6 +2860,7 @@ static const struct drm_ioctl_desc i915_ioctls[] = {
+@@ -2869,6 +2869,7 @@ static const struct drm_ioctl_desc i915_ioctls[] = {
  	DRM_IOCTL_DEF_DRV(I915_PERF_ADD_CONFIG, i915_perf_add_config_ioctl, DRM_UNLOCKED|DRM_RENDER_ALLOW),
  	DRM_IOCTL_DEF_DRV(I915_PERF_REMOVE_CONFIG, i915_perf_remove_config_ioctl, DRM_UNLOCKED|DRM_RENDER_ALLOW),
  	DRM_IOCTL_DEF_DRV(I915_QUERY, i915_query_ioctl, DRM_UNLOCKED|DRM_RENDER_ALLOW),
@@ -73,10 +91,10 @@ index f8cfd16..fda068c 100644
  
  static struct drm_driver driver = {
 diff --git a/drivers/gpu/drm/i915/i915_drv.h b/drivers/gpu/drm/i915/i915_drv.h
-index d6c25bea..e755419 100644
+index c25ee6a02d65..7214e866ad5b 100644
 --- a/drivers/gpu/drm/i915/i915_drv.h
 +++ b/drivers/gpu/drm/i915/i915_drv.h
-@@ -2874,6 +2874,15 @@ int i915_gem_set_tiling_ioctl(struct drm_device *dev, void *data,
+@@ -2891,6 +2891,15 @@ int i915_gem_set_tiling_ioctl(struct drm_device *dev, void *data,
  			      struct drm_file *file_priv);
  int i915_gem_get_tiling_ioctl(struct drm_device *dev, void *data,
  			      struct drm_file *file_priv);
@@ -93,10 +111,10 @@ index d6c25bea..e755419 100644
  void i915_gem_cleanup_userptr(struct drm_i915_private *dev_priv);
  int i915_gem_userptr_ioctl(struct drm_device *dev, void *data,
 diff --git a/drivers/gpu/drm/i915/i915_gem.c b/drivers/gpu/drm/i915/i915_gem.c
-index 47cc932..833bfad6 100644
+index 478d989a2369..1591e1917b40 100644
 --- a/drivers/gpu/drm/i915/i915_gem.c
 +++ b/drivers/gpu/drm/i915/i915_gem.c
-@@ -4869,7 +4869,7 @@ static void __i915_gem_free_objects(struct drm_i915_private *i915,
+@@ -5031,7 +5031,7 @@ static void __i915_gem_free_objects(struct drm_i915_private *i915,
  		if (obj->ops->release)
  			obj->ops->release(obj);
  
@@ -107,7 +125,7 @@ index 47cc932..833bfad6 100644
  		GEM_BUG_ON(i915_gem_object_has_pages(obj));
 diff --git a/drivers/gpu/drm/i915/i915_gem_vgtbuffer.c b/drivers/gpu/drm/i915/i915_gem_vgtbuffer.c
 new file mode 100644
-index 00000000..b5017c6
+index 000000000000..b5017c668d36
 --- /dev/null
 +++ b/drivers/gpu/drm/i915/i915_gem_vgtbuffer.c
 @@ -0,0 +1,326 @@
@@ -438,7 +456,7 @@ index 00000000..b5017c6
 +	return 0;
 +}
 diff --git a/include/uapi/drm/i915_drm.h b/include/uapi/drm/i915_drm.h
-index 7f5634c..0b18887 100644
+index 4671c9150d4d..b09d12d4b5fb 100644
 --- a/include/uapi/drm/i915_drm.h
 +++ b/include/uapi/drm/i915_drm.h
 @@ -319,6 +319,7 @@ typedef struct _drm_i915_sarea {

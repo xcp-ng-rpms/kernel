@@ -1,4 +1,4 @@
-From 5cb256fefb61660da855316ec384128303e6747c Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Roland McGrath <roland@redhat.com>
 Date: Mon, 6 Oct 2008 23:03:03 -0700
 Subject: [PATCH] kbuild: AFTER_LINK
@@ -10,6 +10,16 @@ Bugzilla: N/A
 Upstream-status: ??
 
 Signed-off-by: Roland McGrath <roland@redhat.com>
+---
+ arch/arm64/kernel/vdso/Makefile     | 3 ++-
+ arch/powerpc/kernel/vdso32/Makefile | 3 ++-
+ arch/powerpc/kernel/vdso64/Makefile | 3 ++-
+ arch/s390/kernel/vdso32/Makefile    | 3 ++-
+ arch/s390/kernel/vdso64/Makefile    | 3 ++-
+ arch/x86/entry/vdso/Makefile        | 5 +++--
+ scripts/link-vmlinux.sh             | 4 ++++
+ 7 files changed, 17 insertions(+), 7 deletions(-)
+
 diff --git a/arch/arm64/kernel/vdso/Makefile b/arch/arm64/kernel/vdso/Makefile
 index b215c712d897..e18cd2a3ea53 100644
 --- a/arch/arm64/kernel/vdso/Makefile
@@ -53,10 +63,10 @@ index 69cecb346269..5769131eaf61 100644
  # install commands for the unstripped file
  quiet_cmd_vdso_install = INSTALL $@
 diff --git a/arch/s390/kernel/vdso32/Makefile b/arch/s390/kernel/vdso32/Makefile
-index 04dd3e2c3bd9..ac9e56e5ccf9 100644
+index e76309fbbcb3..5eaf703eb9c5 100644
 --- a/arch/s390/kernel/vdso32/Makefile
 +++ b/arch/s390/kernel/vdso32/Makefile
-@@ -50,7 +50,8 @@ $(obj-vdso32): %.o: %.S FORCE
+@@ -51,7 +51,8 @@ $(obj-vdso32): %.o: %.S FORCE
  
  # actual build commands
  quiet_cmd_vdso32ld = VDSO32L $@
@@ -67,10 +77,10 @@ index 04dd3e2c3bd9..ac9e56e5ccf9 100644
        cmd_vdso32as = $(CC) $(a_flags) -c -o $@ $<
  
 diff --git a/arch/s390/kernel/vdso64/Makefile b/arch/s390/kernel/vdso64/Makefile
-index ddebc26cd949..87def94a520b 100644
+index f849ac61c5da..0055787490a5 100644
 --- a/arch/s390/kernel/vdso64/Makefile
 +++ b/arch/s390/kernel/vdso64/Makefile
-@@ -50,7 +50,8 @@ $(obj-vdso64): %.o: %.S FORCE
+@@ -51,7 +51,8 @@ $(obj-vdso64): %.o: %.S FORCE
  
  # actual build commands
  quiet_cmd_vdso64ld = VDSO64L $@
@@ -81,7 +91,7 @@ index ddebc26cd949..87def94a520b 100644
        cmd_vdso64as = $(CC) $(a_flags) -c -o $@ $<
  
 diff --git a/arch/x86/entry/vdso/Makefile b/arch/x86/entry/vdso/Makefile
-index c3d7ccd25381..7c03993ea881 100644
+index ec5d8d0bd222..8208a80fbeae 100644
 --- a/arch/x86/entry/vdso/Makefile
 +++ b/arch/x86/entry/vdso/Makefile
 @@ -167,8 +167,9 @@ $(obj)/vdso32.so.dbg: FORCE \

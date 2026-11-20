@@ -1,5 +1,15 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Vates Git Importer <gitimporter@vates.tech>
+Date: Sat, 19 Sep 2015 07:09:42 +0100
+Subject: [PATCH] xen-balloon-hotplug-select-HOLES_IN_ZONE
+
+---
+ drivers/xen/Kconfig | 1 +
+ mm/Kconfig          | 3 +++
+ 2 files changed, 4 insertions(+)
+
 diff --git a/drivers/xen/Kconfig b/drivers/xen/Kconfig
-index 73708ac..e283707 100644
+index 0505eeb593b5..b431153a7934 100644
 --- a/drivers/xen/Kconfig
 +++ b/drivers/xen/Kconfig
 @@ -29,6 +29,7 @@ config XEN_BALLOON_MEMORY_HOTPLUG
@@ -11,10 +21,10 @@ index 73708ac..e283707 100644
  	  Memory hotplug support for Xen balloon driver allows expanding memory
  	  available for the system above limit declared at system startup.
 diff --git a/mm/Kconfig b/mm/Kconfig
-index 97a4e06..6f3d87f 100644
+index b457e94ae618..edc133dafd23 100644
 --- a/mm/Kconfig
 +++ b/mm/Kconfig
-@@ -476,6 +476,9 @@ config FRONTSWAP
+@@ -479,6 +479,9 @@ config FRONTSWAP
  
  	  If unsure, say Y to enable frontswap.
  

@@ -1,8 +1,19 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Vates Git Importer <gitimporter@vates.tech>
+Date: Sat, 19 Sep 2015 07:09:42 +0100
+Subject: [PATCH] CA-135938-nfs-disconnect-on-rpc-retry
+
+---
+ fs/nfs/client.c       | 1 +
+ net/sunrpc/clnt.c     | 4 ++++
+ net/sunrpc/xprtsock.c | 2 ++
+ 3 files changed, 7 insertions(+)
+
 diff --git a/fs/nfs/client.c b/fs/nfs/client.c
-index 96d5f8135eb9..acaa6ca0499a 100644
+index 6a44a7f894f7..4a8772f1db66 100644
 --- a/fs/nfs/client.c
 +++ b/fs/nfs/client.c
-@@ -665,6 +665,7 @@ static int nfs_init_server(struct nfs_server *server,
+@@ -719,6 +719,7 @@ static int nfs_init_server(struct nfs_server *server,
  			data->timeo, data->retrans);
  	if (data->flags & NFS_MOUNT_NORESVPORT)
  		set_bit(NFS_CS_NORESVPORT, &cl_init.init_flags);
@@ -11,10 +22,10 @@ index 96d5f8135eb9..acaa6ca0499a 100644
  	/* Allocate or find a client reference we can use */
  	clp = nfs_get_client(&cl_init);
 diff --git a/net/sunrpc/clnt.c b/net/sunrpc/clnt.c
-index 8ea2f5fadd96..9ce20c41614e 100644
+index 3bdaebe5e53d..2acda9c84e42 100644
 --- a/net/sunrpc/clnt.c
 +++ b/net/sunrpc/clnt.c
-@@ -2162,6 +2162,10 @@ call_status(struct rpc_task *task)
+@@ -2160,6 +2160,10 @@ call_status(struct rpc_task *task)
  		/* fall through */
  	case -ETIMEDOUT:
  		task->tk_action = call_timeout;
@@ -26,10 +37,10 @@ index 8ea2f5fadd96..9ce20c41614e 100644
  	case -ECONNREFUSED:
  	case -ECONNRESET:
 diff --git a/net/sunrpc/xprtsock.c b/net/sunrpc/xprtsock.c
-index 7d8cce1dfcad..7db2d2f40149 100644
+index e2336842fb97..4dcc93dd137d 100644
 --- a/net/sunrpc/xprtsock.c
 +++ b/net/sunrpc/xprtsock.c
-@@ -2271,6 +2271,8 @@ static void xs_tcp_shutdown(struct rpc_xprt *xprt)
+@@ -2290,6 +2290,8 @@ static void xs_tcp_shutdown(struct rpc_xprt *xprt)
  		break;
  	case TCP_CLOSE:
  	case TCP_TIME_WAIT:

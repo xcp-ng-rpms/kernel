@@ -1,8 +1,17 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Vates Git Importer <gitimporter@vates.tech>
+Date: Sat, 19 Sep 2015 07:09:42 +0100
+Subject: [PATCH] set-XENMEM_get_mfn_from_pfn-hypercall-number
+
+---
+ include/xen/interface/memory.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
 diff --git a/include/xen/interface/memory.h b/include/xen/interface/memory.h
-index 786d240..d0090d5 100644
+index 55536bc37ae7..0bbb76c5a4fc 100644
 --- a/include/xen/interface/memory.h
 +++ b/include/xen/interface/memory.h
-@@ -251,7 +251,7 @@ DEFINE_GUEST_HANDLE_STRUCT(xen_memory_map);
+@@ -246,7 +246,7 @@ DEFINE_GUEST_HANDLE_STRUCT(xen_memory_map);
  /*
   * Translate the given guest PFNs to MFNs
   */

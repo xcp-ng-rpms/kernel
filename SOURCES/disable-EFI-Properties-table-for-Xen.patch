@@ -1,8 +1,17 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Vates Git Importer <gitimporter@vates.tech>
+Date: Sat, 19 Sep 2015 07:09:42 +0100
+Subject: [PATCH] disable-EFI-Properties-table-for-Xen
+
+---
+ drivers/firmware/efi/efi.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
 diff --git a/drivers/firmware/efi/efi.c b/drivers/firmware/efi/efi.c
-index 2a29dd9..687ed4f 100644
+index c966a23de85d..c17d93ecca5e 100644
 --- a/drivers/firmware/efi/efi.c
 +++ b/drivers/firmware/efi/efi.c
-@@ -575,7 +575,7 @@ int __init efi_config_parse_tables(void *config_tables, int count, int sz,
+@@ -583,7 +583,7 @@ int __init efi_config_parse_tables(void *config_tables, int count, int sz,
  	efi_tpm_eventlog_init();
  
  	/* Parse the EFI Properties table if it exists */

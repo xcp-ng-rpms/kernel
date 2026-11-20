@@ -1,5 +1,31 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+Date: Mon, 5 Jan 2026 20:11:50 +0100
+Subject: [PATCH] bridge-lock-fdb-after-garp
+
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+
+[Quentin: rebase v4.19.19 to v4.19.325 conflicts:
+ - net/bridge/br_input.c: since 08b0b4f28008 ("net: bridge: fix per-port
+   af_packet sockets"), a return of 1 from br_handle_local_finish tells
+   br_handle_frame() to keep processing the packets, so we need to return 0
+   when the packet is dropped.
+ - net/bridge/br_fdb.c: converted fbd->local to using bitops on fbd->flags
+   since 9969873b374e ("net: bridge: fdb: convert is_local to bitops")
+
+No conflicts but since c5a0142c4d33 ("net: bridge: add support for sticky
+fdb entries"), we need to handle sticky fdb entries in br_fdb_update, so
+added an extra check]
+
+Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+---
+ net/bridge/br_fdb.c     | 103 ++++++++++++++++++++++++++++++++++++----
+ net/bridge/br_input.c   |  20 ++++++--
+ net/bridge/br_private.h |   6 ++-
+ 3 files changed, 114 insertions(+), 15 deletions(-)
+
 diff --git a/net/bridge/br_fdb.c b/net/bridge/br_fdb.c
-index 8034ce9..ffda192 100644
+index 711fc539dbfd..9d409b4c6035 100644
 --- a/net/bridge/br_fdb.c
 +++ b/net/bridge/br_fdb.c
 @@ -12,6 +12,7 @@
@@ -31,7 +57,7 @@ index 8034ce9..ffda192 100644
  int __init br_fdb_init(void)
  {
  	br_fdb_cache = kmem_cache_create("bridge_fdb_cache",
-@@ -490,7 +498,8 @@ static struct net_bridge_fdb_entry *fdb_create(struct net_bridge *br,
+@@ -503,7 +511,8 @@ static struct net_bridge_fdb_entry *fdb_create(struct net_bridge *br,
  					       const unsigned char *addr,
  					       __u16 vid,
  					       unsigned char is_local,
@@ -41,15 +67,15 @@ index 8034ce9..ffda192 100644
  {
  	struct net_bridge_fdb_entry *fdb;
  
-@@ -505,6 +514,7 @@ static struct net_bridge_fdb_entry *fdb_create(struct net_bridge *br,
- 		fdb->added_by_external_learn = 0;
+@@ -519,6 +528,7 @@ static struct net_bridge_fdb_entry *fdb_create(struct net_bridge *br,
+ 			set_bit(BR_FDB_STATIC, &fdb->flags);
  		fdb->offloaded = 0;
  		fdb->updated = fdb->used = jiffies;
 +                fdb->garp_lock_until = garp_lock_until;
  		if (rhashtable_lookup_insert_fast(&br->fdb_hash_tbl,
  						  &fdb->rhnode,
  						  br_fdb_rht_params)) {
-@@ -537,7 +547,7 @@ static int fdb_insert(struct net_bridge *br, struct net_bridge_port *source,
+@@ -551,7 +561,7 @@ static int fdb_insert(struct net_bridge *br, struct net_bridge_port *source,
  		fdb_delete(br, fdb, true);
  	}
  
@@ -58,7 +84,7 @@ index 8034ce9..ffda192 100644
  	if (!fdb)
  		return -ENOMEM;
  
-@@ -623,8 +633,9 @@ static int is_physical_port(struct net_bridge *br, struct net_bridge_port *port)
+@@ -637,8 +647,9 @@ static int is_physical_port(struct net_bridge *br, struct net_bridge_port *port)
  	return phys_port && phys_port == port;
  }
  
@@ -70,7 +96,7 @@ index 8034ce9..ffda192 100644
  {
  	struct net_bridge_fdb_entry *fdb;
  	bool fdb_modified = false;
-@@ -667,7 +678,7 @@ void br_fdb_update(struct net_bridge *br, struct net_bridge_port *source,
+@@ -682,7 +693,7 @@ void br_fdb_update(struct net_bridge *br, struct net_bridge_port *source,
  		}
  	} else {
  		spin_lock(&br->hash_lock);
@@ -78,8 +104,8 @@ index 8034ce9..ffda192 100644
 +		fdb = fdb_create(br, source, addr, vid, 0, 0, NO_GARP_LOCK);
  		if (fdb) {
  			if (unlikely(added_by_user))
- 				fdb->added_by_user = 1;
-@@ -682,6 +693,81 @@ void br_fdb_update(struct net_bridge *br, struct net_bridge_port *source,
+ 				set_bit(BR_FDB_ADDED_BY_USER, &fdb->flags);
+@@ -697,6 +708,82 @@ void br_fdb_update(struct net_bridge *br, struct net_bridge_port *source,
  	}
  }
  
@@ -126,7 +152,7 @@ index 8034ce9..ffda192 100644
 +               }
 +
 +               /* attempt to update an entry for a local interface */
-+               if (unlikely(fdb->is_local)) {
++               if (unlikely(test_bit(BR_FDB_LOCAL, &fdb->flags))) {
 +                       if (net_ratelimit())
 +                               br_warn(br, "received packet on %s with "
 +                                               "own address as source address\n",
@@ -137,7 +163,8 @@ index 8034ce9..ffda192 100644
 +                               fdb->garp_lock_until = jiffies + (fdb_garp_lock_time * HZ);
 +
 +                       /* fastpath: update of existing entry */
-+                       fdb->dst = source;
++                       if (likely(!test_bit(BR_FDB_STICKY, &fdb->flags)))
++                               fdb->dst = source;
 +                       fdb->updated = jiffies;
 +               }
 +       } else {
@@ -161,7 +188,7 @@ index 8034ce9..ffda192 100644
  static int fdb_to_nud(const struct net_bridge *br,
  		      const struct net_bridge_fdb_entry *fdb)
  {
-@@ -859,7 +945,7 @@ static int fdb_add_entry(struct net_bridge *br, struct net_bridge_port *source,
+@@ -883,7 +970,7 @@ static int fdb_add_entry(struct net_bridge *br, struct net_bridge_port *source,
  		if (!(flags & NLM_F_CREATE))
  			return -ENOENT;
  
@@ -170,7 +197,7 @@ index 8034ce9..ffda192 100644
  		if (!fdb)
  			return -ENOMEM;
  
-@@ -922,7 +1008,7 @@ static int __br_fdb_add(struct ndmsg *ndm, struct net_bridge *br,
+@@ -946,7 +1033,7 @@ static int __br_fdb_add(struct ndmsg *ndm, struct net_bridge *br,
  		}
  		local_bh_disable();
  		rcu_read_lock();
@@ -179,7 +206,7 @@ index 8034ce9..ffda192 100644
  		rcu_read_unlock();
  		local_bh_enable();
  	} else if (ndm->ndm_flags & NTF_EXT_LEARNED) {
-@@ -1148,7 +1234,7 @@ int br_fdb_external_learn_add(struct net_bridge *br, struct net_bridge_port *p,
+@@ -1172,7 +1259,7 @@ int br_fdb_external_learn_add(struct net_bridge *br, struct net_bridge_port *p,
  
  	fdb = br_fdb_find(br, addr, vid);
  	if (!fdb) {
@@ -189,10 +216,10 @@ index 8034ce9..ffda192 100644
  			err = -ENOMEM;
  			goto err_unlock;
 diff --git a/net/bridge/br_input.c b/net/bridge/br_input.c
-index 7207427..2b24c5e 100644
+index 8fdc1641b5fc..37c6ec16c89d 100644
 --- a/net/bridge/br_input.c
 +++ b/net/bridge/br_input.c
-@@ -94,7 +94,8 @@ int br_handle_frame_finish(struct net *net, struct sock *sk, struct sk_buff *skb
+@@ -100,7 +100,8 @@ int br_handle_frame_finish(struct net *net, struct sock *sk, struct sk_buff *skb
  	/* insert into forwarding database after filtering to avoid spoofing */
  	br = p->br;
  	if (p->flags & BR_LEARNING)
@@ -201,8 +228,8 @@ index 7207427..2b24c5e 100644
 +			goto drop;
  
  	local_rcv = !!(br->dev->flags & IFF_PROMISC);
- 	dest = eth_hdr(skb)->h_dest;
-@@ -182,22 +183,30 @@ int br_handle_frame_finish(struct net *net, struct sock *sk, struct sk_buff *skb
+ 	if (is_multicast_ether_addr(eth_hdr(skb)->h_dest)) {
+@@ -187,20 +188,29 @@ int br_handle_frame_finish(struct net *net, struct sock *sk, struct sk_buff *skb
  }
  EXPORT_SYMBOL_GPL(br_handle_frame_finish);
  
@@ -225,32 +252,31 @@ index 7207427..2b24c5e 100644
  /* note: already called with rcu_read_lock */
  static int br_handle_local_finish(struct net *net, struct sock *sk, struct sk_buff *skb)
  {
- 	struct net_bridge_port *p = br_port_get_rcu(skb->dev);
-+	int rc;
- 
 -	__br_handle_local_finish(skb);
++	int rc;
++
 +	rc = __br_handle_local_finish(skb);
 +	if (rc) {
 +		kfree_skb(skb);
-+		return rc;
++		return 0;
 +	}
  
- 	BR_INPUT_SKB_CB(skb)->brdev = p->br->dev;
- 	br_pass_frame_up(skb);
+ 	/* return 1 to signal the okfn() was called so it's ok to use the skb */
+ 	return 1;
 diff --git a/net/bridge/br_private.h b/net/bridge/br_private.h
-index 1fdfb06..106b13a 100644
+index 917beae7e780..ce79ddda34a4 100644
 --- a/net/bridge/br_private.h
 +++ b/net/bridge/br_private.h
-@@ -185,6 +185,8 @@ struct net_bridge_fdb_entry {
- 					added_by_external_learn:1,
- 					offloaded:1;
+@@ -192,6 +192,8 @@ struct net_bridge_fdb_entry {
+ 	unsigned long			flags;
+ 	unsigned char			offloaded:1;
  
 +	unsigned long			garp_lock_until;
 +
  	/* write-heavy members should not affect lookups */
  	unsigned long			updated ____cacheline_aligned_in_smp;
  	unsigned long			used;
-@@ -547,8 +549,8 @@ int br_fdb_fillbuf(struct net_bridge *br, void *buf, unsigned long count,
+@@ -555,8 +557,8 @@ int br_fdb_fillbuf(struct net_bridge *br, void *buf, unsigned long count,
  		   unsigned long off);
  int br_fdb_insert(struct net_bridge *br, struct net_bridge_port *source,
  		  const unsigned char *addr, u16 vid);

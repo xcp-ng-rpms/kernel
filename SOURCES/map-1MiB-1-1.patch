@@ -1,8 +1,17 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Vates Git Importer <gitimporter@vates.tech>
+Date: Sat, 19 Sep 2015 07:09:42 +0100
+Subject: [PATCH] map-1MiB-1-1
+
+---
+ arch/x86/xen/setup.c | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
+
 diff --git a/arch/x86/xen/setup.c b/arch/x86/xen/setup.c
-index a5bf7c4..743d4f6 100644
+index 69fd1134b7fc..1518fb3134c8 100644
 --- a/arch/x86/xen/setup.c
 +++ b/arch/x86/xen/setup.c
-@@ -778,8 +778,14 @@ char * __init xen_memory_setup(void)
+@@ -774,8 +774,14 @@ char * __init xen_memory_setup(void)
  	 * UNUSABLE regions in domUs are not handled and will need
  	 * a patch in the future.
  	 */

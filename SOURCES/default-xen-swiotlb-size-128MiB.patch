@@ -1,8 +1,17 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Vates Git Importer <gitimporter@vates.tech>
+Date: Sat, 19 Sep 2015 07:09:42 +0100
+Subject: [PATCH] default-xen-swiotlb-size-128MiB
+
+---
+ drivers/xen/swiotlb-xen.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
 diff --git a/drivers/xen/swiotlb-xen.c b/drivers/xen/swiotlb-xen.c
-index 92cc199..729111f 100644
+index 7c6252a86a13..6bc51aa59d2c 100644
 --- a/drivers/xen/swiotlb-xen.c
 +++ b/drivers/xen/swiotlb-xen.c
-@@ -150,7 +150,7 @@ xen_swiotlb_fixup(void *buf, size_t size, unsigned long nslabs)
+@@ -167,7 +167,7 @@ xen_swiotlb_fixup(void *buf, size_t size, unsigned long nslabs,
  static unsigned long xen_set_nslabs(unsigned long nr_tbl)
  {
  	if (!nr_tbl) {

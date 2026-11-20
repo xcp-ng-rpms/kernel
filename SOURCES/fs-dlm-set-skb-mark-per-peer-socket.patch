@@ -1,0 +1,164 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Alexander Aring <aahringo@redhat.com>
+Date: Fri, 26 Jun 2020 13:26:50 -0400
+Subject: [PATCH] fs: dlm: set skb mark per peer socket
+
+This patch adds support to set the skb mark value for the DLM tcp and
+sctp socket per peer. The mark value will be offered as per comm value
+of configfs. At creation time of the peer socket it will be set as
+socket option.
+
+Signed-off-by: Alexander Aring <aahringo@redhat.com>
+Signed-off-by: David Teigland <teigland@redhat.com>
+---
+ fs/dlm/config.c   | 38 ++++++++++++++++++++++++++++++++++++++
+ fs/dlm/config.h   |  1 +
+ fs/dlm/lowcomms.c | 16 ++++++++++++++++
+ 3 files changed, 55 insertions(+)
+
+diff --git a/fs/dlm/config.c b/fs/dlm/config.c
+index 8a109324838d..995ee93f4c31 100644
+--- a/fs/dlm/config.c
++++ b/fs/dlm/config.c
+@@ -205,6 +205,7 @@ enum {
+ 	COMM_ATTR_LOCAL,
+ 	COMM_ATTR_ADDR,
+ 	COMM_ATTR_ADDR_LIST,
++	COMM_ATTR_MARK,
+ };
+ 
+ enum {
+@@ -238,6 +239,7 @@ struct dlm_comm {
+ 	int nodeid;
+ 	int local;
+ 	int addr_count;
++	unsigned int mark;
+ 	struct sockaddr_storage *addr[DLM_MAX_ADDR_COUNT];
+ };
+ 
+@@ -483,6 +485,7 @@ static struct config_item *make_comm(struct config_group *g, const char *name)
+ 	cm->nodeid = -1;
+ 	cm->local = 0;
+ 	cm->addr_count = 0;
++	cm->mark = 0;
+ 	return &cm->item;
+ }
+ 
+@@ -678,8 +681,28 @@ static ssize_t comm_addr_list_show(struct config_item *item, char *buf)
+ 	return 4096 - allowance;
+ }
+ 
++static ssize_t comm_mark_show(struct config_item *item, char *buf)
++{
++	return sprintf(buf, "%u\n", config_item_to_comm(item)->mark);
++}
++
++static ssize_t comm_mark_store(struct config_item *item, const char *buf,
++			       size_t len)
++{
++	unsigned int mark;
++	int rc;
++
++	rc = kstrtouint(buf, 0, &mark);
++	if (rc)
++		return rc;
++
++	config_item_to_comm(item)->mark = mark;
++	return len;
++}
++
+ CONFIGFS_ATTR(comm_, nodeid);
+ CONFIGFS_ATTR(comm_, local);
++CONFIGFS_ATTR(comm_, mark);
+ CONFIGFS_ATTR_WO(comm_, addr);
+ CONFIGFS_ATTR_RO(comm_, addr_list);
+ 
+@@ -688,6 +711,7 @@ static struct configfs_attribute *comm_attrs[] = {
+ 	[COMM_ATTR_LOCAL] = &comm_attr_local,
+ 	[COMM_ATTR_ADDR] = &comm_attr_addr,
+ 	[COMM_ATTR_ADDR_LIST] = &comm_attr_addr_list,
++	[COMM_ATTR_MARK] = &comm_attr_mark,
+ 	NULL,
+ };
+ 
+@@ -847,6 +871,20 @@ int dlm_comm_seq(int nodeid, uint32_t *seq)
+ 	return 0;
+ }
+ 
++int dlm_comm_mark(int nodeid, unsigned int *mark)
++{
++	struct dlm_comm *cm;
++
++	cm = get_comm(nodeid);
++	if (!cm)
++		return -ENOENT;
++
++	*mark = cm->mark;
++	put_comm(cm);
++
++	return 0;
++}
++
+ int dlm_our_nodeid(void)
+ {
+ 	return local_comm ? local_comm->nodeid : 0;
+diff --git a/fs/dlm/config.h b/fs/dlm/config.h
+index 3b25c975e4b2..e16b1241b48b 100644
+--- a/fs/dlm/config.h
++++ b/fs/dlm/config.h
+@@ -48,6 +48,7 @@ void dlm_config_exit(void);
+ int dlm_config_nodes(char *lsname, struct dlm_config_node **nodes_out,
+ 		     int *count_out);
+ int dlm_comm_seq(int nodeid, uint32_t *seq);
++int dlm_comm_mark(int nodeid, unsigned int *mark);
+ int dlm_our_nodeid(void);
+ int dlm_our_addr(struct sockaddr_storage *addr, int num);
+ 
+diff --git a/fs/dlm/lowcomms.c b/fs/dlm/lowcomms.c
+index bb5adfbe6c87..597f6a764109 100644
+--- a/fs/dlm/lowcomms.c
++++ b/fs/dlm/lowcomms.c
+@@ -919,6 +919,7 @@ static void sctp_connect_to_sock(struct connection *con)
+ 	int result;
+ 	int addr_len;
+ 	struct socket *sock;
++	unsigned int mark;
+ 
+ 	if (con->nodeid == 0) {
+ 		log_print("attempt to connect sock 0 foiled");
+@@ -949,6 +950,13 @@ static void sctp_connect_to_sock(struct connection *con)
+ 	if (result < 0)
+ 		goto socket_err;
+ 
++	/* set skb mark */
++	result = dlm_comm_mark(con->nodeid, &mark);
++	if (result < 0)
++		goto bind_err;
++
++	sock_set_mark(sock->sk, mark);
++
+ 	con->rx_action = receive_from_sock;
+ 	con->connect_action = sctp_connect_to_sock;
+ 	add_sock(sock, con);
+@@ -1011,6 +1019,7 @@ static void tcp_connect_to_sock(struct connection *con)
+ 	struct sockaddr_storage saddr, src_addr;
+ 	int addr_len;
+ 	struct socket *sock = NULL;
++	unsigned int mark;
+ 	int result;
+ 
+ 	if (con->nodeid == 0) {
+@@ -1032,6 +1041,13 @@ static void tcp_connect_to_sock(struct connection *con)
+ 	if (result < 0)
+ 		goto out_err;
+ 
++	/* set skb mark */
++	result = dlm_comm_mark(con->nodeid, &mark);
++	if (result < 0)
++		goto out_err;
++
++	sock_set_mark(sock->sk, mark);
++
+ 	memset(&saddr, 0, sizeof(saddr));
+ 	result = nodeid_to_addr(con->nodeid, &saddr, NULL, false);
+ 	if (result < 0) {

@@ -1,8 +1,17 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Vates Git Importer <gitimporter@vates.tech>
+Date: Sat, 19 Sep 2015 07:09:42 +0100
+Subject: [PATCH] pciback-mask-root-port-comp-timeout
+
+---
+ drivers/xen/xen-pciback/pci_stub.c | 34 ++++++++++++++++++++++++++++++
+ 1 file changed, 34 insertions(+)
+
 diff --git a/drivers/xen/xen-pciback/pci_stub.c b/drivers/xen/xen-pciback/pci_stub.c
-index aa46452..05091913 100644
+index 04e3f876551b..2787682cbebe 100644
 --- a/drivers/xen/xen-pciback/pci_stub.c
 +++ b/drivers/xen/xen-pciback/pci_stub.c
-@@ -439,6 +439,9 @@ static int pcistub_match(struct pci_dev *dev)
+@@ -465,6 +465,9 @@ static int pcistub_match(struct pci_dev *dev)
  	return found;
  }
  
@@ -12,7 +21,7 @@ index aa46452..05091913 100644
  static int pcistub_init_device(struct pci_dev *dev)
  {
  	struct xen_pcibk_dev_data *dev_data;
-@@ -523,6 +526,37 @@ static int pcistub_init_device(struct pci_dev *dev)
+@@ -553,6 +556,37 @@ static int pcistub_init_device(struct pci_dev *dev)
  					   PCI_EXP_RTCTL_SECEE);
  			}
  		}

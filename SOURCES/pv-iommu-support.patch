@@ -1,3 +1,29 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Vates Git Importer <gitimporter@vates.tech>
+Date: Sat, 19 Sep 2015 07:09:42 +0100
+Subject: [PATCH] pv-iommu-support
+
+---
+ arch/x86/include/asm/xen/hypercall.h |   7 +
+ arch/x86/xen/pci-swiotlb-xen.c       | 229 ++++++++++++++++++++++++++-
+ arch/x86/xen/xen-head.S              |   1 +
+ drivers/xen/Makefile                 |   1 +
+ drivers/xen/balloon.c                |  12 ++
+ drivers/xen/biomerge.c               |  14 +-
+ drivers/xen/ioemu.c                  |  45 ++++++
+ drivers/xen/mem-reservation.c        |  25 ++-
+ drivers/xen/pv-iommu-xen.c           | 134 ++++++++++++++++
+ include/xen/interface/elfnote.h      |  12 ++
+ include/xen/interface/pv-iommu.h     | 100 ++++++++++++
+ include/xen/interface/xen.h          |   1 +
+ include/xen/ioemu.h                  |   3 +
+ include/xen/swiotlb-xen.h            |   2 +
+ kernel/dma/swiotlb.c                 |   5 +-
+ kernel/ksysfs.c                      |  12 ++
+ 16 files changed, 595 insertions(+), 8 deletions(-)
+ create mode 100644 drivers/xen/pv-iommu-xen.c
+ create mode 100644 include/xen/interface/pv-iommu.h
+
 diff --git a/arch/x86/include/asm/xen/hypercall.h b/arch/x86/include/asm/xen/hypercall.h
 index d66ba01478ac..1cef4d44a165 100644
 --- a/arch/x86/include/asm/xen/hypercall.h
@@ -329,10 +355,10 @@ index 5d58370d81ac..6db17a6d3196 100644
  obj-$(CONFIG_XEN_PCIDEV_BACKEND)	+= xen-pciback/
  obj-$(CONFIG_XEN_PRIVCMD)		+= xen-privcmd.o
 diff --git a/drivers/xen/balloon.c b/drivers/xen/balloon.c
-index d4e8b717ce2b..5879f7933977 100644
+index 4f4a47ae72b1..d576c5de33c8 100644
 --- a/drivers/xen/balloon.c
 +++ b/drivers/xen/balloon.c
-@@ -113,6 +113,9 @@ static struct ctl_table xen_root[] = {
+@@ -122,6 +122,9 @@ static struct ctl_table xen_root[] = {
  
  #endif
  
@@ -342,7 +368,7 @@ index d4e8b717ce2b..5879f7933977 100644
  /*
   * Use one extent per PAGE_SIZE to avoid to break down the page into
   * multiple frame.
-@@ -368,6 +371,15 @@ static enum bp_state reserve_additional_memory(void)
+@@ -376,6 +379,15 @@ static enum bp_state reserve_additional_memory(void)
  
  static void xen_online_page(struct page *page)
  {
@@ -809,7 +835,7 @@ index ff66b40dfb53..5d39bf40e29b 100644
 +
  #endif /* __LINUX_SWIOTLB_XEN_H */
 diff --git a/kernel/dma/swiotlb.c b/kernel/dma/swiotlb.c
-index 4f8a6dbf0b60..530b0c326dc9 100644
+index b1e2ce2f9c2d..66579293fcc2 100644
 --- a/kernel/dma/swiotlb.c
 +++ b/kernel/dma/swiotlb.c
 @@ -64,7 +64,10 @@ enum swiotlb_force swiotlb_force;

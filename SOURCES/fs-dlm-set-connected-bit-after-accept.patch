@@ -1,0 +1,29 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Alexander Aring <aahringo@redhat.com>
+Date: Mon, 1 Mar 2021 17:05:10 -0500
+Subject: [PATCH] fs: dlm: set connected bit after accept
+
+This patch sets the CF_CONNECTED bit when dlm accepts a connection from
+another node. If we don't set this bit, next time if the connection
+socket gets writable it will assume an event that the connection is
+successfully connected. However that is only the case when the
+connection did a connect.
+
+Signed-off-by: Alexander Aring <aahringo@redhat.com>
+Signed-off-by: David Teigland <teigland@redhat.com>
+---
+ fs/dlm/lowcomms.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/fs/dlm/lowcomms.c b/fs/dlm/lowcomms.c
+index 6ca8893e8e6c..eb2bfd97046f 100644
+--- a/fs/dlm/lowcomms.c
++++ b/fs/dlm/lowcomms.c
+@@ -955,6 +955,7 @@ static int accept_from_sock(struct listen_connection *con)
+ 		addcon = newcon;
+ 	}
+ 
++	set_bit(CF_CONNECTED, &addcon->flags);
+ 	mutex_unlock(&newcon->sock_mutex);
+ 
+ 	/*
