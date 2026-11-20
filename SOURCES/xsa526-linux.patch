@@ -1,4 +1,3 @@
-From d99fccccd57775f96d3deb7b14c0e4d66154ce9d Mon Sep 17 00:00:00 2001
 From: Juergen Gross <jgross@suse.com>
 Date: Fri, 6 Nov 2026 13:07:52 +0100
 Subject: [PATCH] xen-netback: Fix UAF when reading statistics data
@@ -15,16 +14,12 @@ Fix that by calling synchronize_net() before freeing the queue data.
 
 This is XSA-526 / CVE-2026-100080
 
+Fixes: b17075d5c198 ("xen-netback: fix race condition on XenBus disconnect")
 Reported-by: Yehyeong Lee <yhlee@isslab.korea.ac.kr>
 Signed-off-by: Juergen Gross <jgross@suse.com>
-(cherry picked from commit 5fb756f1bbec7a3862dda5d79028bf656271804c)
-Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
 ---
- drivers/net/xen-netback/xenbus.c | 1 +
- 1 file changed, 1 insertion(+)
-
 diff --git a/drivers/net/xen-netback/xenbus.c b/drivers/net/xen-netback/xenbus.c
-index 9172ad35edbb..84081668742c 100644
+index 9172ad3..8408166 100644
 --- a/drivers/net/xen-netback/xenbus.c
 +++ b/drivers/net/xen-netback/xenbus.c
 @@ -1080,6 +1080,7 @@ static void connect(struct backend_info *be)
