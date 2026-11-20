@@ -797,18 +797,19 @@ Patch1021: 0656-openvswitch-cap-upcall-PID-array-size-and-pre-size-v.patch
 Patch1022: 0657-net-openvswitch-fix-possible-kfree_skb-of-ERR_PTR.patch
 
 # CVE-2026-64600 (RefluXFS)
-Patch1023: 0001-xfs-resample-the-data-fork-mapping-after-cycling-ILO.patch
+Patch1023: 0001-xfs-update-fork-seq-counter-on-data-fork-changes.patch
+Patch1024: 0001-xfs-resample-the-data-fork-mapping-after-cycling-ILO.patch
 
 # https://github.com/xcp-ng/linux/pull/5
-Patch1024: 0001-SUNRPC-avoid-race-between-mod_timer-and-del_timer_sy.patch
-Patch1025: 0002-SUNRPC-use-_bh-spinlocking-on-transport_lock.patch
-Patch1026: 0003-Revert-XSI-2150-Avoid-deadlocks-on-NFS-spinlocks.patch
+Patch1025: 0001-SUNRPC-avoid-race-between-mod_timer-and-del_timer_sy.patch
+Patch1026: 0002-SUNRPC-use-_bh-spinlocking-on-transport_lock.patch
+Patch1027: 0003-Revert-XSI-2150-Avoid-deadlocks-on-NFS-spinlocks.patch
 
 # Defensive fix pulled in with XSA-527
-Patch1027: 0002-xen-netback-fix-error-path-of-xenvif_connect_data.patch
+Patch1028: 0002-xen-netback-fix-error-path-of-xenvif_connect_data.patch
 
 # Fix crash on empty plaintext (regression in 8.0.49 / 8.0.51)
-Patch1028: 0001-crypto-x86-aesni-gcm-fix-crash-on-empty-plaintext.patch
+Patch1029: 0001-crypto-x86-aesni-gcm-fix-crash-on-empty-plaintext.patch
 
 %description
 The kernel package contains the Linux kernel (vmlinuz), the core of any
@@ -1182,6 +1183,7 @@ fi
 
 # * Fri Nov 20 2026 Quentin Casasnovas <quentin.casasnovas@vates.tech> - 4.19.19-8.0.51.1
 # - Fix regression on AES-GCM encryption through AF_ALG
+# - Fix incomplete backport to CVE-2026-64600 (RefluXFS)
 # - Sync with 4.19.19-8.0.51
 # - *** Upstream changelog ***
 # - * Tue Nov 17 2026 Alex Brett <alex.brett@citrix.com> - 4.19.19-8.0.51
