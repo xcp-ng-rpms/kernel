@@ -807,6 +807,9 @@ Patch1026: 0003-Revert-XSI-2150-Avoid-deadlocks-on-NFS-spinlocks.patch
 # Defensive fix pulled in with XSA-527
 Patch1027: 0002-xen-netback-fix-error-path-of-xenvif_connect_data.patch
 
+# Fix crash on empty plaintext (regression in 8.0.49 / 8.0.51)
+Patch1028: 0001-crypto-x86-aesni-gcm-fix-crash-on-empty-plaintext.patch
+
 %description
 The kernel package contains the Linux kernel (vmlinuz), the core of any
 Linux operating system. The kernel handles the basic functions of the operating
@@ -1178,6 +1181,7 @@ fi
 %changelog
 
 # * Fri Nov 20 2026 Quentin Casasnovas <quentin.casasnovas@vates.tech> - 4.19.19-8.0.51.1
+# - Fix regression on AES-GCM encryption through AF_ALG
 # - Sync with 4.19.19-8.0.51
 # - *** Upstream changelog ***
 # - * Tue Nov 17 2026 Alex Brett <alex.brett@citrix.com> - 4.19.19-8.0.51
