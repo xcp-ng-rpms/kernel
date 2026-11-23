@@ -12,7 +12,7 @@ Signed-off-by: Ross Lagerwall <ross.lagerwall@citrix.com>
  2 files changed, 66 insertions(+), 12 deletions(-)
 
 diff --git a/drivers/block/xen-blkback/common.h b/drivers/block/xen-blkback/common.h
-index 1d3002d773f7..e41d5e246c7e 100644
+index 584f822f15ce..86df03f761ed 100644
 --- a/drivers/block/xen-blkback/common.h
 +++ b/drivers/block/xen-blkback/common.h
 @@ -231,7 +231,14 @@ struct xen_vbd {
@@ -31,7 +31,7 @@ index 1d3002d773f7..e41d5e246c7e 100644
  
  /* Number of requests that we can fit in a ring */
  #define XEN_BLKIF_REQS_PER_PAGE		32
-@@ -365,8 +372,12 @@ struct pending_req {
+@@ -366,8 +373,12 @@ struct pending_req {
  #define xen_blkif_get(_b) (atomic_inc(&(_b)->refcnt))
  #define xen_blkif_put(_b)				\
  	do {						\
@@ -47,7 +47,7 @@ index 1d3002d773f7..e41d5e246c7e 100644
  
  struct phys_req {
 diff --git a/drivers/block/xen-blkback/xenbus.c b/drivers/block/xen-blkback/xenbus.c
-index 42af2f37ba4e..bc888aac585f 100644
+index e99c71ebc548..a9fd32a48ede 100644
 --- a/drivers/block/xen-blkback/xenbus.c
 +++ b/drivers/block/xen-blkback/xenbus.c
 @@ -26,15 +26,6 @@
@@ -136,10 +136,10 @@ index 42af2f37ba4e..bc888aac585f 100644
  	return;
  }
  
-@@ -254,6 +280,14 @@ static int xen_blkif_disconnect(struct xen_blkif *blkif)
- 	struct pending_req *req, *n;
+@@ -264,6 +290,14 @@ static int xen_blkif_disconnect(struct xen_blkif *blkif)
  	unsigned int j, r;
  	bool busy = false;
+ 	struct xen_blkif_ring *rings;
 +	char *xspath;
 +	size_t xspathsize;
 +	const size_t xenstore_path_ext_size = 11; /* sufficient for "/queue-NNN" */
@@ -151,7 +151,7 @@ index 42af2f37ba4e..bc888aac585f 100644
  
  	for (r = 0; r < blkif->nr_rings; r++) {
  		struct xen_blkif_ring *ring = &blkif->rings[r];
-@@ -264,6 +298,9 @@ static int xen_blkif_disconnect(struct xen_blkif *blkif)
+@@ -274,6 +308,9 @@ static int xen_blkif_disconnect(struct xen_blkif *blkif)
  
  		if (ring->xenblkd) {
  			kthread_stop(ring->xenblkd);
@@ -161,7 +161,7 @@ index 42af2f37ba4e..bc888aac585f 100644
  			ring->xenblkd = NULL;
  			wake_up(&ring->shutdown_wq);
  		}
-@@ -313,6 +350,7 @@ static int xen_blkif_disconnect(struct xen_blkif *blkif)
+@@ -323,6 +360,7 @@ static int xen_blkif_disconnect(struct xen_blkif *blkif)
  		WARN_ON(i != (XEN_BLKIF_REQS_PER_PAGE * blkif->nr_ring_pages));
  		ring->active = false;
  	}
@@ -169,7 +169,7 @@ index 42af2f37ba4e..bc888aac585f 100644
  	if (busy)
  		return -EBUSY;
  
-@@ -331,6 +369,11 @@ static int xen_blkif_disconnect(struct xen_blkif *blkif)
+@@ -347,6 +385,11 @@ static int xen_blkif_disconnect(struct xen_blkif *blkif)
  static void xen_blkif_free(struct xen_blkif *blkif)
  {
  	WARN_ON(xen_blkif_disconnect(blkif));
