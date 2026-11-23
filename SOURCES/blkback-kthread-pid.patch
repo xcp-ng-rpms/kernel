@@ -130,10 +130,10 @@ index dc954fbc664f..c31dc95a3513 100644
  	return;
  }
  
-@@ -245,6 +271,14 @@ static int xen_blkif_disconnect(struct xen_blkif *blkif)
- 	struct pending_req *req, *n;
+@@ -246,6 +272,14 @@ static int xen_blkif_disconnect(struct xen_blkif *blkif)
  	unsigned int j, r;
  	bool busy = false;
+ 	struct xen_blkif_ring *rings;
 +	char *xspath;
 +	size_t xspathsize;
 +	const size_t xenstore_path_ext_size = 11; /* sufficient for "/queue-NNN" */

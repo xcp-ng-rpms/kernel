@@ -1,4 +1,4 @@
-From 3f449ea2b2750129651e04b8babb72cae98166f0 Mon Sep 17 00:00:00 2001
+From 73bfd8dac387495809dbcbee4aa0087f07aed9a9 Mon Sep 17 00:00:00 2001
 From: Eric Dumazet <edumazet@google.com>
 Date: Mon, 20 Dec 2021 06:33:30 -0800
 Subject: [PATCH] inet: fully convert sk->sk_rx_dst to RCU rules
@@ -231,8 +231,12 @@ Signed-off-by: Jakub Kicinski <kuba@kernel.org>
 [cmllamas: fixed trivial merge conflict]
 Signed-off-by: Carlos Llamas <cmllamas@google.com>
 Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
-(cherry picked from commit f039b43cbaea5e0700980c2f0052da05a70782e0)
-Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
+
+[ Backport to XS8: taken from 4.19.y stable commit
+  75a578000ae5e511e5d0e8433c94a14d9c99c412 (4.19.262). Applied with a
+  3-way merge due to context differences in tcp_disconnect(); no
+  functional changes. ]
+Signed-off-by: Alex Brett <alex.brett@citrix.com>
 ---
  include/net/sock.h   |  2 +-
  net/ipv4/af_inet.c   |  2 +-
@@ -258,20 +262,20 @@ index 15cbddf99b5a..8eaf4704abd2 100644
  	atomic_t		sk_omem_alloc;
  	int			sk_sndbuf;
 diff --git a/net/ipv4/af_inet.c b/net/ipv4/af_inet.c
-index 037078a97411..8a6647a96c29 100644
+index 1fbe2f815474..908f2199673e 100644
 --- a/net/ipv4/af_inet.c
 +++ b/net/ipv4/af_inet.c
 @@ -157,7 +157,7 @@ void inet_sock_destruct(struct sock *sk)
  
  	kfree(rcu_dereference_protected(inet->inet_opt, 1));
- 	dst_release(rcu_dereference_protected(sk->sk_dst_cache, 1));
+ 	dst_release(rcu_dereference_check(sk->sk_dst_cache, 1));
 -	dst_release(sk->sk_rx_dst);
 +	dst_release(rcu_dereference_protected(sk->sk_rx_dst, 1));
  	sk_refcnt_debug_dec(sk);
  }
  EXPORT_SYMBOL(inet_sock_destruct);
 diff --git a/net/ipv4/tcp.c b/net/ipv4/tcp.c
-index e03da0de9dea..867e3f01973a 100644
+index 03b0dbfa0e53..742316c74c87 100644
 --- a/net/ipv4/tcp.c
 +++ b/net/ipv4/tcp.c
 @@ -2584,8 +2584,7 @@ int tcp_disconnect(struct sock *sk, int flags)
@@ -436,3 +440,6 @@ index 76ba2f34ef6b..31e7a31eb291 100644
  
  	if (dst)
  		dst = dst_check(dst, inet6_sk(sk)->rx_dst_cookie);
+-- 
+2.53.0
+
