@@ -45,7 +45,7 @@
 Name: kernel
 License: GPLv2
 Version: %{usver}
-Release: %{?xsrel}.1.kernelpreview.1%{?dist}
+Release: %{?xsrel}.1.kernelpreview.1.0.testv1.1%{?dist}
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
