@@ -8,10 +8,10 @@ Subject: [PATCH] default-xen-swiotlb-size-128MiB
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/drivers/xen/swiotlb-xen.c b/drivers/xen/swiotlb-xen.c
-index 7c6252a86a13..6bc51aa59d2c 100644
+index 0fe74ef81451..72bcab46db0d 100644
 --- a/drivers/xen/swiotlb-xen.c
 +++ b/drivers/xen/swiotlb-xen.c
-@@ -167,7 +167,7 @@ xen_swiotlb_fixup(void *buf, size_t size, unsigned long nslabs,
+@@ -173,7 +173,7 @@ xen_swiotlb_fixup(void *buf, size_t size, unsigned long nslabs,
  static unsigned long xen_set_nslabs(unsigned long nr_tbl)
  {
  	if (!nr_tbl) {

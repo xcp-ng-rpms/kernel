@@ -1,7 +1,7 @@
 %global package_speccommit ab0ac59fd53959995355c0cc3d845e75e7d60f94
 %global usver 4.19.325
 %global cipver 137
-%global xsver 8.0.46
+%global xsver 8.0.51
 %global xsrel cip%{cipver}.%{xsver}%{?xscount}%{?xshash}
 %global package_srccommit refs/tags/v%{usver}-cip%{cipver}
 %define uname 4.19.325-cip137
@@ -45,7 +45,7 @@
 Name: kernel
 License: GPLv2
 Version: %{usver}
-Release: %{?xsrel}.16.kernelpreview.1%{?dist}
+Release: %{?xsrel}.1.kernelpreview.1%{?dist}
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
@@ -97,9 +97,9 @@ Source4: Module.kabi
 Source5: prepare-build
 
 # The patch-queue was exported with the following command:
-#  git-spec-patches -o SOURCES/ v4.19.19..kernel/xcpng-4.19.19-8.0.46.16/patched v4.19.325-cip137..kernel/xcpng-4.19.325-cip137.8.0.46.16/patched-manual
-# kernel/xcpng-4.19.19-8.0.46.16/patched: 1709c67197bb xen-netback: Fix XenBus connection failure cleanup
-# kernel/xcpng-4.19.325-cip137.8.0.46.16/patched-manual: 0d9cca5c2096 localversion-st: rm to avoid conflicts with yum's rpm version constraints.
+#  git-spec-patches -o SOURCES/ v4.19.19..kernel/xcpng-4.19.19-8.0.51.1/patched v4.19.325-cip137..kernel/xcpng-4.19.325-cip137.8.0.51.1/patched-manual
+# kernel/xcpng-4.19.19-8.0.51.1/patched: 8bfcf95dbb4e crypto: x86/aesni-gcm - fix crash on empty plaintext
+# kernel/xcpng-4.19.325-cip137.8.0.51.1/patched-manual: cd36b00fcfea localversion-st: rm to avoid conflicts with yum's rpm version constraints.
 
 # Patch0: 8c763a3cf502 ("Fix "net: ipv4: do not handle duplicate fragments as overlapping"")
 # Patch1: d8099663adc9 ("xen/privcmd: allow fetching resource sizes")
@@ -226,515 +226,544 @@ Patch117: gfs2-Inode-dirtying-fix.patch
 # Patch122: b72ea6ec83be ("net/mlx5e: Force CHECKSUM_UNNECESSARY for short ethernet frames")
 # Patch123: 4190a7bcd2af ("net/mlx4_en: Force CHECKSUM_NONE for short ethernet frames")
 # Patch124: b4d965a37d89 ("cifs: allow calling SMB2_xxx_free(NULL)")
-# Patch125: 944c58523731 ("random: add a spinlock_t to struct batched_entropy")
-# Patch126: c09be31461ed ("tcp: limit payload size of sacked skbs")
-# Patch127: ec83921899a5 ("tcp: tcp_fragment() should apply sane memory limits")
-# Patch128: 7f9f8a37e563 ("tcp: add tcp_min_snd_mss sysctl")
-# Patch129: 59222807fcc9 ("tcp: enforce tcp_min_snd_mss in tcp_mtu_probing()")
-# Patch130: dad3a9314ac9 ("tcp: refine memory limit test in tcp_fragment()")
-# Patch131: 007e5aaf287c ("xen/events: fix binding user event channels to cpus")
-# Patch132: e73db096691e ("xen: let alloc_xenballooned_pages() fail if not enough memory free")
-# Patch133: 6323c238bb43 ("tcp: be more careful in tcp_fragment()")
-# Patch134: 259f9d9a290e ("random: always use batched entropy for get_random_u{32,64}")
-# Patch135: 014ee1c7d184 ("xen-blkback: set ring->xenblkd to NULL after kthread_stop()")
-# Patch136: b0be61a5a59e ("block: cleanup __blkdev_issue_discard()")
-# Patch137: f387897cf5b8 ("block: fix 32 bit overflow in __blkdev_issue_discard()")
-# Patch138: 3491857f4292 ("scsi: libiscsi: Fix race between iscsi_xmit_task and iscsi_complete_task")
-# Patch139: b3410f0f8505 ("xen/netback: Reset nr_frags before freeing skb")
-# Patch140: 99952b08537c ("openvswitch: change type of UPCALL_PID attribute to NLA_UNSPEC")
-Patch141: gfs2-gfs2_iomap_begin-cleanup.patch
-Patch142: gfs2-Add-support-for-IOMAP_ZERO.patch
-Patch143: gfs2-implement-gfs2_block_zero_range-using-iomap_zer.patch
-Patch144: gfs2-Minor-gfs2_alloc_inode-cleanup.patch
-Patch145: gfs2-Always-mark-inode-dirty-in-fallocate.patch
-Patch146: gfs2-untangle-the-logic-in-gfs2_drevalidate.patch
-Patch147: gfs2-Fix-possible-fs-name-overflows.patch
-Patch148: gfs2-Fix-recovery-slot-bumping.patch
-Patch149: gfs2-Minor-PAGE_SIZE-arithmetic-cleanups.patch
-Patch150: gfs2-Delete-an-unnecessary-check-before-brelse.patch
-Patch151: gfs2-separate-holder-for-rgrps-in-gfs2_rename.patch
-Patch152: gfs2-create-function-gfs2_glock_update_hold_time.patch
-Patch153: gfs2-Use-async-glocks-for-rename.patch
-Patch154: gfs2-Improve-mmap-write-vs.-truncate-consistency.patch
-# Patch155: e0c1e6e55bca ("gfs2: clear buf_in_tr when ending a transaction in sweep_bh_for_rgrps")
-# Patch156: 90a886b68faa ("xen/efi: Set nonblocking callbacks")
-# Patch157: 1d5cb12a2539 ("net: fix sk_page_frag() recursion from memory reclaim")
-Patch158: drm-i915-gvt-Allow-F_CMD_ACCESS-on-mmio-0x21f0.patch
-Patch159: gfs2-add-compat_ioctl-support.patch
-Patch160: gfs2-removed-unnecessary-semicolon.patch
-Patch161: gfs2-Some-whitespace-cleanups.patch
-Patch162: gfs2-Improve-mmap-write-vs.-punch_hole-consistency.patch
-Patch163: gfs2-Multi-block-allocations-in-gfs2_page_mkwrite.patch
-Patch164: gfs2-Fix-end-of-file-handling-in-gfs2_page_mkwrite.patch
-Patch165: gfs2-Remove-active-journal-side-effect-from-gfs2_wri.patch
-Patch166: gfs2-make-gfs2_log_shutdown-static.patch
-# Patch167: 0809e1087c3d ("gfs2: fix glock reference problem in gfs2_trans_remove_revoke")
-Patch168: gfs2-Introduce-function-gfs2_withdrawn.patch
-Patch169: gfs2-fix-infinite-loop-in-gfs2_ail1_flush-on-io-erro.patch
-Patch170: gfs2-Don-t-loop-forever-in-gfs2_freeze-if-withdrawn.patch
-Patch171: gfs2-Abort-gfs2_freeze-if-io-error-is-seen.patch
-Patch172: gfs2-Close-timing-window-with-GLF_INVALIDATE_IN_PROG.patch
-# Patch173: 19709adfd7cd ("gfs2: clean up iopen glock mess in gfs2_create_inode")
-Patch174: gfs2-Remove-duplicate-call-from-gfs2_create_inode.patch
-Patch175: gfs2-Don-t-write-log-headers-after-file-system-withd.patch
-Patch176: xen-events-remove-event-handling-recursion-detection.patch
-Patch177: gfs2-Another-gfs2_find_jhead-fix.patch
-Patch178: gfs2-eliminate-ssize-parameter-from-gfs2_struct2blk.patch
-Patch179: gfs2-minor-cleanup-remove-unneeded-variable-ret-in-g.patch
-Patch180: gfs2-Avoid-access-time-thrashing-in-gfs2_inode_looku.patch
-Patch181: gfs2-Fix-incorrect-variable-name.patch
-Patch182: gfs2-Remove-GFS2_MIN_LVB_SIZE-define.patch
-Patch183: fs-gfs2-remove-unused-IS_DINODE-and-IS_LEAF-macros.patch
-Patch184: gfs2-remove-unused-LBIT-macros.patch
-Patch185: Revert-gfs2-eliminate-tr_num_revoke_rm.patch
-Patch186: gfs2-fix-gfs2_find_jhead-that-returns-uninitialized-.patch
-# Patch187: e57e77e9321c ("gfs2: move setting current->backing_dev_info")
-# Patch188: 4b67a516c63d ("gfs2: fix O_SYNC write handling")
-Patch189: drm-i915-gvt-fix-high-order-allocation-failure-on-la.patch
-Patch190: drm-i915-gvt-Add-mutual-lock-for-ppgtt-mm-LRU-list.patch
-Patch191: drm-i915-gvt-more-locking-for-ppgtt-mm-LRU-list.patch
-# Patch192: d0f7d0913862 ("xenbus: req->body should be updated before req->state")
-# Patch193: c4e8290c6fdf ("xenbus: req->err should be updated before req->state")
-# Patch194: 777179200cb8 ("gfs2_atomic_open(): fix O_EXCL|O_CREAT handling on cold dcache")
-Patch195: gfs2-Split-gfs2_lm_withdraw-into-two-functions.patch
-Patch196: gfs2-Report-errors-before-withdraw.patch
-Patch197: gfs2-Remove-usused-cluster_wide-arguments-of-gfs2_co.patch
-Patch198: gfs2-Turn-gfs2_consist-into-void-functions.patch
-Patch199: gfs2-Return-bool-from-gfs2_assert-functions.patch
-Patch200: gfs2-Introduce-concept-of-a-pending-withdraw.patch
-Patch201: gfs2-clear-ail1-list-when-gfs2-withdraws.patch
-Patch202: gfs2-Rework-how-rgrp-buffer_heads-are-managed.patch
-Patch203: gfs2-log-error-reform.patch
-Patch204: gfs2-Only-complain-the-first-time-an-io-error-occurs.patch
-Patch205: gfs2-Ignore-dlm-recovery-requests-if-gfs2-is-withdra.patch
-Patch206: gfs2-move-check_journal_clean-to-util.c-for-future-u.patch
-Patch207: gfs2-Allow-some-glocks-to-be-used-during-withdraw.patch
-Patch208: gfs2-Force-withdraw-to-replay-journals-and-wait-for-.patch
-Patch209: gfs2-fix-infinite-loop-when-checking-ail-item-count-.patch
-Patch210: gfs2-Add-verbose-option-to-check_journal_clean.patch
-Patch211: gfs2-Issue-revokes-more-intelligently.patch
-Patch212: gfs2-Prepare-to-withdraw-as-soon-as-an-IO-error-occu.patch
-Patch213: gfs2-Check-for-log-write-errors-before-telling-dlm-t.patch
-Patch214: gfs2-Do-log_flush-in-gfs2_ail_empty_gl-even-if-ail-l.patch
-Patch215: gfs2-Withdraw-in-gfs2_ail1_flush-if-write_cache_page.patch
-Patch216: gfs2-drain-the-ail2-list-after-io-errors.patch
-# Patch217: 09f8ac747f36 ("gfs2: Don't demote a glock until its revokes are written")
-Patch218: gfs2-Do-proper-error-checking-for-go_sync-family-of-.patch
-Patch219: gfs2-flesh-out-delayed-withdraw-for-gfs2_log_flush.patch
-Patch220: gfs2-don-t-allow-releasepage-to-free-bd-still-used-f.patch
-Patch221: gfs2-allow-journal-replay-to-hold-sd_log_flush_lock.patch
-Patch222: gfs2-leaf_dealloc-needs-to-allocate-one-more-revoke.patch
-Patch223: gfs2-Additional-information-when-gfs2_ail1_flush-wit.patch
-Patch224: gfs2-Clean-up-inode-initialization-and-teardown.patch
-Patch225: gfs2-Switch-to-list_-first-last-_entry.patch
-Patch226: gfs2-eliminate-gfs2_rsqa_alloc-in-favor-of-gfs2_qa_a.patch
-Patch227: gfs2-Change-inode-qa_data-to-allow-multiple-users.patch
-Patch228: gfs2-Split-gfs2_rsqa_delete-into-gfs2_rs_delete-and-.patch
-Patch229: gfs2-Remove-unnecessary-gfs2_qa_-get-put-pairs.patch
-Patch230: gfs2-don-t-lock-sd_log_flush_lock-in-try_rgrp_unlink.patch
-Patch231: gfs2-instrumentation-wrt-ail1-stuck.patch
-Patch232: gfs2-change-from-write-to-read-lock-for-sd_log_flush.patch
-Patch233: gfs2-Fix-oversight-in-gfs2_ail1_flush.patch
-Patch234: gfs2-If-go_sync-returns-error-withdraw-but-skip-inva.patch
-Patch235: dlm-Switch-to-using-wait_event.patch
-Patch236: dlm-use-the-tcp-version-of-accept_from_sock-for-sctp.patch
-Patch237: net-add-sock_set_reuseaddr.patch
-Patch238: net-add-sock_set_sndtimeo.patch
-Patch239: net-add-sock_set_keepalive.patch
-Patch240: net-add-sock_set_rcvbuf.patch
-Patch241: tcp-add-tcp_sock_set_nodelay.patch
-Patch242: sctp-add-sctp_sock_set_nodelay.patch
-Patch243: dlm-dlm_internal-Replace-zero-length-array-with-flex.patch
-Patch244: dlm-user-Replace-zero-length-array-with-flexible-arr.patch
-Patch245: fs-dlm-remove-unneeded-semicolon-in-rcom.c.patch
-# Patch246: 68728008569c ("dlm: remove BUG() before panic()")
-Patch247: gfs2-fix-withdraw-sequence-deadlock.patch
-Patch248: gfs2-Fix-error-exit-in-do_xmote.patch
-Patch249: gfs2-Fix-BUG-during-unmount-after-file-system-withdr.patch
-Patch250: gfs2-Fix-use-after-free-in-gfs2_logd-after-withdraw.patch
-# Patch251: 9663d294ae28 ("block: call rq_qos_exit() after queue is frozen")
-# Patch252: 8343dffacc1b ("scsi: libfc: free response frame from GPN_ID")
-# Patch253: 41722344981f ("xen/xenbus: ensure xenbus_map_ring_valloc() returns proper grant status")
-# Patch254: b7e389235cfe ("treewide: Remove uninitialized_var() usage")
-# Patch255: 6a2db034f9b3 ("dlm: Fix kobject memleak")
-Patch256: net-sock-add-sock_set_mark.patch
-Patch257: fs-dlm-set-skb-mark-for-listen-socket.patch
-Patch258: fs-dlm-set-skb-mark-per-peer-socket.patch
-Patch259: fs-dlm-don-t-close-socket-on-invalid-message.patch
-Patch260: fs-dlm-change-handling-of-reconnects.patch
-Patch261: fs-dlm-implement-tcp-graceful-shutdown.patch
-# Patch262: b3ddf6ba5e28 ("ext4: fix potential negative array index in do_split()")
-Patch263: fs-dlm-synchronize-dlm-before-shutdown.patch
-Patch264: fs-dlm-make-connection-hash-lockless.patch
-Patch265: fs-dlm-fix-dlm_local_addr-memory-leak.patch
-# Patch266: 13296b64a81c ("fs: dlm: fix configfs memory leak")
-Patch267: fs-dlm-move-free-writequeue-into-con-free.patch
-Patch268: fs-dlm-handle-possible-othercon-writequeues.patch
-Patch269: fs-dlm-use-free_con-to-free-connection.patch
-Patch270: fs-dlm-remove-lock-dependency-warning.patch
-Patch271: fs-dlm-fix-mark-per-nodeid-setting.patch
-Patch272: fs-dlm-handle-range-check-as-callback.patch
-Patch273: fs-dlm-disallow-buffer-size-below-default.patch
-Patch274: fs-dlm-rework-receive-handling.patch
-Patch275: fs-dlm-fix-race-in-nodeid2con.patch
-# Patch276: 61d359d51a1c ("xen/events: avoid removing an event channel while handling it")
-# Patch277: 25f6b08895d5 ("xen/events: add a proper barrier to 2-level uevent unmasking")
-# Patch278: c7f95d899f49 ("xen/events: fix race in evtchn_fifo_unmask()")
-# Patch279: dea09436da03 ("xen/events: add a new "late EOI" evtchn framework")
-# Patch280: 1506109a85c8 ("xen/blkback: use lateeoi irq binding")
-# Patch281: 6a052f3a6282 ("xen/netback: use lateeoi irq binding")
-# Patch282: fb22061b20ea ("xen/scsiback: use lateeoi irq binding")
-# Patch283: 128b11967a26 ("xen/pvcallsback: use lateeoi irq binding")
-# Patch284: 4988884d53c0 ("xen/pciback: use lateeoi irq binding")
-# Patch285: 8363670c4d0b ("xen/events: switch user event channels to lateeoi model")
-# Patch286: 536075098940 ("xen/events: use a common cpu hotplug hook for event channels")
-# Patch287: 17ef715c0c88 ("xen/events: defer eoi in case of excessive number of events")
-# Patch288: c1f90a9cd988 ("xen/events: block rogue events for some time")
-Patch289: xen-events-unmask-a-fifo-event-channel-only-if-it-wa.patch
-Patch290: fs-dlm-fix-proper-srcu-api-call.patch
-Patch291: fs-dlm-define-max-send-buffer.patch
-Patch292: fs-dlm-add-get-buffer-error-handling.patch
-Patch293: fs-dlm-flush-othercon-at-close.patch
-Patch294: fs-dlm-handle-non-blocked-connect-event.patch
-Patch295: fs-dlm-add-helper-for-init-connection.patch
-Patch296: fs-dlm-move-connect-callback-in-node-creation.patch
-Patch297: fs-dlm-move-shutdown-action-to-node-creation.patch
-Patch298: fs-dlm-refactor-sctp-sock-parameter.patch
-Patch299: fs-dlm-listen-socket-out-of-connection-hash.patch
-Patch300: fs-dlm-fix-check-for-multi-homed-hosts.patch
-Patch301: fs-dlm-constify-addr_compare.patch
-Patch302: fs-dlm-check-on-existing-node-address.patch
-# Patch303: 7740c404d068 ("xen/netback: avoid race in xenvif_rx_ring_slots_available()")
-# Patch304: dfed59ee4b41 ("Xen/x86: don't bail early from clear_foreign_p2m_mapping()")
-# Patch305: c3d586afdb44 ("Xen/x86: also check kernel mapping in set_foreign_p2m_mapping()")
-# Patch306: ba75f4393225 ("Xen/gntdev: correct dev_bus_addr handling in gntdev_map_grant_pages()")
-# Patch307: e07f06f6bbee ("Xen/gntdev: correct error checking in gntdev_map_grant_pages()")
-# Patch308: a01b49a9bf91 ("xen-blkback: don't "handle" error by BUG()")
-# Patch309: 717faa776ca2 ("xen-netback: don't "handle" error by BUG()")
-# Patch310: f84c00fbd27b ("xen-scsiback: don't "handle" error by BUG()")
-# Patch311: 98f16e171e28 ("xen-blkback: fix error handling in xen_blkbk_map()")
-# Patch312: 135ba06d0bf8 ("xen/netback: fix spurious event detection for common event case")
-Patch313: xen-evtchn-use-smp-barriers-for-user-event-ring.patch
-Patch314: xen-evtchn-use-READ-WRITE_ONCE-for-accessing-ring-in.patch
-# Patch315: a6a76d7234cc ("xen/events: reset affinity of 2-level event when tearing it down")
-# Patch316: 3a19f808cb2b ("xen/events: don't unmask an event channel when an eoi is pending")
-# Patch317: d8887e85efca ("xen/events: avoid handling the same event on two cpus at the same time")
-Patch318: x86-ioperm-Add-new-paravirt-function-update_io_bitma.patch
-# Patch319: 1a999d25ef53 ("Xen/gnttab: handle p2m update errors on a per-slot basis")
-# Patch320: b62d8b5c814b ("xen-netback: respect gnttab_map_refs()'s return value")
-# Patch321: 16356ddb5878 ("xen-blkback: don't leak persistent grants from xen_blkbk_map()")
-# Patch322: 5f26f1f838aa ("bpf, x86: Validate computation of branch displacements for x86-64")
-# Patch323: 7b77ae2a0d6f ("bpf, x86: Validate computation of branch displacements for x86-32")
-# Patch324: d9ab90118cf9 ("xen/events: fix setting irq affinity")
-# Patch325: 1de7644eac41 ("xen/netback: fix rx queue stall detection")
-# Patch326: c9f17e92917f ("xen/netback: don't queue unlimited number of packages")
-# Patch327: 2efaecaf9603 ("fs: dlm: fix debugfs dump")
-Patch328: fs-dlm-fix-mark-setting-deadlock.patch
-Patch329: fs-dlm-set-connected-bit-after-accept.patch
-Patch330: fs-dlm-set-subclass-for-othercon-sock_mutex.patch
-Patch331: fs-dlm-add-errno-handling-to-check-callback.patch
-Patch332: fs-dlm-add-check-if-dlm-is-currently-running.patch
-Patch333: fs-dlm-change-allocation-limits.patch
-Patch334: fs-dlm-use-GFP_ZERO-for-page-buffer.patch
-Patch335: fs-dlm-simplify-writequeue-handling.patch
-Patch336: fs-dlm-check-on-minimum-msglen-size.patch
-Patch337: fs-dlm-remove-unaligned-memory-access-handling.patch
-Patch338: fs-dlm-flush-swork-on-shutdown.patch
-Patch339: fs-dlm-add-shutdown-hook.patch
-Patch340: fs-dlm-fix-missing-unlock-on-error-in-accept_from_so.patch
-# Patch341: cda326e5033f ("xen/events: reset active flag for lateeoi events later")
-Patch342: gfs2-fix-a-deadlock-on-withdraw-during-mount.patch
-Patch343: fs-dlm-always-run-complete-for-possible-waiters.patch
-Patch344: fs-dlm-add-dlm-macros-for-ratelimit-log.patch
-Patch345: fs-dlm-fix-srcu-read-lock-usage.patch
-Patch346: fs-dlm-set-is-othercon-flag.patch
-Patch347: fs-dlm-reconnect-if-socket-error-report-occurs.patch
-# Patch348: d5473f43e4fb ("fs: dlm: cancel work sync othercon")
-Patch349: fs-dlm-fix-connection-tcp-EOF-handling.patch
-Patch350: fs-dlm-public-header-in-out-utility.patch
-Patch351: fs-dlm-add-more-midcomms-hooks.patch
-Patch352: fs-dlm-make-buffer-handling-per-msg.patch
-Patch353: fs-dlm-add-functionality-to-re-transmit-a-message.patch
-Patch354: fs-dlm-move-out-some-hash-functionality.patch
-Patch355: fs-dlm-add-union-in-dlm-header-for-lockspace-id.patch
-Patch356: fs-dlm-add-reliable-connection-if-reconnect.patch
-Patch357: fs-dlm-add-midcomms-debugfs-functionality.patch
-Patch358: fs-dlm-don-t-allow-half-transmitted-messages.patch
-Patch359: fs-dlm-Fix-memory-leak-of-object-mh.patch
-Patch360: fs-dlm-Fix-spelling-mistake-stucked-stuck.patch
-Patch361: fs-dlm-fix-lowcomms_start-error-case.patch
-# Patch362: af02ec6cf614 ("fs: dlm: fix memory leak when fenced")
-Patch363: fs-dlm-use-alloc_ordered_workqueue.patch
-Patch364: fs-dlm-move-dlm-allow-conn.patch
-Patch365: fs-dlm-introduce-proto-values.patch
-Patch366: fs-dlm-rename-socket-and-app-buffer-defines.patch
-Patch367: fs-dlm-fix-race-in-mhandle-deletion.patch
-Patch368: fs-dlm-invalid-buffer-access-in-lookup-error.patch
-# Patch369: 6de9f0bf7cac ("seq_file: disallow extremely large seq buffer allocations")
-# Patch370: 387635925cd0 ("xen/events: Fix race in set_evtchn_to_irq")
-Patch371: fs-dlm-use-sk-sk_socket-instead-of-con-sock.patch
-Patch372: fs-dlm-use-READ_ONCE-for-config-var.patch
-Patch373: fs-dlm-fix-typo-in-tlv-prefix.patch
-Patch374: fs-dlm-clear-CF_APP_LIMITED-on-close.patch
-Patch375: fs-dlm-cleanup-and-remove-_send_rcom.patch
-Patch376: fs-dlm-introduce-con_next_wq-helper.patch
-Patch377: fs-dlm-move-to-static-proto-ops.patch
-Patch378: fs-dlm-introduce-generic-listen.patch
-Patch379: fs-dlm-auto-load-sctp-module.patch
-Patch380: fs-dlm-generic-connect-func.patch
-Patch381: fs-dlm-fix-multiple-empty-writequeue-alloc.patch
-Patch382: fs-dlm-move-receive-loop-into-receive-handler.patch
-Patch383: fs-dlm-implement-delayed-ack-handling.patch
-Patch384: fs-dlm-fix-return-EINTR-on-recovery-stopped.patch
-Patch385: fs-dlm-avoid-comms-shutdown-delay-in-release_lockspa.patch
-# Patch386: 6a9449e95688 ("iommu/vt-d: Fix agaw for a supported 48 bit guest address width")
-# Patch387: c348d806ed1d ("bpf: Do not use ax register in interpreter on div/mod")
-# Patch388: 8313432df224 ("bpf: Fix 32 bit src register truncation on div/mod")
-# Patch389: 39f74b7c81cc ("bpf: Fix truncation handling for mod32 dst reg wrt zero")
-Patch390: x86-timer-Skip-PIT-initialization-on-modern-chipsets.patch
-Patch391: x86-timer-Force-PIT-initialization-when-X86_FEATURE_.patch
-Patch392: x86-timer-Don-t-skip-PIT-setup-when-APIC-is-disabled.patch
-Patch393: nbd-Fix-use-after-free-in-pid_show.patch
-Patch394: fs-dlm-remove-check-SCTP-is-loaded-message.patch
-Patch395: fs-dlm-let-handle-callback-data-as-void.patch
-Patch396: fs-dlm-remove-double-list_first_entry-call.patch
-Patch397: fs-dlm-don-t-call-kernel_getpeername-in-error_report.patch
-Patch398: fs-dlm-replace-use-of-socket-sk_callback_lock-with-s.patch
-Patch399: fs-dlm-fix-build-with-CONFIG_IPV6-disabled.patch
-Patch400: fs-dlm-check-for-pending-users-filling-buffers.patch
-Patch401: fs-dlm-remove-wq_alloc-mutex.patch
-Patch402: fs-dlm-memory-cache-for-writequeue_entry.patch
-Patch403: fs-dlm-memory-cache-for-lowcomms-hotpath.patch
-Patch404: fs-dlm-print-cluster-addr-if-non-cluster-node-connec.patch
-Patch405: xen-x86-obtain-upper-32-bits-of-video-frame-buffer-a.patch
-Patch406: xen-x86-obtain-full-video-frame-buffer-address-for-D.patch
-Patch407: dlm-uninitialized-variable-on-error-in-dlm_listen_fo.patch
-Patch408: dlm-add-__CHECKER__-for-false-positives.patch
-Patch409: fs-dlm-fix-grammar-in-lowcomms-output.patch
-Patch410: fs-dlm-fix-race-in-lowcomms.patch
-Patch411: fs-dlm-relax-sending-to-allow-receiving.patch
-Patch412: fs-dlm-fix-sock-release-if-listen-fails.patch
-Patch413: fs-dlm-retry-accept-until-EAGAIN-or-error-returns.patch
-Patch414: fs-dlm-remove-send-repeat-remove-handling.patch
-# Patch415: 756eda9bc8b7 ("xen/pvh: set xen_domain_type to HVM in xen_pvh_init")
-# Patch416: 0c47135536b8 ("xen/pvh: correctly setup the PV EFI interface for dom0")
-# Patch417: 2a226e8ca951 ("PCI: pciehp: Fix AB-BA deadlock between reset_lock and device_lock")
-Patch418: nvme_fc-add-nvme_discovery-sysfs-attribute-to-fc-tra.patch
-Patch419: ACPI-processor-Fix-evaluating-_PDC-method-when-runni.patch
-# Patch420: 2440f3cebcb0 ("SUNRPC: Always drop the XPRT_LOCK on XPRT_CLOSE_WAIT")
-# Patch421: b42515434f8f ("xen-netback: use default TX queue size for vifs")
-Patch422: gfs2-Expect-EBUSY-after-canceling-dlm-locking-reques.patch
-Patch423: gfs2-Clear-flags-when-withdraw-prevents-xmote.patch
-# Patch424: d1ae006b4851 ("fs: dlm: fix race between test_bit() and queue_work()")
-Patch425: xhci-show-fault-reason-for-a-failed-enable-slot-comm.patch
-Patch426: gfs2-Fix-ignore-unlock-failures-after-withdraw.patch
-Patch427: gfs2-finish_xmote-cleanup.patch
-Patch428: gfs2-do_xmote-fixes.patch
-Patch429: x86-xen-time-Reduce-Xen-timer-tick.patch
-# Patch430: 16b92b031b4d ("decompress_bunzip2: fix rare decompression failure")
-# Patch431: 89ede9d8b5b8 ("scsi: scsi_dh_alua: Fix possible null-ptr-deref")
-# Patch432: cdd92ebe29c2 ("scsi: scsi_dh_alua: always use a 2 second delay before retrying RTPG")
-# Patch433: cf372c60ed13 ("scsi: scsi_dh_alua: handle RTPG sense code correctly during state transitions")
-# Patch434: 509e215d161e ("scsi: scsi_dh_alua: Avoid crash during alua_bus_detach()")
-Patch435: scsi-scsi_dh_alua-Set-transitioning-state-on-Unit-At.patch
-Patch436: scsi-scsi_dh_alua-Prevent-duplicate-pg-info-print-in.patch
-# Patch437: 5fc6e73ba502 ("scsi: scsi_dh_alua: Remove check for ASC 24h in alua_rtpg()")
-Patch438: scsi-scsi_dh_alua-Retry-RTPG-on-a-different-path-aft.patch
-# Patch439: f4bde1d1bf90 ("scsi: scsi_dh_alua: Check for negative result value")
-# Patch440: c021be62bbcb ("scsi: scsi_dh_alua: Fix signedness bug in alua_rtpg()")
-# Patch441: c110051d335e ("scsi: scsi_dh_alua: Fix memleak for 'qdata' in alua_activate()")
-Patch442: scsi-core-alua-I-O-errors-for-ALUA-state-transitions.patch
-Patch443: scsi-scsi_dh_alua-Properly-handle-the-ALUA-transitio.patch
-Patch444: From-07e447d39839d0401d5f44243e8e20de0e5ce9ce-Mon-Se.patch
-Patch445: SUNRPC-Replace-the-queue-timer-with-a-delayed-work-f.patch
-# Patch446: cad4448dfc9c ("nbd: fix possible sysfs duplicate warning")
-Patch447: SUNRPC-fix-race-to-sk_err-after-xs_error_report.patch
-# Patch448: 82b7c99ee141 ("nbd: protect cmd->status with cmd->lock")
-# Patch449: 1f032ca298dd ("nbd: handle racing with error'ed out commands")
-Patch450: SUNRPC-Fix-backchannel-RPC-soft-lockups.patch
-# Patch451: d9f4534a9a28 ("nbd: fix a block_device refcount leak in nbd_release")
-Patch452: nbd-Aovid-double-completion-of-a-request.patch
-Patch453: nbd-don-t-handle-response-without-a-corresponding-re.patch
-Patch454: nbd-make-sure-request-completion-won-t-concurrent.patch
-Patch455: cdc_ether-export-usbnet_cdc_zte_rx_fixup.patch
-Patch456: rndis_host-enable-the-bogus-MAC-fixup-for-ZTE-device.patch
-Patch457: rndis_host-limit-scope-of-bogus-MAC-address-detectio.patch
-Patch458: SUNRPC-Move-reset-of-TCP-state-variables-into-the-re.patch
-Patch459: nvme-fabrics-reject-I-O-to-offline-device.patch
-Patch460: Add-shadow-variables-support-from-kpatch.patch
-# Patch461: 9039eb22f995 ("xen/xenbus: Allow watches discard events before queueing")
-# Patch462: 3a36e4af694a ("xen/xenbus: Add 'will_handle' callback support in xenbus_watch_path()")
-# Patch463: b88c52d02e16 ("xen/xenbus/xen_bus_type: Support will_handle watch callback")
-# Patch464: 85597c4369c9 ("xen/xenbus: Count pending messages for each watch")
-# Patch465: be19047894c3 ("xenbus/xenbus_backend: Disallow pending watch messages")
-# Patch466: 47eb291ba65b ("xen/xenbus: Fix granting of vmalloc'd memory")
-# Patch467: b9b75a460076 ("xen-blkfront: switch kcalloc to kvcalloc for large array allocation")
-# Patch468: 041497b65eb0 ("xen/blkfront: Adjust indentation in xlvbd_alloc_gendisk")
-# Patch469: 5f547e7cbd84 ("xen/blkfront: fix memory allocation flags in blkfront_setup_indirect()")
-# Patch470: a4af550350cc ("xen-blkfront: allow discard-* nodes to be optional")
-# Patch471: dcbfd3f13b13 ("xen: sync include/xen/interface/io/ring.h with Xen's newest version")
-# Patch472: b647c449f166 ("xen/blkfront: read response from backend only once")
-# Patch473: 80baa77511ee ("xen/blkfront: don't take local copy of a request from the ring page")
-# Patch474: f89a05402f74 ("xen/blkfront: don't trust the backend response data blindly")
-# Patch475: 269d7124bcfa ("xen/blkfront: harden blkfront against event channel storms")
-# Patch476: 47288968eebd ("xen-netfront: do not assume sk_buff_head list is empty in error handling")
-# Patch477: a1afd826e549 ("xen-netfront: do not use ~0U as error return value for xennet_fill_frags()")
-# Patch478: 4b635fc2b349 ("xen-netfront: fix potential deadlock in xennet_remove()")
-# Patch479: 274c04221d91 ("xen/netfront: stop tx queues during live migration")
-# Patch480: e7d1024f5b19 ("xen/netfront: read response from backend only once")
-# Patch481: 26509bb5dd2f ("xen/netfront: don't read data from request on the ring page")
-# Patch482: e52c0efbd23c ("xen/netfront: disentangle tx_skb_freelist")
-# Patch483: e4e01b0e4b7f ("xen/netfront: don't trust the backend response data blindly")
-# Patch484: 3559ca594f15 ("xen/netfront: harden netfront against event channel storms")
-# Patch485: 198cdc287769 ("xen/netfront: destroy queues before real_num_tx_queues is zeroed")
-# Patch486: 9699f7a70eb8 ("pvcalls-front: read all data before closing the connection")
-# Patch487: 81b8519de1b4 ("pvcalls-front: don't try to free unallocated rings")
-# Patch488: 05ac8a683962 ("pvcalls-front: properly allocate sk")
-# Patch489: 06b919a51772 ("pvcalls-front: Avoid get_free_pages(GFP_KERNEL) under spinlock")
-# Patch490: 642e26628cf9 ("pvcalls-front: fix potential null dereference")
-# Patch491: 66f33b2bd2d8 ("xen/pvcalls: Remove set but not used variable")
-# Patch492: 36a2e9bf242b ("pvcalls-front: don't return error when the ring is full")
-# Patch493: 8d521d960aef ("xen/xenbus: don't let xenbus_grant_ring() remove grants in error case")
-# Patch494: 17659846fe33 ("xen/grant-table: add gnttab_try_end_foreign_access()")
-# Patch495: 423a3a50dce9 ("xen/blkfront: don't use gnttab_query_foreign_access() for mapped status")
-# Patch496: 927e4eb8ddf4 ("xen/netfront: don't use gnttab_query_foreign_access() for mapped status")
-# Patch497: 62a696c15cfc ("xen/scsifront: don't use gnttab_query_foreign_access() for mapped status")
-# Patch498: fbc57368ea52 ("xen/gntalloc: don't use gnttab_query_foreign_access()")
-# Patch499: c900f34fc134 ("xen: remove gnttab_query_foreign_access()")
-# Patch500: 2466bed361f3 ("xen/9p: use alloc/free_pages_exact()")
-# Patch501: f85d03f0f482 ("xen/pvcalls: use alloc/free_pages_exact()")
-# Patch502: 92dc0e4a2196 ("xen/gnttab: fix gnttab_end_foreign_access() without page specified")
-# Patch503: c307029d811e ("xen/netfront: react properly to failing gnttab_end_foreign_access_ref()")
-# Patch504: f4a1391185e3 ("xen/blkfront: fix leaking data in shared pages")
-# Patch505: 3650ac3218c1 ("xen/netfront: fix leaking data in shared pages")
-# Patch506: 4b67d8e42dbb ("xen/netfront: force data bouncing when backend is untrusted")
-# Patch507: 981de55fb6b5 ("xen/blkfront: force data bouncing when backend is untrusted")
-# Patch508: 44dfdecc288b ("xen/netback: Ensure protocol headers don't fall in the non-linear area")
-# Patch509: d3e1b6151d5d ("xen/netback: don't call kfree_skb() with interrupts disabled")
-Patch510: xen-netback-remove-unused-variables-pending_idx-and-.patch
-# Patch511: e14369897067 ("xen/netback: don't do grant copy across page boundary")
-Patch512: xen-netback-remove-not-needed-test-in-xenvif_tx_buil.patch
-# Patch513: a5353cdecd9b ("xen/netback: use same error messages for same errors")
-# Patch514: 11e6919ae028 ("xen/netback: Fix buffer overrun triggered by unusual packet")
-# Patch515: 3fdf2be9089b ("xen/events: replace evtchn_rwlock with RCU")
-# Patch516: 5bb8270789c8 ("xen-netback: don't produce zero-size SKB frags")
-Patch517: kbuild-AFTER_LINK.patch
-Patch518: expose-xsversion.patch
-Patch519: blktap2.patch
-Patch520: Write-each-kthread-s-pid-into-xenstore-so-that-it-ca.patch
-Patch521: Several-order-4-5-allocations-are-required-when-sett.patch
-Patch522: disable-EFI-Properties-table-for-Xen.patch
-Patch523: net-Do-not-scrub-ignore_df-within-the-same-name-spac.patch
-Patch524: enable-fragmention-gre-packets.patch
-Patch525: CA-285778-emulex-nic-ip-hdr-len.patch
-Patch526: cifs-Change-the-default-value-SecFlags-to-0x83.patch
-Patch527: call-kexec-before-offlining-noncrashing-cpus.patch
-Patch528: The-CFQ-IO-scheduler-has-the-concept-of-an-idle-IO-s.patch
-Patch529: pvsproxy-uses-an-XFS-filesystem-on-top-of-a-blktap-d.patch
-# Patch530: 694ec54b7826 ("scsi: libfc: Handling of extra kref")
-Patch531: Don-t-select-PINCTRL.patch
-Patch532: Add-50G-100G-200G-ethtool-link-modes.patch
-Patch533: dma-add-dma_get_required_mask_from_max_pfn.patch
-Patch534: x86-xen-correct-dma_get_required_mask-for-Xen-PV-gue.patch
-Patch535: map-1MiB-1-1.patch
-Patch536: If-the-host-has-more-CPUs-than-the-kernel-is-compile.patch
-Patch537: dom0-detects-the-presence-of-the-ACPI-PM-timer-but-c.patch
-Patch538: With-many-VMs-it-is-possible-to-hit-the-IRQ-descript.patch
-Patch539: xen-balloon-hotplug-select-HOLES_IN_ZONE.patch
-Patch540: pci-export-pci_probe_reset_function.patch
-Patch541: xen-pciback-provide-a-reset-sysfs-file-to-try-harder.patch
-Patch542: Guests-can-potentially-disable-cause-the-PCI-device-.patch
-Patch543: pciback-mask-root-port-comp-timeout.patch
-Patch544: Some-devices-advertise-FLReset-but-do-not-support-it.patch
-Patch545: Revert-PCI-Probe-for-device-reset-support-during-enu.patch
-Patch546: CA-135938-nfs-disconnect-on-rpc-retry.patch
-Patch547: sunrpc-force-disconnect-on-connection-timeout.patch
-Patch548: nfs_access_get_cached-may-call-__nfs_revalidate_inod.patch
-Patch549: bonding-balance-slb.patch
-Patch550: bridge-lock-fdb-after-garp.patch
-Patch551: CP-13181-net-openvswitch-add-dropping-of-fip-and-lld.patch
-Patch552: xen-ioemu-inject-msi.patch
-Patch553: pv-iommu-support.patch
-Patch554: Reserve-the-crashkernel-region-in-the-E820.-This-pre.patch
-Patch555: xen-swiotlb-rework-early-repeat-code.patch
-Patch556: arch-x86-xen-add-infrastruction-in-xen-to-support-gv.patch
-Patch557: drm-i915-gvt-write-guest-ppgtt-entry-for-xengt-suppo.patch
-Patch558: drm-i915-xengt-xengt-moudule-initial-files.patch
-Patch559: drm-i915-xengt-check-on_destroy-on-pfn_to_mfn.patch
-Patch560: arch-x86-xen-Import-x4.9-interface-for-ioreq.patch
-Patch561: i915-gvt-xengt.c-Use-new-dm_op-instead-of-hvm_op.patch
-Patch562: i915-gvt-xengt.c-New-interface-to-write-protect-PPGT.patch
-Patch563: i915-gvt-xengt.c-Select-vgpu-type-according-to-low_g.patch
-Patch564: drm-i915-gvt-Don-t-output-error-message-when-DomU-ma.patch
-Patch565: drm-i915-gvt-xengt-Correctly-get-low-mem-max-gfn.patch
-Patch566: drm-i915-gvt-Fix-dom0-call-trace-at-shutdown-or-rebo.patch
-Patch567: hvm-dm_op.h-Sync-dm_op-interface-to-xen-4.9-release.patch
-Patch568: drm-i915-gvt-Apply-g2h-adjust-for-GTT-mmio-access.patch
-Patch569: drm-i915-gvt-Apply-g2h-adjustment-during-fence-mmio-.patch
-Patch570: drm-i915-gvt-Patch-the-gma-in-gpu-commands-during-co.patch
-Patch571: drm-i915-gvt-Retrieve-the-guest-gm-base-address-from.patch
-Patch572: drm-i915-gvt-Align-the-guest-gm-aperture-start-offse.patch
-Patch573: drm-i915-gvt-Add-support-to-new-VFIO-subregion-VFIO_.patch
-Patch574: drm-i915-gvt-Implement-vGPU-status-save-and-restore-.patch
-Patch575: vfio-Implement-new-Ioctl-VFIO_IOMMU_GET_DIRTY_BITMAP.patch
-Patch576: drm-i915-gvt-Add-dev-node-for-vGPU-state-save-restor.patch
-Patch577: drm-i915-gvt-Add-interface-to-control-the-vGPU-runni.patch
-Patch578: drm-i915-gvt-Modify-the-vGPU-save-restore-logic-for-.patch
-Patch579: drm-i915-gvt-Add-log-dirty-support-for-XENGT-migrati.patch
-Patch580: drm-i915-gvt-xengt-Add-iosrv_enabled-to-track-iosrv-.patch
-Patch581: drm-i915-gvt-Add-xengt-ppgtt-write-handler.patch
-Patch582: drm-i915-gvt-xengt-Impliment-mpt-dma_map-unmap_guest.patch
-Patch583: drm-i915-gvt-introduce-a-new-VFIO-region-for-vfio-de.patch
-Patch584: drm-i915-gvt-change-the-return-value-of-opregion-acc.patch
-Patch585: drm-i915-gvt-Rebase-the-code-to-gvt-staging-for-live.patch
-Patch586: drm-i915-gvt-Apply-g2h-adjustment-to-buffer-start-gm.patch
-Patch587: drm-i915-gvt-Fix-xengt-opregion-handling-in-migratio.patch
-Patch588: drm-i915-gvt-XenGT-migration-optimize.patch
-Patch589: drm-i915-gvt-Add-vgpu-execlist-info-into-migration-d.patch
-Patch590: drm-i915-gvt-Emulate-ring-mode-register-restore-for-.patch
-Patch591: drm-i915-gvt-Use-copy_to_user-to-return-opregion.patch
-Patch592: drm-i915-gvt-Expose-opregion-in-vgpu-open.patch
-Patch593: drm-i915-gvt-xengt-Don-t-shutdown-vm-at-ioreq-failur.patch
-Patch594: drm-i915-gvt-Emulate-hw-status-page-address-register.patch
-Patch595: drm-i915-gvt-migration-copy-vregs-on-vreg-load.patch
-Patch596: drm-i915-gvt-Fix-a-command-corruption-caused-by-live.patch
-Patch597: drm-i915-gvt-update-force-to-nonpriv-register-whitel.patch
-Patch598: drm-i915-gvt-xengt-Fix-xengt-instance-destroy-error.patch
-Patch599: drm-i915-gvt-invalidate-old-ggtt-page-when-update-gg.patch
-Patch600: drm-i915-gvt-support-inconsecutive-partial-gtt-entry.patch
-Patch601: set-XENMEM_get_mfn_from_pfn-hypercall-number.patch
-Patch602: gvt-enforce-primary-class-id.patch
-Patch603: gvt-use-xs-vgpu-type.patch
-Patch604: xengt-pviommu-basic.patch
-Patch605: xengt-pviommu-unmap.patch
-Patch606: get_domctl_interface_version.patch
-Patch607: xengt-fix-shutdown-failures.patch
-Patch608: xengt-i915-gem-vgtbuffer.patch
-Patch609: xengt-gtt-2m-alignment.patch
-Patch610: THIS-PATCH-IS-NOT-INTENDED-TO-BE-UPSTREAMED-IT-HAS-O.patch
-Patch611: The-current-implementation-of-idle_cpu-only-consider.patch
-Patch612: default-xen-swiotlb-size-128MiB.patch
-Patch613: On-a-16-node-virtual-cluster-with-e1000-NICs-joining.patch
-Patch614: Add-some-randomisation-to-the-GFS2-resource-group-al.patch
-Patch615: When-under-heavy-I-O-load-from-two-or-more-hosts-the.patch
-Patch616: Look-for-inconsistencies-in-sweep_bh_for_rgrps.patch
-Patch617: Fixing-a-GFS2-deadlock-requires-changing-struct-ioma.patch
-Patch618: Add-auxiliary-bus-support.patch
-Patch619: driver-core-auxiliary-bus-move-slab.h-from-include-f.patch
-Patch620: driver-core-auxiliary-bus-make-remove-function-retur.patch
-Patch621: driver-core-auxiliary-bus-minor-coding-style-tweaks.patch
-Patch622: driver-core-auxiliary-bus-Fix-auxiliary-bus-shutdown.patch
-Patch623: driver-core-auxiliary-bus-Fix-calling-stage-for-auxi.patch
-Patch624: driver-core-auxiliary-bus-Remove-unneeded-module-bit.patch
-Patch625: driver-core-auxiliary-bus-Fix-memory-leak-when-drive.patch
-Patch626: Documentation-auxiliary_bus-Clarify-auxiliary_device.patch
-Patch627: Documentation-auxiliary_bus-Clarify-__auxiliary_driv.patch
-Patch628: Documentation-auxiliary_bus-Clarify-the-release-of-d.patch
-Patch629: Documentation-auxiliary_bus-Move-the-text-into-the-c.patch
-Patch630: CP-41018-Make-CONFIG_AUXILIARY_BUS-y-work.patch
-Patch631: SDEV_EVT_LUN_CHANGE_REPORTED-events-should-only-be-r.patch
-Patch632: XSI-2150-Avoid-deadlocks-on-NFS-spinlocks.patch
-# Patch633: abi-version.patch ; removed as we are actually changing the kABI now
+# Patch125: 71a47ed651c0 ("cifs: fail i/o on soft mounts if sessionsetup errors out")
+# Patch126: 944c58523731 ("random: add a spinlock_t to struct batched_entropy")
+# Patch127: c09be31461ed ("tcp: limit payload size of sacked skbs")
+# Patch128: ec83921899a5 ("tcp: tcp_fragment() should apply sane memory limits")
+# Patch129: 7f9f8a37e563 ("tcp: add tcp_min_snd_mss sysctl")
+# Patch130: 59222807fcc9 ("tcp: enforce tcp_min_snd_mss in tcp_mtu_probing()")
+# Patch131: dad3a9314ac9 ("tcp: refine memory limit test in tcp_fragment()")
+# Patch132: 007e5aaf287c ("xen/events: fix binding user event channels to cpus")
+# Patch133: e73db096691e ("xen: let alloc_xenballooned_pages() fail if not enough memory free")
+# Patch134: 6323c238bb43 ("tcp: be more careful in tcp_fragment()")
+# Patch135: 259f9d9a290e ("random: always use batched entropy for get_random_u{32,64}")
+# Patch136: 014ee1c7d184 ("xen-blkback: set ring->xenblkd to NULL after kthread_stop()")
+# Patch137: b0be61a5a59e ("block: cleanup __blkdev_issue_discard()")
+# Patch138: f387897cf5b8 ("block: fix 32 bit overflow in __blkdev_issue_discard()")
+# Patch139: 3491857f4292 ("scsi: libiscsi: Fix race between iscsi_xmit_task and iscsi_complete_task")
+# Patch140: b3410f0f8505 ("xen/netback: Reset nr_frags before freeing skb")
+# Patch141: 99952b08537c ("openvswitch: change type of UPCALL_PID attribute to NLA_UNSPEC")
+Patch142: gfs2-gfs2_iomap_begin-cleanup.patch
+Patch143: gfs2-Add-support-for-IOMAP_ZERO.patch
+Patch144: gfs2-implement-gfs2_block_zero_range-using-iomap_zer.patch
+Patch145: gfs2-Minor-gfs2_alloc_inode-cleanup.patch
+Patch146: gfs2-Always-mark-inode-dirty-in-fallocate.patch
+Patch147: gfs2-untangle-the-logic-in-gfs2_drevalidate.patch
+Patch148: gfs2-Fix-possible-fs-name-overflows.patch
+Patch149: gfs2-Fix-recovery-slot-bumping.patch
+Patch150: gfs2-Minor-PAGE_SIZE-arithmetic-cleanups.patch
+Patch151: gfs2-Delete-an-unnecessary-check-before-brelse.patch
+Patch152: gfs2-separate-holder-for-rgrps-in-gfs2_rename.patch
+Patch153: gfs2-create-function-gfs2_glock_update_hold_time.patch
+Patch154: gfs2-Use-async-glocks-for-rename.patch
+Patch155: gfs2-Improve-mmap-write-vs.-truncate-consistency.patch
+# Patch156: e0c1e6e55bca ("gfs2: clear buf_in_tr when ending a transaction in sweep_bh_for_rgrps")
+# Patch157: 90a886b68faa ("xen/efi: Set nonblocking callbacks")
+# Patch158: 1d5cb12a2539 ("net: fix sk_page_frag() recursion from memory reclaim")
+Patch159: drm-i915-gvt-Allow-F_CMD_ACCESS-on-mmio-0x21f0.patch
+Patch160: gfs2-add-compat_ioctl-support.patch
+Patch161: gfs2-removed-unnecessary-semicolon.patch
+Patch162: gfs2-Some-whitespace-cleanups.patch
+Patch163: gfs2-Improve-mmap-write-vs.-punch_hole-consistency.patch
+Patch164: gfs2-Multi-block-allocations-in-gfs2_page_mkwrite.patch
+Patch165: gfs2-Fix-end-of-file-handling-in-gfs2_page_mkwrite.patch
+Patch166: gfs2-Remove-active-journal-side-effect-from-gfs2_wri.patch
+Patch167: gfs2-make-gfs2_log_shutdown-static.patch
+# Patch168: 0809e1087c3d ("gfs2: fix glock reference problem in gfs2_trans_remove_revoke")
+Patch169: gfs2-Introduce-function-gfs2_withdrawn.patch
+Patch170: gfs2-fix-infinite-loop-in-gfs2_ail1_flush-on-io-erro.patch
+Patch171: gfs2-Don-t-loop-forever-in-gfs2_freeze-if-withdrawn.patch
+Patch172: gfs2-Abort-gfs2_freeze-if-io-error-is-seen.patch
+Patch173: gfs2-Close-timing-window-with-GLF_INVALIDATE_IN_PROG.patch
+# Patch174: 19709adfd7cd ("gfs2: clean up iopen glock mess in gfs2_create_inode")
+Patch175: gfs2-Remove-duplicate-call-from-gfs2_create_inode.patch
+Patch176: gfs2-Don-t-write-log-headers-after-file-system-withd.patch
+Patch177: xen-events-remove-event-handling-recursion-detection.patch
+Patch178: gfs2-Another-gfs2_find_jhead-fix.patch
+Patch179: gfs2-eliminate-ssize-parameter-from-gfs2_struct2blk.patch
+Patch180: gfs2-minor-cleanup-remove-unneeded-variable-ret-in-g.patch
+Patch181: gfs2-Avoid-access-time-thrashing-in-gfs2_inode_looku.patch
+Patch182: gfs2-Fix-incorrect-variable-name.patch
+Patch183: gfs2-Remove-GFS2_MIN_LVB_SIZE-define.patch
+Patch184: fs-gfs2-remove-unused-IS_DINODE-and-IS_LEAF-macros.patch
+Patch185: gfs2-remove-unused-LBIT-macros.patch
+Patch186: Revert-gfs2-eliminate-tr_num_revoke_rm.patch
+Patch187: gfs2-fix-gfs2_find_jhead-that-returns-uninitialized-.patch
+# Patch188: e57e77e9321c ("gfs2: move setting current->backing_dev_info")
+# Patch189: 4b67a516c63d ("gfs2: fix O_SYNC write handling")
+Patch190: drm-i915-gvt-fix-high-order-allocation-failure-on-la.patch
+Patch191: drm-i915-gvt-Add-mutual-lock-for-ppgtt-mm-LRU-list.patch
+Patch192: drm-i915-gvt-more-locking-for-ppgtt-mm-LRU-list.patch
+# Patch193: d0f7d0913862 ("xenbus: req->body should be updated before req->state")
+# Patch194: c4e8290c6fdf ("xenbus: req->err should be updated before req->state")
+# Patch195: 777179200cb8 ("gfs2_atomic_open(): fix O_EXCL|O_CREAT handling on cold dcache")
+Patch196: gfs2-Split-gfs2_lm_withdraw-into-two-functions.patch
+Patch197: gfs2-Report-errors-before-withdraw.patch
+Patch198: gfs2-Remove-usused-cluster_wide-arguments-of-gfs2_co.patch
+Patch199: gfs2-Turn-gfs2_consist-into-void-functions.patch
+Patch200: gfs2-Return-bool-from-gfs2_assert-functions.patch
+Patch201: gfs2-Introduce-concept-of-a-pending-withdraw.patch
+Patch202: gfs2-clear-ail1-list-when-gfs2-withdraws.patch
+Patch203: gfs2-Rework-how-rgrp-buffer_heads-are-managed.patch
+Patch204: gfs2-log-error-reform.patch
+Patch205: gfs2-Only-complain-the-first-time-an-io-error-occurs.patch
+Patch206: gfs2-Ignore-dlm-recovery-requests-if-gfs2-is-withdra.patch
+Patch207: gfs2-move-check_journal_clean-to-util.c-for-future-u.patch
+Patch208: gfs2-Allow-some-glocks-to-be-used-during-withdraw.patch
+Patch209: gfs2-Force-withdraw-to-replay-journals-and-wait-for-.patch
+Patch210: gfs2-fix-infinite-loop-when-checking-ail-item-count-.patch
+Patch211: gfs2-Add-verbose-option-to-check_journal_clean.patch
+Patch212: gfs2-Issue-revokes-more-intelligently.patch
+Patch213: gfs2-Prepare-to-withdraw-as-soon-as-an-IO-error-occu.patch
+Patch214: gfs2-Check-for-log-write-errors-before-telling-dlm-t.patch
+Patch215: gfs2-Do-log_flush-in-gfs2_ail_empty_gl-even-if-ail-l.patch
+Patch216: gfs2-Withdraw-in-gfs2_ail1_flush-if-write_cache_page.patch
+Patch217: gfs2-drain-the-ail2-list-after-io-errors.patch
+# Patch218: 09f8ac747f36 ("gfs2: Don't demote a glock until its revokes are written")
+Patch219: gfs2-Do-proper-error-checking-for-go_sync-family-of-.patch
+Patch220: gfs2-flesh-out-delayed-withdraw-for-gfs2_log_flush.patch
+Patch221: gfs2-don-t-allow-releasepage-to-free-bd-still-used-f.patch
+Patch222: gfs2-allow-journal-replay-to-hold-sd_log_flush_lock.patch
+Patch223: gfs2-leaf_dealloc-needs-to-allocate-one-more-revoke.patch
+Patch224: gfs2-Additional-information-when-gfs2_ail1_flush-wit.patch
+Patch225: gfs2-Clean-up-inode-initialization-and-teardown.patch
+Patch226: gfs2-Switch-to-list_-first-last-_entry.patch
+Patch227: gfs2-eliminate-gfs2_rsqa_alloc-in-favor-of-gfs2_qa_a.patch
+Patch228: gfs2-Change-inode-qa_data-to-allow-multiple-users.patch
+Patch229: gfs2-Split-gfs2_rsqa_delete-into-gfs2_rs_delete-and-.patch
+Patch230: gfs2-Remove-unnecessary-gfs2_qa_-get-put-pairs.patch
+Patch231: gfs2-don-t-lock-sd_log_flush_lock-in-try_rgrp_unlink.patch
+Patch232: gfs2-instrumentation-wrt-ail1-stuck.patch
+Patch233: gfs2-change-from-write-to-read-lock-for-sd_log_flush.patch
+Patch234: gfs2-Fix-oversight-in-gfs2_ail1_flush.patch
+Patch235: gfs2-If-go_sync-returns-error-withdraw-but-skip-inva.patch
+Patch236: dlm-Switch-to-using-wait_event.patch
+Patch237: dlm-use-the-tcp-version-of-accept_from_sock-for-sctp.patch
+Patch238: net-add-sock_set_reuseaddr.patch
+Patch239: net-add-sock_set_sndtimeo.patch
+Patch240: net-add-sock_set_keepalive.patch
+Patch241: net-add-sock_set_rcvbuf.patch
+Patch242: tcp-add-tcp_sock_set_nodelay.patch
+Patch243: sctp-add-sctp_sock_set_nodelay.patch
+Patch244: tcp-add-tcp_sock_set_user_timeout.patch
+Patch245: dlm-dlm_internal-Replace-zero-length-array-with-flex.patch
+Patch246: dlm-user-Replace-zero-length-array-with-flexible-arr.patch
+Patch247: fs-dlm-remove-unneeded-semicolon-in-rcom.c.patch
+# Patch248: 68728008569c ("dlm: remove BUG() before panic()")
+Patch249: gfs2-fix-withdraw-sequence-deadlock.patch
+Patch250: gfs2-Fix-error-exit-in-do_xmote.patch
+Patch251: gfs2-Fix-BUG-during-unmount-after-file-system-withdr.patch
+Patch252: gfs2-Fix-use-after-free-in-gfs2_logd-after-withdraw.patch
+# Patch253: 9663d294ae28 ("block: call rq_qos_exit() after queue is frozen")
+# Patch254: 8343dffacc1b ("scsi: libfc: free response frame from GPN_ID")
+# Patch255: 41722344981f ("xen/xenbus: ensure xenbus_map_ring_valloc() returns proper grant status")
+# Patch256: b7e389235cfe ("treewide: Remove uninitialized_var() usage")
+# Patch257: 6a2db034f9b3 ("dlm: Fix kobject memleak")
+Patch258: net-sock-add-sock_set_mark.patch
+Patch259: fs-dlm-set-skb-mark-for-listen-socket.patch
+Patch260: fs-dlm-set-skb-mark-per-peer-socket.patch
+Patch261: fs-dlm-don-t-close-socket-on-invalid-message.patch
+Patch262: fs-dlm-change-handling-of-reconnects.patch
+Patch263: fs-dlm-implement-tcp-graceful-shutdown.patch
+# Patch264: b3ddf6ba5e28 ("ext4: fix potential negative array index in do_split()")
+Patch265: fs-dlm-synchronize-dlm-before-shutdown.patch
+Patch266: fs-dlm-make-connection-hash-lockless.patch
+Patch267: fs-dlm-fix-dlm_local_addr-memory-leak.patch
+# Patch268: 13296b64a81c ("fs: dlm: fix configfs memory leak")
+Patch269: fs-dlm-move-free-writequeue-into-con-free.patch
+Patch270: fs-dlm-handle-possible-othercon-writequeues.patch
+Patch271: fs-dlm-use-free_con-to-free-connection.patch
+Patch272: fs-dlm-remove-lock-dependency-warning.patch
+Patch273: fs-dlm-fix-mark-per-nodeid-setting.patch
+Patch274: fs-dlm-handle-range-check-as-callback.patch
+Patch275: fs-dlm-disallow-buffer-size-below-default.patch
+Patch276: fs-dlm-rework-receive-handling.patch
+Patch277: fs-dlm-fix-race-in-nodeid2con.patch
+# Patch278: 61d359d51a1c ("xen/events: avoid removing an event channel while handling it")
+# Patch279: 25f6b08895d5 ("xen/events: add a proper barrier to 2-level uevent unmasking")
+# Patch280: c7f95d899f49 ("xen/events: fix race in evtchn_fifo_unmask()")
+# Patch281: dea09436da03 ("xen/events: add a new "late EOI" evtchn framework")
+# Patch282: 1506109a85c8 ("xen/blkback: use lateeoi irq binding")
+# Patch283: 6a052f3a6282 ("xen/netback: use lateeoi irq binding")
+# Patch284: fb22061b20ea ("xen/scsiback: use lateeoi irq binding")
+# Patch285: 128b11967a26 ("xen/pvcallsback: use lateeoi irq binding")
+# Patch286: 4988884d53c0 ("xen/pciback: use lateeoi irq binding")
+# Patch287: 8363670c4d0b ("xen/events: switch user event channels to lateeoi model")
+# Patch288: 536075098940 ("xen/events: use a common cpu hotplug hook for event channels")
+# Patch289: 17ef715c0c88 ("xen/events: defer eoi in case of excessive number of events")
+# Patch290: c1f90a9cd988 ("xen/events: block rogue events for some time")
+Patch291: xen-events-unmask-a-fifo-event-channel-only-if-it-wa.patch
+Patch292: fs-dlm-fix-proper-srcu-api-call.patch
+Patch293: fs-dlm-define-max-send-buffer.patch
+Patch294: fs-dlm-add-get-buffer-error-handling.patch
+Patch295: fs-dlm-flush-othercon-at-close.patch
+Patch296: fs-dlm-handle-non-blocked-connect-event.patch
+Patch297: fs-dlm-add-helper-for-init-connection.patch
+Patch298: fs-dlm-move-connect-callback-in-node-creation.patch
+Patch299: fs-dlm-move-shutdown-action-to-node-creation.patch
+Patch300: fs-dlm-refactor-sctp-sock-parameter.patch
+Patch301: fs-dlm-listen-socket-out-of-connection-hash.patch
+Patch302: fs-dlm-fix-check-for-multi-homed-hosts.patch
+Patch303: fs-dlm-constify-addr_compare.patch
+Patch304: fs-dlm-check-on-existing-node-address.patch
+# Patch305: 7740c404d068 ("xen/netback: avoid race in xenvif_rx_ring_slots_available()")
+# Patch306: dfed59ee4b41 ("Xen/x86: don't bail early from clear_foreign_p2m_mapping()")
+# Patch307: c3d586afdb44 ("Xen/x86: also check kernel mapping in set_foreign_p2m_mapping()")
+# Patch308: ba75f4393225 ("Xen/gntdev: correct dev_bus_addr handling in gntdev_map_grant_pages()")
+# Patch309: e07f06f6bbee ("Xen/gntdev: correct error checking in gntdev_map_grant_pages()")
+# Patch310: a01b49a9bf91 ("xen-blkback: don't "handle" error by BUG()")
+# Patch311: 717faa776ca2 ("xen-netback: don't "handle" error by BUG()")
+# Patch312: f84c00fbd27b ("xen-scsiback: don't "handle" error by BUG()")
+# Patch313: 98f16e171e28 ("xen-blkback: fix error handling in xen_blkbk_map()")
+# Patch314: 135ba06d0bf8 ("xen/netback: fix spurious event detection for common event case")
+Patch315: xen-evtchn-use-smp-barriers-for-user-event-ring.patch
+Patch316: xen-evtchn-use-READ-WRITE_ONCE-for-accessing-ring-in.patch
+# Patch317: a6a76d7234cc ("xen/events: reset affinity of 2-level event when tearing it down")
+# Patch318: 3a19f808cb2b ("xen/events: don't unmask an event channel when an eoi is pending")
+# Patch319: d8887e85efca ("xen/events: avoid handling the same event on two cpus at the same time")
+Patch320: x86-ioperm-Add-new-paravirt-function-update_io_bitma.patch
+# Patch321: 1a999d25ef53 ("Xen/gnttab: handle p2m update errors on a per-slot basis")
+# Patch322: b62d8b5c814b ("xen-netback: respect gnttab_map_refs()'s return value")
+# Patch323: 16356ddb5878 ("xen-blkback: don't leak persistent grants from xen_blkbk_map()")
+# Patch324: 5f26f1f838aa ("bpf, x86: Validate computation of branch displacements for x86-64")
+# Patch325: 7b77ae2a0d6f ("bpf, x86: Validate computation of branch displacements for x86-32")
+# Patch326: d9ab90118cf9 ("xen/events: fix setting irq affinity")
+# Patch327: 1de7644eac41 ("xen/netback: fix rx queue stall detection")
+# Patch328: c9f17e92917f ("xen/netback: don't queue unlimited number of packages")
+# Patch329: 2efaecaf9603 ("fs: dlm: fix debugfs dump")
+Patch330: fs-dlm-fix-mark-setting-deadlock.patch
+Patch331: fs-dlm-set-connected-bit-after-accept.patch
+Patch332: fs-dlm-set-subclass-for-othercon-sock_mutex.patch
+Patch333: fs-dlm-add-errno-handling-to-check-callback.patch
+Patch334: fs-dlm-add-check-if-dlm-is-currently-running.patch
+Patch335: fs-dlm-change-allocation-limits.patch
+Patch336: fs-dlm-use-GFP_ZERO-for-page-buffer.patch
+Patch337: fs-dlm-simplify-writequeue-handling.patch
+Patch338: fs-dlm-check-on-minimum-msglen-size.patch
+Patch339: fs-dlm-remove-unaligned-memory-access-handling.patch
+Patch340: fs-dlm-flush-swork-on-shutdown.patch
+Patch341: fs-dlm-add-shutdown-hook.patch
+Patch342: fs-dlm-fix-missing-unlock-on-error-in-accept_from_so.patch
+# Patch343: cda326e5033f ("xen/events: reset active flag for lateeoi events later")
+Patch344: gfs2-fix-a-deadlock-on-withdraw-during-mount.patch
+Patch345: fs-dlm-always-run-complete-for-possible-waiters.patch
+Patch346: fs-dlm-add-dlm-macros-for-ratelimit-log.patch
+Patch347: fs-dlm-fix-srcu-read-lock-usage.patch
+Patch348: fs-dlm-set-is-othercon-flag.patch
+Patch349: fs-dlm-reconnect-if-socket-error-report-occurs.patch
+# Patch350: d5473f43e4fb ("fs: dlm: cancel work sync othercon")
+Patch351: fs-dlm-fix-connection-tcp-EOF-handling.patch
+Patch352: fs-dlm-public-header-in-out-utility.patch
+Patch353: fs-dlm-add-more-midcomms-hooks.patch
+Patch354: fs-dlm-make-buffer-handling-per-msg.patch
+Patch355: fs-dlm-add-functionality-to-re-transmit-a-message.patch
+Patch356: fs-dlm-move-out-some-hash-functionality.patch
+Patch357: fs-dlm-add-union-in-dlm-header-for-lockspace-id.patch
+Patch358: fs-dlm-add-reliable-connection-if-reconnect.patch
+Patch359: fs-dlm-add-midcomms-debugfs-functionality.patch
+Patch360: fs-dlm-don-t-allow-half-transmitted-messages.patch
+Patch361: fs-dlm-Fix-memory-leak-of-object-mh.patch
+Patch362: fs-dlm-Fix-spelling-mistake-stucked-stuck.patch
+Patch363: fs-dlm-fix-lowcomms_start-error-case.patch
+# Patch364: af02ec6cf614 ("fs: dlm: fix memory leak when fenced")
+Patch365: fs-dlm-use-alloc_ordered_workqueue.patch
+Patch366: fs-dlm-move-dlm-allow-conn.patch
+Patch367: fs-dlm-introduce-proto-values.patch
+Patch368: fs-dlm-rename-socket-and-app-buffer-defines.patch
+Patch369: fs-dlm-fix-race-in-mhandle-deletion.patch
+Patch370: fs-dlm-invalid-buffer-access-in-lookup-error.patch
+# Patch371: 6de9f0bf7cac ("seq_file: disallow extremely large seq buffer allocations")
+# Patch372: 387635925cd0 ("xen/events: Fix race in set_evtchn_to_irq")
+Patch373: fs-dlm-use-sk-sk_socket-instead-of-con-sock.patch
+Patch374: fs-dlm-use-READ_ONCE-for-config-var.patch
+Patch375: fs-dlm-fix-typo-in-tlv-prefix.patch
+Patch376: fs-dlm-clear-CF_APP_LIMITED-on-close.patch
+Patch377: fs-dlm-cleanup-and-remove-_send_rcom.patch
+Patch378: fs-dlm-introduce-con_next_wq-helper.patch
+Patch379: fs-dlm-move-to-static-proto-ops.patch
+Patch380: fs-dlm-introduce-generic-listen.patch
+Patch381: fs-dlm-auto-load-sctp-module.patch
+Patch382: fs-dlm-generic-connect-func.patch
+Patch383: fs-dlm-fix-multiple-empty-writequeue-alloc.patch
+Patch384: fs-dlm-move-receive-loop-into-receive-handler.patch
+Patch385: fs-dlm-implement-delayed-ack-handling.patch
+Patch386: fs-dlm-fix-return-EINTR-on-recovery-stopped.patch
+Patch387: fs-dlm-avoid-comms-shutdown-delay-in-release_lockspa.patch
+# Patch388: 6a9449e95688 ("iommu/vt-d: Fix agaw for a supported 48 bit guest address width")
+# Patch389: c348d806ed1d ("bpf: Do not use ax register in interpreter on div/mod")
+# Patch390: 8313432df224 ("bpf: Fix 32 bit src register truncation on div/mod")
+# Patch391: 39f74b7c81cc ("bpf: Fix truncation handling for mod32 dst reg wrt zero")
+Patch392: x86-timer-Skip-PIT-initialization-on-modern-chipsets.patch
+Patch393: x86-timer-Force-PIT-initialization-when-X86_FEATURE_.patch
+Patch394: x86-timer-Don-t-skip-PIT-setup-when-APIC-is-disabled.patch
+Patch395: nbd-Fix-use-after-free-in-pid_show.patch
+Patch396: fs-dlm-remove-check-SCTP-is-loaded-message.patch
+Patch397: fs-dlm-let-handle-callback-data-as-void.patch
+Patch398: fs-dlm-remove-double-list_first_entry-call.patch
+Patch399: fs-dlm-don-t-call-kernel_getpeername-in-error_report.patch
+Patch400: fs-dlm-replace-use-of-socket-sk_callback_lock-with-s.patch
+Patch401: fs-dlm-fix-build-with-CONFIG_IPV6-disabled.patch
+Patch402: fs-dlm-check-for-pending-users-filling-buffers.patch
+Patch403: fs-dlm-remove-wq_alloc-mutex.patch
+Patch404: fs-dlm-memory-cache-for-writequeue_entry.patch
+Patch405: fs-dlm-memory-cache-for-lowcomms-hotpath.patch
+Patch406: fs-dlm-print-cluster-addr-if-non-cluster-node-connec.patch
+Patch407: xen-x86-obtain-upper-32-bits-of-video-frame-buffer-a.patch
+Patch408: xen-x86-obtain-full-video-frame-buffer-address-for-D.patch
+Patch409: dlm-uninitialized-variable-on-error-in-dlm_listen_fo.patch
+Patch410: dlm-add-__CHECKER__-for-false-positives.patch
+Patch411: fs-dlm-fix-grammar-in-lowcomms-output.patch
+Patch412: fs-dlm-fix-race-in-lowcomms.patch
+Patch413: fs-dlm-relax-sending-to-allow-receiving.patch
+Patch414: fs-dlm-fix-sock-release-if-listen-fails.patch
+Patch415: fs-dlm-retry-accept-until-EAGAIN-or-error-returns.patch
+Patch416: fs-dlm-remove-send-repeat-remove-handling.patch
+# Patch417: 756eda9bc8b7 ("xen/pvh: set xen_domain_type to HVM in xen_pvh_init")
+# Patch418: 0c47135536b8 ("xen/pvh: correctly setup the PV EFI interface for dom0")
+# Patch419: 2a226e8ca951 ("PCI: pciehp: Fix AB-BA deadlock between reset_lock and device_lock")
+Patch420: nvme_fc-add-nvme_discovery-sysfs-attribute-to-fc-tra.patch
+Patch421: ACPI-processor-Fix-evaluating-_PDC-method-when-runni.patch
+# Patch422: 2440f3cebcb0 ("SUNRPC: Always drop the XPRT_LOCK on XPRT_CLOSE_WAIT")
+# Patch423: b42515434f8f ("xen-netback: use default TX queue size for vifs")
+Patch424: gfs2-Expect-EBUSY-after-canceling-dlm-locking-reques.patch
+Patch425: gfs2-Clear-flags-when-withdraw-prevents-xmote.patch
+# Patch426: d1ae006b4851 ("fs: dlm: fix race between test_bit() and queue_work()")
+Patch427: xhci-show-fault-reason-for-a-failed-enable-slot-comm.patch
+Patch428: gfs2-Fix-ignore-unlock-failures-after-withdraw.patch
+Patch429: gfs2-finish_xmote-cleanup.patch
+Patch430: gfs2-do_xmote-fixes.patch
+Patch431: x86-xen-time-Reduce-Xen-timer-tick.patch
+# Patch432: 16b92b031b4d ("decompress_bunzip2: fix rare decompression failure")
+# Patch433: 89ede9d8b5b8 ("scsi: scsi_dh_alua: Fix possible null-ptr-deref")
+# Patch434: cdd92ebe29c2 ("scsi: scsi_dh_alua: always use a 2 second delay before retrying RTPG")
+# Patch435: cf372c60ed13 ("scsi: scsi_dh_alua: handle RTPG sense code correctly during state transitions")
+# Patch436: 509e215d161e ("scsi: scsi_dh_alua: Avoid crash during alua_bus_detach()")
+Patch437: scsi-scsi_dh_alua-Set-transitioning-state-on-Unit-At.patch
+Patch438: scsi-scsi_dh_alua-Prevent-duplicate-pg-info-print-in.patch
+# Patch439: 5fc6e73ba502 ("scsi: scsi_dh_alua: Remove check for ASC 24h in alua_rtpg()")
+Patch440: scsi-scsi_dh_alua-Retry-RTPG-on-a-different-path-aft.patch
+# Patch441: f4bde1d1bf90 ("scsi: scsi_dh_alua: Check for negative result value")
+# Patch442: c021be62bbcb ("scsi: scsi_dh_alua: Fix signedness bug in alua_rtpg()")
+# Patch443: c110051d335e ("scsi: scsi_dh_alua: Fix memleak for 'qdata' in alua_activate()")
+Patch444: scsi-core-alua-I-O-errors-for-ALUA-state-transitions.patch
+Patch445: scsi-scsi_dh_alua-Properly-handle-the-ALUA-transitio.patch
+Patch446: From-07e447d39839d0401d5f44243e8e20de0e5ce9ce-Mon-Se.patch
+Patch447: SUNRPC-Replace-the-queue-timer-with-a-delayed-work-f.patch
+# Patch448: cad4448dfc9c ("nbd: fix possible sysfs duplicate warning")
+Patch449: SUNRPC-fix-race-to-sk_err-after-xs_error_report.patch
+# Patch450: 82b7c99ee141 ("nbd: protect cmd->status with cmd->lock")
+# Patch451: 1f032ca298dd ("nbd: handle racing with error'ed out commands")
+Patch452: SUNRPC-Fix-backchannel-RPC-soft-lockups.patch
+# Patch453: d9f4534a9a28 ("nbd: fix a block_device refcount leak in nbd_release")
+Patch454: nbd-Aovid-double-completion-of-a-request.patch
+Patch455: nbd-don-t-handle-response-without-a-corresponding-re.patch
+Patch456: nbd-make-sure-request-completion-won-t-concurrent.patch
+Patch457: cdc_ether-export-usbnet_cdc_zte_rx_fixup.patch
+Patch458: rndis_host-enable-the-bogus-MAC-fixup-for-ZTE-device.patch
+Patch459: rndis_host-limit-scope-of-bogus-MAC-address-detectio.patch
+Patch460: SUNRPC-Move-reset-of-TCP-state-variables-into-the-re.patch
+Patch461: crypto-af_alg-Disallow-concurrent-writes-in-af_alg_s.patch
+# Patch462: f9142f21e465 ("crypto: af_alg - zero initialize memory allocated via sock_kmalloc")
+# Patch463: 949e09166db8 ("crypto: authencesn - reject too-short AAD (assoclen<8) to match ESP/ESN spec")
+# Patch464: e49eb4ec3abc ("crypto: af-alg - fix NULL pointer dereference in scatterwalk")
+# Patch465: 7833e91cee5c ("crypto: scatterwalk - Backport memcpy_sglist()")
+# Patch466: a6eb232e2cad ("crypto: algif_aead - use memcpy_sglist() instead of null skcipher")
+# Patch467: e1d60aac7af8 ("crypto: algif_aead - Revert to operating out-of-place")
+# Patch468: 732cdd28b4b0 ("crypto: algif_aead - snapshot IV for async AEAD requests")
+# Patch469: 9dde35139b83 ("crypto: authenc - use memcpy_sglist() instead of null skcipher")
+# Patch470: 05654d734687 ("crypto: authencesn - Do not place hiseq at end of dst for out-of-place decryption")
+# Patch471: 97d1348160c1 ("crypto: authencesn - Fix src offset when decrypting in-place")
+# Patch472: ebd01513a069 ("crypto: af_alg - Fix page reassignment overflow in af_alg_pull_tsgl")
+# Patch473: ea7be32078f1 ("crypto: algif_aead - Fix minimum RX size check for decryption")
+# Patch474: 17a1144baa54 ("crypto: algif_aead - fix uninitialized ctx->init")
+Patch475: crypto-af_alg-Fix-incorrect-boolean-values-in-af_alg.patch
+# Patch476: d59aae60ed71 ("crypto: af_alg - Remove zero-copy support from skcipher and aead")
+# Patch477: 75a578000ae5 ("inet: fully convert sk->sk_rx_dst to RCU rules")
+# Patch478: 69c4a5f195a7 ("ipv4: free inet_opt and ireq_opt after an RCU grace period")
+# Patch479: f1529ec771e4 ("net/xen-netback: prevent UAF in xenvif_flush_hash()")
+Patch480: rcu-Add-a-hlist_nulls_unhashed_lockless-function.patch
+Patch481: inet-reject-unhashed-sockets-during-established-look.patch
+Patch482: nvme-fabrics-reject-I-O-to-offline-device.patch
+Patch483: Add-shadow-variables-support-from-kpatch.patch
+# Patch484: 9039eb22f995 ("xen/xenbus: Allow watches discard events before queueing")
+# Patch485: 3a36e4af694a ("xen/xenbus: Add 'will_handle' callback support in xenbus_watch_path()")
+# Patch486: b88c52d02e16 ("xen/xenbus/xen_bus_type: Support will_handle watch callback")
+# Patch487: 85597c4369c9 ("xen/xenbus: Count pending messages for each watch")
+# Patch488: be19047894c3 ("xenbus/xenbus_backend: Disallow pending watch messages")
+# Patch489: 47eb291ba65b ("xen/xenbus: Fix granting of vmalloc'd memory")
+# Patch490: b9b75a460076 ("xen-blkfront: switch kcalloc to kvcalloc for large array allocation")
+# Patch491: 041497b65eb0 ("xen/blkfront: Adjust indentation in xlvbd_alloc_gendisk")
+# Patch492: 5f547e7cbd84 ("xen/blkfront: fix memory allocation flags in blkfront_setup_indirect()")
+# Patch493: a4af550350cc ("xen-blkfront: allow discard-* nodes to be optional")
+# Patch494: dcbfd3f13b13 ("xen: sync include/xen/interface/io/ring.h with Xen's newest version")
+# Patch495: b647c449f166 ("xen/blkfront: read response from backend only once")
+# Patch496: 80baa77511ee ("xen/blkfront: don't take local copy of a request from the ring page")
+# Patch497: f89a05402f74 ("xen/blkfront: don't trust the backend response data blindly")
+# Patch498: 269d7124bcfa ("xen/blkfront: harden blkfront against event channel storms")
+# Patch499: 47288968eebd ("xen-netfront: do not assume sk_buff_head list is empty in error handling")
+# Patch500: a1afd826e549 ("xen-netfront: do not use ~0U as error return value for xennet_fill_frags()")
+# Patch501: 4b635fc2b349 ("xen-netfront: fix potential deadlock in xennet_remove()")
+# Patch502: 274c04221d91 ("xen/netfront: stop tx queues during live migration")
+# Patch503: e7d1024f5b19 ("xen/netfront: read response from backend only once")
+# Patch504: 26509bb5dd2f ("xen/netfront: don't read data from request on the ring page")
+# Patch505: e52c0efbd23c ("xen/netfront: disentangle tx_skb_freelist")
+# Patch506: e4e01b0e4b7f ("xen/netfront: don't trust the backend response data blindly")
+# Patch507: 3559ca594f15 ("xen/netfront: harden netfront against event channel storms")
+# Patch508: 198cdc287769 ("xen/netfront: destroy queues before real_num_tx_queues is zeroed")
+# Patch509: 9699f7a70eb8 ("pvcalls-front: read all data before closing the connection")
+# Patch510: 81b8519de1b4 ("pvcalls-front: don't try to free unallocated rings")
+# Patch511: 05ac8a683962 ("pvcalls-front: properly allocate sk")
+# Patch512: 06b919a51772 ("pvcalls-front: Avoid get_free_pages(GFP_KERNEL) under spinlock")
+# Patch513: 642e26628cf9 ("pvcalls-front: fix potential null dereference")
+# Patch514: 66f33b2bd2d8 ("xen/pvcalls: Remove set but not used variable")
+# Patch515: 36a2e9bf242b ("pvcalls-front: don't return error when the ring is full")
+# Patch516: 8d521d960aef ("xen/xenbus: don't let xenbus_grant_ring() remove grants in error case")
+# Patch517: 17659846fe33 ("xen/grant-table: add gnttab_try_end_foreign_access()")
+# Patch518: 423a3a50dce9 ("xen/blkfront: don't use gnttab_query_foreign_access() for mapped status")
+# Patch519: 927e4eb8ddf4 ("xen/netfront: don't use gnttab_query_foreign_access() for mapped status")
+# Patch520: 62a696c15cfc ("xen/scsifront: don't use gnttab_query_foreign_access() for mapped status")
+# Patch521: fbc57368ea52 ("xen/gntalloc: don't use gnttab_query_foreign_access()")
+# Patch522: c900f34fc134 ("xen: remove gnttab_query_foreign_access()")
+# Patch523: 2466bed361f3 ("xen/9p: use alloc/free_pages_exact()")
+# Patch524: f85d03f0f482 ("xen/pvcalls: use alloc/free_pages_exact()")
+# Patch525: 92dc0e4a2196 ("xen/gnttab: fix gnttab_end_foreign_access() without page specified")
+# Patch526: c307029d811e ("xen/netfront: react properly to failing gnttab_end_foreign_access_ref()")
+# Patch527: f4a1391185e3 ("xen/blkfront: fix leaking data in shared pages")
+# Patch528: 3650ac3218c1 ("xen/netfront: fix leaking data in shared pages")
+# Patch529: 4b67d8e42dbb ("xen/netfront: force data bouncing when backend is untrusted")
+# Patch530: 981de55fb6b5 ("xen/blkfront: force data bouncing when backend is untrusted")
+# Patch531: 44dfdecc288b ("xen/netback: Ensure protocol headers don't fall in the non-linear area")
+# Patch532: d3e1b6151d5d ("xen/netback: don't call kfree_skb() with interrupts disabled")
+Patch533: xen-netback-remove-unused-variables-pending_idx-and-.patch
+# Patch534: e14369897067 ("xen/netback: don't do grant copy across page boundary")
+Patch535: xen-netback-remove-not-needed-test-in-xenvif_tx_buil.patch
+# Patch536: a5353cdecd9b ("xen/netback: use same error messages for same errors")
+# Patch537: 11e6919ae028 ("xen/netback: Fix buffer overrun triggered by unusual packet")
+# Patch538: 3fdf2be9089b ("xen/events: replace evtchn_rwlock with RCU")
+# Patch539: 5bb8270789c8 ("xen-netback: don't produce zero-size SKB frags")
+Patch540: xen-netback-Fix-UAF-when-reading-statistics-data.patch
+Patch541: xen-netback-defer-xenvif_mcast_addr_list_free.patch
+Patch542: xen-blkback-Avoid-UAF-when-reading-I-O-statistics.patch
+Patch543: xen-netback-Fix-XenBus-connection-failure-cleanup.patch
+Patch544: kbuild-AFTER_LINK.patch
+Patch545: expose-xsversion.patch
+Patch546: blktap2.patch
+Patch547: Write-each-kthread-s-pid-into-xenstore-so-that-it-ca.patch
+Patch548: Several-order-4-5-allocations-are-required-when-sett.patch
+Patch549: disable-EFI-Properties-table-for-Xen.patch
+Patch550: net-Do-not-scrub-ignore_df-within-the-same-name-spac.patch
+Patch551: enable-fragmention-gre-packets.patch
+Patch552: CA-285778-emulex-nic-ip-hdr-len.patch
+Patch553: cifs-Change-the-default-value-SecFlags-to-0x83.patch
+Patch554: call-kexec-before-offlining-noncrashing-cpus.patch
+Patch555: The-CFQ-IO-scheduler-has-the-concept-of-an-idle-IO-s.patch
+Patch556: pvsproxy-uses-an-XFS-filesystem-on-top-of-a-blktap-d.patch
+# Patch557: 694ec54b7826 ("scsi: libfc: Handling of extra kref")
+Patch558: Don-t-select-PINCTRL.patch
+Patch559: Add-50G-100G-200G-ethtool-link-modes.patch
+Patch560: dma-add-dma_get_required_mask_from_max_pfn.patch
+Patch561: x86-xen-correct-dma_get_required_mask-for-Xen-PV-gue.patch
+Patch562: map-1MiB-1-1.patch
+Patch563: If-the-host-has-more-CPUs-than-the-kernel-is-compile.patch
+Patch564: dom0-detects-the-presence-of-the-ACPI-PM-timer-but-c.patch
+Patch565: With-many-VMs-it-is-possible-to-hit-the-IRQ-descript.patch
+Patch566: xen-balloon-hotplug-select-HOLES_IN_ZONE.patch
+Patch567: pci-export-pci_probe_reset_function.patch
+Patch568: xen-pciback-provide-a-reset-sysfs-file-to-try-harder.patch
+Patch569: Guests-can-potentially-disable-cause-the-PCI-device-.patch
+Patch570: pciback-mask-root-port-comp-timeout.patch
+Patch571: Some-devices-advertise-FLReset-but-do-not-support-it.patch
+Patch572: Revert-PCI-Probe-for-device-reset-support-during-enu.patch
+Patch573: CA-135938-nfs-disconnect-on-rpc-retry.patch
+Patch574: sunrpc-force-disconnect-on-connection-timeout.patch
+Patch575: nfs_access_get_cached-may-call-__nfs_revalidate_inod.patch
+Patch576: bonding-balance-slb.patch
+Patch577: bridge-lock-fdb-after-garp.patch
+Patch578: CP-13181-net-openvswitch-add-dropping-of-fip-and-lld.patch
+Patch579: xen-ioemu-inject-msi.patch
+Patch580: pv-iommu-support.patch
+Patch581: Reserve-the-crashkernel-region-in-the-E820.-This-pre.patch
+Patch582: xen-swiotlb-rework-early-repeat-code.patch
+Patch583: CA-433052-xen-swiotlb-Check-the-segment-boundary-in-.patch
+Patch584: arch-x86-xen-add-infrastruction-in-xen-to-support-gv.patch
+Patch585: drm-i915-gvt-write-guest-ppgtt-entry-for-xengt-suppo.patch
+Patch586: drm-i915-xengt-xengt-moudule-initial-files.patch
+Patch587: drm-i915-xengt-check-on_destroy-on-pfn_to_mfn.patch
+Patch588: arch-x86-xen-Import-x4.9-interface-for-ioreq.patch
+Patch589: i915-gvt-xengt.c-Use-new-dm_op-instead-of-hvm_op.patch
+Patch590: i915-gvt-xengt.c-New-interface-to-write-protect-PPGT.patch
+Patch591: i915-gvt-xengt.c-Select-vgpu-type-according-to-low_g.patch
+Patch592: drm-i915-gvt-Don-t-output-error-message-when-DomU-ma.patch
+Patch593: drm-i915-gvt-xengt-Correctly-get-low-mem-max-gfn.patch
+Patch594: drm-i915-gvt-Fix-dom0-call-trace-at-shutdown-or-rebo.patch
+Patch595: hvm-dm_op.h-Sync-dm_op-interface-to-xen-4.9-release.patch
+Patch596: drm-i915-gvt-Apply-g2h-adjust-for-GTT-mmio-access.patch
+Patch597: drm-i915-gvt-Apply-g2h-adjustment-during-fence-mmio-.patch
+Patch598: drm-i915-gvt-Patch-the-gma-in-gpu-commands-during-co.patch
+Patch599: drm-i915-gvt-Retrieve-the-guest-gm-base-address-from.patch
+Patch600: drm-i915-gvt-Align-the-guest-gm-aperture-start-offse.patch
+Patch601: drm-i915-gvt-Add-support-to-new-VFIO-subregion-VFIO_.patch
+Patch602: drm-i915-gvt-Implement-vGPU-status-save-and-restore-.patch
+Patch603: vfio-Implement-new-Ioctl-VFIO_IOMMU_GET_DIRTY_BITMAP.patch
+Patch604: drm-i915-gvt-Add-dev-node-for-vGPU-state-save-restor.patch
+Patch605: drm-i915-gvt-Add-interface-to-control-the-vGPU-runni.patch
+Patch606: drm-i915-gvt-Modify-the-vGPU-save-restore-logic-for-.patch
+Patch607: drm-i915-gvt-Add-log-dirty-support-for-XENGT-migrati.patch
+Patch608: drm-i915-gvt-xengt-Add-iosrv_enabled-to-track-iosrv-.patch
+Patch609: drm-i915-gvt-Add-xengt-ppgtt-write-handler.patch
+Patch610: drm-i915-gvt-xengt-Impliment-mpt-dma_map-unmap_guest.patch
+Patch611: drm-i915-gvt-introduce-a-new-VFIO-region-for-vfio-de.patch
+Patch612: drm-i915-gvt-change-the-return-value-of-opregion-acc.patch
+Patch613: drm-i915-gvt-Rebase-the-code-to-gvt-staging-for-live.patch
+Patch614: drm-i915-gvt-Apply-g2h-adjustment-to-buffer-start-gm.patch
+Patch615: drm-i915-gvt-Fix-xengt-opregion-handling-in-migratio.patch
+Patch616: drm-i915-gvt-XenGT-migration-optimize.patch
+Patch617: drm-i915-gvt-Add-vgpu-execlist-info-into-migration-d.patch
+Patch618: drm-i915-gvt-Emulate-ring-mode-register-restore-for-.patch
+Patch619: drm-i915-gvt-Use-copy_to_user-to-return-opregion.patch
+Patch620: drm-i915-gvt-Expose-opregion-in-vgpu-open.patch
+Patch621: drm-i915-gvt-xengt-Don-t-shutdown-vm-at-ioreq-failur.patch
+Patch622: drm-i915-gvt-Emulate-hw-status-page-address-register.patch
+Patch623: drm-i915-gvt-migration-copy-vregs-on-vreg-load.patch
+Patch624: drm-i915-gvt-Fix-a-command-corruption-caused-by-live.patch
+Patch625: drm-i915-gvt-update-force-to-nonpriv-register-whitel.patch
+Patch626: drm-i915-gvt-xengt-Fix-xengt-instance-destroy-error.patch
+Patch627: drm-i915-gvt-invalidate-old-ggtt-page-when-update-gg.patch
+Patch628: drm-i915-gvt-support-inconsecutive-partial-gtt-entry.patch
+Patch629: set-XENMEM_get_mfn_from_pfn-hypercall-number.patch
+Patch630: gvt-enforce-primary-class-id.patch
+Patch631: gvt-use-xs-vgpu-type.patch
+Patch632: xengt-pviommu-basic.patch
+Patch633: xengt-pviommu-unmap.patch
+Patch634: get_domctl_interface_version.patch
+Patch635: xengt-fix-shutdown-failures.patch
+Patch636: xengt-i915-gem-vgtbuffer.patch
+Patch637: xengt-gtt-2m-alignment.patch
+Patch638: THIS-PATCH-IS-NOT-INTENDED-TO-BE-UPSTREAMED-IT-HAS-O.patch
+Patch639: The-current-implementation-of-idle_cpu-only-consider.patch
+Patch640: default-xen-swiotlb-size-128MiB.patch
+Patch641: On-a-16-node-virtual-cluster-with-e1000-NICs-joining.patch
+Patch642: CA-430722-dlm-bound-TCP-failure-detection-with-TCP_U.patch
+Patch643: Add-some-randomisation-to-the-GFS2-resource-group-al.patch
+Patch644: When-under-heavy-I-O-load-from-two-or-more-hosts-the.patch
+Patch645: Look-for-inconsistencies-in-sweep_bh_for_rgrps.patch
+Patch646: Fixing-a-GFS2-deadlock-requires-changing-struct-ioma.patch
+Patch647: Add-auxiliary-bus-support.patch
+Patch648: driver-core-auxiliary-bus-move-slab.h-from-include-f.patch
+Patch649: driver-core-auxiliary-bus-make-remove-function-retur.patch
+Patch650: driver-core-auxiliary-bus-minor-coding-style-tweaks.patch
+Patch651: driver-core-auxiliary-bus-Fix-auxiliary-bus-shutdown.patch
+Patch652: driver-core-auxiliary-bus-Fix-calling-stage-for-auxi.patch
+Patch653: driver-core-auxiliary-bus-Remove-unneeded-module-bit.patch
+Patch654: driver-core-auxiliary-bus-Fix-memory-leak-when-drive.patch
+Patch655: Documentation-auxiliary_bus-Clarify-auxiliary_device.patch
+Patch656: Documentation-auxiliary_bus-Clarify-__auxiliary_driv.patch
+Patch657: Documentation-auxiliary_bus-Clarify-the-release-of-d.patch
+Patch658: Documentation-auxiliary_bus-Move-the-text-into-the-c.patch
+Patch659: CP-41018-Make-CONFIG_AUXILIARY_BUS-y-work.patch
+Patch660: SDEV_EVT_LUN_CHANGE_REPORTED-events-should-only-be-r.patch
+Patch661: XSI-2150-Avoid-deadlocks-on-NFS-spinlocks.patch
+# Patch662: ("abi-version") ; removed as we are actually changing the kABI now
 
 # XCP-ng patches
 
@@ -790,34 +819,18 @@ Patch1024: xfs-resample-the-data-fork-mapping-after-cycling-ILO.patch
 # Patch1026: bcab4d551a3d ("SUNRPC: use _bh spinlocking on ->transport_lock")
 Patch1027: Revert-XSI-2150-Avoid-deadlocks-on-NFS-spinlocks.patch
 
-# CVE-2026-98432
-# Patch1028: ("net: use rcu_dereference_protected to fetch sk_dst_cache in sk_destruct") was only there to minimize conflict
-# Patch1029: 75a578000ae5 ("inet: fully convert sk->sk_rx_dst to RCU rules")
-# Patch1030: ("!kabi inet: fully convert sk->sk_rx_dst to RCU rules") not required for the CIP rebase
-# Patch1031:  69c4a5f195a7 ("ipv4: free inet_opt and ireq_opt after an RCU grace period")
+# Defensive fix pulled in with XSA-527
+# Patch1028: ccb02adf3293 ("xen/netback: fix error path of xenvif_connect_data()")
 
-# XSA-526 / CVE-2026-100080
-Patch1032: xen-netback-Fix-UAF-when-reading-statistics-data.patch
-
-# XSA-527 / CVE-2026-100081
-# Patch1033: ccb02adf3293 ("xen/netback: fix error path of xenvif_connect_data()")
-Patch1034: xen-netback-defer-xenvif_mcast_addr_list_free.patch
-
-# XSA-528 / CVE-2026-100082
-Patch1035: xen-blkback-Avoid-UAF-when-reading-I-O-statistics.patch
-
-# Use-after-free in netback xenvif flush hash, suggested by Alex Brett
-# Patch1036: f1529ec771e4 ("net/xen-netback: prevent UAF in xenvif_flush_hash()")
-
-# XSA-526 iterative fix, called XSA-531 / CVE-2026-99286
-Patch1037: xen-netback-Fix-XenBus-connection-failure-cleanup.patch
+# Fix crash on empty plaintext (regression in 8.0.49 / 8.0.51)
+# Patch1029: 8a9fcf4a9f1f ("crypto: x86/aesni-gcm - fix crash on empty plaintext")
 
 # Perf build errors on linux-4.19.325-cip
-Patch1038: tools-headers-Grab-copy-of-linux-const.h-needed-by-l.patch
-Patch1039: tools-headers-UAPI-Sync-linux-const.h-with-the-kerne.patch
+Patch1030: tools-headers-Grab-copy-of-linux-const.h-needed-by-l.patch
+Patch1031: tools-headers-UAPI-Sync-linux-const.h-with-the-kerne.patch
 
 # Remove extra localversion-st to avoid koji errors
-Patch1040: localversion-st-rm-to-avoid-conflicts-with-yum-s-rpm.patch
+Patch1032: localversion-st-rm-to-avoid-conflicts-with-yum-s-rpm.patch
 
 %description
 The kernel package contains the Linux kernel (vmlinuz), the core of any
@@ -1191,6 +1204,28 @@ fi
 %{?_cov_results_package}
 
 %changelog
+
+* Mon Nov 23 2026 Quentin Casasnovas <quentin.casasnovas@vates.tech> - 4.19.325-cip137.8.0.51.1.kernelpreview.1
+- Note that the incomplete backport to CVE-2026-64600 was already pulled in 4.19.325-cip137.8.0.46.16.kernelpreview.1
+- Sync with 4.19.19-8.0.51.1:
+  - Fix regression on AES-GCM encryption through AF_ALG
+  - Fix incomplete backport to CVE-2026-64600 (RefluXFS)
+  - Sync with 4.19.19-8.0.51
+  - *** Upstream changelog ***
+  - * Tue Nov 17 2026 Alex Brett <alex.brett@citrix.com> - 4.19.19-8.0.51
+    - CA-433053: Fix for XSA-531 / CVE-2026-99286
+    - CA-433124: Fix regressions from the AF_ALG concurrent-write backport
+    - CA-433120: backport cifs: fail i/o on soft mounts if sessionsetup errors out
+    - CA-433052: xen/swiotlb: Check the segment boundary in range_straddles_page_boundary()
+    - CA-433291: Backport fix for NoisyTCP / CVE-2026-99288
+  - * Fri Nov 06 2026 Alex Brett <alex.brett@citrix.com> - 4.19.19-8.0.50
+    - CA-432979: Fix for XSA-526 / CVE-2026-100080
+    - CA-432980: Fix for XSA-527 / CVE-2026-100081
+    - CA-432981: Fix for XSA-528 / CVE-2026-100082
+    - Backport fix for xen-netback UAF in xenvif_flush_hash()
+  - * Fri Oct 30 2026 Alex Brett <alex.brett@citrix.com> - 4.19.19-8.0.49
+    - CA-432848: Fix CVE-2021-47103 - sk_rx_dst use-after-free
+    - CA-432848: Fix CVE-2026-98432 - ipv4 inet_opt use-after-free
 
 * Fri Nov 13 2026 Quentin Casasnovas <quentin.casasnovas@vates.tech> - 4.19.325-cip137.8.0.46.16.kernelpreview.1
 - Rebase on top of v4.19.325-cip137

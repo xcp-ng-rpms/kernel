@@ -27,16 +27,7 @@ detected") which adds the extra buffer_squeeze_end field.
 - drivers/block/xen-blkback/xenbus.c: context conflicts due to:
   - missing aac8a70db24b ("xen-blkback: add a parameter for disabling of persistent grants")
   - missing 5b8e432dbb0e ("xen/blkback: add stack variable 'blkif' in connect_ring()")
-  - missing fa2ac657f978 ("xen-blkback: prevent premature module unload")
-  - extra 8d59de3b0713 ("Write each kthread's pid into xenstore so that it can be ioniced by the toolstac…")
 ]
-Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
-
-[Quentin: rebase from v4.19.19 to v4.19.325-cip136 conflicts:
- - drivers/block/xen-blkback/xenbus.c: context conflict due to
-   fa2ac657f978 ("xen-blkback: prevent premature module unload") now
-   being present.]
-
 Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
 ---
  drivers/block/xen-blkback/common.h |  1 +
@@ -44,10 +35,10 @@ Signed-off-by: Quentin Casasnovas <quentin.casasnovas@vates.tech>
  2 files changed, 25 insertions(+), 7 deletions(-)
 
 diff --git a/drivers/block/xen-blkback/common.h b/drivers/block/xen-blkback/common.h
-index e41d5e246c7e..86df03f761ed 100644
+index 1d3002d773f7..584f822f15ce 100644
 --- a/drivers/block/xen-blkback/common.h
 +++ b/drivers/block/xen-blkback/common.h
-@@ -324,6 +324,7 @@ struct xen_blkif {
+@@ -317,6 +317,7 @@ struct xen_blkif {
  	struct work_struct	free_work;
  	unsigned int 		nr_ring_pages;
  	/* All rings for this device. */
@@ -56,10 +47,10 @@ index e41d5e246c7e..86df03f761ed 100644
  	unsigned int		nr_rings;
  };
 diff --git a/drivers/block/xen-blkback/xenbus.c b/drivers/block/xen-blkback/xenbus.c
-index bc888aac585f..a9fd32a48ede 100644
+index 42af2f37ba4e..e99c71ebc548 100644
 --- a/drivers/block/xen-blkback/xenbus.c
 +++ b/drivers/block/xen-blkback/xenbus.c
-@@ -161,15 +161,23 @@ static void xen_update_blkif_status(struct xen_blkif *blkif)
+@@ -135,15 +135,23 @@ static void xen_update_blkif_status(struct xen_blkif *blkif)
  	return;
  }
  
@@ -87,7 +78,7 @@ index bc888aac585f..a9fd32a48ede 100644
  	for (r = 0; r < blkif->nr_rings; r++) {
  		struct xen_blkif_ring *ring = &blkif->rings[r];
  
-@@ -214,6 +222,7 @@ static struct xen_blkif *xen_blkif_alloc(domid_t domid)
+@@ -188,6 +196,7 @@ static struct xen_blkif *xen_blkif_alloc(domid_t domid)
  	 * has been freed back to the cache.
  	 */
  	__module_get(THIS_MODULE);
@@ -95,15 +86,15 @@ index bc888aac585f..a9fd32a48ede 100644
  	INIT_WORK(&blkif->free_work, xen_blkif_deferred_free);
  
  	return blkif;
-@@ -280,6 +289,7 @@ static int xen_blkif_disconnect(struct xen_blkif *blkif)
+@@ -254,6 +263,7 @@ static int xen_blkif_disconnect(struct xen_blkif *blkif)
  	struct pending_req *req, *n;
  	unsigned int j, r;
  	bool busy = false;
 +	struct xen_blkif_ring *rings;
- 	char *xspath;
- 	size_t xspathsize;
- 	const size_t xenstore_path_ext_size = 11; /* sufficient for "/queue-NNN" */
-@@ -359,10 +369,16 @@ static int xen_blkif_disconnect(struct xen_blkif *blkif)
+ 
+ 	for (r = 0; r < blkif->nr_rings; r++) {
+ 		struct xen_blkif_ring *ring = &blkif->rings[r];
+@@ -321,10 +331,16 @@ static int xen_blkif_disconnect(struct xen_blkif *blkif)
  	 * blkif->rings was allocated in connect_ring, so we should free it in
  	 * here.
  	 */
@@ -121,7 +112,7 @@ index bc888aac585f..a9fd32a48ede 100644
  	return 0;
  }
  
-@@ -409,6 +425,7 @@ int __init xen_blkif_interface_init(void)
+@@ -366,6 +382,7 @@ int __init xen_blkif_interface_init(void)
  		unsigned int i;						\
  		unsigned long long result = 0;				\
  									\
@@ -129,7 +120,7 @@ index bc888aac585f..a9fd32a48ede 100644
  		if (!blkif->rings)				\
  			goto out;					\
  									\
-@@ -419,6 +436,7 @@ int __init xen_blkif_interface_init(void)
+@@ -376,6 +393,7 @@ int __init xen_blkif_interface_init(void)
  		}							\
  									\
  out:									\
@@ -137,7 +128,7 @@ index bc888aac585f..a9fd32a48ede 100644
  		return sprintf(buf, format, result);			\
  	}								\
  	static DEVICE_ATTR(name, 0444, show_##name, NULL)
-@@ -1121,8 +1139,7 @@ static int connect_ring(struct backend_info *be)
+@@ -1078,8 +1096,7 @@ static int connect_ring(struct backend_info *be)
  				requested_num_queues, xenblk_max_queues);
  		return -ENOSYS;
  	}
