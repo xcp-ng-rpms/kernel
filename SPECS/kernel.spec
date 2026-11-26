@@ -45,7 +45,7 @@
 Name: kernel
 License: GPLv2
 Version: %{usver}
-Release: %{?xsrel}.1.kernelpreview.1%{?dist}
+Release: %{?xsrel}.1.0.kernelpreview.1%{?dist}
 ExclusiveArch: x86_64
 ExclusiveOS: Linux
 Summary: The Linux kernel
@@ -84,6 +84,13 @@ AutoReqProv: no
 Provides: kernel-uname-r = %{uname}
 Provides: kernel = %{version}-%{release}
 Provides: kernel-%{_arch} = %{version}-%{release}
+
+Provides: dell-rbu-module
+Obsoletes: dell-rbu-module <= 4.19.0+1-3
+
+Provides: coretemp-module-alt
+Obsoletes: coretemp-module-alt <= 1.0-4
+
 Requires(post): coreutils kmod
 Requires(posttrans): coreutils dracut kmod
 
@@ -1204,6 +1211,10 @@ fi
 %{?_cov_results_package}
 
 %changelog
+
+* Thu Nov 26 2026 Quentin Casasnovas <quentin.casasnovas@vates.tech> - 4.19.325-cip137.8.0.51.1.0.kernelpreview.2
+- Enable Dell BIOS update kernel configuration (CONFIG_DELL_RBU=m)
+- Mark this revision providing dell-rbu and coretemp-module-alt in-tree.
 
 * Mon Nov 23 2026 Quentin Casasnovas <quentin.casasnovas@vates.tech> - 4.19.325-cip137.8.0.51.1.kernelpreview.1
 - Note that the incomplete backport to CVE-2026-64600 was already pulled in 4.19.325-cip137.8.0.46.16.kernelpreview.1
